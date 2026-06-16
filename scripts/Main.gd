@@ -7,14 +7,18 @@ const SAVE_PATH := "user://road_to_worlds_run.json"
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
-const ARCHETYPE_ORDER := ["flightless_birds", "snake", "canine", "glires", "insect"]
+const ARCHETYPE_ORDER := ["flightless_birds", "snake", "oxen", "glires", "insect"]
+const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/CombatService.gd")
+const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
 const COMBAT_BOARD_SLOTS := 5
 const COMBAT_ENGINE_SLOTS := 3
 const MANUAL_PENDING_ACTION_COMMIT_DELAY := 1.0
 
 var rng := RandomNumberGenerator.new()
+var content_catalog: RefCounted
 var combat_service: RefCounted
+var deck_metrics_service: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -50,6 +54,8 @@ func _ready() -> void:
 	_load_content()
 	combat_service = COMBAT_SERVICE_SCRIPT.new()
 	combat_service.setup(cards_by_id, archetypes_by_id)
+	deck_metrics_service = DECK_METRICS_SERVICE_SCRIPT.new()
+	deck_metrics_service.setup(cards_by_id, archetypes_by_id, ARCHETYPE_ORDER, MAIN_DECK_SIZE)
 	_build_shell()
 	_show_start()
 
@@ -142,37 +148,14 @@ func _build_shell() -> void:
 
 
 func _load_content() -> void:
-	var card_data: Dictionary = _load_json("res://data/content/cards.json")
-	var archetype_data: Dictionary = _load_json("res://data/content/archetypes.json")
-	var booster_data: Dictionary = _load_json("res://data/content/boosters.json")
-	var tournament_data: Dictionary = _load_json("res://data/content/tournaments.json")
+	content_catalog = CONTENT_CATALOG_SCRIPT.new()
+	content_catalog.load_all()
 
-	cards = card_data.get("cards", [])
-	for card in cards:
-		cards_by_id[card.get("id", "")] = card
-
-	for archetype in archetype_data.get("archetypes", []):
-		archetypes_by_id[archetype.get("id", "")] = archetype
-
-	for booster in booster_data.get("boosters", []):
-		boosters_by_id[booster.get("id", "")] = booster
-
-	for tournament in tournament_data.get("tournaments", []):
-		tournaments_by_id[tournament.get("id", "")] = tournament
-
-
-func _load_json(path: String) -> Dictionary:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		push_error("Could not load " + path)
-		return {}
-
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		push_error("Invalid JSON at " + path)
-		return {}
-
-	return parsed
+	cards = content_catalog.cards
+	cards_by_id = content_catalog.cards_by_id
+	archetypes_by_id = content_catalog.archetypes_by_id
+	boosters_by_id = content_catalog.boosters_by_id
+	tournaments_by_id = content_catalog.tournaments_by_id
 
 
 func _clear(node: Node) -> void:
@@ -236,13 +219,13 @@ func _start_new_run(archetype_id: String) -> void:
 		"meta": {
 			"flightless_birds": 0.24,
 			"snake": 0.22,
-			"canine": 0.22,
+			"oxen": 0.22,
 			"glires": 0.17,
 			"insect": 0.15
 		},
 		"reports": [
 			"Opening week: Flightless Birds Aggro is cheap and everywhere.",
-			"Canine Midrange is picking up because pack threats trade well into aggro.",
+			"Oxen Ramp is picking up because players want to go over fair boards.",
 			"Snake Control players are happy to coil around fair creature decks."
 		],
 		"shop": [],
@@ -269,10 +252,7 @@ func _start_new_run(archetype_id: String) -> void:
 
 
 func _deck_entries_to_dict(entries: Array) -> Dictionary:
-	var deck := {}
-	for entry in entries:
-		deck[entry.get("cardId", "")] = int(entry.get("count", 0))
-	return deck
+	return content_catalog.deck_entries_to_dict(entries)
 
 
 func _render_nav() -> void:
@@ -5209,11 +5189,11 @@ func _weighted_meta_pick() -> String:
 func _predator_archetype(archetype_id: String) -> String:
 	match archetype_id:
 		"flightless_birds":
-			return "canine"
-		"canine":
 			return "snake"
 		"snake":
-			return "glires"
+			return "oxen"
+		"oxen":
+			return "flightless_birds"
 		"glires":
 			return "insect"
 		"insect":
@@ -5302,11 +5282,11 @@ func _update_meta_after_event(primary: String, wins: int, rounds: int) -> void:
 	reports.append("%s is the deck people are talking about this week." % archetypes_by_id[leader].name)
 	match leader:
 		"flightless_birds":
-			reports.append("Canine players are buying sturdy two-drops and clean trades for the bird rush.")
-		"canine":
-			reports.append("Snake pilots are excited to line up answers against fair pack threats.")
+			reports.append("Snake pilots are buying time and sweepers for the bird rush.")
 		"snake":
-			reports.append("Glires players are trying to go wider than spot removal can handle.")
+			reports.append("Oxen players are trying to ramp past one-for-one answers.")
+		"oxen":
+			reports.append("Bird pilots are cutting clunky cards and trying to finish before the pasture turns on.")
 		"glires":
 			reports.append("Insect pilots are leaning on revive loops to outlast the warren.")
 		"insect":
@@ -5371,134 +5351,7 @@ func _show_meta() -> void:
 
 
 func _calculate_deck_metrics(deck: Dictionary, sideboard: Dictionary) -> Dictionary:
-	var total := _deck_total(deck)
-	if total <= 0:
-		return {
-			"primary": "flightless_birds",
-			"fit": 0.0,
-			"score": 0.0,
-			"speed": 0.0,
-			"power": 0.0,
-			"interaction": 0.0,
-			"resilience": 0.0,
-			"advantage": 0.0,
-			"consistency": 0.0,
-			"role_score": 0.0,
-			"curve_warning": "No deck."
-		}
-
-	var archetype_counts := {}
-	for archetype_id in ARCHETYPE_ORDER:
-		archetype_counts[archetype_id] = 0
-	var role_counts := {}
-	var stat_totals := { "speed": 0.0, "power": 0.0, "interaction": 0.0, "resilience": 0.0, "advantage": 0.0, "consistency": 0.0 }
-	var low_cost := 0
-	var high_cost := 0
-	var card_quality := 0.0
-
-	for card_id in deck.keys():
-		var count := int(deck[card_id])
-		var card: Dictionary = cards_by_id[card_id]
-		var archetype := String(card.get("archetype", "neutral"))
-		if archetype_counts.has(archetype):
-			archetype_counts[archetype] = int(archetype_counts[archetype]) + count
-
-		var role := String(card.get("role", "threat"))
-		role_counts[role] = int(role_counts.get(role, 0)) + count
-
-		var stats: Dictionary = card.get("stats", {})
-		for key in stat_totals.keys():
-			stat_totals[key] = float(stat_totals[key]) + float(stats.get(key, 0)) * count
-
-		if int(card.get("cost", 0)) <= 2:
-			low_cost += count
-		if int(card.get("cost", 0)) >= 4:
-			high_cost += count
-
-		card_quality += sqrt(float(card.get("value", 1))) * count
-
-	var primary := String(ARCHETYPE_ORDER[0])
-	var primary_count := int(archetype_counts.get(primary, 0))
-	for archetype_id in ARCHETYPE_ORDER:
-		var archetype_count := int(archetype_counts.get(archetype_id, 0))
-		if archetype_count > primary_count:
-			primary = archetype_id
-			primary_count = archetype_count
-
-	var archetype: Dictionary = archetypes_by_id[primary]
-	var fit := float(archetype_counts[primary]) / float(total)
-	var desired: Dictionary = archetype.get("desiredRoles", {})
-	var role_error := 0.0
-	for role in desired.keys():
-		role_error += abs(float(role_counts.get(role, 0)) - float(desired[role]))
-	var role_score: float = clamp(1.0 - (role_error / float(MAIN_DECK_SIZE * 1.4)), 0.0, 1.0)
-
-	var averages := {}
-	for key in stat_totals.keys():
-		averages[key] = float(stat_totals[key]) / float(total)
-
-	var weights: Dictionary = archetype.get("phaseWeights", {})
-	var weighted_stats := 0.0
-	weighted_stats += float(averages.speed) * float(weights.get("speed", 0.2))
-	weighted_stats += float(averages.power) * float(weights.get("power", 0.2))
-	weighted_stats += float(averages.interaction) * float(weights.get("interaction", 0.2))
-	weighted_stats += float(averages.resilience) * float(weights.get("resilience", 0.2))
-	weighted_stats += float(averages.advantage) * float(weights.get("advantage", 0.2))
-
-	var curve_warning := "Curve looks playable."
-	var curve_bonus := 0.0
-	if primary == "flightless_birds":
-		if low_cost < 20:
-			curve_warning = "Aggro deck is light on cheap cards."
-			curve_bonus -= 3.0
-		if high_cost > 4:
-			curve_warning = "Aggro deck may be too clunky."
-			curve_bonus -= 3.0
-	elif primary == "snake":
-		if low_cost < 14:
-			curve_warning = "Control deck may not survive early turns."
-			curve_bonus -= 3.0
-		if high_cost > 8:
-			curve_warning = "Control deck has a heavy top end."
-			curve_bonus -= 1.5
-	elif primary == "glires":
-		if low_cost < 18:
-			curve_warning = "Glires deck wants more cheap bodies to propagate."
-			curve_bonus -= 2.0
-		if high_cost > 6:
-			curve_warning = "Glires deck may be too top-heavy for a wide plan."
-			curve_bonus -= 1.5
-	elif primary == "insect":
-		if low_cost < 15:
-			curve_warning = "Insect deck needs early bodies to fuel revive lines."
-			curve_bonus -= 2.0
-		if high_cost > 8:
-			curve_warning = "Insect deck has a heavy revive top end."
-			curve_bonus -= 1.5
-	else:
-		if low_cost < 16:
-			curve_warning = "Midrange deck may stumble before stabilizing."
-			curve_bonus -= 2.0
-		if high_cost > 7:
-			curve_warning = "Midrange deck is leaning too top-heavy."
-			curve_bonus -= 2.0
-
-	var consistency_score: float = float(averages.consistency) + fit * 3.0 + role_score * 2.0
-	var score: float = 28.0 + fit * 16.0 + role_score * 8.0 + weighted_stats * 5.8 + consistency_score * 1.6 + card_quality * 0.16 + curve_bonus
-
-	return {
-		"primary": primary,
-		"fit": fit,
-		"score": score,
-		"speed": averages.speed,
-		"power": averages.power,
-		"interaction": averages.interaction,
-		"resilience": averages.resilience,
-		"advantage": averages.advantage,
-		"consistency": consistency_score,
-		"role_score": role_score,
-		"curve_warning": curve_warning
-	}
+	return deck_metrics_service.calculate(deck, sideboard)
 
 
 func _deck_is_legal() -> Dictionary:
@@ -5714,8 +5567,8 @@ func _affinity_label(archetype_id: String) -> String:
 			return "Flightless Birds"
 		"snake":
 			return "Snake"
-		"canine":
-			return "Canine"
+		"oxen":
+			return "Oxen"
 		"glires":
 			return "Glires"
 		"insect":
@@ -5732,8 +5585,8 @@ func _affinity_color(archetype_id: String) -> Color:
 			return Color("#e45a3c")
 		"snake":
 			return Color("#4cc9b0")
-		"canine":
-			return Color("#7fbf4d")
+		"oxen":
+			return Color("#8f9b4a")
 		"glires":
 			return Color("#d8a74b")
 		"insect":
@@ -5944,7 +5797,8 @@ func _migrate_legacy_run_archetypes() -> void:
 	var legacy_map := {
 		"redline_aggro": "flightless_birds",
 		"lantern_control": "snake",
-		"verdant_midrange": "canine"
+		"verdant_midrange": "oxen",
+		"canine": "oxen"
 	}
 	if legacy_map.has(String(run.get("starter", ""))):
 		run.starter = legacy_map[String(run.starter)]

@@ -1,0 +1,346 @@
+{
+	"archetypes": [
+		{
+			"id": "flightless_birds",
+			"name": "Flightless Birds Aggro"
+		},
+		{
+			"id": "snake",
+			"name": "Snake Control"
+		},
+		{
+			"id": "oxen",
+			"name": "Oxen Ramp"
+		},
+		{
+			"id": "glires",
+			"name": "Glires Propagate"
+		},
+		{
+			"id": "insect",
+			"name": "Insect Revive"
+		}
+	],
+	"gamesPerPairing": 200,
+	"gamesPerSeat": 100,
+	"generatedAt": "2026-06-16 15:34:58",
+	"matrix": {
+		"flightless_birds": {
+			"flightless_birds": null,
+			"glires": 0.94,
+			"insect": 0.84,
+			"oxen": 0.21,
+			"snake": 0.9475
+		},
+		"glires": {
+			"flightless_birds": 0.06,
+			"glires": null,
+			"insect": 0.345,
+			"oxen": 0.03,
+			"snake": 0.73
+		},
+		"insect": {
+			"flightless_birds": 0.16,
+			"glires": 0.655,
+			"insect": null,
+			"oxen": 0.195,
+			"snake": 0.935
+		},
+		"oxen": {
+			"flightless_birds": 0.79,
+			"glires": 0.97,
+			"insect": 0.805,
+			"oxen": null,
+			"snake": 0.98
+		},
+		"snake": {
+			"flightless_birds": 0.0525,
+			"glires": 0.27,
+			"insect": 0.065,
+			"oxen": 0.02,
+			"snake": null
+		}
+	},
+	"pairings": [
+		{
+			"draws": 1,
+			"games": 200,
+			"left": "flightless_birds",
+			"right": "snake",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "snake",
+					"opponentWins": 1,
+					"player": "flightless_birds",
+					"playerWins": 99
+				},
+				{
+					"draws": 1,
+					"games": 100,
+					"opponent": "flightless_birds",
+					"opponentWins": 90,
+					"player": "snake",
+					"playerWins": 9
+				}
+			],
+			"wins": {
+				"flightless_birds": 189,
+				"snake": 10
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "flightless_birds",
+			"right": "oxen",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "oxen",
+					"opponentWins": 63,
+					"player": "flightless_birds",
+					"playerWins": 37
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "flightless_birds",
+					"opponentWins": 5,
+					"player": "oxen",
+					"playerWins": 95
+				}
+			],
+			"wins": {
+				"flightless_birds": 42,
+				"oxen": 158
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "flightless_birds",
+			"right": "glires",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "glires",
+					"opponentWins": 1,
+					"player": "flightless_birds",
+					"playerWins": 99
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "flightless_birds",
+					"opponentWins": 89,
+					"player": "glires",
+					"playerWins": 11
+				}
+			],
+			"wins": {
+				"flightless_birds": 188,
+				"glires": 12
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "flightless_birds",
+			"right": "insect",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "insect",
+					"opponentWins": 2,
+					"player": "flightless_birds",
+					"playerWins": 98
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "flightless_birds",
+					"opponentWins": 70,
+					"player": "insect",
+					"playerWins": 30
+				}
+			],
+			"wins": {
+				"flightless_birds": 168,
+				"insect": 32
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "snake",
+			"right": "oxen",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "oxen",
+					"opponentWins": 97,
+					"player": "snake",
+					"playerWins": 3
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "snake",
+					"opponentWins": 1,
+					"player": "oxen",
+					"playerWins": 99
+				}
+			],
+			"wins": {
+				"oxen": 196,
+				"snake": 4
+			}
+		},
+		{
+			"draws": 2,
+			"games": 200,
+			"left": "snake",
+			"right": "glires",
+			"seatBreakdown": [
+				{
+					"draws": 1,
+					"games": 100,
+					"opponent": "glires",
+					"opponentWins": 68,
+					"player": "snake",
+					"playerWins": 31
+				},
+				{
+					"draws": 1,
+					"games": 100,
+					"opponent": "snake",
+					"opponentWins": 22,
+					"player": "glires",
+					"playerWins": 77
+				}
+			],
+			"wins": {
+				"glires": 145,
+				"snake": 53
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "snake",
+			"right": "insect",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "insect",
+					"opponentWins": 90,
+					"player": "snake",
+					"playerWins": 10
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "snake",
+					"opponentWins": 3,
+					"player": "insect",
+					"playerWins": 97
+				}
+			],
+			"wins": {
+				"insect": 187,
+				"snake": 13
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "oxen",
+			"right": "glires",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "glires",
+					"opponentWins": 1,
+					"player": "oxen",
+					"playerWins": 99
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "oxen",
+					"opponentWins": 95,
+					"player": "glires",
+					"playerWins": 5
+				}
+			],
+			"wins": {
+				"glires": 6,
+				"oxen": 194
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "oxen",
+			"right": "insect",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "insect",
+					"opponentWins": 9,
+					"player": "oxen",
+					"playerWins": 91
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "oxen",
+					"opponentWins": 70,
+					"player": "insect",
+					"playerWins": 30
+				}
+			],
+			"wins": {
+				"insect": 39,
+				"oxen": 161
+			}
+		},
+		{
+			"draws": 0,
+			"games": 200,
+			"left": "glires",
+			"right": "insect",
+			"seatBreakdown": [
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "insect",
+					"opponentWins": 50,
+					"player": "glires",
+					"playerWins": 50
+				},
+				{
+					"draws": 0,
+					"games": 100,
+					"opponent": "glires",
+					"opponentWins": 19,
+					"player": "insect",
+					"playerWins": 81
+				}
+			],
+			"wins": {
+				"glires": 69,
+				"insect": 131
+			}
+		}
+	]
+}

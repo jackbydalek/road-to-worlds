@@ -9,16 +9,20 @@ const outputDir = path.join(repoRoot, "outputs/card-design-review");
 const markdownPath = path.join(outputDir, "current_card_list.md");
 
 export const ARCHETYPES = {
-  redline_aggro: "Redline Aggro",
-  lantern_control: "Lantern Control",
-  verdant_midrange: "Verdant Midrange",
+  flightless_birds: "Flightless Birds Aggro",
+  snake: "Snake Control",
+  oxen: "Oxen Ramp",
+  glires: "Glires Propagate",
+  insect: "Insect Revive",
   neutral: "Universal / Neutral",
 };
 
 export const ARCHETYPE_ORDER = [
-  "redline_aggro",
-  "lantern_control",
-  "verdant_midrange",
+  "flightless_birds",
+  "snake",
+  "oxen",
+  "glires",
+  "insect",
   "neutral",
 ];
 
@@ -78,6 +82,10 @@ function conditionLabel(effectOrTrigger) {
     controls_tool: "if you control a tool",
     enemy_discard_at_least: `if opponent has at least ${amount ?? "N"} cards in discard`,
     played_card_cost: `if the played card costs ${amount ?? "N"}`,
+    played_card_animal_type: `if the played card is ${titleCase(effectOrTrigger.conditionValue ?? "")}`,
+    source_animal_type: `if this is ${titleCase(effectOrTrigger.conditionValue ?? "")}`,
+    controls_animal_type: `if you control at least ${amount ?? "N"} ${titleCase(effectOrTrigger.conditionValue ?? "")}`,
+    enemy_controls_animal_type: `if opponent controls at least ${amount ?? "N"} ${titleCase(effectOrTrigger.conditionValue ?? "")}`,
   };
   return labels[condition] ?? `if ${titleCase(condition).toLowerCase()}`;
 }

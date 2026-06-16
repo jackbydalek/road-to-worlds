@@ -46,31 +46,31 @@ func _init() -> void:
 
 
 func _test_death_damage() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12001)
+	var state := _fresh_state("oxen", "flightless_birds", 12001)
 	state = _play_from_hand(state, "ver_last_word_brawler")
 	var unit := _first_player_unit(state, "ver_last_word_brawler")
 	var life_before := int(state["opponent"]["life"])
 	unit["health"] = 0
 	combat_service._cleanup_dead_units(state, state["player"])
 	if int(state["opponent"]["life"]) > life_before - 4:
-		return { "ok": false, "reason": "Last-Word Brawler death trigger did not damage the opponent." }
+		return { "ok": false, "reason": "Last-Word Longhorn death trigger did not damage the opponent." }
 	return { "ok": true }
 
 
 func _test_death_focus() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12002)
+	var state := _fresh_state("oxen", "flightless_birds", 12002)
 	state = _play_from_hand(state, "ver_refund_beast")
 	state["player"]["focus"] = 0
 	var unit := _first_player_unit(state, "ver_refund_beast")
 	unit["health"] = 0
 	combat_service._cleanup_dead_units(state, state["player"])
 	if int(state["player"]["focus"]) < 4:
-		return { "ok": false, "reason": "Refund Beast death trigger did not grant focus." }
+		return { "ok": false, "reason": "Refund Behemoth death trigger did not grant focus." }
 	return { "ok": true }
 
 
 func _test_damage_player_buff() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12003)
+	var state := _fresh_state("oxen", "flightless_birds", 12003)
 	state = _play_from_hand(state, "ver_growing_duelist")
 	state["opponent"]["board"] = []
 	var unit := _first_player_unit(state, "ver_growing_duelist")
@@ -78,7 +78,7 @@ func _test_damage_player_buff() -> Dictionary:
 	state = combat_service.manual_attack_target(state, int(unit["instance_id"]), "face", -1)
 	unit = _first_player_unit(state, "ver_growing_duelist")
 	if int(unit.get("attack", 0)) < 2 or int(unit.get("health", 0)) < 2:
-		return { "ok": false, "reason": "Growing Duelist did not grow after damaging the opponent." }
+		return { "ok": false, "reason": "Growing Yearling did not grow after damaging the opponent." }
 	return { "ok": true }
 
 
@@ -119,13 +119,13 @@ func _test_opponent_draw_trigger() -> Dictionary:
 
 
 func _test_tool_condition() -> Dictionary:
-	var state_without_tool := _fresh_state("canine", "flightless_birds", 12007)
+	var state_without_tool := _fresh_state("oxen", "flightless_birds", 12007)
 	state_without_tool = _play_from_hand(state_without_tool, "ver_toolfed_scrapper")
 	var plain := _first_player_unit(state_without_tool, "ver_toolfed_scrapper")
 	if int(plain.get("attack", 0)) != 2:
 		return { "ok": false, "reason": "Toolfed Scrapper buffed without a tool." }
 
-	var state_with_tool := _fresh_state("canine", "flightless_birds", 12008)
+	var state_with_tool := _fresh_state("oxen", "flightless_birds", 12008)
 	state_with_tool["player"]["engines"] = [{ "card_id": "ver_grove_stipend" }]
 	state_with_tool["player"]["life"] = 18
 	state_with_tool = _play_from_hand(state_with_tool, "ver_toolfed_scrapper")
@@ -136,12 +136,12 @@ func _test_tool_condition() -> Dictionary:
 
 
 func _test_dynamic_hand_damage() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12009)
+	var state := _fresh_state("oxen", "flightless_birds", 12009)
 	state["opponent"]["hand"] = ["red_spark_runner", "red_live_wire", "red_pure_grave_spark", "red_big_spell_mascot"]
 	var life_before := int(state["opponent"]["life"])
 	state = _play_from_hand(state, "ver_grip_punisher")
 	if int(state["opponent"]["life"]) != life_before - 4:
-		return { "ok": false, "reason": "Grip Punisher did not scale with enemy hand size." }
+		return { "ok": false, "reason": "Load-Bearing Rebuke did not scale with enemy hand size." }
 	return { "ok": true }
 
 
@@ -186,29 +186,29 @@ func _test_restricted_focus_payment() -> Dictionary:
 
 
 func _test_stipend_grants_restricted_focus() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12013)
+	var state := _fresh_state("oxen", "flightless_birds", 12013)
 	state["player"]["engines"] = [{ "card_id": "ver_grove_stipend" }]
 	state["player"]["restricted_focus"] = {}
 	combat_service._prepare_turn(state, state["player"])
-	if int(state["player"].get("restricted_focus", {}).get("canine", 0)) < 1:
-		return { "ok": false, "reason": "Grove Stipend did not grant restricted Verdant focus." }
+	if int(state["player"].get("restricted_focus", {}).get("oxen", 0)) < 1:
+		return { "ok": false, "reason": "Pasture Stipend did not grant restricted Oxen focus." }
 	return { "ok": true }
 
 
 func _test_lifebloom_activation() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12014)
+	var state := _fresh_state("oxen", "flightless_birds", 12014)
 	state = _play_from_hand(state, "ver_lifebloom_glider")
 	state["player"]["life"] = 18
 	state["player"]["focus"] = 1
 	var unit := _first_player_unit(state, "ver_lifebloom_glider")
 	state = combat_service.manual_activate_unit_ability(state, int(unit["instance_id"]), 0)
 	if int(state["player"]["life"]) != 19 or int(state["player"]["focus"]) != 0:
-		return { "ok": false, "reason": "Lifebloom Glider ability did not heal and spend focus." }
+		return { "ok": false, "reason": "Lifebloom Sky-Yoke ability did not heal and spend focus." }
 	return { "ok": true }
 
 
 func _test_gravepath_activation() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12015)
+	var state := _fresh_state("oxen", "flightless_birds", 12015)
 	state = _play_from_hand(state, "ver_gravepath_guide")
 	state["player"]["focus"] = 1
 	state["player"]["hand"] = []
@@ -216,12 +216,12 @@ func _test_gravepath_activation() -> Dictionary:
 	var unit := _first_player_unit(state, "ver_gravepath_guide")
 	state = combat_service.manual_activate_unit_ability(state, int(unit["instance_id"]), 0)
 	if not state["player"]["hand"].has("neu_sleeve_luck") or int(state["player"]["focus"]) != 0:
-		return { "ok": false, "reason": "Gravepath Guide ability did not recover and spend focus." }
+		return { "ok": false, "reason": "Gravepath Drover ability did not recover and spend focus." }
 	return { "ok": true }
 
 
 func _test_focus_page_activation() -> Dictionary:
-	var state := _fresh_state("canine", "flightless_birds", 12016)
+	var state := _fresh_state("oxen", "flightless_birds", 12016)
 	state = _play_from_hand(state, "ver_focus_page")
 	state["player"]["focus"] = 0
 	var unit := _first_player_unit(state, "ver_focus_page")

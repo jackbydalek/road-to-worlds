@@ -482,8 +482,8 @@ func _play_score(card: Dictionary, active: Dictionary, enemy: Dictionary) -> flo
 			score += _effects_play_score(active, enemy, combat.get("onPlay", []), card)
 			if active["archetype"] == "flightless_birds":
 				score += float(stats.get("speed", 0)) * 1.4
-			if active["archetype"] == "canine":
-				score += float(stats.get("resilience", 0)) * 0.8
+			if active["archetype"] == "oxen":
+				score += float(stats.get("resilience", 0)) * 0.5 + float(stats.get("advantage", 0)) * 1.0
 		"action":
 			score += _effects_play_score(active, enemy, combat.get("effects", []), card)
 			score += float(stats.get("interaction", 0)) * 0.7 + float(stats.get("consistency", 0)) * 0.5
@@ -497,6 +497,8 @@ func _play_score(card: Dictionary, active: Dictionary, enemy: Dictionary) -> flo
 			score += float(stats.get("advantage", 0)) * 1.2
 			if active["archetype"] == "snake":
 				score += 2.0
+			if active["archetype"] == "oxen":
+				score += 3.0
 	return score
 
 

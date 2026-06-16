@@ -16,7 +16,7 @@ To run it:
 
 Playable loop:
 
-- Choose Redline Aggro, Lantern Control, or Verdant Midrange.
+- Choose Flightless Birds Aggro, Snake Control, Oxen Ramp, Glires Propagate, or Insect Revive.
 - Visit the card shop.
 - Buy and reveal booster packs.
 - Buy singles.
@@ -38,8 +38,8 @@ Start here:
 - [Combat engine](scripts/CombatService.gd): simplified TCG duel foundation.
 - [Combat progress](docs/combat-implementation-progress.md): current combat roadmap and handoff notes.
 - [Combat card schema](docs/combat-card-schema.md): explicit `combat` fields and placeholder UI customization notes.
-- [Prototype card data](data/content/cards.json): 56-card starter set.
-- [Prototype archetypes](data/content/archetypes.json): Redline Aggro, Lantern Control, and Verdant Midrange starter decks.
+- [Prototype card data](data/content/cards.json): current implemented card set.
+- [Prototype archetypes](data/content/archetypes.json): current starter decks and matchup data.
 - [Example Card Data](data/cards.example.json): sample card schema and starter cards.
 - [Example Archetype Data](data/archetypes.example.json): sample archetype schema and matchup data.
 - [Example Booster Data](data/boosters.example.json): sample pack slot definitions.

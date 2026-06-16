@@ -31,9 +31,9 @@
       },
       "matchups": {
         "snake": 0.06,
-        "canine": -0.08,
         "insect": -0.04,
-        "glires": 0.04
+        "glires": 0.04,
+        "oxen": -0.08
       },
       "starterDeck": [
         {
@@ -116,10 +116,10 @@
         "tech": 2
       },
       "matchups": {
-        "canine": 0.08,
         "flightless_birds": -0.06,
         "glires": -0.05,
-        "insect": 0.04
+        "insect": 0.04,
+        "oxen": 0.08
       },
       "starterDeck": [
         {
@@ -173,51 +173,59 @@
       ]
     },
     {
-      "id": "canine",
-      "name": "Canine Midrange",
-      "animalType": "canine",
-      "strategy": "midrange",
-      "summary": "Reliable pack threats, clean trades, and flexible answers.",
+      "id": "oxen",
+      "name": "Oxen Ramp",
+      "animalType": "oxen",
+      "strategy": "ramp",
+      "summary": "Build extra focus, survive the early rush, and land oversized herd payoffs ahead of curve.",
       "tags": [
-        "canine",
-        "midrange",
-        "fair",
+        "oxen",
+        "ramp",
+        "big_mana",
         "resilient",
-        "pack"
+        "herd"
       ],
-      "color": "#7fbf4d",
+      "color": "#8f9b4a",
       "phaseWeights": {
-        "speed": 0.2,
-        "power": 0.3,
-        "interaction": 0.22,
-        "resilience": 0.18,
-        "advantage": 0.1
+        "speed": 0.08,
+        "power": 0.34,
+        "interaction": 0.14,
+        "resilience": 0.2,
+        "advantage": 0.24
       },
       "desiredRoles": {
-        "threat": 11,
-        "answer": 7,
-        "engine": 3,
-        "finisher": 3,
+        "threat": 9,
+        "answer": 5,
+        "engine": 6,
+        "finisher": 5,
         "filter": 3,
-        "tech": 3
+        "tech": 2
       },
       "matchups": {
-        "flightless_birds": 0.08,
-        "snake": -0.08,
-        "insect": 0.03,
-        "glires": -0.03
+        "flightless_birds": -0.08,
+        "snake": 0.06,
+        "insect": 0.04,
+        "glires": -0.02
       },
       "starterDeck": [
+        {
+          "cardId": "ver_grove_stipend",
+          "count": 3
+        },
+        {
+          "cardId": "ver_focus_page",
+          "count": 3
+        },
+        {
+          "cardId": "ver_canopy_tracker",
+          "count": 3
+        },
         {
           "cardId": "ver_seedling_scrapper",
           "count": 3
         },
         {
           "cardId": "ver_trail_guardian",
-          "count": 3
-        },
-        {
-          "cardId": "ver_thornhide_cub",
           "count": 3
         },
         {
@@ -229,23 +237,15 @@
           "count": 2
         },
         {
-          "cardId": "ver_canopy_tracker",
-          "count": 3
-        },
-        {
           "cardId": "ver_rootsnare_tactician",
-          "count": 3
+          "count": 2
         },
         {
           "cardId": "ver_stubborn_behemoth",
           "count": 2
         },
         {
-          "cardId": "ver_grove_broker",
-          "count": 2
-        },
-        {
-          "cardId": "ver_adaptive_charm",
+          "cardId": "ver_overgrowth_contract",
           "count": 2
         },
         {
@@ -291,7 +291,7 @@
         "snake": 0.05,
         "insect": -0.06,
         "flightless_birds": -0.04,
-        "canine": 0.03
+        "oxen": 0.03
       },
       "starterDeck": [
         {
@@ -376,7 +376,7 @@
         "flightless_birds": 0.04,
         "glires": 0.06,
         "snake": -0.04,
-        "canine": -0.03
+        "oxen": -0.03
       },
       "starterDeck": [
         {

@@ -1355,14 +1355,15 @@
     },
     {
       "id": "ver_seedling_scrapper",
-      "name": "Den Scrapper",
-      "archetype": "canine",
+      "name": "Plowline Yearling",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "anti_aggro",
-        "pack"
+        "guard",
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -1370,39 +1371,42 @@
       "value": 2,
       "deckLimit": 3,
       "stats": {
-        "speed": 2,
-        "power": 2,
+        "speed": 0,
+        "power": 1,
         "consistency": 0,
         "interaction": 0,
-        "resilience": 2,
+        "resilience": 3,
         "advantage": 0
       },
       "combat": {
         "kind": "unit",
-        "attack": 2,
-        "health": 3
+        "attack": 1,
+        "health": 3,
+        "keywords": [
+          "guard"
+        ]
       },
-      "text": "Canine pack midrange: Small threat that trades up against fast starts.",
+      "text": "Oxen Ramp: Cheap guard that buys time for pasture engines and bigger herd payoffs.",
       "matchupModifiers": [
         {
           "target": "aggro",
           "value": 1
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_trail_guardian",
-      "name": "Trail Hound Guardian",
-      "archetype": "canine",
+      "name": "Yoked Trailguard",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "stabilizer",
         "guard",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -1410,35 +1414,35 @@
       "value": 3,
       "deckLimit": 3,
       "stats": {
-        "speed": 0,
-        "power": 3,
+        "speed": -1,
+        "power": 2,
         "consistency": 0,
         "interaction": 1,
-        "resilience": 4,
+        "resilience": 5,
         "advantage": 0
       },
       "combat": {
         "kind": "unit",
-        "attack": 3,
+        "attack": 2,
         "health": 5,
         "keywords": [
           "guard"
         ]
       },
-      "text": "Canine pack midrange: Efficient stabilizer that makes racing awkward.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Sturdy guard that keeps pressure off while your focus engines come online.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_thornhide_cub",
-      "name": "Thornhide Pup",
-      "archetype": "canine",
+      "name": "Broadback Calf",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "resilient",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -1458,20 +1462,20 @@
         "attack": 3,
         "health": 4
       },
-      "text": "Canine pack midrange: A sturdy two-drop for fair exchanges.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Sturdy early body that keeps the herd stable while you build focus.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_clean_trade",
-      "name": "Clean Pack Trade",
-      "archetype": "canine",
+      "name": "Furrow-Cut Answer",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "answer",
         "anti_aggro",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "answer",
@@ -1497,31 +1501,31 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Efficient removal that shines against cheap threats.",
+      "text": "Oxen Ramp: Clean early removal that clears the road to your expensive turns.",
       "matchupModifiers": [
         {
           "target": "aggro",
           "value": 2
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_second_wind",
-      "name": "Second Wind Howl",
-      "archetype": "canine",
+      "name": "Second Wind Graze",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "answer",
         "stabilizer",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "answer",
       "cost": 2,
-      "value": 2,
+      "value": 3,
       "deckLimit": 3,
       "stats": {
         "speed": 0,
@@ -1529,7 +1533,7 @@
         "consistency": 0,
         "interaction": 1,
         "resilience": 4,
-        "advantage": 0
+        "advantage": 1
       },
       "combat": {
         "kind": "action",
@@ -1546,25 +1550,26 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Stabilization tool for races and attrition games.",
+      "text": "Oxen Ramp: Stabilize, replace the card, and keep walking toward your top end.",
       "matchupModifiers": [
         {
           "target": "aggro",
           "value": 1
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_canopy_tracker",
-      "name": "Canopy Tracker Hound",
-      "archetype": "canine",
+      "name": "Pasture Survey",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "filter",
-        "pack"
+        "focus",
+        "herd"
       ],
       "rarity": "common",
       "role": "filter",
@@ -1572,12 +1577,12 @@
       "value": 2,
       "deckLimit": 3,
       "stats": {
-        "speed": 0,
-        "power": 1,
+        "speed": 1,
+        "power": 0,
         "consistency": 4,
         "interaction": 0,
-        "resilience": 1,
-        "advantage": 0
+        "resilience": 0,
+        "advantage": 1
       },
       "combat": {
         "kind": "action",
@@ -1588,44 +1593,45 @@
             "amount": 1
           },
           {
-            "type": "heal",
+            "type": "gain_focus",
             "amount": 1,
-            "target": "self_player"
+            "restrictedTo": "oxen"
           }
         ]
       },
-      "text": "Canine pack midrange: Finds the right half of a fair deck.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Draw a card and gain 1 Oxen focus this turn to bridge into the herd curve.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_rootsnare_tactician",
-      "name": "Pack Tactician",
-      "archetype": "canine",
+      "name": "Stampede Tactician",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "answer",
-        "pack"
+        "focus",
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
       "cost": 3,
-      "value": 7,
+      "value": 4,
       "deckLimit": 3,
       "stats": {
-        "speed": 0,
+        "speed": -1,
         "power": 4,
         "consistency": 0,
         "interaction": 2,
-        "resilience": 3,
+        "resilience": 4,
         "advantage": 1
       },
       "combat": {
         "kind": "unit",
-        "attack": 4,
-        "health": 4,
+        "attack": 3,
+        "health": 5,
         "onPlay": [
           {
             "type": "damage",
@@ -1633,63 +1639,64 @@
             "target": "best_enemy_unit"
           },
           {
-            "type": "buff",
-            "amount_attack": 1,
-            "amount_health": 1,
-            "target": "source_unit",
-            "condition": "controls_animal_type",
-            "conditionValue": "canine",
-            "conditionAmount": 2
+            "type": "gain_focus",
+            "amount": 1,
+            "restrictedTo": "oxen"
           }
         ]
       },
-      "text": "Canine pack midrange: Deals 1 to the best enemy unit. If another Canine is already in your pack, this enters with +1/+1.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Deals 1 to the best enemy unit and refunds 1 Oxen focus this turn.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_stubborn_behemoth",
-      "name": "Stubborn Mastiff",
-      "archetype": "canine",
+      "name": "Stubborn Draft Ox",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "resilient",
-        "sticky",
-        "pack"
+        "guard",
+        "payoff",
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
       "cost": 4,
-      "value": 8,
+      "value": 5,
       "deckLimit": 3,
       "stats": {
-        "speed": -1,
+        "speed": -2,
         "power": 5,
         "consistency": 0,
         "interaction": 0,
-        "resilience": 5,
+        "resilience": 6,
         "advantage": 1
       },
       "combat": {
         "kind": "unit",
         "attack": 5,
-        "health": 6
+        "health": 7,
+        "keywords": [
+          "guard"
+        ]
       },
-      "text": "Canine pack midrange: Durable midgame threat that punishes small removal.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Early payoff that turns spare focus into a hard-to-move guard.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_grove_broker",
-      "name": "Grove Broker Hound",
-      "archetype": "canine",
+      "name": "Pasture Broker",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "engine",
-        "pack"
+        "value",
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "engine",
@@ -1723,19 +1730,20 @@
           }
         ]
       },
-      "text": "Canine pack midrange: A fair value engine that keeps trades profitable.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: A value engine that turns patient pasture turns into cards and life.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_adaptive_charm",
-      "name": "Adaptive Howl",
-      "archetype": "canine",
+      "name": "Yoke Adjustment",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "tech",
-        "pack"
+        "stabilizer",
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "tech",
@@ -1766,7 +1774,7 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Flexible sideboard card that is never embarrassing.",
+      "text": "Oxen Ramp: Flexible sideboard tool that removes pressure and buys time for payoffs.",
       "matchupModifiers": [
         {
           "target": "aggro",
@@ -1777,51 +1785,56 @@
           "value": 1
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_prize_stag",
-      "name": "Prize Alpha",
-      "archetype": "canine",
+      "name": "Prize Longhorn",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "finisher",
-        "pack"
+        "payoff",
+        "guard",
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "finisher",
-      "cost": 5,
-      "value": 8,
+      "cost": 6,
+      "value": 6,
       "deckLimit": 3,
       "stats": {
-        "speed": -2,
-        "power": 6,
+        "speed": -3,
+        "power": 8,
         "consistency": 0,
         "interaction": 0,
-        "resilience": 4,
-        "advantage": 1
+        "resilience": 7,
+        "advantage": 2
       },
       "combat": {
         "kind": "unit",
-        "attack": 6,
-        "health": 5
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          "guard"
+        ]
       },
-      "text": "Canine pack midrange: Budget top-end for winning stabilized boards.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Big starter-deck payoff that stabilizes the board and ends games quickly.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_sideboard_path",
-      "name": "Sideboard Path",
-      "archetype": "canine",
+      "name": "Side Pasture Map",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "tech",
         "filter",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "tech",
@@ -1852,7 +1865,7 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Lets midrange tune for whatever the room is doing.",
+      "text": "Oxen Ramp: Tunes the herd for the room while growing your best board presence.",
       "matchupModifiers": [
         {
           "target": "aggro",
@@ -1863,28 +1876,31 @@
           "value": 1
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_overgrowth_contract",
-      "name": "Overgrowth Contract",
-      "archetype": "canine",
+      "name": "Overgrowth Yoke",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "engine",
+        "focus",
+        "tool",
+        "artifact",
         "risky",
-        "pack"
+        "herd"
       ],
       "rarity": "rare",
       "role": "engine",
       "cost": 3,
-      "value": 19,
+      "value": 5,
       "deckLimit": 2,
       "stats": {
-        "speed": -1,
-        "power": 2,
+        "speed": -2,
+        "power": 1,
         "consistency": 1,
         "interaction": 0,
         "resilience": 2,
@@ -1897,32 +1913,34 @@
             "timing": "start_turn",
             "effects": [
               {
-                "type": "draw",
-                "amount": 2
+                "type": "gain_focus",
+                "amount": 2,
+                "restrictedTo": "oxen"
               },
               {
-                "type": "heal",
-                "amount": 1,
-                "target": "self_player"
+                "type": "draw",
+                "amount": 1
               }
             ]
           }
         ]
       },
-      "text": "Canine pack midrange: Powerful value engine that can be too slow into control.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: At the start of your turn, gain 2 Oxen focus this turn and draw 1.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_state_champion_rhino",
-      "name": "State Champion Rhino",
-      "archetype": "canine",
+      "name": "Grand Champion Bull",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "resilient",
-        "pack"
+        "guard",
+        "payoff",
+        "herd"
       ],
       "rarity": "rare",
       "role": "threat",
@@ -1953,26 +1971,26 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Premium midrange body that dominates creature mirrors.",
+      "text": "Oxen Ramp: Premium herd payoff that guards the board and toughens your team.",
       "matchupModifiers": [
         {
           "target": "aggro",
           "value": 2
         }
       ],
-      "animalType": "canine",
-      "strategy": "midrange"
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_harvest_colossus",
       "name": "Harvest Colossus",
-      "archetype": "canine",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "finisher",
         "resilient",
-        "pack"
+        "herd"
       ],
       "rarity": "rare",
       "role": "finisher",
@@ -1995,20 +2013,21 @@
           "guard"
         ]
       },
-      "text": "Canine pack midrange: Clean finisher for fair fights.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Clean oversized finisher for games where the pasture plan comes together.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_world_tree_invite",
-      "name": "World Tree Invite",
-      "archetype": "canine",
+      "name": "Worlds Yoke Invite",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "finisher",
+        "payoff",
         "mythic",
-        "pack"
+        "herd"
       ],
       "rarity": "mythic",
       "role": "finisher",
@@ -2043,9 +2062,9 @@
           }
         ]
       },
-      "text": "Canine pack midrange: A mythic fair-card payoff that can carry a whole season.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Mythic payoff that turns a stocked board and extra focus into a season-defining swing.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "neu_pocket_notebook",
@@ -2442,16 +2461,16 @@
     },
     {
       "id": "ver_last_word_brawler",
-      "name": "Last-Word Brawler",
-      "archetype": "canine",
+      "name": "Last-Word Longhorn",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "death_trigger",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
@@ -2483,22 +2502,22 @@
           }
         ]
       },
-      "text": "Canine pack midrange: When this dies, it deals damage equal to its attack to your opponent.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: When this dies, it deals damage equal to its attack to your opponent.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_ravenous_baloth",
-      "name": "Ravenous Baloth",
-      "archetype": "canine",
+      "name": "Ravenous Bull",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "drawback",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
@@ -2540,22 +2559,22 @@
           }
         ]
       },
-      "text": "Canine pack midrange: At the start and end of your turn, this deals 1 damage to you.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Oversized early body with a dangerous appetite; it deals 1 damage to you at the start and end of your turn.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_toolfed_scrapper",
-      "name": "Toolfed Scrapper",
-      "archetype": "canine",
+      "name": "Toolfed Plowhand",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "tool_payoff",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
@@ -2590,23 +2609,23 @@
           }
         ]
       },
-      "text": "Canine pack midrange: When played, if you control a tool, this gets +1/+1 and you gain 1 life.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: When played, if you control a tool, this gets +1/+1 and you gain 1 life.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_lifebloom_glider",
-      "name": "Lifebloom Glider",
-      "archetype": "canine",
+      "name": "Lifebloom Sky-Yoke",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "flying",
         "life_sink",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
@@ -2643,22 +2662,22 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Flying. Activated: pay 1 focus to gain 1 life.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Flying support threat. Activated: pay 1 focus to gain 1 life.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_gravepath_guide",
-      "name": "Gravepath Guide",
-      "archetype": "canine",
+      "name": "Gravepath Drover",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "graveyard",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "threat",
@@ -2692,23 +2711,23 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Activated: pay 1 focus to recover 1 card from your discard.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Activated: pay 1 focus to recover 1 card from your discard.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_refund_beast",
-      "name": "Refund Beast",
-      "archetype": "canine",
+      "name": "Refund Behemoth",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "death_trigger",
         "focus",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "rare",
       "role": "threat",
@@ -2739,29 +2758,29 @@
           }
         ]
       },
-      "text": "Canine pack midrange: When this dies, gain 4 focus this turn.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: When this dies, gain 4 focus this turn.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_grove_stipend",
-      "name": "Grove Stipend",
-      "archetype": "canine",
+      "name": "Pasture Stipend",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "tool",
         "artifact",
         "focus",
         "engine",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "uncommon",
       "role": "engine",
       "cost": 1,
-      "value": 7,
+      "value": 3,
       "deckLimit": 3,
       "stats": {
         "speed": 2,
@@ -2769,7 +2788,7 @@
         "consistency": 2,
         "interaction": 0,
         "resilience": 0,
-        "advantage": 1
+        "advantage": 2
       },
       "combat": {
         "kind": "engine",
@@ -2780,28 +2799,28 @@
               {
                 "type": "gain_focus",
                 "amount": 1,
-                "restrictedTo": "canine"
+                "restrictedTo": "oxen"
               }
             ]
           }
         ]
       },
-      "text": "Canine pack midrange: At the start of your turn, gain 1 Verdant Midrange focus this turn.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: At the start of your turn, gain 1 Oxen focus this turn.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_focus_page",
-      "name": "Focus Page",
-      "archetype": "canine",
+      "name": "Work Bell Calf",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "focus",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -2809,20 +2828,20 @@
       "value": 2,
       "deckLimit": 3,
       "stats": {
-        "speed": 1,
+        "speed": 0,
         "power": 1,
-        "consistency": 1,
+        "consistency": 2,
         "interaction": 0,
-        "resilience": 1,
+        "resilience": 2,
         "advantage": 1
       },
       "combat": {
         "kind": "unit",
         "attack": 1,
-        "health": 1,
+        "health": 2,
         "abilities": [
           {
-            "id": "focus_page_focus",
+            "id": "work_bell_focus",
             "label": "Add Focus",
             "cost": 0,
             "oncePerTurn": true,
@@ -2836,21 +2855,21 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Activated once each turn: gain 1 focus. This cannot attack after using that ability this turn.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Activated once each turn: gain 1 focus. This cannot attack after using that ability this turn.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_leafwing_scout",
-      "name": "Leafwing Scout",
-      "archetype": "canine",
+      "name": "Leafwing Calf",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "flying",
         "wave1",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -2873,22 +2892,22 @@
           "flying"
         ]
       },
-      "text": "Canine pack midrange: Prototype for: 1/1 flying.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Small flying scout that keeps pressure moving while the ground herd builds.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_growing_duelist",
-      "name": "Growing Duelist",
-      "archetype": "canine",
+      "name": "Growing Yearling",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "threat",
         "snowball",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "common",
       "role": "threat",
@@ -2921,22 +2940,22 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Whenever this deals combat damage to your opponent, it gets +1/+1.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Whenever this deals combat damage to your opponent, it gets +1/+1.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "ver_grip_punisher",
-      "name": "Grip Punisher",
-      "archetype": "canine",
+      "name": "Load-Bearing Rebuke",
+      "archetype": "oxen",
       "tags": [
-        "canine",
-        "midrange",
+        "oxen",
+        "ramp",
         "answer",
         "hand_punisher",
         "wave1",
         "wave2",
-        "pack"
+        "herd"
       ],
       "rarity": "rare",
       "role": "answer",
@@ -2962,9 +2981,9 @@
           }
         ]
       },
-      "text": "Canine pack midrange: Deal 1 damage to your opponent for each card in their hand.",
-      "animalType": "canine",
-      "strategy": "midrange"
+      "text": "Oxen Ramp: Deal 1 damage to your opponent for each card in their hand.",
+      "animalType": "oxen",
+      "strategy": "ramp"
     },
     {
       "id": "lan_lattice_stipend",

@@ -2,17 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
-import {
-  ARCHETYPES,
-  combatSummary,
-  archetypeFor,
-  sortCards,
-} from "../../tools/export_card_lists.mjs";
+import { combatSummary } from "../../tools/export_card_lists.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "../..");
 const cardsPath = path.join(repoRoot, "data/content/cards.json");
+const archetypesPath = path.join(repoRoot, "data/content/archetypes.json");
 const outputPath = path.join(__dirname, "road_to_worlds_implemented_cards.xlsx");
 
 function titleCase(value) {
@@ -51,6 +47,62 @@ function countBy(items, getter) {
   return [...counts.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 }
 
+function archetypeName(card, archetypesById) {
+  const archetypeId = String(card.archetype ?? "neutral");
+  if (archetypeId === "neutral") return "Universal / Neutral";
+  return archetypesById.get(archetypeId)?.name ?? titleCase(archetypeId);
+}
+
+function sortCardsForWorkbook(cards, archetypes) {
+  const order = new Map(archetypes.map((archetype, index) => [String(archetype.id), index]));
+  order.set("neutral", archetypes.length);
+  const rarityOrder = { common: 0, uncommon: 1, rare: 2, mythic: 3 };
+
+  return [...cards].sort((a, b) => {
+    const groupA = order.get(String(a.archetype ?? "neutral")) ?? 999;
+    const groupB = order.get(String(b.archetype ?? "neutral")) ?? 999;
+    if (groupA !== groupB) return groupA - groupB;
+
+    const rarityA = rarityOrder[String(a.rarity ?? "")] ?? 99;
+    const rarityB = rarityOrder[String(b.rarity ?? "")] ?? 99;
+    if (rarityA !== rarityB) return rarityA - rarityB;
+
+    return Number(a.cost ?? 0) - Number(b.cost ?? 0)
+      || String(a.name ?? "").localeCompare(String(b.name ?? ""));
+  });
+}
+
+function buildStarterDeckMap(archetypes) {
+  const starterMap = new Map();
+  for (const archetype of archetypes) {
+    const starterName = String(archetype.name ?? archetype.id ?? "Starter");
+    for (const entry of archetype.starterDeck ?? []) {
+      const cardId = String(entry.cardId ?? "");
+      if (cardId === "") continue;
+      if (!starterMap.has(cardId)) starterMap.set(cardId, []);
+      starterMap.get(cardId).push({
+        name: starterName,
+        count: Number(entry.count ?? 0),
+      });
+    }
+  }
+  return starterMap;
+}
+
+function starterDeckCopies(card, starterDeckMap) {
+  const entries = starterDeckMap.get(String(card.id ?? "")) ?? [];
+  if (entries.length === 0) return "";
+  return entries.map((entry) => `${entry.name} x${entry.count}`).join("; ");
+}
+
+function starterAdjustedSummary(card, archetypesById) {
+  let summary = combatSummary(card);
+  for (const [id, archetype] of archetypesById.entries()) {
+    summary = summary.replaceAll(`${titleCase(id)}-restricted`, `${archetype.name}-restricted`);
+  }
+  return summary;
+}
+
 function columnLetter(index) {
   let n = index + 1;
   let letters = "";
@@ -86,21 +138,21 @@ function mergeIfPossible(sheet, address) {
 }
 
 function styleSheet(sheet, rowCount) {
-  const fullRange = sheet.getRange(`A1:I${rowCount}`);
+  const fullRange = sheet.getRange(`A1:K${rowCount}`);
   fullRange.format = {
     font: { name: "Aptos", size: 10, color: "#1F2937" },
     verticalAlignment: "top",
     wrapText: true,
   };
 
-  sheet.getRange("A1:I1").format = {
+  sheet.getRange("A1:K1").format = {
     fill: "#26333F",
     font: { name: "Aptos Display", size: 16, color: "#FFFFFF", bold: true },
     borders: { preset: "outside", style: "thin", color: "#26333F" },
     verticalAlignment: "center",
   };
 
-  sheet.getRange("A3:I3").format = {
+  sheet.getRange("A3:K3").format = {
     fill: "#D8E7E1",
     font: { name: "Aptos", size: 10, color: "#12302A", bold: true },
     borders: { preset: "outside", style: "thin", color: "#9DB8AE" },
@@ -110,14 +162,15 @@ function styleSheet(sheet, rowCount) {
   };
 
   if (rowCount > 3) {
-    sheet.getRange(`A4:I${rowCount}`).format = {
+    sheet.getRange(`A4:K${rowCount}`).format = {
       fill: "#FBFCFD",
       borders: { preset: "inside", style: "thin", color: "#E5E7EB" },
       verticalAlignment: "top",
       wrapText: true,
     };
-    sheet.getRange(`E4:E${rowCount}`).format.horizontalAlignment = "center";
-    sheet.getRange(`G4:H${rowCount}`).format.horizontalAlignment = "center";
+    sheet.getRange(`D4:D${rowCount}`).format.horizontalAlignment = "center";
+    sheet.getRange(`F4:G${rowCount}`).format.horizontalAlignment = "center";
+    sheet.getRange(`I4:J${rowCount}`).format.horizontalAlignment = "center";
   }
 
   sheet.getRange(`A4:A${rowCount}`).format.font = {
@@ -130,52 +183,57 @@ function styleSheet(sheet, rowCount) {
   applyWidth(sheet, "A", 190);
   applyWidth(sheet, "B", 145);
   applyWidth(sheet, "C", 90);
-  applyWidth(sheet, "D", 70);
-  applyWidth(sheet, "E", 150);
-  applyWidth(sheet, "F", 520);
-  applyWidth(sheet, "G", 100);
-  applyWidth(sheet, "H", 95);
-  applyWidth(sheet, "I", 190);
+  applyWidth(sheet, "D", 90);
+  applyWidth(sheet, "E", 260);
+  applyWidth(sheet, "F", 70);
+  applyWidth(sheet, "G", 150);
+  applyWidth(sheet, "H", 520);
+  applyWidth(sheet, "I", 100);
+  applyWidth(sheet, "J", 95);
+  applyWidth(sheet, "K", 190);
 
   try {
-    sheet.getRange(`A1:I${rowCount}`).format.autofitRows();
+    sheet.getRange(`A1:K${rowCount}`).format.autofitRows();
   } catch {
     // Row autofit is a visual nicety; the workbook remains usable without it.
   }
 }
 
-function styleSummarySheet(sheet, rowCount) {
-  sheet.getRange(`A1:F${rowCount}`).format = {
+function styleSummarySheet(sheet, rowCount, starterHeaderRow) {
+  sheet.getRange(`A1:G${rowCount}`).format = {
     font: { name: "Aptos", size: 10, color: "#1F2937" },
     verticalAlignment: "top",
     wrapText: true,
   };
-  sheet.getRange("A1:F1").format = {
+  sheet.getRange("A1:G1").format = {
     fill: "#26333F",
     font: { name: "Aptos Display", size: 16, color: "#FFFFFF", bold: true },
   };
-  sheet.getRange("A4:B4").format = {
-    fill: "#D8E7E1",
-    font: { name: "Aptos", size: 10, color: "#12302A", bold: true },
-    borders: { preset: "outside", style: "thin", color: "#9DB8AE" },
-  };
-  sheet.getRange("D4:E4").format = {
-    fill: "#D8E7E1",
-    font: { name: "Aptos", size: 10, color: "#12302A", bold: true },
-    borders: { preset: "outside", style: "thin", color: "#9DB8AE" },
-  };
+  for (const headerRange of ["A4:B4", "D4:E4", `A${starterHeaderRow}:C${starterHeaderRow}`]) {
+    sheet.getRange(headerRange).format = {
+      fill: "#D8E7E1",
+      font: { name: "Aptos", size: 10, color: "#12302A", bold: true },
+      borders: { preset: "outside", style: "thin", color: "#9DB8AE" },
+    };
+  }
   sheet.getRange(`A5:B${rowCount}`).format = {
     borders: { preset: "inside", style: "thin", color: "#E5E7EB" },
   };
   sheet.getRange(`D5:E${rowCount}`).format = {
     borders: { preset: "inside", style: "thin", color: "#E5E7EB" },
   };
+  sheet.getRange(`A${starterHeaderRow + 1}:C${rowCount}`).format = {
+    fill: "#D8E7E1",
+    borders: { preset: "inside", style: "thin", color: "#E5E7EB" },
+  };
   for (const [column, px] of [
     ["A", 180],
     ["B", 90],
+    ["C", 95],
     ["D", 180],
     ["E", 90],
     ["F", 320],
+    ["G", 90],
   ]) {
     applyWidth(sheet, column, px);
   }
@@ -183,9 +241,15 @@ function styleSummarySheet(sheet, rowCount) {
 
 async function main() {
   const raw = await fs.readFile(cardsPath, "utf8");
+  const archetypeRaw = await fs.readFile(archetypesPath, "utf8");
   const data = JSON.parse(raw);
-  const implementedCards = sortCards(
+  const archetypeData = JSON.parse(archetypeRaw);
+  const archetypes = archetypeData.archetypes ?? [];
+  const archetypesById = new Map(archetypes.map((archetype) => [String(archetype.id), archetype]));
+  const starterDeckMap = buildStarterDeckMap(archetypes);
+  const implementedCards = sortCardsForWorkbook(
     (data.cards ?? []).filter((card) => card.combat && Object.keys(card.combat).length > 0),
+    archetypes,
   );
 
   const workbook = Workbook.create();
@@ -196,6 +260,8 @@ async function main() {
     "Name",
     "Archetype",
     "Card Type",
+    "Starter Deck?",
+    "Starter Deck Copies",
     "Cost",
     "Stats",
     "Implemented Gameplay Effect",
@@ -206,18 +272,20 @@ async function main() {
 
   const rows = implementedCards.map((card) => [
     card.name ?? "",
-    ARCHETYPES[archetypeFor(card)] ?? titleCase(card.archetype ?? "neutral"),
+    archetypeName(card, archetypesById),
     cardType(card),
+    starterDeckMap.has(String(card.id ?? "")) ? "Yes" : "No",
+    starterDeckCopies(card, starterDeckMap),
     Number(card.cost ?? 0),
     gameplayStats(card),
-    combatSummary(card),
+    starterAdjustedSummary(card, archetypesById),
     titleCase(card.role ?? ""),
     titleCase(card.rarity ?? ""),
     card.id ?? "",
   ]);
 
-  cardSheet.getRange("A1:I1").values = [["Road to Worlds - Implemented Gameplay Cards", "", "", "", "", "", "", "", ""]];
-  cardSheet.getRange("A2:I2").values = [[
+  cardSheet.getRange("A1:K1").values = [["Road to Worlds - Implemented Gameplay Cards", "", "", "", "", "", "", "", "", "", ""]];
+  cardSheet.getRange("A2:K2").values = [[
     `Source: data/content/cards.json. Inclusion rule: cards loaded by gameplay with an explicit combat object. Total cards: ${implementedCards.length}.`,
     "",
     "",
@@ -227,23 +295,34 @@ async function main() {
     "",
     "",
     "",
+    "",
+    "",
   ]];
-  cardSheet.getRange("A3:I3").values = [headers];
+  cardSheet.getRange("A3:K3").values = [headers];
   cardSheet.getRange(a1Range(0, 4, headers.length, rows.length)).values = rows;
-  mergeIfPossible(cardSheet, "A1:I1");
-  mergeIfPossible(cardSheet, "A2:I2");
+  mergeIfPossible(cardSheet, "A1:K1");
+  mergeIfPossible(cardSheet, "A2:K2");
   styleSheet(cardSheet, rows.length + 3);
 
   const byType = countBy(implementedCards, cardType);
   const byArchetype = countBy(
     implementedCards,
-    (card) => ARCHETYPES[archetypeFor(card)] ?? titleCase(card.archetype ?? "neutral"),
+    (card) => archetypeName(card, archetypesById),
   );
+  const starterDeckRows = archetypes.map((archetype) => {
+    const entries = archetype.starterDeck ?? [];
+    return [
+      String(archetype.name ?? archetype.id ?? ""),
+      new Set(entries.map((entry) => String(entry.cardId ?? ""))).size,
+      entries.reduce((sum, entry) => sum + Number(entry.count ?? 0), 0),
+    ];
+  });
+  const starterUniqueCount = new Set([...starterDeckMap.keys()]).size;
   const summaryRows = [
-    ["Road to Worlds - Card Implementation Summary", "", "", "", "", ""],
-    ["Generated", "2026-06-16", "", "", "", ""],
-    ["Source", "data/content/cards.json", "", "Inclusion Rule", "Explicit combat object loaded by Main.gd", ""],
-    ["Card Type", "Count", "", "Archetype", "Count", ""],
+    ["Road to Worlds - Card Implementation Summary", "", "", "", "", "", ""],
+    ["Generated", "2026-06-16", "", "", "", "", ""],
+    ["Source", "data/content/cards.json", "", "Inclusion Rule", "Explicit combat object loaded by Main.gd", "", ""],
+    ["Card Type", "Count", "", "Archetype", "Count", "", ""],
   ];
   const maxRows = Math.max(byType.length, byArchetype.length);
   for (let i = 0; i < maxRows; i += 1) {
@@ -254,20 +333,27 @@ async function main() {
       byArchetype[i]?.[0] ?? "",
       byArchetype[i]?.[1] ?? "",
       "",
+      "",
     ]);
   }
-  summaryRows.push(["", "", "", "", "", ""]);
-  summaryRows.push(["Total Implemented Cards", implementedCards.length, "", "", "", ""]);
-  summarySheet.getRange(a1Range(0, 1, 6, summaryRows.length)).values = summaryRows;
-  mergeIfPossible(summarySheet, "A1:F1");
-  styleSummarySheet(summarySheet, summaryRows.length);
+  summaryRows.push(["", "", "", "", "", "", ""]);
+  summaryRows.push(["Total Implemented Cards", implementedCards.length, "", "Unique Starter Cards", starterUniqueCount, "", ""]);
+  summaryRows.push(["", "", "", "", "", "", ""]);
+  const starterHeaderRow = summaryRows.length + 1;
+  summaryRows.push(["Starter Deck", "Unique Cards", "Total Copies", "", "", "", ""]);
+  for (const row of starterDeckRows) {
+    summaryRows.push([row[0], row[1], row[2], "", "", "", ""]);
+  }
+  summarySheet.getRange(a1Range(0, 1, 7, summaryRows.length)).values = summaryRows;
+  mergeIfPossible(summarySheet, "A1:G1");
+  styleSummarySheet(summarySheet, summaryRows.length, starterHeaderRow);
 
   const check = await workbook.inspect({
     kind: "table",
-    range: `Implemented Cards!A1:I${Math.min(rows.length + 3, 16)}`,
+    range: `Implemented Cards!A1:K${Math.min(rows.length + 3, 16)}`,
     include: "values,formulas",
     tableMaxRows: 16,
-    tableMaxCols: 9,
+    tableMaxCols: 11,
   });
   console.log(check.ndjson);
 
@@ -281,7 +367,7 @@ async function main() {
 
   const renderCards = await workbook.render({
     sheetName: "Implemented Cards",
-    range: "A1:I24",
+    range: "A1:K24",
     scale: 1,
   });
   await fs.writeFile(
@@ -290,7 +376,7 @@ async function main() {
   );
   const renderSummary = await workbook.render({
     sheetName: "Summary",
-    range: "A1:F12",
+    range: "A1:G21",
     scale: 1,
   });
   await fs.writeFile(
