@@ -12,7 +12,7 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 
-	main._start_new_run("redline_aggro")
+	main._start_new_run("flightless_birds")
 	main._run_tournament()
 	await process_frame
 

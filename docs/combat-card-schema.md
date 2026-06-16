@@ -130,6 +130,10 @@ Wave 2 condition values:
 - `enemy_discard_at_least`: compare enemy discard size with `conditionAmount`.
 - `played_card_cost`: compare the triggering played card's cost with `conditionAmount`.
 - `played_card_archetype`: compare the triggering played card's archetype with `conditionValue`.
+- `played_card_animal_type`: compare the triggering played card's printed animal family with `conditionValue`.
+- `source_animal_type`: compare the source card's animal family with `conditionValue`.
+- `controls_animal_type`: true if the active player controls at least `conditionAmount` cards or units of `conditionValue`.
+- `enemy_controls_animal_type`: true if the opposing player controls at least `conditionAmount` cards or units of `conditionValue`.
 
 Wave 2 dynamic amounts:
 
@@ -139,6 +143,8 @@ Wave 2 dynamic amounts:
 - `amountSource: "own_discard_size"` uses active player's discard size.
 - `amountSource: "current_focus"` uses active player's current focus.
 - `amountSource: "played_card_cost"` uses the triggering played card's cost.
+- `amountSource: "friendly_animal_type_count"` counts friendly cards and units matching `animalType`.
+- `amountSource: "enemy_animal_type_count"` counts opposing cards and units matching `animalType`.
 
 Stat effects can include `"duration": "end_turn"` to expire their attack/health changes at end of turn.
 

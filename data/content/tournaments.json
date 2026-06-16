@@ -6,10 +6,16 @@
       "rounds": 3,
       "requiredWins": 2,
       "entryFee": 3,
-      "rewardMoney": { "3": 14, "2": 7 },
-      "rewardPacks": { "3": 1, "2": 0 },
+      "rewardMoney": {
+        "2": 7,
+        "3": 14
+      },
+      "rewardPacks": {
+        "2": 0,
+        "3": 1
+      },
       "bossName": "Local Rival Tess",
-      "bossArchetype": "lantern_control"
+      "bossArchetype": "snake"
     }
   ]
 }

@@ -12,7 +12,7 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 
-	main._start_new_run("redline_aggro")
+	main._start_new_run("flightless_birds")
 	main._show_ui_combat()
 	main._start_manual_combat_lab_battle()
 	await process_frame
@@ -193,6 +193,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
+	if int(main.run.manual_combat["opponent"]["board"][0].get("health", 0)) != 4:
+		push_error("UI smoke test committed targeted card effects before the travel animation finished.")
+		quit(1)
+		return
 	if _count_named_nodes(main, "ManualActionSummaryPanel") > 0 or _count_named_nodes(main, "ManualFeedbackChip") > 0:
 		push_error("UI smoke test rendered hidden battle log/action feedback by default.")
 		quit(1)
@@ -207,6 +211,12 @@ func _run() -> void:
 		return
 	if _count_named_nodes(main, "ManualBoardImpactBadge") == 0:
 		push_error("UI smoke test did not render board-layer impact feedback.")
+		quit(1)
+		return
+	await create_timer(1.15).timeout
+	await process_frame
+	if int(main.run.manual_combat["opponent"]["board"][0].get("health", 0)) >= 4:
+		push_error("UI smoke test did not commit targeted card effects after the travel animation finished.")
 		quit(1)
 		return
 
@@ -304,6 +314,10 @@ func _run() -> void:
 	main._manual_play_card("lan_late_fee_drake")
 	await process_frame
 	await process_frame
+	if _player_board_has_card(main, "lan_late_fee_drake"):
+		push_error("UI smoke test committed a played threat before its travel animation finished.")
+		quit(1)
+		return
 	if _count_named_nodes(main, "ManualBoardTargetArc") > 0 or _count_named_nodes(main, "ManualBoardTargetArrowHead") > 0:
 		push_error("UI smoke test rendered a target arrow for a non-target finisher play.")
 		quit(1)
@@ -313,6 +327,11 @@ func _run() -> void:
 		quit(1)
 		return
 	await create_timer(1.2).timeout
+	await process_frame
+	if not _player_board_has_card(main, "lan_late_fee_drake"):
+		push_error("UI smoke test did not commit a played threat after its travel animation finished.")
+		quit(1)
+		return
 	main._manual_set_inspect_card("red_quick_spark", "Hand", "", false)
 	await process_frame
 	main._show_active_combat_screen()
@@ -332,7 +351,7 @@ func _run() -> void:
 	main._manual_set_inspect_card("red_quick_spark", "Hand", "")
 	main._show_active_combat_screen()
 	await process_frame
-	if not _has_named_label_text(main, "ManualInspectName", "Quick Spark"):
+	if not _has_named_label_text(main, "ManualInspectName", "Quick Peck"):
 		push_error("UI smoke test did not update the click-pinned card inspect overlay.")
 		quit(1)
 		return
@@ -406,6 +425,14 @@ func _point_closer_to(root_node: Node, point_data: Variant, near_name: String, f
 		return false
 	var point := Vector2(float(point_data[0]), float(point_data[1]))
 	return point.distance_to(_node_global_center(near)) < point.distance_to(_node_global_center(far))
+
+
+func _player_board_has_card(main, card_id: String) -> bool:
+	var board: Array = main.run.manual_combat.get("player", {}).get("board", [])
+	for unit in board:
+		if String(unit.get("card_id", "")) == card_id:
+			return true
+	return false
 
 
 func _find_named_node(node: Node, target_name: String) -> Node:

@@ -44,8 +44,8 @@ func _init() -> void:
 func _exercise_card(combat_service: RefCounted, cards_by_id: Dictionary, archetypes_by_id: Dictionary, card_id: String, card: Dictionary, seed_offset: int) -> Dictionary:
 	var player_archetype := String(card.get("archetype", "neutral"))
 	if player_archetype == "neutral":
-		player_archetype = "redline_aggro"
-	var opponent_archetype := "lantern_control" if player_archetype != "lantern_control" else "redline_aggro"
+		player_archetype = "flightless_birds"
+	var opponent_archetype := "snake" if player_archetype != "snake" else "flightless_birds"
 	var player_deck := _deck_entries_to_dict(archetypes_by_id[player_archetype].get("starterDeck", []))
 	var opponent_deck := _deck_entries_to_dict(archetypes_by_id[opponent_archetype].get("starterDeck", []))
 	var state: Dictionary = combat_service.start_manual_game(player_deck, player_archetype, opponent_deck, opponent_archetype, 9000 + seed_offset)

@@ -361,6 +361,7 @@ func _resolve_played_card_triggers(state: Dictionary, active: Dictionary, played
 		"played_card_id": String(played_card.get("id", "")),
 		"played_card_cost": int(played_card.get("cost", 0)),
 		"played_card_archetype": String(played_card.get("archetype", "")),
+		"played_card_animal_type": _card_animal_type(played_card),
 		"played_card_role": String(played_card.get("role", ""))
 	}
 	_resolve_engine_triggers_with_context(state, active, "on_card_played", context)
@@ -479,9 +480,9 @@ func _play_score(card: Dictionary, active: Dictionary, enemy: Dictionary) -> flo
 			var health := float(combat.get("health", stats.get("resilience", 0)))
 			score += attack + health * 0.7
 			score += _effects_play_score(active, enemy, combat.get("onPlay", []), card)
-			if active["archetype"] == "redline_aggro":
+			if active["archetype"] == "flightless_birds":
 				score += float(stats.get("speed", 0)) * 1.4
-			if active["archetype"] == "verdant_midrange":
+			if active["archetype"] == "canine":
 				score += float(stats.get("resilience", 0)) * 0.8
 		"action":
 			score += _effects_play_score(active, enemy, combat.get("effects", []), card)
@@ -494,7 +495,7 @@ func _play_score(card: Dictionary, active: Dictionary, enemy: Dictionary) -> flo
 			for trigger in combat.get("triggers", []):
 				score += _effects_play_score(active, enemy, trigger.get("effects", []), card) * 0.8
 			score += float(stats.get("advantage", 0)) * 1.2
-			if active["archetype"] == "lantern_control":
+			if active["archetype"] == "snake":
 				score += 2.0
 	return score
 
@@ -897,7 +898,7 @@ func _action_should_go_face(card: Dictionary, active: Dictionary, enemy: Diction
 	var damage := _action_damage(card, enemy)
 	if int(enemy.get("life", STARTING_LIFE)) <= damage:
 		return true
-	if String(active.get("archetype", "")) == "redline_aggro" and int(enemy.get("life", STARTING_LIFE)) <= 10 and damage >= 2:
+	if String(active.get("archetype", "")) == "flightless_birds" and int(enemy.get("life", STARTING_LIFE)) <= 10 and damage >= 2:
 		return true
 	return enemy["board"].is_empty()
 
@@ -1017,6 +1018,14 @@ func _effect_condition_met(effect: Dictionary, source_card: Dictionary, active: 
 			return int(context.get("played_card_cost", -1)) == int(effect.get("conditionAmount", -2))
 		"played_card_archetype":
 			return String(context.get("played_card_archetype", "")) == String(effect.get("conditionValue", ""))
+		"played_card_animal_type":
+			return String(context.get("played_card_animal_type", "")) == String(effect.get("conditionValue", ""))
+		"source_animal_type":
+			return _card_animal_type(source_card) == String(effect.get("conditionValue", ""))
+		"controls_animal_type":
+			return _animal_type_count(active, String(effect.get("conditionValue", ""))) >= int(effect.get("conditionAmount", 1))
+		"enemy_controls_animal_type":
+			return _animal_type_count(enemy, String(effect.get("conditionValue", ""))) >= int(effect.get("conditionAmount", 1))
 		_:
 			return false
 
@@ -1040,6 +1049,10 @@ func _effect_amount(effect: Dictionary, active: Dictionary, enemy: Dictionary, s
 			amount = int(active.get("focus", amount))
 		"played_card_cost":
 			amount = int(context.get("played_card_cost", amount))
+		"friendly_animal_type_count":
+			amount = _animal_type_count(active, String(effect.get("animalType", effect.get("conditionValue", ""))))
+		"enemy_animal_type_count":
+			amount = _animal_type_count(enemy, String(effect.get("animalType", effect.get("conditionValue", ""))))
 
 	amount *= int(effect.get("multiplier", 1))
 	if effect.has("minimum"):
@@ -1047,6 +1060,27 @@ func _effect_amount(effect: Dictionary, active: Dictionary, enemy: Dictionary, s
 	if effect.has("maximum"):
 		amount = min(amount, int(effect.get("maximum", amount)))
 	return max(0, amount)
+
+
+func _card_animal_type(card: Dictionary) -> String:
+	return String(card.get("animalType", card.get("archetype", "neutral")))
+
+
+func _animal_type_count(combatant: Dictionary, animal_type: String) -> int:
+	if animal_type == "":
+		return 0
+	var count := 0
+	for unit in combatant["board"]:
+		var card_id := String(unit.get("card_id", ""))
+		if cards_by_id.has(card_id) and _card_animal_type(cards_by_id[card_id]) == animal_type:
+			count += 1
+		elif unit.get("tags", []).has(animal_type):
+			count += 1
+	for engine in combatant["engines"]:
+		var card_id := String(engine.get("card_id", ""))
+		if cards_by_id.has(card_id) and _card_animal_type(cards_by_id[card_id]) == animal_type:
+			count += 1
+	return count
 
 
 func _controls_tool(combatant: Dictionary) -> bool:
@@ -1340,7 +1374,7 @@ func _choose_attack_target(active: Dictionary, enemy: Dictionary, attacker: Dict
 	if guard.is_empty() and int(enemy["life"]) <= int(attacker["attack"]):
 		return {}
 
-	if active["archetype"] == "redline_aggro":
+	if active["archetype"] == "flightless_birds":
 		if not guard.is_empty():
 			return guard
 		return {}
@@ -1363,7 +1397,7 @@ func _choose_attack_target(active: Dictionary, enemy: Dictionary, attacker: Dict
 
 	if guard.is_empty() and best_score < int(attacker["attack"]) * 2:
 		return {}
-	if active["archetype"] == "lantern_control" and int(active["life"]) > 12 and int(attacker["attack"]) >= 4:
+	if active["archetype"] == "snake" and int(active["life"]) > 12 and int(attacker["attack"]) >= 4:
 		return {}
 	return best_target
 

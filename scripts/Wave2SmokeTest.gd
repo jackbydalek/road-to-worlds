@@ -46,7 +46,7 @@ func _init() -> void:
 
 
 func _test_death_damage() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12001)
+	var state := _fresh_state("canine", "flightless_birds", 12001)
 	state = _play_from_hand(state, "ver_last_word_brawler")
 	var unit := _first_player_unit(state, "ver_last_word_brawler")
 	var life_before := int(state["opponent"]["life"])
@@ -58,7 +58,7 @@ func _test_death_damage() -> Dictionary:
 
 
 func _test_death_focus() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12002)
+	var state := _fresh_state("canine", "flightless_birds", 12002)
 	state = _play_from_hand(state, "ver_refund_beast")
 	state["player"]["focus"] = 0
 	var unit := _first_player_unit(state, "ver_refund_beast")
@@ -70,7 +70,7 @@ func _test_death_focus() -> Dictionary:
 
 
 func _test_damage_player_buff() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12003)
+	var state := _fresh_state("canine", "flightless_birds", 12003)
 	state = _play_from_hand(state, "ver_growing_duelist")
 	state["opponent"]["board"] = []
 	var unit := _first_player_unit(state, "ver_growing_duelist")
@@ -83,7 +83,7 @@ func _test_damage_player_buff() -> Dictionary:
 
 
 func _test_damage_player_draw() -> Dictionary:
-	var state := _fresh_state("lantern_control", "redline_aggro", 12004)
+	var state := _fresh_state("snake", "flightless_birds", 12004)
 	state = _play_from_hand(state, "lan_curiosity_harness")
 	state["opponent"]["board"] = []
 	var unit := _first_player_unit(state, "lan_curiosity_harness")
@@ -96,7 +96,7 @@ func _test_damage_player_draw() -> Dictionary:
 
 
 func _test_end_turn_destroy() -> Dictionary:
-	var state := _fresh_state("redline_aggro", "lantern_control", 12005)
+	var state := _fresh_state("flightless_birds", "snake", 12005)
 	state = _play_from_hand(state, "red_glass_cannon_sprinter")
 	state["opponent"]["deck"] = []
 	state["opponent"]["hand"] = []
@@ -108,7 +108,7 @@ func _test_end_turn_destroy() -> Dictionary:
 
 
 func _test_opponent_draw_trigger() -> Dictionary:
-	var state := _fresh_state("redline_aggro", "lantern_control", 12006)
+	var state := _fresh_state("flightless_birds", "snake", 12006)
 	state = _play_from_hand(state, "red_draw_punisher")
 	state["opponent"]["deck"] = ["neu_sleeve_luck"]
 	var life_before := int(state["opponent"]["life"])
@@ -119,13 +119,13 @@ func _test_opponent_draw_trigger() -> Dictionary:
 
 
 func _test_tool_condition() -> Dictionary:
-	var state_without_tool := _fresh_state("verdant_midrange", "redline_aggro", 12007)
+	var state_without_tool := _fresh_state("canine", "flightless_birds", 12007)
 	state_without_tool = _play_from_hand(state_without_tool, "ver_toolfed_scrapper")
 	var plain := _first_player_unit(state_without_tool, "ver_toolfed_scrapper")
 	if int(plain.get("attack", 0)) != 2:
 		return { "ok": false, "reason": "Toolfed Scrapper buffed without a tool." }
 
-	var state_with_tool := _fresh_state("verdant_midrange", "redline_aggro", 12008)
+	var state_with_tool := _fresh_state("canine", "flightless_birds", 12008)
 	state_with_tool["player"]["engines"] = [{ "card_id": "ver_grove_stipend" }]
 	state_with_tool["player"]["life"] = 18
 	state_with_tool = _play_from_hand(state_with_tool, "ver_toolfed_scrapper")
@@ -136,7 +136,7 @@ func _test_tool_condition() -> Dictionary:
 
 
 func _test_dynamic_hand_damage() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12009)
+	var state := _fresh_state("canine", "flightless_birds", 12009)
 	state["opponent"]["hand"] = ["red_spark_runner", "red_live_wire", "red_pure_grave_spark", "red_big_spell_mascot"]
 	var life_before := int(state["opponent"]["life"])
 	state = _play_from_hand(state, "ver_grip_punisher")
@@ -146,7 +146,7 @@ func _test_dynamic_hand_damage() -> Dictionary:
 
 
 func _test_once_per_turn_card_play_trigger() -> Dictionary:
-	var state := _fresh_state("redline_aggro", "lantern_control", 12010)
+	var state := _fresh_state("flightless_birds", "snake", 12010)
 	state["player"]["hand"] = ["red_one_drop_reactor", "red_live_wire", "red_pure_grave_spark"]
 	state["player"]["focus"] = 12
 	state["player"]["max_focus"] = 12
@@ -164,21 +164,21 @@ func _test_once_per_turn_card_play_trigger() -> Dictionary:
 
 
 func _test_restricted_focus_payment() -> Dictionary:
-	var state := _fresh_state("redline_aggro", "lantern_control", 12011)
+	var state := _fresh_state("flightless_birds", "snake", 12011)
 	state["player"]["hand"] = ["red_live_wire"]
 	state["player"]["focus"] = 0
-	state["player"]["restricted_focus"] = { "redline_aggro": 1 }
+	state["player"]["restricted_focus"] = { "flightless_birds": 1 }
 	var life_before := int(state["opponent"]["life"])
 	state = combat_service.manual_play_card_with_target(state, "red_live_wire", "face", -1)
 	if state["player"]["hand"].has("red_live_wire") or int(state["opponent"]["life"]) != life_before - 2:
 		return { "ok": false, "reason": "Restricted focus did not pay for matching archetype card." }
-	if int(state["player"].get("restricted_focus", {}).get("redline_aggro", 0)) != 0:
+	if int(state["player"].get("restricted_focus", {}).get("flightless_birds", 0)) != 0:
 		return { "ok": false, "reason": "Restricted focus was not spent first." }
 
-	var blocked := _fresh_state("redline_aggro", "lantern_control", 12012)
+	var blocked := _fresh_state("flightless_birds", "snake", 12012)
 	blocked["player"]["hand"] = ["lan_null_pupil"]
 	blocked["player"]["focus"] = 0
-	blocked["player"]["restricted_focus"] = { "redline_aggro": 1 }
+	blocked["player"]["restricted_focus"] = { "flightless_birds": 1 }
 	blocked = combat_service.manual_play_card_with_target(blocked, "lan_null_pupil", "unit", 9001)
 	if not blocked["player"]["hand"].has("lan_null_pupil"):
 		return { "ok": false, "reason": "Restricted focus paid for an off-archetype card." }
@@ -186,17 +186,17 @@ func _test_restricted_focus_payment() -> Dictionary:
 
 
 func _test_stipend_grants_restricted_focus() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12013)
+	var state := _fresh_state("canine", "flightless_birds", 12013)
 	state["player"]["engines"] = [{ "card_id": "ver_grove_stipend" }]
 	state["player"]["restricted_focus"] = {}
 	combat_service._prepare_turn(state, state["player"])
-	if int(state["player"].get("restricted_focus", {}).get("verdant_midrange", 0)) < 1:
+	if int(state["player"].get("restricted_focus", {}).get("canine", 0)) < 1:
 		return { "ok": false, "reason": "Grove Stipend did not grant restricted Verdant focus." }
 	return { "ok": true }
 
 
 func _test_lifebloom_activation() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12014)
+	var state := _fresh_state("canine", "flightless_birds", 12014)
 	state = _play_from_hand(state, "ver_lifebloom_glider")
 	state["player"]["life"] = 18
 	state["player"]["focus"] = 1
@@ -208,7 +208,7 @@ func _test_lifebloom_activation() -> Dictionary:
 
 
 func _test_gravepath_activation() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12015)
+	var state := _fresh_state("canine", "flightless_birds", 12015)
 	state = _play_from_hand(state, "ver_gravepath_guide")
 	state["player"]["focus"] = 1
 	state["player"]["hand"] = []
@@ -221,7 +221,7 @@ func _test_gravepath_activation() -> Dictionary:
 
 
 func _test_focus_page_activation() -> Dictionary:
-	var state := _fresh_state("verdant_midrange", "redline_aggro", 12016)
+	var state := _fresh_state("canine", "flightless_birds", 12016)
 	state = _play_from_hand(state, "ver_focus_page")
 	state["player"]["focus"] = 0
 	var unit := _first_player_unit(state, "ver_focus_page")

@@ -7,10 +7,11 @@ const SAVE_PATH := "user://road_to_worlds_run.json"
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
-const ARCHETYPE_ORDER := ["redline_aggro", "lantern_control", "verdant_midrange"]
+const ARCHETYPE_ORDER := ["flightless_birds", "snake", "canine", "glires", "insect"]
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/CombatService.gd")
 const COMBAT_BOARD_SLOTS := 5
 const COMBAT_ENGINE_SLOTS := 3
+const MANUAL_PENDING_ACTION_COMMIT_DELAY := 1.0
 
 var rng := RandomNumberGenerator.new()
 var combat_service: RefCounted
@@ -35,6 +36,8 @@ var content: VBoxContainer
 var footer_label: RichTextLabel
 var manual_inspect_art_panel: PanelContainer
 var manual_inspect_name_label: Label
+var manual_inspect_type_panel: PanelContainer
+var manual_inspect_type_label: Label
 var manual_inspect_meta_label: Label
 var manual_inspect_stats_label: Label
 var manual_inspect_zone_label: Label
@@ -231,14 +234,16 @@ func _start_new_run(archetype_id: String) -> void:
 		"deck": starter_deck.duplicate(true),
 		"sideboard": {},
 		"meta": {
-			"redline_aggro": 0.40,
-			"lantern_control": 0.32,
-			"verdant_midrange": 0.28
+			"flightless_birds": 0.24,
+			"snake": 0.22,
+			"canine": 0.22,
+			"glires": 0.17,
+			"insect": 0.15
 		},
 		"reports": [
-			"Opening week: Redline Aggro is cheap and everywhere.",
-			"Verdant Midrange is picking up because it trades well into aggro.",
-			"Lantern Control players are happy to face fair midrange decks."
+			"Opening week: Flightless Birds Aggro is cheap and everywhere.",
+			"Canine Midrange is picking up because pack threats trade well into aggro.",
+			"Snake Control players are happy to coil around fair creature decks."
 		],
 		"shop": [],
 		"current_pack": [],
@@ -253,6 +258,7 @@ func _start_new_run(archetype_id: String) -> void:
 		"manual_battle_log_open": false,
 		"manual_animation": {},
 		"manual_animation_queue": [],
+		"manual_pending_action": {},
 		"manual_combat": {},
 		"last_combat": {}
 	}
@@ -494,7 +500,7 @@ func _pick_card_by_rarity(rarity: String) -> String:
 	if pool.is_empty():
 		return cards[0].id
 
-	var current_primary := "redline_aggro"
+	var current_primary := "flightless_birds"
 	if not run.is_empty():
 		current_primary = _calculate_deck_metrics(run.deck, run.sideboard).primary
 
@@ -713,8 +719,8 @@ func _show_deckbuilder() -> void:
 
 		var dot := Label.new()
 		dot.text = "●"
-		dot.tooltip_text = _affinity_label(card.get("archetype", "neutral"))
-		dot.add_theme_color_override("font_color", _affinity_color(card.get("archetype", "neutral")))
+		dot.tooltip_text = _affinity_label(_card_animal_type(card))
+		dot.add_theme_color_override("font_color", _affinity_color(_card_animal_type(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
@@ -724,7 +730,7 @@ func _show_deckbuilder() -> void:
 			String(card.rarity).capitalize(),
 			String(card.role).capitalize(),
 			int(card.cost),
-			_affinity_label(card.get("archetype", "neutral"))
+			_affinity_label(_card_animal_type(card))
 		]
 		label.tooltip_text = card.text
 		label.add_theme_color_override("font_color", _rarity_text_color(card.get("rarity", "common")))
@@ -790,8 +796,8 @@ func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool) -> v
 
 		var dot := Label.new()
 		dot.text = "●"
-		dot.tooltip_text = _affinity_label(card.get("archetype", "neutral"))
-		dot.add_theme_color_override("font_color", _affinity_color(card.get("archetype", "neutral")))
+		dot.tooltip_text = _affinity_label(_card_animal_type(card))
+		dot.add_theme_color_override("font_color", _affinity_color(_card_animal_type(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
@@ -1090,6 +1096,7 @@ func _set_combat_lab_opponent(archetype_id: String) -> void:
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
 	run.manual_animation_queue = []
+	run.manual_pending_action = {}
 	_set_footer("Combat Lab opponent set to " + archetypes_by_id[archetype_id].name + ".")
 	_show_active_combat_screen()
 
@@ -1132,19 +1139,20 @@ func _start_manual_combat_lab_battle() -> void:
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
 	run.manual_animation_queue = []
+	run.manual_pending_action = {}
 	run.last_combat = {}
 	_set_footer("Manual battle started.")
 	_show_active_combat_screen()
 
 
 func _manual_play_card(card_id: String) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
-	run.manual_combat = combat_service.manual_play_card(run.manual_combat, card_id)
-	var destination_anchor := _manual_play_destination_anchor(before_state, run.manual_combat, card_id, "auto")
-	_manual_commit_action_animation(before_state, run.manual_combat, {
+	var after_state: Dictionary = combat_service.manual_play_card(before_state.duplicate(true), card_id)
+	var destination_anchor := _manual_play_destination_anchor(before_state, after_state, card_id, "auto", current_screen == "ui_combat")
+	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": card_id,
 		"source_zone": "Your Hand",
 		"target_zone": _manual_play_destination_zone(card_id, "auto"),
@@ -1159,20 +1167,20 @@ func _manual_play_card(card_id: String) -> void:
 
 
 func _manual_play_card_target(card_id: String, target_type: String, target_instance_id: int = -1) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
-	run.manual_combat = combat_service.manual_play_card_with_target(run.manual_combat, card_id, target_type, target_instance_id)
+	var after_state: Dictionary = combat_service.manual_play_card_with_target(before_state.duplicate(true), card_id, target_type, target_instance_id)
 	var target_anchor := _manual_target_anchor(before_state, target_type, target_instance_id, false)
-	_manual_commit_action_animation(before_state, run.manual_combat, {
+	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": card_id,
 		"source_zone": "Your Hand",
 		"target_zone": _manual_target_zone_label(before_state, target_type, target_instance_id),
 		"destination_zone": _manual_play_destination_zone(card_id, target_type),
 		"source_anchor": _manual_hand_card_anchor(card_id),
 		"target_anchor": target_anchor,
-		"destination_anchor": _manual_play_destination_anchor(before_state, run.manual_combat, card_id, target_type),
+		"destination_anchor": _manual_play_destination_anchor(before_state, after_state, card_id, target_type, current_screen == "ui_combat"),
 		"verb": "Cast"
 	}, log_start)
 	run.manual_selection = {}
@@ -1180,15 +1188,15 @@ func _manual_play_card_target(card_id: String, target_type: String, target_insta
 
 
 func _manual_attack(instance_id: int, target_mode: String) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var attacker := _manual_find_player_unit(before_state, instance_id)
 	var source_anchor := _manual_unit_anchor(before_state, "player", instance_id)
 	var target_anchor := _manual_target_anchor(before_state, target_mode, -1, false)
-	run.manual_combat = combat_service.manual_attack(run.manual_combat, instance_id, target_mode)
-	_manual_commit_action_animation(before_state, run.manual_combat, {
+	var after_state: Dictionary = combat_service.manual_attack(before_state.duplicate(true), instance_id, target_mode)
+	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": String(attacker.get("card_id", "")),
 		"source_zone": "Your Board",
 		"target_zone": "Best Legal Target",
@@ -1203,14 +1211,14 @@ func _manual_attack(instance_id: int, target_mode: String) -> void:
 
 
 func _manual_attack_target(instance_id: int, target_type: String, target_instance_id: int = -1) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var attacker := _manual_find_player_unit(before_state, instance_id)
 	var source_anchor := _manual_unit_anchor(before_state, "player", instance_id)
-	run.manual_combat = combat_service.manual_attack_target(run.manual_combat, instance_id, target_type, target_instance_id)
-	_manual_commit_action_animation(before_state, run.manual_combat, {
+	var after_state: Dictionary = combat_service.manual_attack_target(before_state.duplicate(true), instance_id, target_type, target_instance_id)
+	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": String(attacker.get("card_id", "")),
 		"source_zone": "Your Board",
 		"target_zone": _manual_target_zone_label(before_state, target_type, target_instance_id),
@@ -1225,14 +1233,14 @@ func _manual_attack_target(instance_id: int, target_type: String, target_instanc
 
 
 func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var unit := _manual_find_player_unit(before_state, instance_id)
 	var source_anchor := _manual_unit_anchor(before_state, "player", instance_id)
-	run.manual_combat = combat_service.manual_activate_unit_ability(run.manual_combat, instance_id, ability_index)
-	_manual_commit_action_animation(before_state, run.manual_combat, {
+	var after_state: Dictionary = combat_service.manual_activate_unit_ability(before_state.duplicate(true), instance_id, ability_index)
+	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": String(unit.get("card_id", "")),
 		"source_zone": "Your Board",
 		"target_zone": "Ability",
@@ -1247,7 +1255,7 @@ func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void
 
 
 func _manual_end_turn() -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
@@ -1264,6 +1272,7 @@ func _clear_manual_battle() -> void:
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
 	run.manual_animation_queue = []
+	run.manual_pending_action = {}
 	_set_footer("Manual battle cleared.")
 	_show_active_combat_screen()
 
@@ -1288,7 +1297,7 @@ func _manual_clear_inspect_overlay() -> void:
 
 
 func _manual_select_card(card_id: String) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	run.manual_selection = { "kind": "card", "card_id": card_id }
 	_manual_set_inspect_card(card_id, "Hand", "", true)
@@ -1297,7 +1306,7 @@ func _manual_select_card(card_id: String) -> void:
 
 
 func _manual_select_attacker(instance_id: int) -> void:
-	if run.get("manual_combat", {}).is_empty():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	run.manual_selection = { "kind": "attacker", "instance_id": instance_id }
 	var attacker := _manual_find_player_unit(run.manual_combat, instance_id)
@@ -1339,6 +1348,70 @@ func _manual_commit_action_animation(before_state: Dictionary, after_state: Dict
 		return
 	run.manual_animation = animation
 	run.manual_animation_queue = []
+
+
+func _manual_stage_or_commit_player_action(before_state: Dictionary, after_state: Dictionary, descriptor: Dictionary, log_start: int) -> void:
+	var animation := _manual_build_action_animation(before_state, after_state, descriptor, log_start)
+	if current_screen == "ui_combat" and not animation.is_empty():
+		_manual_stage_pending_action(after_state, animation)
+		return
+
+	run.manual_combat = after_state
+	if animation.is_empty():
+		run.manual_animation = {}
+		run.manual_animation_queue = []
+	else:
+		run.manual_animation = animation
+		run.manual_animation_queue = []
+
+
+func _manual_stage_pending_action(after_state: Dictionary, animation: Dictionary) -> void:
+	animation["pending_commit"] = true
+	run.manual_animation = animation
+	run.manual_animation_queue = []
+	run.manual_pending_action = {
+		"after_state": after_state,
+		"commit_scheduled": false
+	}
+	call_deferred("_manual_schedule_pending_action_commit")
+
+
+func _manual_has_pending_action() -> bool:
+	return not run.get("manual_pending_action", {}).is_empty()
+
+
+func _manual_schedule_pending_action_commit() -> void:
+	if run.is_empty():
+		return
+	var pending: Dictionary = run.get("manual_pending_action", {})
+	if pending.is_empty():
+		return
+	if bool(pending.get("commit_scheduled", false)):
+		return
+	pending["commit_scheduled"] = true
+	run.manual_pending_action = pending
+	var timer := get_tree().create_timer(MANUAL_PENDING_ACTION_COMMIT_DELAY)
+	timer.timeout.connect(Callable(self, "_manual_commit_pending_action"))
+
+
+func _manual_commit_pending_action() -> void:
+	if run.is_empty():
+		return
+	var pending: Dictionary = run.get("manual_pending_action", {})
+	if pending.is_empty():
+		return
+	var after_state: Dictionary = pending.get("after_state", {})
+	if not after_state.is_empty():
+		run.manual_combat = after_state
+	var animation: Dictionary = run.get("manual_animation", {})
+	if not animation.is_empty():
+		animation["board_vfx_started"] = true
+		animation.erase("pending_commit")
+		run.manual_animation = animation
+	run.manual_pending_action = {}
+	run.manual_selection = {}
+	if current_screen == "ui_combat":
+		_show_active_combat_screen()
 
 
 func _manual_build_action_animation(before_state: Dictionary, after_state: Dictionary, descriptor: Dictionary, log_start: int, log_end: int = -1) -> Dictionary:
@@ -1819,12 +1892,16 @@ func _manual_target_zone_label(state: Dictionary, target_type: String, target_in
 			return "Target"
 
 
-func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dictionary, card_id: String, target_type: String) -> String:
+func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dictionary, card_id: String, target_type: String, prefer_slot_anchor: bool = false) -> String:
 	if not cards_by_id.has(card_id):
 		return "ManualZone_PlayerDiscard"
 	var card: Dictionary = cards_by_id[card_id]
 	match _combat_card_type(card):
 		"threat":
+			if prefer_slot_anchor:
+				var slot_anchor := _manual_new_unit_slot_anchor(before_state, after_state, "player", card_id)
+				if slot_anchor != "":
+					return slot_anchor
 			var new_unit_anchor := _manual_new_unit_anchor(before_state, after_state, "player", card_id)
 			return new_unit_anchor if new_unit_anchor != "" else "ManualZone_PlayerBoard"
 		"engine":
@@ -1834,6 +1911,20 @@ func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dict
 				return "ManualZone_PlayerDiscard"
 			return "ManualZone_PlayerDiscard"
 	return "ManualZone_PlayerDiscard"
+
+
+func _manual_new_unit_slot_anchor(before_state: Dictionary, after_state: Dictionary, side: String, card_id: String) -> String:
+	var before_combatant: Dictionary = before_state.get("player" if side == "player" else "opponent", {})
+	var after_combatant: Dictionary = after_state.get("player" if side == "player" else "opponent", {})
+	var before_ids: Array = []
+	for unit in before_combatant.get("board", []):
+		before_ids.append(int(unit.get("instance_id", -1)))
+	var after_board: Array = after_combatant.get("board", [])
+	for unit_index in range(after_board.size()):
+		var unit: Dictionary = after_board[unit_index]
+		if String(unit.get("card_id", "")) == card_id and not before_ids.has(int(unit.get("instance_id", -1))):
+			return _manual_board_slot_anchor(side == "player", unit_index)
+	return ""
 
 
 func _manual_target_anchor(state: Dictionary, target_type: String, target_instance_id: int, prefer_face_affordance: bool) -> String:
@@ -1939,7 +2030,7 @@ func _add_manual_combat_lab(parent: Node, state: Dictionary) -> void:
 	panel.add_child(controls)
 
 	var end_button := _make_button("End Turn")
-	end_button.disabled = is_over or phase != "player_main"
+	end_button.disabled = is_over or phase != "player_main" or _manual_has_pending_action()
 	_connect_pressed(end_button, _manual_end_turn)
 	controls.add_child(end_button)
 
@@ -2334,7 +2425,7 @@ func _add_ui_combat_end_turn_overlay(parent: Node, is_over: bool, phase: String)
 	_style_button(end_button, "action")
 	end_button.add_theme_font_size_override("font_size", 18)
 	end_button.custom_minimum_size = Vector2(150, 32)
-	end_button.disabled = is_over or phase != "player_main"
+	end_button.disabled = is_over or phase != "player_main" or _manual_has_pending_action()
 	_connect_pressed(end_button, _manual_end_turn)
 	margin.add_child(end_button)
 
@@ -2627,7 +2718,9 @@ func _add_manual_committed_board_arc(layer: Node2D, root: Node) -> void:
 		return
 	animation["board_vfx_started"] = true
 	run.manual_animation = animation
-	if not run.get("manual_animation_queue", []).is_empty():
+	if _manual_has_pending_action():
+		_manual_schedule_pending_action_commit()
+	elif not run.get("manual_animation_queue", []).is_empty():
 		_manual_schedule_animation_queue_advance(animation)
 	_pulse_manual_anchor(root, source_anchor, Color("#ffe08a"))
 	if should_draw_arrow:
@@ -3338,6 +3431,26 @@ func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
 	manual_inspect_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(manual_inspect_name_label)
 
+	manual_inspect_type_panel = PanelContainer.new()
+	manual_inspect_type_panel.name = "ManualInspectTypeStrip"
+	manual_inspect_type_panel.custom_minimum_size = Vector2(0, 18 if compact_duel else 24)
+	box.add_child(manual_inspect_type_panel)
+
+	var type_margin := MarginContainer.new()
+	type_margin.add_theme_constant_override("margin_left", 6)
+	type_margin.add_theme_constant_override("margin_right", 6)
+	type_margin.add_theme_constant_override("margin_top", 1)
+	type_margin.add_theme_constant_override("margin_bottom", 1)
+	manual_inspect_type_panel.add_child(type_margin)
+
+	manual_inspect_type_label = Label.new()
+	manual_inspect_type_label.name = "ManualInspectTypeLabel"
+	manual_inspect_type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	manual_inspect_type_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	manual_inspect_type_label.clip_text = true
+	manual_inspect_type_label.add_theme_font_size_override("font_size", 9 if compact_duel else 12)
+	type_margin.add_child(manual_inspect_type_label)
+
 	manual_inspect_meta_label = Label.new()
 	manual_inspect_meta_label.name = "ManualInspectMeta"
 	manual_inspect_meta_label.add_theme_color_override("font_color", Color("#c7d0df"))
@@ -3480,6 +3593,10 @@ func _refresh_manual_inspect_panel() -> void:
 	var card_id := String(inspect_data.get("card_id", ""))
 	if not cards_by_id.has(card_id):
 		manual_inspect_name_label.text = "Inspect"
+		if manual_inspect_type_panel != null and is_instance_valid(manual_inspect_type_panel):
+			manual_inspect_type_panel.visible = false
+		if manual_inspect_type_label != null and is_instance_valid(manual_inspect_type_label):
+			manual_inspect_type_label.text = ""
 		manual_inspect_meta_label.text = "Hover for a quick look. Click a card to pin it."
 		manual_inspect_stats_label.text = ""
 		manual_inspect_zone_label.text = ""
@@ -3492,9 +3609,14 @@ func _refresh_manual_inspect_panel() -> void:
 	var combat: Dictionary = card.get("combat", {})
 	var kind := String(combat.get("kind", _combat_card_type(card))).capitalize()
 	manual_inspect_name_label.text = String(card.get("name", card_id))
-	manual_inspect_meta_label.text = "%s | %s | %s | Cost %d" % [
+	if manual_inspect_type_panel != null and is_instance_valid(manual_inspect_type_panel):
+		manual_inspect_type_panel.visible = true
+		_style_card_type_strip(manual_inspect_type_panel, _card_animal_type(card), current_screen == "ui_combat")
+	if manual_inspect_type_label != null and is_instance_valid(manual_inspect_type_label):
+		manual_inspect_type_label.text = _combat_card_type_line(card)
+		manual_inspect_type_label.add_theme_color_override("font_color", _affinity_color(_card_animal_type(card)).lightened(0.68))
+	manual_inspect_meta_label.text = "%s | %s | Cost %d" % [
 		String(card.get("rarity", "common")).capitalize(),
-		_archetype_label(String(card.get("archetype", "neutral"))),
 		kind,
 		int(card.get("cost", 0))
 	]
@@ -3996,7 +4118,9 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 			String(unit.get("card_id", "")),
 			"Your Board" if is_player else "Opponent Board",
 			_manual_current_unit_summary(unit),
-			_manual_unit_card_anchor(is_player, int(unit.get("instance_id", -1)))
+			_manual_unit_card_anchor(is_player, int(unit.get("instance_id", -1))),
+			_unit_card_type_line(unit),
+			_unit_animal_type(unit)
 		)
 
 		if selected_attacker:
@@ -4063,7 +4187,7 @@ func _add_manual_hand(parent: VBoxContainer, combatant: Dictionary, state: Dicti
 		var card_box := _add_combat_placeholder_card(
 			grid,
 			String(card.get("name", card_id)),
-			"%s | Cost %d" % [String(card.get("role", "card")).capitalize(), int(card.get("cost", 0))],
+			"Cost %d" % int(card.get("cost", 0)),
 			_combat_effect_summary(card),
 			_combat_placeholder_color(card_id),
 			border_color,
@@ -4119,7 +4243,7 @@ func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictiona
 		var card_box := _add_combat_placeholder_card(
 			fan,
 			String(card.get("name", card_id)),
-			"%s | Cost %d" % [String(card.get("role", "card")).capitalize(), int(card.get("cost", 0))],
+			"Cost %d" % int(card.get("cost", 0)),
 			_combat_effect_summary(card),
 			_combat_placeholder_color(card_id),
 			border_color,
@@ -4242,11 +4366,11 @@ func _add_manual_card_badge(parent: Node, text: String, color: Color) -> void:
 	parent.add_child(badge)
 
 
-func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "") -> VBoxContainer:
+func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "") -> VBoxContainer:
 	var compact_duel := current_screen == "ui_combat"
 	var panel := PanelContainer.new()
 	panel.name = node_anchor if node_anchor != "" else "CombatCardPanel"
-	panel.custom_minimum_size = Vector2(92, 54) if compact_duel else Vector2(172, 132)
+	panel.custom_minimum_size = Vector2(96, 62) if compact_duel else Vector2(172, 132)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 	panel.pivot_offset = panel.custom_minimum_size * 0.5
@@ -4280,11 +4404,42 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 10 if compact_duel else 14)
+	title_label.add_theme_font_size_override("font_size", 9 if compact_duel else 14)
 	title_label.add_theme_color_override("font_color", Color("#f3efe4"))
 	title_label.autowrap_mode = TextServer.AUTOWRAP_OFF if compact_duel else TextServer.AUTOWRAP_WORD_SMART
 	title_label.clip_text = compact_duel
 	box.add_child(title_label)
+
+	var type_text := printed_type
+	var animal_type := printed_animal_type if printed_animal_type != "" else "neutral"
+	if inspect_card_id != "" and cards_by_id.has(inspect_card_id):
+		var inspect_card: Dictionary = cards_by_id[inspect_card_id]
+		type_text = _combat_card_type_line(inspect_card) if type_text == "" else type_text
+		animal_type = _card_animal_type(inspect_card) if printed_animal_type == "" else printed_animal_type
+	elif type_text == "":
+		animal_type = "neutral"
+	if type_text != "":
+		var type_strip := PanelContainer.new()
+		type_strip.name = "CombatCardTypeStrip"
+		type_strip.custom_minimum_size = Vector2(0, 12 if compact_duel else 18)
+		_style_card_type_strip(type_strip, animal_type, compact_duel)
+		box.add_child(type_strip)
+
+		var type_margin := MarginContainer.new()
+		type_margin.add_theme_constant_override("margin_left", 4)
+		type_margin.add_theme_constant_override("margin_right", 4)
+		type_margin.add_theme_constant_override("margin_top", 0)
+		type_margin.add_theme_constant_override("margin_bottom", 0)
+		type_strip.add_child(type_margin)
+
+		var type_label := Label.new()
+		type_label.text = type_text.to_upper()
+		type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		type_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		type_label.clip_text = true
+		type_label.add_theme_font_size_override("font_size", 7 if compact_duel else 10)
+		type_label.add_theme_color_override("font_color", _affinity_color(animal_type).lightened(0.68))
+		type_margin.add_child(type_label)
 
 	var subtitle_label := Label.new()
 	subtitle_label.text = subtitle
@@ -4409,6 +4564,11 @@ func _manual_selection() -> Dictionary:
 
 
 func _manual_selection_label(state: Dictionary) -> String:
+	if _manual_has_pending_action():
+		var animation: Dictionary = run.get("manual_animation", {})
+		if not animation.is_empty():
+			return "Resolving %s..." % String(animation.get("card_name", "action"))
+		return "Resolving action..."
 	var selection := _manual_selection()
 	match String(selection.get("kind", "")):
 		"card":
@@ -4513,7 +4673,7 @@ func _combat_placeholder_color(card_id: String) -> Color:
 	if not cards_by_id.has(String(card_id)):
 		return Color("#28313d")
 	var card: Dictionary = cards_by_id[String(card_id)]
-	var base := _affinity_color(String(card.get("archetype", "neutral")))
+	var base := _affinity_color(_card_animal_type(card))
 	match String(card.get("rarity", "common")):
 		"uncommon":
 			return base.darkened(0.42)
@@ -4639,6 +4799,10 @@ func _effect_amount_summary(effect: Dictionary, fallback: int) -> String:
 			return "focus"
 		"played_card_cost":
 			return "played cost"
+		"friendly_animal_type_count":
+			return "your " + _affinity_label(String(effect.get("animalType", effect.get("conditionValue", ""))))
+		"enemy_animal_type_count":
+			return "enemy " + _affinity_label(String(effect.get("animalType", effect.get("conditionValue", ""))))
 		_:
 			return str(fallback)
 
@@ -4697,7 +4861,7 @@ func _manual_guard_unit(state: Dictionary) -> Dictionary:
 
 
 func _manual_combat_accepts_input(state: Dictionary) -> bool:
-	return not bool(state.get("game_over", false)) and String(state.get("phase", "")) == "player_main"
+	return not _manual_has_pending_action() and not bool(state.get("game_over", false)) and String(state.get("phase", "")) == "player_main"
 
 
 func _manual_can_play_card(state: Dictionary, card_id: String) -> bool:
@@ -5044,14 +5208,18 @@ func _weighted_meta_pick() -> String:
 
 func _predator_archetype(archetype_id: String) -> String:
 	match archetype_id:
-		"redline_aggro":
-			return "verdant_midrange"
-		"verdant_midrange":
-			return "lantern_control"
-		"lantern_control":
-			return "redline_aggro"
+		"flightless_birds":
+			return "canine"
+		"canine":
+			return "snake"
+		"snake":
+			return "glires"
+		"glires":
+			return "insect"
+		"insect":
+			return "flightless_birds"
 		_:
-			return "redline_aggro"
+			return "flightless_birds"
 
 
 func _simulate_combat_match(opponent: Dictionary, deck_metrics: Dictionary) -> Dictionary:
@@ -5133,12 +5301,16 @@ func _update_meta_after_event(primary: String, wins: int, rounds: int) -> void:
 	var leader: String = _dominant_archetype()
 	reports.append("%s is the deck people are talking about this week." % archetypes_by_id[leader].name)
 	match leader:
-		"redline_aggro":
-			reports.append("Verdant players are buying sturdy two-drops and clean removal for the aggro field.")
-		"verdant_midrange":
-			reports.append("Lantern pilots are excited to line up answers against fair midrange threats.")
-		"lantern_control":
-			reports.append("Aggro pilots are cutting clunky cards and trying to get under control decks.")
+		"flightless_birds":
+			reports.append("Canine players are buying sturdy two-drops and clean trades for the bird rush.")
+		"canine":
+			reports.append("Snake pilots are excited to line up answers against fair pack threats.")
+		"snake":
+			reports.append("Glires players are trying to go wider than spot removal can handle.")
+		"glires":
+			reports.append("Insect pilots are leaning on revive loops to outlast the warren.")
+		"insect":
+			reports.append("Bird pilots are cutting clunky cards and trying to finish before the hive turns on.")
 
 	if wins == rounds:
 		reports.append("Your undefeated run is getting noticed. Expect sharper sideboards next week.")
@@ -5202,7 +5374,7 @@ func _calculate_deck_metrics(deck: Dictionary, sideboard: Dictionary) -> Diction
 	var total := _deck_total(deck)
 	if total <= 0:
 		return {
-			"primary": "redline_aggro",
+			"primary": "flightless_birds",
 			"fit": 0.0,
 			"score": 0.0,
 			"speed": 0.0,
@@ -5275,19 +5447,33 @@ func _calculate_deck_metrics(deck: Dictionary, sideboard: Dictionary) -> Diction
 
 	var curve_warning := "Curve looks playable."
 	var curve_bonus := 0.0
-	if primary == "redline_aggro":
+	if primary == "flightless_birds":
 		if low_cost < 20:
 			curve_warning = "Aggro deck is light on cheap cards."
 			curve_bonus -= 3.0
 		if high_cost > 4:
 			curve_warning = "Aggro deck may be too clunky."
 			curve_bonus -= 3.0
-	elif primary == "lantern_control":
+	elif primary == "snake":
 		if low_cost < 14:
 			curve_warning = "Control deck may not survive early turns."
 			curve_bonus -= 3.0
 		if high_cost > 8:
 			curve_warning = "Control deck has a heavy top end."
+			curve_bonus -= 1.5
+	elif primary == "glires":
+		if low_cost < 18:
+			curve_warning = "Glires deck wants more cheap bodies to propagate."
+			curve_bonus -= 2.0
+		if high_cost > 6:
+			curve_warning = "Glires deck may be too top-heavy for a wide plan."
+			curve_bonus -= 1.5
+	elif primary == "insect":
+		if low_cost < 15:
+			curve_warning = "Insect deck needs early bodies to fuel revive lines."
+			curve_bonus -= 2.0
+		if high_cost > 8:
+			curve_warning = "Insect deck has a heavy revive top end."
 			curve_bonus -= 1.5
 	else:
 		if low_cost < 16:
@@ -5446,7 +5632,7 @@ func _add_card_panel(parent: Node, card_id: String, note: String = "") -> VBoxCo
 
 	var meta := "%s | %s | %s | cost %d | $%d" % [
 		card.rarity.capitalize(),
-		_archetype_label(card.get("archetype", "neutral")),
+		_affinity_label(_card_animal_type(card)),
 		card.role.capitalize(),
 		int(card.cost),
 		_card_price(card_id) if not run.is_empty() else int(card.value)
@@ -5466,14 +5652,74 @@ func _archetype_label(archetype_id: String) -> String:
 	return "Neutral"
 
 
+func _card_animal_type(card: Dictionary) -> String:
+	return String(card.get("animalType", card.get("archetype", "neutral")))
+
+
+func _unit_animal_type(unit: Dictionary) -> String:
+	var card_id := String(unit.get("card_id", ""))
+	if cards_by_id.has(card_id):
+		return _card_animal_type(cards_by_id[card_id])
+	var tags: Array = unit.get("tags", [])
+	for archetype_id in ARCHETYPE_ORDER:
+		if tags.has(archetype_id):
+			return String(archetype_id)
+	return "neutral"
+
+
+func _combat_card_type_line(card: Dictionary) -> String:
+	var animal := _affinity_label(_card_animal_type(card))
+	var printed_role := String(card.get("role", _combat_card_type(card))).capitalize()
+	match String(card.get("role", "")):
+		"threat":
+			printed_role = "Threat"
+		"answer":
+			printed_role = "Answer"
+		"filter":
+			printed_role = "Filter"
+		"engine":
+			printed_role = "Engine"
+		"finisher":
+			printed_role = "Finisher"
+		"tech":
+			printed_role = "Tech"
+	return "%s | %s" % [animal, printed_role]
+
+
+func _unit_card_type_line(unit: Dictionary) -> String:
+	var animal_type := _unit_animal_type(unit)
+	return "%s | Threat" % _affinity_label(animal_type)
+
+
+func _style_card_type_strip(panel: PanelContainer, animal_type: String, compact_duel: bool) -> void:
+	var color := _affinity_color(animal_type)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#121a24")
+	style.bg_color.a = 0.78 if compact_duel else 0.86
+	style.border_color = color.lightened(0.35)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 3
+	style.corner_radius_top_right = 3
+	style.corner_radius_bottom_left = 3
+	style.corner_radius_bottom_right = 3
+	panel.add_theme_stylebox_override("panel", style)
+
+
 func _affinity_label(archetype_id: String) -> String:
 	match archetype_id:
-		"redline_aggro":
-			return "Aggro"
-		"lantern_control":
-			return "Control"
-		"verdant_midrange":
-			return "Midrange"
+		"flightless_birds":
+			return "Flightless Birds"
+		"snake":
+			return "Snake"
+		"canine":
+			return "Canine"
+		"glires":
+			return "Glires"
+		"insect":
+			return "Insect"
 		"neutral":
 			return "Universal"
 		_:
@@ -5482,12 +5728,16 @@ func _affinity_label(archetype_id: String) -> String:
 
 func _affinity_color(archetype_id: String) -> Color:
 	match archetype_id:
-		"redline_aggro":
-			return Color("#f35d3d")
-		"lantern_control":
+		"flightless_birds":
+			return Color("#e45a3c")
+		"snake":
 			return Color("#4cc9b0")
-		"verdant_midrange":
+		"canine":
 			return Color("#7fbf4d")
+		"glires":
+			return Color("#d8a74b")
+		"insect":
+			return Color("#9b7bd5")
 		"neutral":
 			return Color("#c7d0df")
 		_:
@@ -5680,9 +5930,34 @@ func _load_run_from_disk() -> void:
 		run.manual_animation = {}
 	if not run.has("manual_animation_queue"):
 		run.manual_animation_queue = []
+	run.manual_pending_action = {}
+	_migrate_legacy_run_archetypes()
 	if not run.has("combat_lab_opponent"):
 		var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 		run.combat_lab_opponent = _predator_archetype(String(metrics.primary))
 	_generate_shop_inventory()
 	_set_footer("Run loaded.")
 	_show_shop()
+
+
+func _migrate_legacy_run_archetypes() -> void:
+	var legacy_map := {
+		"redline_aggro": "flightless_birds",
+		"lantern_control": "snake",
+		"verdant_midrange": "canine"
+	}
+	if legacy_map.has(String(run.get("starter", ""))):
+		run.starter = legacy_map[String(run.starter)]
+	if legacy_map.has(String(run.get("combat_lab_opponent", ""))):
+		run.combat_lab_opponent = legacy_map[String(run.combat_lab_opponent)]
+	if run.has("meta"):
+		var migrated_meta := {}
+		for archetype_id in run.meta.keys():
+			var id := String(archetype_id)
+			id = String(legacy_map.get(id, id))
+			migrated_meta[id] = float(migrated_meta.get(id, 0.0)) + float(run.meta[archetype_id])
+		for archetype_id in ARCHETYPE_ORDER:
+			if not migrated_meta.has(archetype_id):
+				migrated_meta[archetype_id] = 0.12
+		run.meta = migrated_meta
+		_normalize_meta()

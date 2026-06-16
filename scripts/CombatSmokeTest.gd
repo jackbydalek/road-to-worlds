@@ -25,9 +25,9 @@ func _init() -> void:
 			quit(1)
 			return
 
-	var player_deck := _deck_entries_to_dict(archetypes_by_id["redline_aggro"].get("starterDeck", []))
-	var opponent_deck := _deck_entries_to_dict(archetypes_by_id["verdant_midrange"].get("starterDeck", []))
-	var result: Dictionary = combat_service.auto_play_game(player_deck, "redline_aggro", opponent_deck, "verdant_midrange", 12345)
+	var player_deck := _deck_entries_to_dict(archetypes_by_id["flightless_birds"].get("starterDeck", []))
+	var opponent_deck := _deck_entries_to_dict(archetypes_by_id["canine"].get("starterDeck", []))
+	var result: Dictionary = combat_service.auto_play_game(player_deck, "flightless_birds", opponent_deck, "canine", 12345)
 
 	if result.get("winner", "") == "":
 		push_error("Combat smoke test produced no winner.")
@@ -37,7 +37,7 @@ func _init() -> void:
 	print("Combat smoke test winner: %s" % result.get("winner", ""))
 	print("Combat smoke test log lines: %d" % result.get("log", []).size())
 
-	var manual_result: Dictionary = combat_service.start_manual_game(player_deck, "redline_aggro", opponent_deck, "verdant_midrange", 67890)
+	var manual_result: Dictionary = combat_service.start_manual_game(player_deck, "flightless_birds", opponent_deck, "canine", 67890)
 	if manual_result.get("phase", "") != "player_main":
 		push_error("Manual combat did not start in player_main phase.")
 		quit(1)
@@ -47,7 +47,7 @@ func _init() -> void:
 	if playable_card != "":
 		manual_result = combat_service.manual_play_card(manual_result, playable_card)
 
-	var target_result: Dictionary = combat_service.start_manual_game(player_deck, "redline_aggro", opponent_deck, "verdant_midrange", 24680)
+	var target_result: Dictionary = combat_service.start_manual_game(player_deck, "flightless_birds", opponent_deck, "canine", 24680)
 	target_result["opponent"]["board"].append({
 		"instance_id": 9001,
 		"card_id": "ver_briarwall_guard",
@@ -83,7 +83,7 @@ func _init() -> void:
 		quit(1)
 		return
 
-	var token_result: Dictionary = combat_service.start_manual_game(player_deck, "redline_aggro", opponent_deck, "verdant_midrange", 13579)
+	var token_result: Dictionary = combat_service.start_manual_game(player_deck, "flightless_birds", opponent_deck, "canine", 13579)
 	token_result["player"]["engines"] = [{ "card_id": "red_crowd_surge" }]
 	token_result["opponent"]["deck"] = []
 	token_result["opponent"]["hand"] = []
