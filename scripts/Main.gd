@@ -1487,6 +1487,8 @@ func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dict
 func _manual_target_anchor(state: Dictionary, target_type: String, target_instance_id: int, prefer_face_affordance: bool) -> String:
 	match target_type:
 		"face":
+			if current_screen == "ui_combat":
+				return "ManualFaceTargetAffordance" if prefer_face_affordance else "ManualOpponentFanHand"
 			return "ManualFaceTargetAffordance" if prefer_face_affordance else "ManualOpponentPanel"
 		"unit":
 			return _manual_unit_anchor(state, "opponent", target_instance_id)
@@ -1741,7 +1743,7 @@ func _add_ui_combat_duel(parent: Node, state: Dictionary, is_over: bool, phase: 
 	arena.add_theme_constant_override("separation", 4)
 	battlefield.add_child(arena)
 
-	_add_ui_combat_opponent_hand(arena, opponent)
+	_add_ui_combat_opponent_hand(arena, opponent, state)
 	_add_manual_summary_zone(
 		arena,
 		"Engine Zone",
@@ -1774,7 +1776,7 @@ func _add_ui_combat_duel(parent: Node, state: Dictionary, is_over: bool, phase: 
 	_add_manual_inspect_panel(battlefield, state)
 
 
-func _add_ui_combat_opponent_hand(parent: Node, opponent: Dictionary) -> void:
+func _add_ui_combat_opponent_hand(parent: Node, opponent: Dictionary, state: Dictionary) -> void:
 	var zone := _add_manual_zone(parent, "Hand Zone", "OpponentHand", "#182537")
 	zone.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
@@ -1787,10 +1789,37 @@ func _add_ui_combat_opponent_hand(parent: Node, opponent: Dictionary) -> void:
 	var hand_count := int(opponent.get("hand", []).size())
 	if hand_count <= 0:
 		_add_manual_empty_zone_slot(fan, "Empty Hand")
-		return
-	for i in range(hand_count):
-		_add_ui_combat_blank_hand_card(fan, i)
-	call_deferred("_layout_ui_combat_opponent_hand", fan)
+	else:
+		for i in range(hand_count):
+			_add_ui_combat_blank_hand_card(fan, i)
+		call_deferred("_layout_ui_combat_opponent_hand", fan)
+	if _manual_selection_can_try_face(state):
+		_add_ui_combat_face_target_anchor(fan, _manual_selected_can_target_face(state))
+
+
+func _add_ui_combat_face_target_anchor(parent: Control, selected_can_face: bool) -> void:
+	var anchor := PanelContainer.new()
+	anchor.name = "ManualFaceTargetAffordance"
+	anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anchor.set_anchors_preset(Control.PRESET_FULL_RECT)
+	anchor.offset_left = 0.0
+	anchor.offset_top = 0.0
+	anchor.offset_right = 0.0
+	anchor.offset_bottom = 0.0
+	anchor.z_index = 25
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.22, 0.14, 0.12) if selected_can_face else Color(0.26, 0.14, 0.14, 0.10)
+	style.border_color = Color(0.62, 0.9, 0.43, 0.68) if selected_can_face else Color(0.85, 0.63, 0.63, 0.35)
+	style.border_width_left = 2 if selected_can_face else 1
+	style.border_width_right = 2 if selected_can_face else 1
+	style.border_width_top = 2 if selected_can_face else 1
+	style.border_width_bottom = 2 if selected_can_face else 1
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	anchor.add_theme_stylebox_override("panel", style)
+	parent.add_child(anchor)
 
 
 func _add_ui_combat_blank_hand_card(parent: Node, index: int) -> void:
@@ -1845,7 +1874,7 @@ func _add_ui_combat_resource_readout(parent: Node, combatant: Dictionary, is_pla
 	var can_try_face := not is_player and _manual_selection_can_try_face(state)
 	var selected_can_face := can_try_face and _manual_selected_can_target_face(state)
 	var panel := PanelContainer.new()
-	panel.name = "ManualPlayerResourceReadout" if is_player else ("ManualFaceTargetAffordance" if can_try_face else "ManualOpponentResourceReadout")
+	panel.name = "ManualPlayerResourceReadout" if is_player else "ManualOpponentResourceReadout"
 	panel.z_index = 110
 	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 	if is_player:
@@ -1868,11 +1897,11 @@ func _add_ui_combat_resource_readout(parent: Node, combatant: Dictionary, is_pla
 		panel.offset_bottom = 124.0
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.12, 0.17, 0.72)
-	style.border_color = Color("#9ee66e") if selected_can_face else Color(0.18, 0.27, 0.36, 0.62)
-	style.border_width_left = 2 if selected_can_face else 1
-	style.border_width_right = 2 if selected_can_face else 1
-	style.border_width_top = 2 if selected_can_face else 1
-	style.border_width_bottom = 2 if selected_can_face else 1
+	style.border_color = Color(0.18, 0.27, 0.36, 0.62)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
 	style.corner_radius_top_left = 8
 	style.corner_radius_top_right = 8
 	style.corner_radius_bottom_left = 8
@@ -2190,8 +2219,10 @@ func _add_manual_selection_preview_arcs(layer: Node2D, root: Node, state: Dictio
 		return
 
 	if _manual_selected_can_target_face(state):
-		if not _manual_draw_board_arc(layer, root, source_anchor, "ManualFaceTargetAffordance", "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true):
-			_manual_draw_board_arc(layer, root, source_anchor, "ManualOpponentPanel", "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true)
+		var face_anchor := _manual_target_anchor(state, "face", -1, true)
+		var fallback_face_anchor := "ManualOpponentFanHand" if current_screen == "ui_combat" else "ManualOpponentPanel"
+		if not _manual_draw_board_arc(layer, root, source_anchor, face_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true):
+			_manual_draw_board_arc(layer, root, source_anchor, fallback_face_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true)
 
 	var opponent: Dictionary = state.get("opponent", {})
 	for unit in opponent.get("board", []):
@@ -2337,11 +2368,14 @@ func _manual_visible_anchor_or_fallback(root: Node, anchor: String, fallback_anc
 
 
 func _manual_ui_combat_vfx_fallback_anchor(animation: Dictionary) -> String:
-	var target_text := "%s %s" % [
-		String(animation.get("target_zone", "")),
-		String(animation.get("destination_zone", ""))
-	]
-	return "ManualOpponentResourceReadout" if target_text.to_lower().contains("opponent") else "ManualPlayerResourceReadout"
+	var target_zone := String(animation.get("target_zone", "")).to_lower()
+	var destination_zone := String(animation.get("destination_zone", "")).to_lower()
+	var target_text := "%s %s" % [target_zone, destination_zone]
+	if target_zone.contains("opponent face"):
+		return "ManualOpponentFanHand"
+	if target_zone.contains("opponent board"):
+		return "ManualZone_OpponentBoard"
+	return "ManualOpponentFanHand" if target_text.contains("opponent") else "ManualPlayerResourceReadout"
 
 
 func _add_manual_board_card_travel(layer: Node2D, root: Node, animation: Dictionary, source_anchor: String, target_anchor: String, destination_anchor: String) -> bool:

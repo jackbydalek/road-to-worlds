@@ -172,6 +172,10 @@ func _run() -> void:
 		push_error("UI smoke test did not render face target button.")
 		quit(1)
 		return
+	if not _node_center_closer_to(main, "ManualFaceTargetAffordance", "ManualOpponentFanHand", "ManualOpponentResourceReadout"):
+		push_error("UI smoke test face target affordance is not anchored to the opponent hand.")
+		quit(1)
+		return
 	if _count_named_nodes(main, "ManualFanHand") == 0:
 		push_error("UI smoke test did not render the fanned player hand.")
 		quit(1)
@@ -335,3 +339,31 @@ func _has_named_label_text(node: Node, target_name: String, text: String) -> boo
 		if _has_named_label_text(child, target_name, text):
 			return true
 	return false
+
+
+func _node_center_closer_to(root_node: Node, target_name: String, near_name: String, far_name: String) -> bool:
+	var target := _find_named_node(root_node, target_name)
+	var near := _find_named_node(root_node, near_name)
+	var far := _find_named_node(root_node, far_name)
+	if target == null or near == null or far == null:
+		return false
+	var target_center := _node_global_center(target)
+	return target_center.distance_to(_node_global_center(near)) < target_center.distance_to(_node_global_center(far))
+
+
+func _find_named_node(node: Node, target_name: String) -> Node:
+	if String(node.name).begins_with(target_name):
+		return node
+	for child in node.get_children():
+		var found := _find_named_node(child, target_name)
+		if found != null:
+			return found
+	return null
+
+
+func _node_global_center(node: Node) -> Vector2:
+	if node is Control:
+		return (node as Control).get_global_rect().get_center()
+	if node is Node2D:
+		return (node as Node2D).global_position
+	return Vector2.ZERO
