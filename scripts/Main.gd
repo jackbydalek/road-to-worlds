@@ -252,6 +252,7 @@ func _start_new_run(archetype_id: String) -> void:
 		"manual_inspect": {},
 		"manual_battle_log_open": false,
 		"manual_animation": {},
+		"manual_animation_queue": [],
 		"manual_combat": {},
 		"last_combat": {}
 	}
@@ -1088,6 +1089,7 @@ func _set_combat_lab_opponent(archetype_id: String) -> void:
 	run.manual_inspect = {}
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
+	run.manual_animation_queue = []
 	_set_footer("Combat Lab opponent set to " + archetypes_by_id[archetype_id].name + ".")
 	_show_active_combat_screen()
 
@@ -1129,6 +1131,7 @@ func _start_manual_combat_lab_battle() -> void:
 	run.manual_inspect = {}
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
+	run.manual_animation_queue = []
 	run.last_combat = {}
 	_set_footer("Manual battle started.")
 	_show_active_combat_screen()
@@ -1246,7 +1249,10 @@ func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void
 func _manual_end_turn() -> void:
 	if run.get("manual_combat", {}).is_empty():
 		return
+	var before_state: Dictionary = run.manual_combat.duplicate(true)
+	var log_start: int = before_state.get("log", []).size()
 	run.manual_combat = combat_service.manual_end_player_turn(run.manual_combat)
+	_manual_set_animation_queue(_manual_build_opponent_turn_animation_queue(before_state, run.manual_combat, log_start))
 	run.manual_selection = {}
 	_show_active_combat_screen()
 
@@ -1257,6 +1263,7 @@ func _clear_manual_battle() -> void:
 	run.manual_inspect = {}
 	run.manual_battle_log_open = false
 	run.manual_animation = {}
+	run.manual_animation_queue = []
 	_set_footer("Manual battle cleared.")
 	_show_active_combat_screen()
 
@@ -1325,14 +1332,24 @@ func _manual_target_unit(instance_id: int) -> void:
 
 
 func _manual_commit_action_animation(before_state: Dictionary, after_state: Dictionary, descriptor: Dictionary, log_start: int) -> void:
+	var animation := _manual_build_action_animation(before_state, after_state, descriptor, log_start)
+	if animation.is_empty():
+		run.manual_animation = {}
+		run.manual_animation_queue = []
+		return
+	run.manual_animation = animation
+	run.manual_animation_queue = []
+
+
+func _manual_build_action_animation(before_state: Dictionary, after_state: Dictionary, descriptor: Dictionary, log_start: int, log_end: int = -1) -> Dictionary:
 	var log_lines: Array = after_state.get("log", [])
 	var new_lines: Array = []
-	for i in range(log_start, log_lines.size()):
+	var end_index: int = log_lines.size() if log_end < 0 else int(min(log_end, log_lines.size()))
+	for i in range(log_start, end_index):
 		new_lines.append(String(log_lines[i]))
 
 	if new_lines.is_empty() or not _manual_log_has_animation_event(new_lines):
-		run.manual_animation = {}
-		return
+		return {}
 
 	var card_id := String(descriptor.get("card_id", ""))
 	var card_name := String(descriptor.get("card_name", ""))
@@ -1341,7 +1358,7 @@ func _manual_commit_action_animation(before_state: Dictionary, after_state: Dict
 	if card_name == "":
 		card_name = String(descriptor.get("verb", "Action"))
 
-	run.manual_animation = {
+	return {
 		"card_id": card_id,
 		"card_name": card_name,
 		"source_zone": String(descriptor.get("source_zone", "Source")),
@@ -1357,6 +1374,341 @@ func _manual_commit_action_animation(before_state: Dictionary, after_state: Dict
 		"summary": new_lines.slice(max(0, new_lines.size() - 4), new_lines.size()),
 		"badges": _manual_impact_badges_from_log(new_lines)
 	}
+
+
+func _manual_set_animation_queue(animations: Array) -> void:
+	if animations.is_empty():
+		run.manual_animation = {}
+		run.manual_animation_queue = []
+		return
+	run.manual_animation = animations[0]
+	run.manual_animation_queue = animations.slice(1, animations.size()) if animations.size() > 1 else []
+
+
+func _manual_build_opponent_turn_animation_queue(before_state: Dictionary, after_state: Dictionary, log_start: int) -> Array:
+	var animations: Array = []
+	var log_lines: Array = after_state.get("log", [])
+	var used_new_units := {}
+	var used_action_counts := {}
+	var in_opponent_turn := false
+	for i in range(log_start, log_lines.size()):
+		var line := String(log_lines[i])
+		if line.begins_with("Opponent turn"):
+			in_opponent_turn = true
+			continue
+		if in_opponent_turn and line.begins_with("You turn"):
+			break
+		if not in_opponent_turn:
+			continue
+
+		var descriptor := _manual_opponent_animation_descriptor_for_line(line, before_state, after_state, used_new_units, used_action_counts)
+		if descriptor.is_empty():
+			continue
+		var animation := _manual_build_action_animation(before_state, after_state, descriptor, i, i + 1)
+		if not animation.is_empty():
+			animations.append(animation)
+	return animations
+
+
+func _manual_opponent_animation_descriptor_for_line(line: String, before_state: Dictionary, after_state: Dictionary, used_new_units: Dictionary, used_action_counts: Dictionary) -> Dictionary:
+	if line.begins_with("Opponent plays engine "):
+		var engine_name := _manual_trim_sentence_end(_manual_text_after(line, "Opponent plays engine "))
+		var engine_id := _manual_card_id_for_name(engine_name, before_state, after_state)
+		return {
+			"card_id": engine_id,
+			"card_name": engine_name,
+			"source_zone": "Opponent Hand",
+			"target_zone": "Opponent Engine Zone",
+			"destination_zone": "Opponent Engine Zone",
+			"source_anchor": "ManualOpponentFanHand",
+			"target_anchor": "ManualZone_OpponentEngine",
+			"destination_anchor": "ManualZone_OpponentEngine",
+			"verb": "Play"
+		}
+
+	if line.begins_with("Opponent plays "):
+		var unit_name := _manual_text_between(line, "Opponent plays ", " as a ")
+		if unit_name == "":
+			return {}
+		var unit_card_id := _manual_card_id_for_name(unit_name, before_state, after_state)
+		var unit_anchor := _manual_new_unit_anchor_for_event(before_state, after_state, "opponent", unit_card_id, used_new_units)
+		if unit_anchor == "":
+			unit_anchor = "ManualZone_OpponentBoard"
+		return {
+			"card_id": unit_card_id,
+			"card_name": unit_name,
+			"source_zone": "Opponent Hand",
+			"target_zone": "Opponent Board",
+			"destination_zone": "Opponent Board",
+			"source_anchor": "ManualOpponentFanHand",
+			"target_anchor": unit_anchor,
+			"destination_anchor": unit_anchor,
+			"verb": "Play"
+		}
+
+	if line.begins_with("Opponent casts "):
+		var cast_name := _manual_cast_card_name_from_line(line)
+		if cast_name == "":
+			return {}
+		var cast_has_target := line.contains(" to ")
+		var cast_target_name: String = _manual_trim_sentence_end(_manual_text_after(line, " to ")) if cast_has_target else ""
+		var cast_target_anchor: String = _manual_target_anchor_for_opponent_log_name(before_state, after_state, cast_target_name) if cast_has_target else "ManualZone_OpponentBoard"
+		return {
+			"card_id": _manual_card_id_for_name(cast_name, before_state, after_state),
+			"card_name": cast_name,
+			"source_zone": "Opponent Hand",
+			"target_zone": _manual_target_zone_for_opponent_log_name(cast_target_name) if cast_has_target else "Action",
+			"destination_zone": "Opponent Discard",
+			"source_anchor": "ManualOpponentFanHand",
+			"target_anchor": cast_target_anchor,
+			"destination_anchor": "ManualZone_OpponentDiscard",
+			"verb": "Cast"
+		}
+
+	if line.begins_with("Opponent fires finisher "):
+		var finisher_name := _manual_text_between(line, "Opponent fires finisher ", " at ")
+		if finisher_name == "":
+			return {}
+		var finisher_target_name := _manual_trim_sentence_end(_manual_text_after(line, " at "))
+		return {
+			"card_id": _manual_card_id_for_name(finisher_name, before_state, after_state),
+			"card_name": finisher_name,
+			"source_zone": "Opponent Hand",
+			"target_zone": _manual_target_zone_for_opponent_log_name(finisher_target_name),
+			"destination_zone": "Opponent Discard",
+			"source_anchor": "ManualOpponentFanHand",
+			"target_anchor": _manual_target_anchor_for_opponent_log_name(before_state, after_state, finisher_target_name),
+			"destination_anchor": "ManualZone_OpponentDiscard",
+			"verb": "Cast"
+		}
+
+	var effect_action_id := _manual_opponent_action_card_id_from_effect_line(line, before_state, after_state, used_action_counts)
+	if effect_action_id != "":
+		used_action_counts[effect_action_id] = int(used_action_counts.get(effect_action_id, 0)) + 1
+		var effect_target_name := _manual_effect_target_name_from_line(line)
+		var has_effect_target := effect_target_name != ""
+		return {
+			"card_id": effect_action_id,
+			"card_name": String(cards_by_id[effect_action_id].get("name", effect_action_id)),
+			"source_zone": "Opponent Hand",
+			"target_zone": _manual_target_zone_for_opponent_log_name(effect_target_name) if has_effect_target else "Action",
+			"destination_zone": "Opponent Discard",
+			"source_anchor": "ManualOpponentFanHand",
+			"target_anchor": _manual_target_anchor_for_opponent_log_name(before_state, after_state, effect_target_name) if has_effect_target else "ManualZone_OpponentBoard",
+			"destination_anchor": "ManualZone_OpponentDiscard",
+			"verb": "Cast"
+		}
+
+	if line.contains(" attacks You for "):
+		var attacker_name := _manual_text_between(line, "", " attacks You for ")
+		var source_anchor := _manual_unit_anchor_by_name(before_state, after_state, "opponent", attacker_name)
+		return {
+			"card_id": _manual_unit_card_id_by_name(before_state, after_state, "opponent", attacker_name),
+			"card_name": attacker_name,
+			"source_zone": "Opponent Board",
+			"target_zone": "Your Face",
+			"destination_zone": "Opponent Board",
+			"source_anchor": source_anchor if source_anchor != "" else "ManualZone_OpponentBoard",
+			"target_anchor": _manual_face_anchor_for_side("player"),
+			"destination_anchor": source_anchor if source_anchor != "" else "ManualZone_OpponentBoard",
+			"verb": "Attack"
+		}
+
+	if line.contains(" trades with "):
+		var attacker_name := _manual_text_between(line, "", " trades with ")
+		var target_name := _manual_trim_sentence_end(_manual_text_after(line, " trades with "))
+		var source_anchor := _manual_unit_anchor_by_name(before_state, after_state, "opponent", attacker_name)
+		var target_anchor := _manual_unit_anchor_by_name(before_state, after_state, "player", target_name)
+		return {
+			"card_id": _manual_unit_card_id_by_name(before_state, after_state, "opponent", attacker_name),
+			"card_name": attacker_name,
+			"source_zone": "Opponent Board",
+			"target_zone": "Your Board",
+			"destination_zone": "Opponent Board",
+			"source_anchor": source_anchor if source_anchor != "" else "ManualZone_OpponentBoard",
+			"target_anchor": target_anchor if target_anchor != "" else "ManualZone_PlayerBoard",
+			"destination_anchor": source_anchor if source_anchor != "" else "ManualZone_OpponentBoard",
+			"verb": "Attack"
+		}
+
+	return {}
+
+
+func _manual_cast_card_name_from_line(line: String) -> String:
+	var card_name := _manual_text_between(line, "Opponent casts ", " for ")
+	if card_name != "":
+		return card_name
+	card_name = _manual_text_between(line, "Opponent casts ", " and draws")
+	if card_name != "":
+		return card_name
+	return _manual_text_between(line, "Opponent casts ", " for tempo")
+
+
+func _manual_opponent_action_card_id_from_effect_line(line: String, before_state: Dictionary, after_state: Dictionary, used_action_counts: Dictionary) -> String:
+	var available_counts := _manual_new_opponent_discarded_action_counts(before_state, after_state)
+	for card_id_value in available_counts.keys():
+		var card_id := String(card_id_value)
+		if int(used_action_counts.get(card_id, 0)) >= int(available_counts.get(card_id, 0)):
+			continue
+		if not cards_by_id.has(card_id):
+			continue
+		var card_name := String(cards_by_id[card_id].get("name", card_id))
+		if line.begins_with(card_name + " ") or line.begins_with(card_name + "'s "):
+			return card_id
+	return ""
+
+
+func _manual_new_opponent_discarded_action_counts(before_state: Dictionary, after_state: Dictionary) -> Dictionary:
+	var before_counts := _manual_card_count_map(before_state.get("opponent", {}).get("discard", []))
+	var after_counts := _manual_card_count_map(after_state.get("opponent", {}).get("discard", []))
+	var counts := {}
+	for card_id_value in after_counts.keys():
+		var card_id := String(card_id_value)
+		var delta := int(after_counts.get(card_id, 0)) - int(before_counts.get(card_id, 0))
+		if delta <= 0 or not cards_by_id.has(card_id):
+			continue
+		if _combat_card_type(cards_by_id[card_id]) == "action":
+			counts[card_id] = delta
+	return counts
+
+
+func _manual_card_count_map(card_ids: Array) -> Dictionary:
+	var counts := {}
+	for card_id_value in card_ids:
+		var card_id := String(card_id_value)
+		counts[card_id] = int(counts.get(card_id, 0)) + 1
+	return counts
+
+
+func _manual_effect_target_name_from_line(line: String) -> String:
+	return _manual_trim_sentence_end(_manual_text_after(line, " to "))
+
+
+func _manual_target_anchor_for_opponent_log_name(before_state: Dictionary, after_state: Dictionary, target_name: String) -> String:
+	if target_name == "" or target_name == "You":
+		return _manual_face_anchor_for_side("player")
+	if target_name == "Opponent":
+		return _manual_face_anchor_for_side("opponent")
+	var player_unit_anchor := _manual_unit_anchor_by_name(before_state, after_state, "player", target_name)
+	if player_unit_anchor != "":
+		return player_unit_anchor
+	return "ManualZone_PlayerBoard"
+
+
+func _manual_target_zone_for_opponent_log_name(target_name: String) -> String:
+	if target_name == "" or target_name == "You":
+		return "Your Face"
+	if target_name == "Opponent":
+		return "Opponent Face"
+	return "Your Board"
+
+
+func _manual_face_anchor_for_side(side: String) -> String:
+	if current_screen == "ui_combat":
+		return "ManualFanHand" if side == "player" else "ManualOpponentFanHand"
+	return "ManualPlayerPanel" if side == "player" else "ManualOpponentPanel"
+
+
+func _manual_new_unit_anchor_for_event(before_state: Dictionary, after_state: Dictionary, side: String, card_id: String, used_new_units: Dictionary) -> String:
+	var before_ids := {}
+	var before_combatant: Dictionary = before_state.get(side, {})
+	for unit in before_combatant.get("board", []):
+		before_ids[int(unit.get("instance_id", -1))] = true
+	var after_combatant: Dictionary = after_state.get(side, {})
+	for unit in after_combatant.get("board", []):
+		var instance_id := int(unit.get("instance_id", -1))
+		if before_ids.has(instance_id) or used_new_units.has(instance_id):
+			continue
+		if card_id != "" and String(unit.get("card_id", "")) != card_id:
+			continue
+		used_new_units[instance_id] = true
+		return _manual_unit_card_anchor(side == "player", instance_id)
+	return ""
+
+
+func _manual_unit_anchor_by_name(before_state: Dictionary, after_state: Dictionary, side: String, unit_name: String) -> String:
+	var before_anchor := _manual_unit_anchor_by_name_in_state(before_state, side, unit_name)
+	if before_anchor != "":
+		return before_anchor
+	return _manual_unit_anchor_by_name_in_state(after_state, side, unit_name)
+
+
+func _manual_unit_anchor_by_name_in_state(state: Dictionary, side: String, unit_name: String) -> String:
+	var combatant: Dictionary = state.get(side, {})
+	for unit in combatant.get("board", []):
+		if String(unit.get("name", "")) == unit_name:
+			return _manual_unit_card_anchor(side == "player", int(unit.get("instance_id", -1)))
+	return ""
+
+
+func _manual_unit_card_id_by_name(before_state: Dictionary, after_state: Dictionary, side: String, unit_name: String) -> String:
+	var before_id := _manual_unit_card_id_by_name_in_state(before_state, side, unit_name)
+	if before_id != "":
+		return before_id
+	return _manual_unit_card_id_by_name_in_state(after_state, side, unit_name)
+
+
+func _manual_unit_card_id_by_name_in_state(state: Dictionary, side: String, unit_name: String) -> String:
+	var combatant: Dictionary = state.get(side, {})
+	for unit in combatant.get("board", []):
+		if String(unit.get("name", "")) == unit_name:
+			return String(unit.get("card_id", ""))
+	return ""
+
+
+func _manual_card_id_for_name(card_name: String, before_state: Dictionary, after_state: Dictionary) -> String:
+	var candidates: Array = []
+	_manual_append_opponent_card_candidates(candidates, before_state)
+	_manual_append_opponent_card_candidates(candidates, after_state)
+	for card_id_value in candidates:
+		var card_id := String(card_id_value)
+		if cards_by_id.has(card_id) and String(cards_by_id[card_id].get("name", card_id)) == card_name:
+			return card_id
+	for card_id_value in cards_by_id.keys():
+		var card_id := String(card_id_value)
+		if String(cards_by_id[card_id].get("name", card_id)) == card_name:
+			return card_id
+	return ""
+
+
+func _manual_append_opponent_card_candidates(candidates: Array, state: Dictionary) -> void:
+	var opponent: Dictionary = state.get("opponent", {})
+	for card_id in opponent.get("hand", []):
+		candidates.append(String(card_id))
+	for card_id in opponent.get("discard", []):
+		candidates.append(String(card_id))
+	for unit in opponent.get("board", []):
+		candidates.append(String(unit.get("card_id", "")))
+	for engine in opponent.get("engines", []):
+		candidates.append(String(engine.get("card_id", "")))
+
+
+func _manual_text_between(text: String, prefix: String, suffix: String) -> String:
+	var start := 0
+	if prefix != "":
+		start = text.find(prefix)
+		if start < 0:
+			return ""
+		start += prefix.length()
+	var end := text.find(suffix, start)
+	if end < 0:
+		return ""
+	return text.substr(start, end - start).strip_edges()
+
+
+func _manual_text_after(text: String, prefix: String) -> String:
+	var start := text.find(prefix)
+	if start < 0:
+		return ""
+	start += prefix.length()
+	return text.substr(start).strip_edges()
+
+
+func _manual_trim_sentence_end(text: String) -> String:
+	var trimmed := text.strip_edges()
+	while trimmed.ends_with("."):
+		trimmed = trimmed.substr(0, trimmed.length() - 1).strip_edges()
+	return trimmed
 
 
 func _manual_log_has_animation_event(lines: Array) -> bool:
@@ -2247,6 +2599,7 @@ func _add_manual_committed_board_arc(layer: Node2D, root: Node) -> void:
 		destination_anchor = target_anchor
 	var should_draw_arrow := _manual_animation_should_draw_target_arrow(animation, target_anchor, destination_anchor)
 	if current_screen == "ui_combat":
+		source_anchor = _manual_visible_anchor_or_fallback(root, source_anchor, _manual_ui_combat_vfx_source_fallback_anchor(animation))
 		var fallback_anchor := _manual_ui_combat_vfx_fallback_anchor(animation)
 		target_anchor = _manual_visible_anchor_or_fallback(root, target_anchor, fallback_anchor)
 		destination_anchor = _manual_visible_anchor_or_fallback(root, destination_anchor, target_anchor)
@@ -2274,6 +2627,8 @@ func _add_manual_committed_board_arc(layer: Node2D, root: Node) -> void:
 		return
 	animation["board_vfx_started"] = true
 	run.manual_animation = animation
+	if not run.get("manual_animation_queue", []).is_empty():
+		_manual_schedule_animation_queue_advance(animation)
 	_pulse_manual_anchor(root, source_anchor, Color("#ffe08a"))
 	if should_draw_arrow:
 		_pulse_manual_anchor(root, target_anchor, _manual_arc_color(String(animation.get("verb", "Action"))))
@@ -2358,7 +2713,7 @@ func _manual_animation_should_draw_target_arrow(animation: Dictionary, target_an
 	if target_anchor == "" or target_anchor == destination_anchor:
 		return false
 	var target_zone := String(animation.get("target_zone", ""))
-	return target_zone.contains("Opponent")
+	return target_zone.contains("Opponent") or target_zone.contains("Your")
 
 
 func _manual_visible_anchor_or_fallback(root: Node, anchor: String, fallback_anchor: String) -> String:
@@ -2371,11 +2726,49 @@ func _manual_ui_combat_vfx_fallback_anchor(animation: Dictionary) -> String:
 	var target_zone := String(animation.get("target_zone", "")).to_lower()
 	var destination_zone := String(animation.get("destination_zone", "")).to_lower()
 	var target_text := "%s %s" % [target_zone, destination_zone]
+	if target_zone.contains("your face"):
+		return "ManualFanHand"
+	if target_zone.contains("your board"):
+		return "ManualZone_PlayerBoard"
 	if target_zone.contains("opponent face"):
 		return "ManualOpponentFanHand"
 	if target_zone.contains("opponent board"):
 		return "ManualZone_OpponentBoard"
 	return "ManualOpponentFanHand" if target_text.contains("opponent") else "ManualPlayerResourceReadout"
+
+
+func _manual_ui_combat_vfx_source_fallback_anchor(animation: Dictionary) -> String:
+	var source_zone := String(animation.get("source_zone", "")).to_lower()
+	if source_zone.contains("opponent hand"):
+		return "ManualOpponentFanHand"
+	if source_zone.contains("your hand"):
+		return "ManualFanHand"
+	if source_zone.contains("opponent board"):
+		return "ManualZone_OpponentBoard"
+	if source_zone.contains("your board"):
+		return "ManualZone_PlayerBoard"
+	return "ManualFanHand"
+
+
+func _manual_schedule_animation_queue_advance(animation: Dictionary) -> void:
+	if bool(animation.get("advance_scheduled", false)):
+		return
+	animation["advance_scheduled"] = true
+	run.manual_animation = animation
+	var timer := get_tree().create_timer(1.12)
+	timer.timeout.connect(Callable(self, "_manual_advance_manual_animation_queue"))
+
+
+func _manual_advance_manual_animation_queue() -> void:
+	if run.is_empty():
+		return
+	var queue: Array = run.get("manual_animation_queue", [])
+	if queue.is_empty():
+		return
+	run.manual_animation = queue[0]
+	run.manual_animation_queue = queue.slice(1, queue.size()) if queue.size() > 1 else []
+	if current_screen == "ui_combat":
+		_show_active_combat_screen()
 
 
 func _add_manual_board_card_travel(layer: Node2D, root: Node, animation: Dictionary, source_anchor: String, target_anchor: String, destination_anchor: String) -> bool:
@@ -5285,6 +5678,8 @@ func _load_run_from_disk() -> void:
 		run.manual_battle_log_open = false
 	if not run.has("manual_animation"):
 		run.manual_animation = {}
+	if not run.has("manual_animation_queue"):
+		run.manual_animation_queue = []
 	if not run.has("combat_lab_opponent"):
 		var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 		run.combat_lab_opponent = _predator_archetype(String(metrics.primary))

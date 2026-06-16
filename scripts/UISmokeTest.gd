@@ -246,6 +246,52 @@ func _run() -> void:
 		push_error("UI smoke test left board card/impact VFX on screen after their lifetime.")
 		quit(1)
 		return
+
+	main.run.manual_animation = {}
+	main.run.manual_animation_queue = []
+	main.run.manual_combat["opponent"]["hand"] = ["red_quick_spark"]
+	main.run.manual_combat["opponent"]["deck"] = []
+	main.run.manual_combat["opponent"]["max_focus"] = 0
+	main.run.manual_combat["opponent"]["focus"] = 0
+	main.run.manual_combat["opponent"]["board"].append({
+		"instance_id": 881,
+		"card_id": "red_spark_runner",
+		"name": "Smoke Rival",
+		"attack": 2,
+		"health": 1,
+		"max_health": 1,
+		"ready": false,
+		"tags": ["fast"]
+	})
+	main._show_active_combat_screen()
+	await process_frame
+	await process_frame
+	main._manual_end_turn()
+	await process_frame
+	await process_frame
+	if main.run.manual_animation.is_empty():
+		push_error("UI smoke test did not create an opponent action animation after end turn.")
+		quit(1)
+		return
+	if String(main.run.manual_animation.get("source_anchor", "")) != "ManualOpponentFanHand":
+		push_error("UI smoke test opponent action did not originate from the opponent hand.")
+		quit(1)
+		return
+	if not _point_closer_to(main, main.run.manual_animation.get("source_global_point", []), "ManualOpponentFanHand", "ManualFanHand"):
+		push_error("UI smoke test opponent action source point was not captured at the opponent hand.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualBoardMovingCardGhost") == 0:
+		push_error("UI smoke test did not render opponent action card movement.")
+		quit(1)
+		return
+	if main.run.manual_animation_queue.is_empty():
+		push_error("UI smoke test did not queue a follow-up opponent action animation.")
+		quit(1)
+		return
+	main.run.manual_animation = {}
+	main.run.manual_animation_queue = []
+
 	main.run.manual_combat["player"]["hand"].append("lan_late_fee_drake")
 	main.run.manual_combat["player"]["focus"] = max(int(main.run.manual_combat["player"].get("focus", 0)), 5)
 	main._show_active_combat_screen()
@@ -349,6 +395,17 @@ func _node_center_closer_to(root_node: Node, target_name: String, near_name: Str
 		return false
 	var target_center := _node_global_center(target)
 	return target_center.distance_to(_node_global_center(near)) < target_center.distance_to(_node_global_center(far))
+
+
+func _point_closer_to(root_node: Node, point_data: Variant, near_name: String, far_name: String) -> bool:
+	if typeof(point_data) != TYPE_ARRAY or point_data.size() < 2:
+		return false
+	var near := _find_named_node(root_node, near_name)
+	var far := _find_named_node(root_node, far_name)
+	if near == null or far == null:
+		return false
+	var point := Vector2(float(point_data[0]), float(point_data[1]))
+	return point.distance_to(_node_global_center(near)) < point.distance_to(_node_global_center(far))
 
 
 func _find_named_node(node: Node, target_name: String) -> Node:
