@@ -1,0 +1,4207 @@
+{
+  "cards": [
+    {
+      "id": "red_spark_runner",
+      "name": "Spark Runner",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "low_interaction_punisher"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 5,
+        "power": 2,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 1,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ]
+      },
+      "text": "A fast opener that improves aggressive starts."
+    },
+    {
+      "id": "red_alley_brawler",
+      "name": "Alley Brawler",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 2
+      },
+      "text": "Efficient pressure for creature-heavy starts."
+    },
+    {
+      "id": "red_heatline_initiate",
+      "name": "Heatline Initiate",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "spell_payoff"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 4,
+        "power": 2,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 1,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ]
+      },
+      "text": "Cheap threat that rewards burn-heavy lists."
+    },
+    {
+      "id": "red_quick_spark",
+      "name": "Quick Spark",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "burn",
+        "answer"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 1,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Cheap interaction that doubles as reach."
+    },
+    {
+      "id": "red_last_point",
+      "name": "Last Point",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "burn",
+        "finisher"
+      ],
+      "rarity": "common",
+      "role": "finisher",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_player",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 4,
+            "target": "enemy_player"
+          }
+        ]
+      },
+      "text": "Reach that turns close games into wins."
+    },
+    {
+      "id": "red_blistering_charm",
+      "name": "Blistering Charm",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "tech",
+        "anti_control"
+      ],
+      "rarity": "common",
+      "role": "tech",
+      "cost": 1,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 1,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          },
+          {
+            "type": "draw",
+            "amount": 1,
+            "condition": "relevant_tech"
+          }
+        ]
+      },
+      "text": "Sideboard card that helps push through slow answers.",
+      "matchupModifiers": [
+        {
+          "target": "control",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "red_side_street_fix",
+      "name": "Side-Street Fix",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 0,
+        "consistency": 4,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Improves opening hands and smooths awkward draws."
+    },
+    {
+      "id": "red_cheap_shot",
+      "name": "Cheap Shot",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "answer",
+        "anti_aggro"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 3,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Low-cost answer for mirrors and creature swarms.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "red_reckless_recruiter",
+      "name": "Reckless Recruiter",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "engine"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 2,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 2,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Keeps pressure flowing through removal."
+    },
+    {
+      "id": "red_chain_reaction",
+      "name": "Chain Reaction",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "burn",
+        "finisher"
+      ],
+      "rarity": "uncommon",
+      "role": "finisher",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 5,
+        "consistency": 1,
+        "interaction": 1,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_player",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "target": "enemy_player"
+          },
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "A strong payoff when the deck is mostly cheap spells."
+    },
+    {
+      "id": "red_crowd_surge",
+      "name": "Crowd Surge",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "engine",
+        "wide"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 2,
+      "value": 5,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 3,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "summon",
+                "name": "Crowd Token",
+                "attack": 1,
+                "health": 1,
+                "ready": true,
+                "tags": [
+                  "token",
+                  "fast"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Rewards threat density and go-wide starts."
+    },
+    {
+      "id": "red_fuse_mentor",
+      "name": "Fuse Mentor",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "spell_payoff"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 2,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 3,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 3,
+        "onPlay": [
+          {
+            "type": "buff",
+            "amount_attack": 1,
+            "amount_health": 0,
+            "target": "all_friendly_units"
+          }
+        ]
+      },
+      "text": "Turns burn-heavy hands into faster clocks."
+    },
+    {
+      "id": "red_flaming_contract",
+      "name": "Flaming Contract",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "engine",
+        "risky"
+      ],
+      "rarity": "rare",
+      "role": "engine",
+      "cost": 2,
+      "value": 18,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 3,
+        "consistency": -1,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 5
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 2
+              },
+              {
+                "type": "damage",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "High-upside draw engine that can make the deck clunkier."
+    },
+    {
+      "id": "red_feature_match_hero",
+      "name": "Feature Match Hero",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "resilient"
+      ],
+      "rarity": "rare",
+      "role": "threat",
+      "cost": 3,
+      "value": 20,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 5,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 3,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 5,
+        "health": 5
+      },
+      "text": "Premium threat that survives common removal."
+    },
+    {
+      "id": "red_final_turn_gambit",
+      "name": "Final Turn Gambit",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "finisher",
+        "anti_control"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 4,
+      "value": 19,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -1,
+        "power": 7,
+        "consistency": -1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_player",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "target": "enemy_player"
+          },
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "self_player"
+          }
+        ]
+      },
+      "text": "Clunky but terrifying finisher against slow decks.",
+      "matchupModifiers": [
+        {
+          "target": "control",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "red_mythic_phoenix",
+      "name": "Mythic Phoenix",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "resilient",
+        "mythic"
+      ],
+      "rarity": "mythic",
+      "role": "threat",
+      "cost": 3,
+      "value": 38,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 2,
+        "power": 6,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 5,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 6,
+        "health": 6,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ],
+        "onPlay": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "enemy_player"
+          }
+        ]
+      },
+      "text": "A season-defining pull for aggressive decks."
+    },
+    {
+      "id": "lan_null_pupil",
+      "name": "Null Pupil",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 3,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Early answer that helps control reach the late game."
+    },
+    {
+      "id": "lan_delay_tactic",
+      "name": "Delay Tactic",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "anti_aggro"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          },
+          {
+            "type": "heal",
+            "amount": 2,
+            "target": "self_player"
+          }
+        ]
+      },
+      "text": "Strong against fast starts.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "lan_soft_counter",
+      "name": "Soft Counter",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "anti_combo"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 2,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Flexible disruption for unfair decks.",
+      "matchupModifiers": [
+        {
+          "target": "combo",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "lan_lantern_guard",
+      "name": "Lantern Guard",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "stabilizer"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 3,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 5,
+        "keywords": [
+          "guard"
+        ]
+      },
+      "text": "Stops early pressure without diluting the late game."
+    },
+    {
+      "id": "lan_find_line",
+      "name": "Find the Line",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 5,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 2
+          }
+        ]
+      },
+      "text": "Finds the right answer at the right time."
+    },
+    {
+      "id": "lan_archive_dig",
+      "name": "Archive Dig",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "engine",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "engine",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 3,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Slow card selection that improves long games."
+    },
+    {
+      "id": "lan_quiet_invitation",
+      "name": "Quiet Invitation",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 2,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 3,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          },
+          {
+            "type": "exhaust",
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Answer that is best when the game slows down."
+    },
+    {
+      "id": "lan_sweep_table",
+      "name": "Sweep the Table",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "anti_aggro"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 3,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -2,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 6,
+        "resilience": 2,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "target": "all_enemy_units"
+          }
+        ]
+      },
+      "text": "High-impact anti-aggro stabilizer.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "lan_patience_engine",
+      "name": "Patience Engine",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "engine"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -2,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 5
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Long-game engine that demands early survival."
+    },
+    {
+      "id": "lan_silver_bullet",
+      "name": "Silver Bullet",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "tech"
+      ],
+      "rarity": "uncommon",
+      "role": "tech",
+      "cost": 2,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Narrow but powerful sideboard answer.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        },
+        {
+          "target": "control",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "lan_late_fee_drake",
+      "name": "Late-Fee Drake",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "finisher"
+      ],
+      "rarity": "uncommon",
+      "role": "finisher",
+      "cost": 5,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -3,
+        "power": 5,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 3,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 5,
+        "health": 5
+      },
+      "text": "Budget finisher for stabilized games."
+    },
+    {
+      "id": "lan_mirror_notes",
+      "name": "Mirror Notes",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "tech",
+        "anti_control"
+      ],
+      "rarity": "uncommon",
+      "role": "tech",
+      "cost": 1,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 1,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          },
+          {
+            "type": "heal",
+            "amount": 2,
+            "target": "self_player",
+            "condition": "relevant_tech"
+          }
+        ]
+      },
+      "text": "Gives control decks an edge in slow mirrors.",
+      "matchupModifiers": [
+        {
+          "target": "control",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "lan_null_verdict",
+      "name": "Null Verdict",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "anti_combo"
+      ],
+      "rarity": "rare",
+      "role": "answer",
+      "cost": 2,
+      "value": 19,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 7,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "destroy",
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Premium answer that anchors reactive decks.",
+      "matchupModifiers": [
+        {
+          "target": "combo",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "lan_clockwork_sphinx",
+      "name": "Clockwork Sphinx",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "finisher",
+        "resilient"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 5,
+      "value": 22,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -3,
+        "power": 7,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 5,
+        "advantage": 3
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Clean, resilient win condition."
+    },
+    {
+      "id": "lan_total_recall",
+      "name": "Total Recall",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "engine"
+      ],
+      "rarity": "rare",
+      "role": "engine",
+      "cost": 4,
+      "value": 20,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -3,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 7
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Massive late-game refuel."
+    },
+    {
+      "id": "lan_worlds_wake",
+      "name": "Worlds Wake",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "finisher",
+        "mythic"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 6,
+      "value": 42,
+      "deckLimit": 1,
+      "stats": {
+        "speed": -4,
+        "power": 9,
+        "consistency": -1,
+        "interaction": 2,
+        "resilience": 6,
+        "advantage": 5
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 9,
+        "health": 9,
+        "keywords": [
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "all_enemy_units"
+          },
+          {
+            "type": "draw",
+            "amount": 2
+          }
+        ]
+      },
+      "text": "A mythic endgame that can reshape a season."
+    },
+    {
+      "id": "ver_seedling_scrapper",
+      "name": "Seedling Scrapper",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "anti_aggro"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 3
+      },
+      "text": "Small threat that trades up against fast starts.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ver_trail_guardian",
+      "name": "Trail Guardian",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "stabilizer",
+        "guard"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 4,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 5,
+        "keywords": [
+          "guard"
+        ]
+      },
+      "text": "Efficient stabilizer that makes racing awkward."
+    },
+    {
+      "id": "ver_thornhide_cub",
+      "name": "Thornhide Cub",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "resilient"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 3,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 4
+      },
+      "text": "A sturdy two-drop for fair exchanges."
+    },
+    {
+      "id": "ver_clean_trade",
+      "name": "Clean Trade",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "answer",
+        "anti_aggro"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 4,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Efficient removal that shines against cheap threats.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "ver_second_wind",
+      "name": "Second Wind",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "answer",
+        "stabilizer"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 2,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 4,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "heal",
+            "amount": 4,
+            "target": "self_player"
+          },
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Stabilization tool for races and attrition games.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ver_canopy_tracker",
+      "name": "Canopy Tracker",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 1,
+        "consistency": 4,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          },
+          {
+            "type": "heal",
+            "amount": 1,
+            "target": "self_player"
+          }
+        ]
+      },
+      "text": "Finds the right half of a fair deck."
+    },
+    {
+      "id": "ver_rootsnare_tactician",
+      "name": "Rootsnare Tactician",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "answer"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 3,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 4,
+        "onPlay": [
+          {
+            "type": "damage",
+            "amount": 1,
+            "target": "best_enemy_unit"
+          }
+        ]
+      },
+      "text": "Threat plus small interaction, exactly where midrange wants to be."
+    },
+    {
+      "id": "ver_stubborn_behemoth",
+      "name": "Stubborn Behemoth",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "resilient",
+        "sticky"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 4,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 5,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 5,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 5,
+        "health": 6
+      },
+      "text": "Durable midgame threat that punishes small removal."
+    },
+    {
+      "id": "ver_grove_broker",
+      "name": "Grove Broker",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "engine"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 2,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 3
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 1
+              },
+              {
+                "type": "heal",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "A fair value engine that keeps trades profitable."
+    },
+    {
+      "id": "ver_adaptive_charm",
+      "name": "Adaptive Charm",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "tech"
+      ],
+      "rarity": "uncommon",
+      "role": "tech",
+      "cost": 2,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 1,
+        "consistency": 1,
+        "interaction": 2,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          },
+          {
+            "type": "heal",
+            "amount": 2,
+            "target": "self_player"
+          }
+        ]
+      },
+      "text": "Flexible sideboard card that is never embarrassing.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        },
+        {
+          "target": "control",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ver_prize_stag",
+      "name": "Prize Stag",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "finisher"
+      ],
+      "rarity": "uncommon",
+      "role": "finisher",
+      "cost": 5,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -2,
+        "power": 6,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 4,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 6,
+        "health": 5
+      },
+      "text": "Budget top-end for winning stabilized boards."
+    },
+    {
+      "id": "ver_sideboard_path",
+      "name": "Sideboard Path",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "tech",
+        "filter"
+      ],
+      "rarity": "uncommon",
+      "role": "tech",
+      "cost": 1,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 1,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          },
+          {
+            "type": "buff",
+            "amount_attack": 1,
+            "amount_health": 1,
+            "target": "best_friendly_unit"
+          }
+        ]
+      },
+      "text": "Lets midrange tune for whatever the room is doing.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        },
+        {
+          "target": "control",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ver_overgrowth_contract",
+      "name": "Overgrowth Contract",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "engine",
+        "risky"
+      ],
+      "rarity": "rare",
+      "role": "engine",
+      "cost": 3,
+      "value": 19,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -1,
+        "power": 2,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 6
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 2
+              },
+              {
+                "type": "heal",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Powerful value engine that can be too slow into control."
+    },
+    {
+      "id": "ver_state_champion_rhino",
+      "name": "State Champion Rhino",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "resilient"
+      ],
+      "rarity": "rare",
+      "role": "threat",
+      "cost": 4,
+      "value": 21,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -1,
+        "power": 7,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 5,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "buff",
+            "amount_attack": 0,
+            "amount_health": 1,
+            "target": "all_friendly_units"
+          }
+        ]
+      },
+      "text": "Premium midrange body that dominates creature mirrors.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "ver_harvest_colossus",
+      "name": "Harvest Colossus",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "finisher",
+        "resilient"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 5,
+      "value": 20,
+      "deckLimit": 2,
+      "stats": {
+        "speed": -2,
+        "power": 8,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 5,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          "guard"
+        ]
+      },
+      "text": "Clean finisher for fair fights."
+    },
+    {
+      "id": "ver_world_tree_invite",
+      "name": "World Tree Invite",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "finisher",
+        "mythic"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 6,
+      "value": 40,
+      "deckLimit": 1,
+      "stats": {
+        "speed": -3,
+        "power": 9,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 7,
+        "advantage": 4
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 9,
+        "health": 10,
+        "keywords": [
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "buff",
+            "amount_attack": 2,
+            "amount_health": 2,
+            "target": "all_friendly_units"
+          },
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "A mythic fair-card payoff that can carry a whole season."
+    },
+    {
+      "id": "neu_pocket_notebook",
+      "name": "Pocket Notebook",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 4,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Universal consistency glue."
+    },
+    {
+      "id": "neu_trade_binder",
+      "name": "Trade Binder",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "engine"
+      ],
+      "rarity": "common",
+      "role": "engine",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": -1,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 3
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "A slow value card that can support pivots."
+    },
+    {
+      "id": "neu_sideboard_map",
+      "name": "Sideboard Map",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "tech"
+      ],
+      "rarity": "common",
+      "role": "tech",
+      "cost": 1,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 1,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1,
+            "condition": "relevant_tech"
+          },
+          {
+            "type": "heal",
+            "amount": 1,
+            "target": "self_player"
+          }
+        ]
+      },
+      "text": "Small edge after sideboarding.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        },
+        {
+          "target": "control",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "neu_sleeve_luck",
+      "name": "Sleeve Luck",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "filter"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 0,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Tiny consistency bump for any deck."
+    },
+    {
+      "id": "neu_metagame_forum",
+      "name": "Metagame Forum",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "tech",
+        "filter"
+      ],
+      "rarity": "uncommon",
+      "role": "tech",
+      "cost": 1,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          },
+          {
+            "type": "draw",
+            "amount": 1,
+            "condition": "relevant_tech"
+          }
+        ]
+      },
+      "text": "Flexible tech that improves uncertain fields.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 1
+        },
+        {
+          "target": "control",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "neu_budget_rare",
+      "name": "Budget Rare",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "threat"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 3
+      },
+      "text": "Playable filler when your collection is thin."
+    },
+    {
+      "id": "neu_shop_owner_tip",
+      "name": "Shop Owner's Tip",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "tech",
+        "filter"
+      ],
+      "rarity": "rare",
+      "role": "tech",
+      "cost": 1,
+      "value": 16,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 4,
+        "interaction": 2,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 2
+          },
+          {
+            "type": "heal",
+            "amount": 2,
+            "target": "self_player",
+            "condition": "relevant_tech"
+          }
+        ]
+      },
+      "text": "Broad format knowledge compressed into cardboard.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 2
+        },
+        {
+          "target": "control",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "neu_secret_tech_foil",
+      "name": "Secret Tech Foil",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "tech",
+        "mythic"
+      ],
+      "rarity": "mythic",
+      "role": "tech",
+      "cost": 2,
+      "value": 36,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 5,
+        "resilience": 2,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "destroy",
+            "target": "selected"
+          },
+          {
+            "type": "draw",
+            "amount": 1,
+            "condition": "relevant_tech"
+          }
+        ]
+      },
+      "text": "A flashy answer that makes any sideboard better.",
+      "matchupModifiers": [
+        {
+          "target": "aggro",
+          "value": 3
+        },
+        {
+          "target": "control",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "neu_binder_filter",
+      "name": "Binder Filter",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "tool",
+        "artifact",
+        "filter",
+        "engine",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 3,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "discard",
+                "amount": 1,
+                "target": "self_player"
+              },
+              {
+                "type": "draw",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Prototype for: once each turn, discard 1 card, then draw 1 card."
+    },
+    {
+      "id": "ver_last_word_brawler",
+      "name": "Last-Word Brawler",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "death_trigger",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 4,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 1,
+        "triggers": [
+          {
+            "timing": "on_death",
+            "effects": [
+              {
+                "type": "damage",
+                "amountSource": "source_attack",
+                "target": "enemy_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "When this dies, it deals damage equal to its attack to your opponent."
+    },
+    {
+      "id": "ver_ravenous_baloth",
+      "name": "Ravenous Baloth",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "drawback",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 3,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 4,
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "damage",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          },
+          {
+            "timing": "end_turn",
+            "effects": [
+              {
+                "type": "damage",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "At the start and end of your turn, this deals 1 damage to you."
+    },
+    {
+      "id": "ver_toolfed_scrapper",
+      "name": "Toolfed Scrapper",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "tool_payoff",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 3,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 2,
+        "onPlay": [
+          {
+            "type": "buff",
+            "amount_attack": 1,
+            "amount_health": 1,
+            "target": "source_unit",
+            "condition": "controls_tool"
+          },
+          {
+            "type": "heal",
+            "amount": 1,
+            "target": "self_player",
+            "condition": "controls_tool"
+          }
+        ]
+      },
+      "text": "When played, if you control a tool, this gets +1/+1 and you gain 1 life."
+    },
+    {
+      "id": "ver_lifebloom_glider",
+      "name": "Lifebloom Glider",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "flying",
+        "life_sink",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 4,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 4,
+        "keywords": [
+          "flying"
+        ],
+        "abilities": [
+          {
+            "id": "lifebloom_heal",
+            "label": "Gain Life",
+            "cost": 1,
+            "effects": [
+              {
+                "type": "heal",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Flying. Activated: pay 1 focus to gain 1 life."
+    },
+    {
+      "id": "ver_gravepath_guide",
+      "name": "Gravepath Guide",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "graveyard",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 2,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 2,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 1,
+        "abilities": [
+          {
+            "id": "gravepath_recover",
+            "label": "Recover",
+            "cost": 1,
+            "effects": [
+              {
+                "type": "recover",
+                "amount": 1,
+                "target": "self_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Activated: pay 1 focus to recover 1 card from your discard."
+    },
+    {
+      "id": "ver_refund_beast",
+      "name": "Refund Beast",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "death_trigger",
+        "focus",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "rare",
+      "role": "threat",
+      "cost": 4,
+      "value": 18,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 1,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 4,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 4,
+        "triggers": [
+          {
+            "timing": "on_death",
+            "effects": [
+              {
+                "type": "gain_focus",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      },
+      "text": "When this dies, gain 4 focus this turn."
+    },
+    {
+      "id": "ver_grove_stipend",
+      "name": "Grove Stipend",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "tool",
+        "artifact",
+        "focus",
+        "engine",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 1,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "gain_focus",
+                "amount": 1,
+                "restrictedTo": "verdant_midrange"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "At the start of your turn, gain 1 Verdant Midrange focus this turn."
+    },
+    {
+      "id": "ver_focus_page",
+      "name": "Focus Page",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "focus",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 1,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 1,
+        "abilities": [
+          {
+            "id": "focus_page_focus",
+            "label": "Add Focus",
+            "cost": 0,
+            "oncePerTurn": true,
+            "preventAttack": true,
+            "effects": [
+              {
+                "type": "gain_focus",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Activated once each turn: gain 1 focus. This cannot attack after using that ability this turn."
+    },
+    {
+      "id": "ver_leafwing_scout",
+      "name": "Leafwing Scout",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "flying",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 1,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 1,
+        "keywords": [
+          "flying"
+        ]
+      },
+      "text": "Prototype for: 1/1 flying."
+    },
+    {
+      "id": "ver_growing_duelist",
+      "name": "Growing Duelist",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "threat",
+        "snowball",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 1,
+        "triggers": [
+          {
+            "timing": "on_damage_player",
+            "effects": [
+              {
+                "type": "buff",
+                "amount_attack": 1,
+                "amount_health": 1,
+                "target": "source_unit"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Whenever this deals combat damage to your opponent, it gets +1/+1."
+    },
+    {
+      "id": "ver_grip_punisher",
+      "name": "Grip Punisher",
+      "archetype": "verdant_midrange",
+      "tags": [
+        "verdant_midrange",
+        "midrange",
+        "answer",
+        "hand_punisher",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "rare",
+      "role": "answer",
+      "cost": 4,
+      "value": 18,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 1,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_player",
+        "effects": [
+          {
+            "type": "damage",
+            "amountSource": "enemy_hand_size",
+            "target": "enemy_player"
+          }
+        ]
+      },
+      "text": "Deal 1 damage to your opponent for each card in their hand."
+    },
+    {
+      "id": "lan_lattice_stipend",
+      "name": "Lattice Stipend",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "tool",
+        "artifact",
+        "focus",
+        "engine",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 1,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 2,
+        "interaction": 1,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "gain_focus",
+                "amount": 1,
+                "restrictedTo": "lantern_control"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "At the start of your turn, gain 1 Lantern Control focus this turn."
+    },
+    {
+      "id": "lan_perfect_search",
+      "name": "Perfect Search",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "filter",
+        "tutor",
+        "wave1"
+      ],
+      "rarity": "rare",
+      "role": "filter",
+      "cost": 2,
+      "value": 17,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 5,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 2
+          }
+        ]
+      },
+      "text": "Prototype for: search your library for a card and put it into your hand."
+    },
+    {
+      "id": "lan_borrowed_turn",
+      "name": "Borrowed Turn",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "finisher",
+        "extra_turn",
+        "mythic",
+        "wave1"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 5,
+      "value": 40,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 4,
+        "resilience": 2,
+        "advantage": 5
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 3
+          },
+          {
+            "type": "gain_focus",
+            "amount": 2
+          },
+          {
+            "type": "exhaust",
+            "target": "all_enemy_units",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: take an extra turn after this one."
+    },
+    {
+      "id": "lan_focus_tax",
+      "name": "Focus Tax",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "tax",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 3,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "exhaust",
+            "target": "all_enemy_units",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: your opponent gains 1 less focus next turn."
+    },
+    {
+      "id": "lan_curiosity_harness",
+      "name": "Curiosity Harness",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "attachment",
+        "draw",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 4,
+      "value": 8,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 1,
+        "consistency": 1,
+        "interaction": 1,
+        "resilience": 4,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 5,
+        "keywords": [
+          "guard"
+        ],
+        "triggers": [
+          {
+            "timing": "on_damage_player",
+            "effects": [
+              {
+                "type": "draw",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Whenever this deals combat damage to your opponent, draw 1 card."
+    },
+    {
+      "id": "lan_scrying_page",
+      "name": "Scrying Page",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "filter",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 1,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 1,
+        "health": 1,
+        "onPlay": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Prototype for: 1/1 that looks at the top card and may discard it."
+    },
+    {
+      "id": "lan_shield_protocol",
+      "name": "Shield Protocol",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "interaction",
+        "protection",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "buff",
+            "amount_attack": 0,
+            "amount_health": 3,
+            "target": "best_friendly_unit"
+          }
+        ]
+      },
+      "text": "Prototype for: target a threat; it gains 3 health."
+    },
+    {
+      "id": "lan_table_freeze",
+      "name": "Table Freeze",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "lockdown",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "exhaust",
+            "target": "all_enemy_units",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: opposing threats currently on the field cannot attack next turn."
+    },
+    {
+      "id": "lan_action_denial",
+      "name": "Action Denial",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "interaction",
+        "counter",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 2,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "discard",
+            "amount": 1,
+            "target": "enemy_player"
+          },
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Prototype for: negate an opponent action."
+    },
+    {
+      "id": "lan_summon_denial",
+      "name": "Summon Denial",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "interaction",
+        "counter",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 2,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "target": "selected"
+          },
+          {
+            "type": "exhaust",
+            "target": "selected",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: negate an opponent threat as it is played."
+    },
+    {
+      "id": "lan_focus_gargoyle",
+      "name": "Focus Gargoyle",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "focus_payoff",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 3,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 4,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 4,
+        "keywords": [
+          "guard"
+        ]
+      },
+      "text": "Prototype for: 0/4 that gets +1 attack for each focus you have."
+    },
+    {
+      "id": "lan_lockdown_tag",
+      "name": "Lockdown Tag",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "answer",
+        "stun",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 3,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 3,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "exhaust",
+            "target": "selected",
+            "turns": 2
+          }
+        ]
+      },
+      "text": "Prototype for: target a creature; it cannot attack."
+    },
+    {
+      "id": "lan_preordain_notes",
+      "name": "Preordain Notes",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "filter",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "filter",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 0,
+        "consistency": 3,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Prototype for: look at the top card, choose whether to discard it, then draw 1."
+    },
+    {
+      "id": "lan_uncounterable_drake",
+      "name": "Uncounterable Drake",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "flying",
+        "mythic",
+        "finisher",
+        "wave1"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 5,
+      "value": 39,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 1,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 5,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 5,
+        "keywords": [
+          "flying",
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "draw",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Prototype for: 4/5 flying; your spells cannot be countered."
+    },
+    {
+      "id": "red_glass_cannon_sprinter",
+      "name": "Glass-Cannon Sprinter",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "fast",
+        "drawback",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "rare",
+      "role": "threat",
+      "cost": 4,
+      "value": 18,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 5,
+        "power": 6,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 6,
+        "health": 1,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ],
+        "triggers": [
+          {
+            "timing": "end_turn",
+            "effects": [
+              {
+                "type": "destroy",
+                "target": "source_unit"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Fast. At the end of your turn, destroy this."
+    },
+    {
+      "id": "red_redline_stipend",
+      "name": "Redline Stipend",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "tool",
+        "artifact",
+        "focus",
+        "engine",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 1,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "timing": "start_turn",
+            "effects": [
+              {
+                "type": "gain_focus",
+                "amount": 1,
+                "restrictedTo": "redline_aggro"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "At the start of your turn, gain 1 Redline Aggro focus this turn."
+    },
+    {
+      "id": "red_smash_the_toolbox",
+      "name": "Smash the Toolbox",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "answer",
+        "tool_hate",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 2,
+      "value": 6,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 2,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 3,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "destroy",
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Prototype for: destroy target tool."
+    },
+    {
+      "id": "red_draw_punisher",
+      "name": "Draw Punisher",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "draw_punisher",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 3,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 3,
+        "triggers": [
+          {
+            "timing": "opponent_draw",
+            "effects": [
+              {
+                "type": "damage",
+                "amount": 1,
+                "target": "enemy_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Whenever your opponent draws a card, this deals 1 damage to them."
+    },
+    {
+      "id": "red_live_wire",
+      "name": "Live Wire",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "interaction",
+        "burn",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 2,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Deal 2 damage to any target."
+    },
+    {
+      "id": "red_taunting_sprinter",
+      "name": "Taunting Sprinter",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "fast",
+        "stun",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 5,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 2,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ],
+        "onPlay": [
+          {
+            "type": "exhaust",
+            "target": "best_enemy_unit",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: 3/2 fast that can stop a threat from attacking next turn."
+    },
+    {
+      "id": "red_impact_mauler",
+      "name": "Impact Mauler",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "fast",
+        "attack_trigger",
+        "finisher",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 5,
+      "value": 20,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 5,
+        "power": 4,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 3,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 4,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ],
+        "triggers": [
+          {
+            "timing": "on_damage_player",
+            "effects": [
+              {
+                "type": "damage",
+                "amount": 4,
+                "target": "enemy_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Fast. Whenever this deals combat damage to your opponent, it deals 4 damage to them."
+    },
+    {
+      "id": "red_overdrive_titan",
+      "name": "Overdrive Titan",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "piercing",
+        "mythic",
+        "finisher",
+        "wave1"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 7,
+      "value": 42,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 3,
+        "power": 7,
+        "consistency": 0,
+        "interaction": 1,
+        "resilience": 7,
+        "advantage": 2
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          "piercing"
+        ],
+        "onPlay": [
+          {
+            "type": "buff",
+            "amount_attack": 3,
+            "amount_health": 3,
+            "target": "best_friendly_unit"
+          }
+        ]
+      },
+      "text": "Prototype for: 7/7 piercing with an additional-cost mode that grants +7/+7 and invincible."
+    },
+    {
+      "id": "red_pure_grave_spark",
+      "name": "Pure-Grave Spark",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "burn",
+        "discard_payoff",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "answer",
+      "cost": 1,
+      "value": 2,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 4,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "any_enemy",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 1,
+            "target": "selected"
+          }
+        ]
+      },
+      "text": "Prototype for: deal 1 damage to any target; if your discard is all aggro cards, deal 6 instead."
+    },
+    {
+      "id": "neu_mirror_box_rare",
+      "name": "Mirror Box Rare",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "threat",
+        "copy",
+        "mythic",
+        "wave1"
+      ],
+      "rarity": "mythic",
+      "role": "threat",
+      "cost": 4,
+      "value": 38,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 1,
+        "power": 2,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 4
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 2,
+        "onPlay": [
+          {
+            "type": "draw",
+            "amount": 1
+          },
+          {
+            "type": "summon",
+            "name": "Copied Threat",
+            "attack": 2,
+            "health": 1,
+            "ready": false,
+            "tags": [
+              "token"
+            ]
+          },
+          {
+            "type": "buff",
+            "amount_attack": 2,
+            "amount_health": 1,
+            "target": "best_friendly_unit"
+          }
+        ]
+      },
+      "text": "Prototype for: on play, give a random threat in your hand +2/+1 and -1 cost, then create a copy."
+    },
+    {
+      "id": "red_topdeck_gambler",
+      "name": "Topdeck Gambler",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "topdeck",
+        "focus",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "threat",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 4,
+        "power": 5,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 5,
+        "health": 1,
+        "ready": true,
+        "keywords": [
+          "fast"
+        ],
+        "onPlay": [
+          {
+            "type": "gain_focus",
+            "amount": 1
+          }
+        ]
+      },
+      "text": "Prototype for: 1/1 that mills the top card; big hits gain focus, misses gain temporary power."
+    },
+    {
+      "id": "red_one_drop_reactor",
+      "name": "One-Drop Reactor",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "tool",
+        "artifact",
+        "burn",
+        "engine",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "uncommon",
+      "role": "engine",
+      "cost": 2,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 0,
+        "consistency": 1,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "engine",
+        "triggers": [
+          {
+            "id": "one_drop_reactor",
+            "timing": "on_card_played",
+            "condition": "played_card_cost",
+            "conditionAmount": 1,
+            "oncePerTurn": true,
+            "effects": [
+              {
+                "type": "damage",
+                "amount": 2,
+                "target": "enemy_player"
+              }
+            ]
+          }
+        ]
+      },
+      "text": "Once each turn, when you play a 1-cost card, deal 2 damage to your opponent."
+    },
+    {
+      "id": "lan_blanking_agent",
+      "name": "Blanking Agent",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "silence",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 3,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 0,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 3,
+        "resilience": 3,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 3,
+        "health": 3,
+        "onPlay": [
+          {
+            "type": "debuff",
+            "amount_attack": 2,
+            "amount_health": 0,
+            "target": "best_enemy_unit"
+          },
+          {
+            "type": "exhaust",
+            "target": "best_enemy_unit",
+            "turns": 1
+          }
+        ]
+      },
+      "text": "Prototype for: on play, target an opponent card; it loses its ability."
+    },
+    {
+      "id": "lan_reset_judge",
+      "name": "Reset Judge",
+      "archetype": "lantern_control",
+      "tags": [
+        "lantern_control",
+        "control",
+        "threat",
+        "reset",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "rare",
+      "role": "answer",
+      "cost": 3,
+      "value": 18,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 0,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 4,
+        "resilience": 4,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 4,
+        "keywords": [
+          "guard"
+        ],
+        "onPlay": [
+          {
+            "type": "debuff",
+            "amount_attack": 2,
+            "amount_health": 0,
+            "target": "all_enemy_units"
+          }
+        ]
+      },
+      "text": "Prototype for: reset all cards to their original power and health."
+    },
+    {
+      "id": "red_graveyard_coward",
+      "name": "Graveyard Coward",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "discard_drawback",
+        "wave1",
+        "wave2"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 3,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 4,
+        "health": 2,
+        "onPlay": [
+          {
+            "type": "debuff",
+            "amount_attack": 4,
+            "amount_health": 0,
+            "target": "source_unit",
+            "condition": "enemy_discard_at_least",
+            "conditionAmount": 3
+          }
+        ]
+      },
+      "text": "When played, if your opponent has 3+ cards in their discard, this loses 4 attack."
+    },
+    {
+      "id": "red_ticket_printer",
+      "name": "Ticket Printer",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "reveal",
+        "mythic",
+        "finisher",
+        "wave1"
+      ],
+      "rarity": "mythic",
+      "role": "finisher",
+      "cost": 2,
+      "value": 36,
+      "deckLimit": 1,
+      "stats": {
+        "speed": 4,
+        "power": 6,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 2,
+        "advantage": 3
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 0,
+        "health": 2,
+        "onPlay": [
+          {
+            "type": "summon",
+            "name": "Rush Ticket",
+            "attack": 6,
+            "health": 1,
+            "ready": true,
+            "tags": [
+              "token",
+              "fast"
+            ]
+          }
+        ]
+      },
+      "text": "Prototype for: on reveal, shuffle two 1-cost 6/1 cards into your deck."
+    },
+    {
+      "id": "neu_zero_power_rally",
+      "name": "Zero-Power Rally",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "buff",
+        "zero_power",
+        "answer",
+        "wave1"
+      ],
+      "rarity": "uncommon",
+      "role": "answer",
+      "cost": 2,
+      "value": 7,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 1,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 2,
+        "resilience": 0,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "none",
+        "effects": [
+          {
+            "type": "buff",
+            "amount_attack": 3,
+            "amount_health": 0,
+            "target": "all_friendly_units"
+          }
+        ]
+      },
+      "text": "Prototype for: all cards with 0 base attack gain 3 attack."
+    },
+    {
+      "id": "red_ahead_on_board_colossus",
+      "name": "Ahead-on-Board Colossus",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "cost_reduction",
+        "finisher",
+        "wave1"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 7,
+      "value": 22,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 2,
+        "power": 6,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 6,
+        "advantage": 1
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 6,
+        "health": 6
+      },
+      "text": "Prototype for: 6/6 that costs 4 less if your cards have more power than your opponent's."
+    },
+    {
+      "id": "red_big_spell_mascot",
+      "name": "Big-Spell Mascot",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "threat",
+        "big_spell_payoff",
+        "wave1"
+      ],
+      "rarity": "common",
+      "role": "threat",
+      "cost": 2,
+      "value": 3,
+      "deckLimit": 3,
+      "stats": {
+        "speed": 3,
+        "power": 2,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 1,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 2,
+        "health": 1
+      },
+      "text": "Prototype for: 0/1 that gains +2 attack for each card costing 4 or more you control."
+    },
+    {
+      "id": "red_chaotic_reprint",
+      "name": "Chaotic Reprint",
+      "archetype": "redline_aggro",
+      "tags": [
+        "redline_aggro",
+        "aggro",
+        "answer",
+        "copy",
+        "wave1"
+      ],
+      "rarity": "rare",
+      "role": "answer",
+      "cost": 6,
+      "value": 22,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 1,
+        "power": 0,
+        "consistency": 0,
+        "interaction": 5,
+        "resilience": 0,
+        "advantage": 3
+      },
+      "combat": {
+        "kind": "action",
+        "targetMode": "enemy_unit",
+        "effects": [
+          {
+            "type": "destroy",
+            "target": "selected"
+          },
+          {
+            "type": "summon",
+            "name": "Reprint Token",
+            "attack": 2,
+            "health": 2,
+            "ready": false,
+            "tags": [
+              "token"
+            ]
+          },
+          {
+            "type": "summon",
+            "name": "Reprint Token",
+            "attack": 2,
+            "health": 2,
+            "ready": false,
+            "tags": [
+              "token"
+            ]
+          }
+        ]
+      },
+      "text": "Prototype for: destroy a target card, then create 2 copies under its owner's control."
+    },
+    {
+      "id": "neu_attendance_colossus",
+      "name": "Attendance Colossus",
+      "archetype": "neutral",
+      "tags": [
+        "neutral",
+        "threat",
+        "drawback",
+        "finisher",
+        "wave1"
+      ],
+      "rarity": "rare",
+      "role": "finisher",
+      "cost": 8,
+      "value": 24,
+      "deckLimit": 2,
+      "stats": {
+        "speed": 0,
+        "power": 15,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 15,
+        "advantage": 0
+      },
+      "combat": {
+        "kind": "unit",
+        "attack": 15,
+        "health": 15
+      },
+      "text": "Prototype for: 15/15 that cannot be played if you played a card last turn."
+    }
+  ]
+}

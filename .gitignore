@@ -1,0 +1,22 @@
+# macOS / editor noise
+.DS_Store
+Icon?
+*.swp
+*.swo
+*.tmp
+~$*
+*.bak
+*.log
+
+# Godot generated editor/import cache
+.godot/
+*.import
+*.translation
+
+# Local/export artifacts
+export_presets.cfg
+exports/
+builds/
+node_modules/
+node_modules
+**/node_modules

@@ -1,0 +1,117 @@
+{
+  "cards": [
+    {
+      "id": "redline_spark_runner",
+      "displayName": "Spark Runner",
+      "setId": "base_01",
+      "rarity": "common",
+      "archetypeTags": ["redline_aggro"],
+      "mechanicTags": ["threat", "burn"],
+      "role": "threat",
+      "cost": 1,
+      "deckLimit": 3,
+      "marketValue": 2,
+      "stats": {
+        "power": 2,
+        "speed": 4,
+        "consistency": 1,
+        "interaction": 0,
+        "resilience": 0,
+        "cardAdvantage": 0
+      },
+      "matchupModifiers": [
+        {
+          "targetTag": "slow_setup",
+          "value": 1
+        }
+      ],
+      "rulesText": "Fast early threat.",
+      "flavorText": "First to the table, first to the feature match."
+    },
+    {
+      "id": "lantern_null_verdict",
+      "displayName": "Null Verdict",
+      "setId": "base_01",
+      "rarity": "rare",
+      "archetypeTags": ["lantern_control"],
+      "mechanicTags": ["answer", "counter"],
+      "role": "answer",
+      "cost": 2,
+      "deckLimit": 3,
+      "marketValue": 18,
+      "stats": {
+        "power": 0,
+        "speed": 1,
+        "consistency": 1,
+        "interaction": 5,
+        "resilience": 1,
+        "cardAdvantage": 0
+      },
+      "matchupModifiers": [
+        {
+          "targetTag": "combo",
+          "value": 2
+        }
+      ],
+      "rulesText": "Efficient answer against setup decks.",
+      "flavorText": "No, and also no."
+    },
+    {
+      "id": "gearworks_second_sun",
+      "displayName": "Second Sun Engine",
+      "setId": "base_01",
+      "rarity": "mythic",
+      "archetypeTags": ["gearworks_combo"],
+      "mechanicTags": ["engine", "combo_piece"],
+      "role": "engine",
+      "cost": 3,
+      "deckLimit": 3,
+      "marketValue": 35,
+      "stats": {
+        "power": 5,
+        "speed": 0,
+        "consistency": 2,
+        "interaction": 0,
+        "resilience": 1,
+        "cardAdvantage": 3
+      },
+      "matchupModifiers": [
+        {
+          "targetTag": "low_interaction",
+          "value": 2
+        }
+      ],
+      "rulesText": "Premium combo engine and pivot card.",
+      "flavorText": "Everyone at the shop has a story about the first one they opened."
+    },
+    {
+      "id": "verdant_stubborn_behemoth",
+      "displayName": "Stubborn Behemoth",
+      "setId": "base_01",
+      "rarity": "uncommon",
+      "archetypeTags": ["verdant_midrange"],
+      "mechanicTags": ["threat", "resilient"],
+      "role": "threat",
+      "cost": 4,
+      "deckLimit": 3,
+      "marketValue": 6,
+      "stats": {
+        "power": 4,
+        "speed": 0,
+        "consistency": 0,
+        "interaction": 0,
+        "resilience": 4,
+        "cardAdvantage": 1
+      },
+      "matchupModifiers": [
+        {
+          "targetTag": "removal_heavy",
+          "value": 1
+        }
+      ],
+      "rulesText": "Durable midgame threat.",
+      "flavorText": "It has survived worse than this tournament hall."
+    }
+  ]
+}
+

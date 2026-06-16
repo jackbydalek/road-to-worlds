@@ -1,0 +1,328 @@
+# Road to Worlds Current Card List
+
+Total cards: 103
+
+Format: `Name` — cost, rarity, combat kind, card id.
+
+Each card includes its design text plus the currently implemented combat behavior.
+
+## Redline Aggro
+
+- **Blistering Charm** — cost 1, common, action, `red_blistering_charm`
+  - Text: Sideboard card that helps push through slow answers.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 2 damage to selected target; Draw 1 (if this is relevant tech).
+- **Cheap Shot** — cost 1, common, action, `red_cheap_shot`
+  - Text: Low-cost answer for mirrors and creature swarms.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 3 damage to selected target.
+- **Heatline Initiate** — cost 1, common, unit, `red_heatline_initiate`
+  - Text: Cheap threat that rewards burn-heavy lists.
+  - Implemented: Unit 1/1; keywords: fast; ready immediately. No additional implemented effect beyond stats/keywords.
+- **Live Wire** — cost 1, common, action, `red_live_wire`
+  - Text: Deal 2 damage to any target.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 2 damage to selected target.
+- **Pure-Grave Spark** — cost 1, common, action, `red_pure_grave_spark`
+  - Text: Prototype for: deal 1 damage to any target; if your discard is all aggro cards, deal 6 instead.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 1 damage to selected target.
+- **Quick Spark** — cost 1, common, action, `red_quick_spark`
+  - Text: Cheap interaction that doubles as reach.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 2 damage to selected target.
+- **Side-Street Fix** — cost 1, common, action, `red_side_street_fix`
+  - Text: Improves opening hands and smooths awkward draws.
+  - Implemented: Action; target mode: none. Effects: Draw 1.
+- **Spark Runner** — cost 1, common, unit, `red_spark_runner`
+  - Text: A fast opener that improves aggressive starts.
+  - Implemented: Unit 2/1; keywords: fast; ready immediately. No additional implemented effect beyond stats/keywords.
+- **Alley Brawler** — cost 2, common, unit, `red_alley_brawler`
+  - Text: Efficient pressure for creature-heavy starts.
+  - Implemented: Unit 3/2. No additional implemented effect beyond stats/keywords.
+- **Big-Spell Mascot** — cost 2, common, unit, `red_big_spell_mascot`
+  - Text: Prototype for: 0/1 that gains +2 attack for each card costing 4 or more you control.
+  - Implemented: Unit 2/1. No additional implemented effect beyond stats/keywords.
+- **Graveyard Coward** — cost 2, common, unit, `red_graveyard_coward`
+  - Text: When played, if your opponent has 3+ cards in their discard, this loses 4 attack.
+  - Implemented: Unit 4/2. On play: Give -4/+0 to this (if opponent has at least 3 cards in discard).
+- **Last Point** — cost 2, common, action, `red_last_point`
+  - Text: Reach that turns close games into wins.
+  - Implemented: Action; target mode: enemy_player. Effects: Deal 4 damage to opponent.
+- **Redline Stipend** — cost 1, uncommon, engine, `red_redline_stipend`
+  - Text: At the start of your turn, gain 1 Redline Aggro focus this turn.
+  - Implemented: Engine. Start of your turn: Gain 1 Redline Aggro-restricted focus this turn.
+- **Crowd Surge** — cost 2, uncommon, engine, `red_crowd_surge`
+  - Text: Rewards threat density and go-wide starts.
+  - Implemented: Engine. Start of your turn: Summon Crowd Token (1/1, ready, token/fast).
+- **Fuse Mentor** — cost 2, uncommon, unit, `red_fuse_mentor`
+  - Text: Turns burn-heavy hands into faster clocks.
+  - Implemented: Unit 3/3. On play: Give +1/+0 to all friendly units.
+- **One-Drop Reactor** — cost 2, uncommon, engine, `red_one_drop_reactor`
+  - Text: Once each turn, when you play a 1-cost card, deal 2 damage to your opponent.
+  - Implemented: Engine. Once each turn, when a card is played, if the played card costs 1: Deal 2 damage to opponent.
+- **Reckless Recruiter** — cost 2, uncommon, engine, `red_reckless_recruiter`
+  - Text: Keeps pressure flowing through removal.
+  - Implemented: Engine. Start of your turn: Draw 1.
+- **Smash the Toolbox** — cost 2, uncommon, action, `red_smash_the_toolbox`
+  - Text: Prototype for: destroy target tool.
+  - Implemented: Action; target mode: enemy_unit. Effects: Destroy selected target.
+- **Chain Reaction** — cost 3, uncommon, action, `red_chain_reaction`
+  - Text: A strong payoff when the deck is mostly cheap spells.
+  - Implemented: Action; target mode: enemy_player. Effects: Deal 5 damage to opponent; Draw 1.
+- **Draw Punisher** — cost 3, uncommon, unit, `red_draw_punisher`
+  - Text: Whenever your opponent draws a card, this deals 1 damage to them.
+  - Implemented: Unit 2/3. When opponent draws: Deal 1 damage to opponent.
+- **Taunting Sprinter** — cost 3, uncommon, unit, `red_taunting_sprinter`
+  - Text: Prototype for: 3/2 fast that can stop a threat from attacking next turn.
+  - Implemented: Unit 3/2; keywords: fast; ready immediately. On play: Exhaust best enemy unit for 1 turn.
+- **Topdeck Gambler** — cost 3, uncommon, unit, `red_topdeck_gambler`
+  - Text: Prototype for: 1/1 that mills the top card; big hits gain focus, misses gain temporary power.
+  - Implemented: Unit 5/1; keywords: fast; ready immediately. On play: Gain 1 focus this turn.
+- **Flaming Contract** — cost 2, rare, engine, `red_flaming_contract`
+  - Text: High-upside draw engine that can make the deck clunkier.
+  - Implemented: Engine. Start of your turn: Draw 2; Deal 1 damage to you.
+- **Feature Match Hero** — cost 3, rare, unit, `red_feature_match_hero`
+  - Text: Premium threat that survives common removal.
+  - Implemented: Unit 5/5. No additional implemented effect beyond stats/keywords.
+- **Final Turn Gambit** — cost 4, rare, action, `red_final_turn_gambit`
+  - Text: Clunky but terrifying finisher against slow decks.
+  - Implemented: Action; target mode: enemy_player. Effects: Deal 7 damage to opponent; Deal 2 damage to you.
+- **Glass-Cannon Sprinter** — cost 4, rare, unit, `red_glass_cannon_sprinter`
+  - Text: Fast. At the end of your turn, destroy this.
+  - Implemented: Unit 6/1; keywords: fast; ready immediately. End of your turn: Destroy this.
+- **Impact Mauler** — cost 5, rare, unit, `red_impact_mauler`
+  - Text: Fast. Whenever this deals combat damage to your opponent, it deals 4 damage to them.
+  - Implemented: Unit 4/4; keywords: fast; ready immediately. When this damages the opponent: Deal 4 damage to opponent.
+- **Chaotic Reprint** — cost 6, rare, action, `red_chaotic_reprint`
+  - Text: Prototype for: destroy a target card, then create 2 copies under its owner's control.
+  - Implemented: Action; target mode: enemy_unit. Effects: Destroy selected target; Summon Reprint Token (2/2, token); Summon Reprint Token (2/2, token).
+- **Ahead-on-Board Colossus** — cost 7, rare, unit, `red_ahead_on_board_colossus`
+  - Text: Prototype for: 6/6 that costs 4 less if your cards have more power than your opponent's.
+  - Implemented: Unit 6/6. No additional implemented effect beyond stats/keywords.
+- **Ticket Printer** — cost 2, mythic, unit, `red_ticket_printer`
+  - Text: Prototype for: on reveal, shuffle two 1-cost 6/1 cards into your deck.
+  - Implemented: Unit 0/2. On play: Summon Rush Ticket (6/1, ready, token/fast).
+- **Mythic Phoenix** — cost 3, mythic, unit, `red_mythic_phoenix`
+  - Text: A season-defining pull for aggressive decks.
+  - Implemented: Unit 6/6; keywords: fast; ready immediately. On play: Deal 2 damage to opponent.
+- **Overdrive Titan** — cost 7, mythic, unit, `red_overdrive_titan`
+  - Text: Prototype for: 7/7 piercing with an additional-cost mode that grants +7/+7 and invincible.
+  - Implemented: Unit 7/7; keywords: piercing. On play: Give +3/+3 to best friendly unit.
+
+## Lantern Control
+
+- **Delay Tactic** — cost 1, common, action, `lan_delay_tactic`
+  - Text: Strong against fast starts.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 2 damage to selected target; Heal 2 to you.
+- **Find the Line** — cost 1, common, action, `lan_find_line`
+  - Text: Finds the right answer at the right time.
+  - Implemented: Action; target mode: none. Effects: Draw 2.
+- **Null Pupil** — cost 1, common, action, `lan_null_pupil`
+  - Text: Early answer that helps control reach the late game.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 3 damage to selected target.
+- **Preordain Notes** — cost 1, common, action, `lan_preordain_notes`
+  - Text: Prototype for: look at the top card, choose whether to discard it, then draw 1.
+  - Implemented: Action; target mode: none. Effects: Draw 1.
+- **Scrying Page** — cost 1, common, unit, `lan_scrying_page`
+  - Text: Prototype for: 1/1 that looks at the top card and may discard it.
+  - Implemented: Unit 1/1. On play: Draw 1.
+- **Shield Protocol** — cost 1, common, action, `lan_shield_protocol`
+  - Text: Prototype for: target a threat; it gains 3 health.
+  - Implemented: Action; target mode: none. Effects: Give +0/+3 to best friendly unit.
+- **Archive Dig** — cost 2, common, engine, `lan_archive_dig`
+  - Text: Slow card selection that improves long games.
+  - Implemented: Engine. Start of your turn: Draw 1.
+- **Lantern Guard** — cost 2, common, unit, `lan_lantern_guard`
+  - Text: Stops early pressure without diluting the late game.
+  - Implemented: Unit 2/5; keywords: guard. No additional implemented effect beyond stats/keywords.
+- **Quiet Invitation** — cost 2, common, action, `lan_quiet_invitation`
+  - Text: Answer that is best when the game slows down.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 2 damage to selected target; Exhaust selected target.
+- **Soft Counter** — cost 2, common, action, `lan_soft_counter`
+  - Text: Flexible disruption for unfair decks.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 3 damage to selected target.
+- **Focus Gargoyle** — cost 3, common, unit, `lan_focus_gargoyle`
+  - Text: Prototype for: 0/4 that gets +1 attack for each focus you have.
+  - Implemented: Unit 2/4; keywords: guard. No additional implemented effect beyond stats/keywords.
+- **Lockdown Tag** — cost 3, common, action, `lan_lockdown_tag`
+  - Text: Prototype for: target a creature; it cannot attack.
+  - Implemented: Action; target mode: enemy_unit. Effects: Exhaust selected target for 2 turns.
+- **Lattice Stipend** — cost 1, uncommon, engine, `lan_lattice_stipend`
+  - Text: At the start of your turn, gain 1 Lantern Control focus this turn.
+  - Implemented: Engine. Start of your turn: Gain 1 Lantern Control-restricted focus this turn.
+- **Mirror Notes** — cost 1, uncommon, action, `lan_mirror_notes`
+  - Text: Gives control decks an edge in slow mirrors.
+  - Implemented: Action; target mode: none. Effects: Draw 1; Heal 2 to you (if this is relevant tech).
+- **Action Denial** — cost 2, uncommon, action, `lan_action_denial`
+  - Text: Prototype for: negate an opponent action.
+  - Implemented: Action; target mode: none. Effects: Make opponent discard 1; Draw 1.
+- **Silver Bullet** — cost 2, uncommon, action, `lan_silver_bullet`
+  - Text: Narrow but powerful sideboard answer.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 5 damage to selected target.
+- **Summon Denial** — cost 2, uncommon, action, `lan_summon_denial`
+  - Text: Prototype for: negate an opponent threat as it is played.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 3 damage to selected target; Exhaust selected target for 1 turn.
+- **Blanking Agent** — cost 3, uncommon, unit, `lan_blanking_agent`
+  - Text: Prototype for: on play, target an opponent card; it loses its ability.
+  - Implemented: Unit 3/3. On play: Give -2/+0 to best enemy unit; Exhaust best enemy unit for 1 turn.
+- **Focus Tax** — cost 3, uncommon, action, `lan_focus_tax`
+  - Text: Prototype for: your opponent gains 1 less focus next turn.
+  - Implemented: Action; target mode: none. Effects: Exhaust all enemy units for 1 turn.
+- **Patience Engine** — cost 3, uncommon, engine, `lan_patience_engine`
+  - Text: Long-game engine that demands early survival.
+  - Implemented: Engine. Start of your turn: Draw 2.
+- **Sweep the Table** — cost 3, uncommon, action, `lan_sweep_table`
+  - Text: High-impact anti-aggro stabilizer.
+  - Implemented: Action; target mode: none. Effects: Deal 3 damage to all enemy units.
+- **Table Freeze** — cost 3, uncommon, action, `lan_table_freeze`
+  - Text: Prototype for: opposing threats currently on the field cannot attack next turn.
+  - Implemented: Action; target mode: none. Effects: Exhaust all enemy units for 1 turn.
+- **Curiosity Harness** — cost 4, uncommon, unit, `lan_curiosity_harness`
+  - Text: Whenever this deals combat damage to your opponent, draw 1 card.
+  - Implemented: Unit 1/5; keywords: guard. When this damages the opponent: Draw 1.
+- **Late-Fee Drake** — cost 5, uncommon, unit, `lan_late_fee_drake`
+  - Text: Budget finisher for stabilized games.
+  - Implemented: Unit 5/5. No additional implemented effect beyond stats/keywords.
+- **Null Verdict** — cost 2, rare, action, `lan_null_verdict`
+  - Text: Premium answer that anchors reactive decks.
+  - Implemented: Action; target mode: enemy_unit. Effects: Destroy selected target.
+- **Perfect Search** — cost 2, rare, action, `lan_perfect_search`
+  - Text: Prototype for: search your library for a card and put it into your hand.
+  - Implemented: Action; target mode: none. Effects: Draw 2.
+- **Reset Judge** — cost 3, rare, unit, `lan_reset_judge`
+  - Text: Prototype for: reset all cards to their original power and health.
+  - Implemented: Unit 2/4; keywords: guard. On play: Give -2/+0 to all enemy units.
+- **Total Recall** — cost 4, rare, engine, `lan_total_recall`
+  - Text: Massive late-game refuel.
+  - Implemented: Engine. Start of your turn: Draw 3.
+- **Clockwork Sphinx** — cost 5, rare, unit, `lan_clockwork_sphinx`
+  - Text: Clean, resilient win condition.
+  - Implemented: Unit 7/7; keywords: guard. On play: Draw 1.
+- **Borrowed Turn** — cost 5, mythic, action, `lan_borrowed_turn`
+  - Text: Prototype for: take an extra turn after this one.
+  - Implemented: Action; target mode: none. Effects: Draw 3; Gain 2 focus this turn; Exhaust all enemy units for 1 turn.
+- **Uncounterable Drake** — cost 5, mythic, unit, `lan_uncounterable_drake`
+  - Text: Prototype for: 4/5 flying; your spells cannot be countered.
+  - Implemented: Unit 4/5; keywords: flying, guard. On play: Draw 1.
+- **Worlds Wake** — cost 6, mythic, unit, `lan_worlds_wake`
+  - Text: A mythic endgame that can reshape a season.
+  - Implemented: Unit 9/9; keywords: guard. On play: Deal 2 damage to all enemy units; Draw 2.
+
+## Verdant Midrange
+
+- **Canopy Tracker** — cost 1, common, action, `ver_canopy_tracker`
+  - Text: Finds the right half of a fair deck.
+  - Implemented: Action; target mode: none. Effects: Draw 1; Heal 1 to you.
+- **Focus Page** — cost 1, common, unit, `ver_focus_page`
+  - Text: Activated once each turn: gain 1 focus. This cannot attack after using that ability this turn.
+  - Implemented: Unit 1/1. Activate Add Focus (cost 0 once each turn; this cannot attack this turn): Gain 1 focus this turn.
+- **Leafwing Scout** — cost 1, common, unit, `ver_leafwing_scout`
+  - Text: Prototype for: 1/1 flying.
+  - Implemented: Unit 1/1; keywords: flying. No additional implemented effect beyond stats/keywords.
+- **Seedling Scrapper** — cost 1, common, unit, `ver_seedling_scrapper`
+  - Text: Small threat that trades up against fast starts.
+  - Implemented: Unit 2/3. No additional implemented effect beyond stats/keywords.
+- **Clean Trade** — cost 2, common, action, `ver_clean_trade`
+  - Text: Efficient removal that shines against cheap threats.
+  - Implemented: Action; target mode: enemy_unit. Effects: Deal 4 damage to selected target.
+- **Growing Duelist** — cost 2, common, unit, `ver_growing_duelist`
+  - Text: Whenever this deals combat damage to your opponent, it gets +1/+1.
+  - Implemented: Unit 1/1. When this damages the opponent: Give +1/+1 to this.
+- **Second Wind** — cost 2, common, action, `ver_second_wind`
+  - Text: Stabilization tool for races and attrition games.
+  - Implemented: Action; target mode: none. Effects: Heal 4 to you; Draw 1.
+- **Thornhide Cub** — cost 2, common, unit, `ver_thornhide_cub`
+  - Text: A sturdy two-drop for fair exchanges.
+  - Implemented: Unit 3/4. No additional implemented effect beyond stats/keywords.
+- **Trail Guardian** — cost 2, common, unit, `ver_trail_guardian`
+  - Text: Efficient stabilizer that makes racing awkward.
+  - Implemented: Unit 3/5; keywords: guard. No additional implemented effect beyond stats/keywords.
+- **Grove Stipend** — cost 1, uncommon, engine, `ver_grove_stipend`
+  - Text: At the start of your turn, gain 1 Verdant Midrange focus this turn.
+  - Implemented: Engine. Start of your turn: Gain 1 Verdant Midrange-restricted focus this turn.
+- **Sideboard Path** — cost 1, uncommon, action, `ver_sideboard_path`
+  - Text: Lets midrange tune for whatever the room is doing.
+  - Implemented: Action; target mode: none. Effects: Draw 1; Give +1/+1 to best friendly unit.
+- **Adaptive Charm** — cost 2, uncommon, action, `ver_adaptive_charm`
+  - Text: Flexible sideboard card that is never embarrassing.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 2 damage to selected target; Heal 2 to you.
+- **Gravepath Guide** — cost 2, uncommon, unit, `ver_gravepath_guide`
+  - Text: Activated: pay 1 focus to recover 1 card from your discard.
+  - Implemented: Unit 2/1. Activate Recover (cost 1): Recover 1 card from discard.
+- **Grove Broker** — cost 3, uncommon, engine, `ver_grove_broker`
+  - Text: A fair value engine that keeps trades profitable.
+  - Implemented: Engine. Start of your turn: Draw 1; Heal 1 to you.
+- **Lifebloom Glider** — cost 3, uncommon, unit, `ver_lifebloom_glider`
+  - Text: Flying. Activated: pay 1 focus to gain 1 life.
+  - Implemented: Unit 2/4; keywords: flying. Activate Gain Life (cost 1): Heal 1 to you.
+- **Ravenous Baloth** — cost 3, uncommon, unit, `ver_ravenous_baloth`
+  - Text: At the start and end of your turn, this deals 1 damage to you.
+  - Implemented: Unit 4/4. Start of your turn: Deal 1 damage to you. End of your turn: Deal 1 damage to you.
+- **Rootsnare Tactician** — cost 3, uncommon, unit, `ver_rootsnare_tactician`
+  - Text: Threat plus small interaction, exactly where midrange wants to be.
+  - Implemented: Unit 4/4. On play: Deal 1 damage to best enemy unit.
+- **Toolfed Scrapper** — cost 3, uncommon, unit, `ver_toolfed_scrapper`
+  - Text: When played, if you control a tool, this gets +1/+1 and you gain 1 life.
+  - Implemented: Unit 2/2. On play: Give +1/+1 to this (if you control a tool); Heal 1 to you (if you control a tool).
+- **Last-Word Brawler** — cost 4, uncommon, unit, `ver_last_word_brawler`
+  - Text: When this dies, it deals damage equal to its attack to your opponent.
+  - Implemented: Unit 4/1. When this dies: Deal damage equal to this unit's attack to opponent.
+- **Stubborn Behemoth** — cost 4, uncommon, unit, `ver_stubborn_behemoth`
+  - Text: Durable midgame threat that punishes small removal.
+  - Implemented: Unit 5/6. No additional implemented effect beyond stats/keywords.
+- **Prize Stag** — cost 5, uncommon, unit, `ver_prize_stag`
+  - Text: Budget top-end for winning stabilized boards.
+  - Implemented: Unit 6/5. No additional implemented effect beyond stats/keywords.
+- **Overgrowth Contract** — cost 3, rare, engine, `ver_overgrowth_contract`
+  - Text: Powerful value engine that can be too slow into control.
+  - Implemented: Engine. Start of your turn: Draw 2; Heal 1 to you.
+- **Grip Punisher** — cost 4, rare, action, `ver_grip_punisher`
+  - Text: Deal 1 damage to your opponent for each card in their hand.
+  - Implemented: Action; target mode: enemy_player. Effects: Deal damage equal to opponent's hand size to opponent.
+- **Refund Beast** — cost 4, rare, unit, `ver_refund_beast`
+  - Text: When this dies, gain 4 focus this turn.
+  - Implemented: Unit 4/4. When this dies: Gain 4 focus this turn.
+- **State Champion Rhino** — cost 4, rare, unit, `ver_state_champion_rhino`
+  - Text: Premium midrange body that dominates creature mirrors.
+  - Implemented: Unit 7/7; keywords: guard. On play: Give +0/+1 to all friendly units.
+- **Harvest Colossus** — cost 5, rare, unit, `ver_harvest_colossus`
+  - Text: Clean finisher for fair fights.
+  - Implemented: Unit 8/8; keywords: guard. No additional implemented effect beyond stats/keywords.
+- **World Tree Invite** — cost 6, mythic, unit, `ver_world_tree_invite`
+  - Text: A mythic fair-card payoff that can carry a whole season.
+  - Implemented: Unit 9/10; keywords: guard. On play: Give +2/+2 to all friendly units; Draw 1.
+
+## Universal / Neutral
+
+- **Sleeve Luck** — cost 0, common, action, `neu_sleeve_luck`
+  - Text: Tiny consistency bump for any deck.
+  - Implemented: Action; target mode: none. Effects: Draw 1.
+- **Pocket Notebook** — cost 1, common, action, `neu_pocket_notebook`
+  - Text: Universal consistency glue.
+  - Implemented: Action; target mode: none. Effects: Draw 1.
+- **Sideboard Map** — cost 1, common, action, `neu_sideboard_map`
+  - Text: Small edge after sideboarding.
+  - Implemented: Action; target mode: none. Effects: Draw 1 (if this is relevant tech); Heal 1 to you.
+- **Trade Binder** — cost 2, common, engine, `neu_trade_binder`
+  - Text: A slow value card that can support pivots.
+  - Implemented: Engine. Start of your turn: Draw 1.
+- **Metagame Forum** — cost 1, uncommon, action, `neu_metagame_forum`
+  - Text: Flexible tech that improves uncertain fields.
+  - Implemented: Action; target mode: any_enemy. Effects: Deal 2 damage to selected target; Draw 1 (if this is relevant tech).
+- **Zero-Power Rally** — cost 2, uncommon, action, `neu_zero_power_rally`
+  - Text: Prototype for: all cards with 0 base attack gain 3 attack.
+  - Implemented: Action; target mode: none. Effects: Give +3/+0 to all friendly units.
+- **Binder Filter** — cost 3, uncommon, engine, `neu_binder_filter`
+  - Text: Prototype for: once each turn, discard 1 card, then draw 1 card.
+  - Implemented: Engine. Start of your turn: Discard 1; Draw 1.
+- **Budget Rare** — cost 3, uncommon, unit, `neu_budget_rare`
+  - Text: Playable filler when your collection is thin.
+  - Implemented: Unit 4/3. No additional implemented effect beyond stats/keywords.
+- **Shop Owner's Tip** — cost 1, rare, action, `neu_shop_owner_tip`
+  - Text: Broad format knowledge compressed into cardboard.
+  - Implemented: Action; target mode: none. Effects: Draw 2; Heal 2 to you (if this is relevant tech).
+- **Attendance Colossus** — cost 8, rare, unit, `neu_attendance_colossus`
+  - Text: Prototype for: 15/15 that cannot be played if you played a card last turn.
+  - Implemented: Unit 15/15. No additional implemented effect beyond stats/keywords.
+- **Secret Tech Foil** — cost 2, mythic, action, `neu_secret_tech_foil`
+  - Text: A flashy answer that makes any sideboard better.
+  - Implemented: Action; target mode: enemy_unit. Effects: Destroy selected target; Draw 1 (if this is relevant tech).
+- **Mirror Box Rare** — cost 4, mythic, unit, `neu_mirror_box_rare`
+  - Text: Prototype for: on play, give a random threat in your hand +2/+1 and -1 cost, then create a copy.
+  - Implemented: Unit 2/2. On play: Draw 1; Summon Copied Threat (2/1, token); Give +2/+1 to best friendly unit.

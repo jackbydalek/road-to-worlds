@@ -1,0 +1,16 @@
+{
+  "boosters": [
+    {
+      "id": "base_standard_pack",
+      "name": "Base Set Booster",
+      "price": 5,
+      "slots": [
+        { "rarity": "common", "count": 4 },
+        { "rarity": "uncommon", "count": 2 },
+        { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" },
+        { "slotType": "wildcard", "count": 1, "rareChance": 0.08, "uncommonChance": 0.35, "mythicChance": 0.015 }
+      ]
+    }
+  ]
+}
+

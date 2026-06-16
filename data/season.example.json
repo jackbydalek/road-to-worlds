@@ -1,0 +1,45 @@
+{
+  "tournaments": [
+    {
+      "id": "weekly_locals",
+      "displayName": "Weekly Locals",
+      "rounds": 3,
+      "requiredWins": 2,
+      "entryFee": 3,
+      "bossOpponentId": "local_rival",
+      "prizeTable": [
+        {
+          "minWins": 3,
+          "money": 12,
+          "packs": ["base_standard_pack"]
+        },
+        {
+          "minWins": 2,
+          "money": 6,
+          "packs": []
+        }
+      ]
+    },
+    {
+      "id": "monthly_regionals",
+      "displayName": "Monthly Regionals",
+      "rounds": 5,
+      "requiredWins": 4,
+      "entryFee": 10,
+      "bossOpponentId": "regional_grinder",
+      "prizeTable": [
+        {
+          "minWins": 5,
+          "money": 35,
+          "packs": ["base_standard_pack", "base_standard_pack"]
+        },
+        {
+          "minWins": 4,
+          "money": 20,
+          "packs": ["base_standard_pack"]
+        }
+      ]
+    }
+  ]
+}
+

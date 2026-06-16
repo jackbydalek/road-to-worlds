@@ -1,0 +1,76 @@
+{
+  "archetypes": [
+    {
+      "id": "redline_aggro",
+      "name": "Redline Aggro",
+      "summary": "Win before expensive decks stabilize.",
+      "tags": ["aggro", "linear", "cheap"],
+      "color": "#f35d3d",
+      "phaseWeights": { "speed": 0.42, "power": 0.30, "interaction": 0.10, "resilience": 0.08, "advantage": 0.10 },
+      "desiredRoles": { "threat": 14, "answer": 5, "engine": 3, "finisher": 4, "filter": 3, "tech": 1 },
+      "matchups": { "lantern_control": 0.08, "verdant_midrange": -0.08 },
+      "starterDeck": [
+        { "cardId": "red_spark_runner", "count": 3 },
+        { "cardId": "red_alley_brawler", "count": 3 },
+        { "cardId": "red_heatline_initiate", "count": 3 },
+        { "cardId": "red_quick_spark", "count": 3 },
+        { "cardId": "red_last_point", "count": 3 },
+        { "cardId": "red_chain_reaction", "count": 2 },
+        { "cardId": "red_side_street_fix", "count": 2 },
+        { "cardId": "red_reckless_recruiter", "count": 2 },
+        { "cardId": "red_crowd_surge", "count": 2 },
+        { "cardId": "red_blistering_charm", "count": 2 },
+        { "cardId": "red_cheap_shot", "count": 2 },
+        { "cardId": "neu_pocket_notebook", "count": 3 }
+      ]
+    },
+    {
+      "id": "lantern_control",
+      "name": "Lantern Control",
+      "summary": "Answer everything, stabilize, and win late.",
+      "tags": ["control", "reactive", "expensive"],
+      "color": "#4cc9b0",
+      "phaseWeights": { "speed": 0.08, "power": 0.22, "interaction": 0.32, "resilience": 0.18, "advantage": 0.20 },
+      "desiredRoles": { "threat": 4, "answer": 12, "engine": 5, "finisher": 3, "filter": 4, "tech": 2 },
+      "matchups": { "redline_aggro": -0.08, "verdant_midrange": 0.08 },
+      "starterDeck": [
+        { "cardId": "lan_null_pupil", "count": 3 },
+        { "cardId": "lan_delay_tactic", "count": 3 },
+        { "cardId": "lan_soft_counter", "count": 3 },
+        { "cardId": "lan_lantern_guard", "count": 3 },
+        { "cardId": "lan_find_line", "count": 3 },
+        { "cardId": "lan_sweep_table", "count": 2 },
+        { "cardId": "lan_archive_dig", "count": 2 },
+        { "cardId": "lan_patience_engine", "count": 2 },
+        { "cardId": "lan_silver_bullet", "count": 2 },
+        { "cardId": "lan_late_fee_drake", "count": 2 },
+        { "cardId": "neu_pocket_notebook", "count": 2 },
+        { "cardId": "neu_budget_rare", "count": 3 }
+      ]
+    },
+    {
+      "id": "verdant_midrange",
+      "name": "Verdant Midrange",
+      "summary": "Stabilize early, trade cleanly, and win with better individual cards.",
+      "tags": ["midrange", "fair", "resilient"],
+      "color": "#7fbf4d",
+      "phaseWeights": { "speed": 0.20, "power": 0.30, "interaction": 0.22, "resilience": 0.18, "advantage": 0.10 },
+      "desiredRoles": { "threat": 11, "answer": 7, "engine": 3, "finisher": 3, "filter": 3, "tech": 3 },
+      "matchups": { "redline_aggro": 0.08, "lantern_control": -0.08 },
+      "starterDeck": [
+        { "cardId": "ver_seedling_scrapper", "count": 3 },
+        { "cardId": "ver_trail_guardian", "count": 3 },
+        { "cardId": "ver_thornhide_cub", "count": 3 },
+        { "cardId": "ver_clean_trade", "count": 3 },
+        { "cardId": "ver_second_wind", "count": 2 },
+        { "cardId": "ver_canopy_tracker", "count": 3 },
+        { "cardId": "ver_rootsnare_tactician", "count": 3 },
+        { "cardId": "ver_stubborn_behemoth", "count": 2 },
+        { "cardId": "ver_grove_broker", "count": 2 },
+        { "cardId": "ver_adaptive_charm", "count": 2 },
+        { "cardId": "ver_prize_stag", "count": 2 },
+        { "cardId": "neu_pocket_notebook", "count": 2 }
+      ]
+    }
+  ]
+}

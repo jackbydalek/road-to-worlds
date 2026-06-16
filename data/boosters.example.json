@@ -1,0 +1,65 @@
+{
+  "boosters": [
+    {
+      "id": "base_standard_pack",
+      "displayName": "Base Set Booster",
+      "setId": "base_01",
+      "price": 5,
+      "slots": [
+        {
+          "rarity": "common",
+          "count": 4
+        },
+        {
+          "rarity": "uncommon",
+          "count": 2
+        },
+        {
+          "rarity": "rare",
+          "count": 1,
+          "upgradeChance": 0.125,
+          "upgradeRarity": "mythic"
+        },
+        {
+          "slotType": "wildcard",
+          "count": 1,
+          "foilChance": 0.15,
+          "rareUpgradeChance": 0.05
+        }
+      ],
+      "tagWeights": {}
+    },
+    {
+      "id": "redline_archetype_pack",
+      "displayName": "Redline Burner Pack",
+      "setId": "base_01",
+      "price": 7,
+      "slots": [
+        {
+          "rarity": "common",
+          "count": 4
+        },
+        {
+          "rarity": "uncommon",
+          "count": 2
+        },
+        {
+          "rarity": "rare",
+          "count": 1,
+          "upgradeChance": 0.1,
+          "upgradeRarity": "mythic"
+        },
+        {
+          "slotType": "wildcard",
+          "count": 1,
+          "foilChance": 0.15,
+          "rareUpgradeChance": 0.04
+        }
+      ],
+      "tagWeights": {
+        "redline_aggro": 2.5,
+        "burn": 1.5
+      }
+    }
+  ]
+}

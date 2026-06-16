@@ -1,0 +1,59 @@
+{
+  "archetypes": [
+    {
+      "id": "redline_aggro",
+      "displayName": "Redline Aggro",
+      "plan": "Pressure early and finish with reach.",
+      "tags": ["aggro", "linear", "cheap"],
+      "accessibility": 0.9,
+      "skillFloor": 0.3,
+      "skillCeiling": 0.65,
+      "phaseWeights": {
+        "early": 0.5,
+        "mid": 0.35,
+        "late": 0.15
+      },
+      "desiredRoles": {
+        "threat": 16,
+        "answer": 4,
+        "engine": 2,
+        "finisher": 4,
+        "tech": 4
+      },
+      "matchups": {
+        "lantern_control": -0.1,
+        "gearworks_combo": 0.15,
+        "verdant_midrange": -0.05
+      },
+      "starterCardPool": ["redline_spark_runner"]
+    },
+    {
+      "id": "lantern_control",
+      "displayName": "Lantern Control",
+      "plan": "Trade resources, stabilize, and win late.",
+      "tags": ["control", "reactive", "expensive"],
+      "accessibility": 0.45,
+      "skillFloor": 0.55,
+      "skillCeiling": 0.9,
+      "phaseWeights": {
+        "early": 0.2,
+        "mid": 0.35,
+        "late": 0.45
+      },
+      "desiredRoles": {
+        "threat": 4,
+        "answer": 14,
+        "engine": 6,
+        "finisher": 3,
+        "tech": 3
+      },
+      "matchups": {
+        "redline_aggro": 0.1,
+        "gearworks_combo": -0.05,
+        "verdant_midrange": 0.12
+      },
+      "starterCardPool": ["lantern_null_verdict"]
+    }
+  ]
+}
+
