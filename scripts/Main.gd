@@ -11,6 +11,9 @@ const ARCHETYPE_ORDER := ["flightless_birds", "snake", "oxen", "glires", "insect
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/CombatService.gd")
 const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
+const RUN_STATE_SERVICE_SCRIPT := preload("res://scripts/RunStateService.gd")
+const SHOP_ECONOMY_SERVICE_SCRIPT := preload("res://scripts/ShopEconomyService.gd")
+const CARD_FRAME_FACTORY_SCRIPT := preload("res://scripts/CardFrameFactory.gd")
 const COMBAT_BOARD_SLOTS := 5
 const COMBAT_ENGINE_SLOTS := 3
 const MANUAL_PENDING_ACTION_COMMIT_DELAY := 1.0
@@ -19,6 +22,9 @@ var rng := RandomNumberGenerator.new()
 var content_catalog: RefCounted
 var combat_service: RefCounted
 var deck_metrics_service: RefCounted
+var run_state_service: RefCounted
+var shop_economy_service: RefCounted
+var card_frame_factory: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -47,6 +53,9 @@ var manual_inspect_stats_label: Label
 var manual_inspect_zone_label: Label
 var manual_inspect_effect_label: Label
 var manual_inspect_text_label: Label
+var manual_drag_candidate: Dictionary = {}
+var manual_drag_state: Dictionary = {}
+var manual_drag_ghost: Control
 
 
 func _ready() -> void:
@@ -56,12 +65,19 @@ func _ready() -> void:
 	combat_service.setup(cards_by_id, archetypes_by_id)
 	deck_metrics_service = DECK_METRICS_SERVICE_SCRIPT.new()
 	deck_metrics_service.setup(cards_by_id, archetypes_by_id, ARCHETYPE_ORDER, MAIN_DECK_SIZE)
+	run_state_service = RUN_STATE_SERVICE_SCRIPT.new()
+	run_state_service.setup(cards_by_id, archetypes_by_id, ARCHETYPE_ORDER, MAIN_DECK_SIZE, SIDEBOARD_SIZE, STARTING_MONEY, SAVE_PATH)
+	shop_economy_service = SHOP_ECONOMY_SERVICE_SCRIPT.new()
+	shop_economy_service.setup(cards, cards_by_id, boosters_by_id, rng)
+	card_frame_factory = CARD_FRAME_FACTORY_SCRIPT.new()
 	_build_shell()
 	_show_start()
 
 
 func _input(event: InputEvent) -> void:
 	if current_screen != "ui_combat":
+		return
+	if _manual_handle_hand_card_drag_input(event):
 		return
 	if run.get("manual_inspect", {}).is_empty():
 		return
@@ -203,48 +219,10 @@ func _show_start() -> void:
 
 
 func _start_new_run(archetype_id: String) -> void:
+	_manual_clear_hand_card_drag()
 	var archetype: Dictionary = archetypes_by_id[archetype_id]
 	var starter_deck := _deck_entries_to_dict(archetype.get("starterDeck", []))
-	var starter_collection := {}
-	for card_id in starter_deck.keys():
-		starter_collection[card_id] = starter_deck[card_id]
-
-	run = {
-		"week": 1,
-		"money": STARTING_MONEY,
-		"starter": archetype_id,
-		"collection": starter_collection,
-		"deck": starter_deck.duplicate(true),
-		"sideboard": {},
-		"meta": {
-			"flightless_birds": 0.24,
-			"snake": 0.22,
-			"oxen": 0.22,
-			"glires": 0.17,
-			"insect": 0.15
-		},
-		"reports": [
-			"Opening week: Flightless Birds Aggro is cheap and everywhere.",
-			"Oxen Ramp is picking up because players want to go over fair boards.",
-			"Snake Control players are happy to coil around fair creature decks."
-		],
-		"shop": [],
-		"current_pack": [],
-		"revealed_pack": [],
-		"pack_index": 0,
-		"prize_packs": 0,
-		"run_over": false,
-		"last_result": [],
-		"combat_lab_opponent": _predator_archetype(archetype_id),
-		"manual_selection": {},
-		"manual_inspect": {},
-		"manual_battle_log_open": false,
-		"manual_animation": {},
-		"manual_animation_queue": [],
-		"manual_pending_action": {},
-		"manual_combat": {},
-		"last_combat": {}
-	}
+	run = run_state_service.create_run(archetype_id, starter_deck, _predator_archetype(archetype_id))
 
 	_generate_shop_inventory()
 	_set_footer("New season started. You have $%d, a legal starter deck, and one shot at this week's locals." % run.money)
@@ -415,169 +393,65 @@ func _show_packs() -> void:
 
 
 func _buy_and_open_pack() -> void:
-	var booster: Dictionary = boosters_by_id["base_standard_pack"]
-	if run.money < booster.price:
-		_set_footer("Not enough money for a booster.")
+	var result: Dictionary = shop_economy_service.buy_and_open_pack(run, "base_standard_pack", _current_primary_archetype())
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	run.money -= int(booster.price)
-	_start_pack(_generate_pack("base_standard_pack"))
-	_set_footer("You bought a Base Set Booster. Time to sweat the rare slot.")
+	_set_footer(result.message)
 	_show_packs()
 
 
 func _open_prize_pack() -> void:
-	if run.prize_packs <= 0:
-		_set_footer("No prize packs waiting.")
+	var result: Dictionary = shop_economy_service.open_prize_pack(run, "base_standard_pack", _current_primary_archetype())
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	run.prize_packs -= 1
-	_start_pack(_generate_pack("base_standard_pack"))
-	_set_footer("Prize pack opened. Free cardboard always feels a little better.")
+	_set_footer(result.message)
 	_show_packs()
 
 
 func _start_pack(pack: Array) -> void:
-	run.current_pack = pack
-	run.revealed_pack = []
-	run.pack_index = 0
+	shop_economy_service.start_pack(run, pack)
 
 
 func _generate_pack(booster_id: String) -> Array:
-	var booster: Dictionary = boosters_by_id[booster_id]
-	var pack: Array = []
-
-	for slot in booster.get("slots", []):
-		var count := int(slot.get("count", 1))
-		for i in range(count):
-			var rarity := ""
-			if slot.has("slotType") and slot.slotType == "wildcard":
-				var roll := rng.randf()
-				if roll < float(slot.get("mythicChance", 0.0)):
-					rarity = "mythic"
-				elif roll < float(slot.get("mythicChance", 0.0)) + float(slot.get("rareChance", 0.0)):
-					rarity = "rare"
-				elif roll < float(slot.get("mythicChance", 0.0)) + float(slot.get("rareChance", 0.0)) + float(slot.get("uncommonChance", 0.0)):
-					rarity = "uncommon"
-				else:
-					rarity = "common"
-			else:
-				rarity = slot.get("rarity", "common")
-				if slot.has("upgradeChance") and rng.randf() < float(slot.upgradeChance):
-					rarity = slot.get("upgradeRarity", rarity)
-
-			pack.append({ "cardId": _pick_card_by_rarity(rarity), "rarity": rarity })
-
-	pack.shuffle()
-	pack.sort_custom(func(a, b) -> bool: return _rarity_rank(a.rarity) < _rarity_rank(b.rarity))
-	return pack
+	return shop_economy_service.generate_pack(booster_id, _current_primary_archetype())
 
 
 func _pick_card_by_rarity(rarity: String) -> String:
-	var pool := []
-	for card in cards:
-		if card.get("rarity", "") == rarity:
-			pool.append(card.id)
-
-	if pool.is_empty():
-		return cards[0].id
-
-	var current_primary := "flightless_birds"
-	if not run.is_empty():
-		current_primary = _calculate_deck_metrics(run.deck, run.sideboard).primary
-
-	var weighted := []
-	for card_id in pool:
-		var card: Dictionary = cards_by_id[card_id]
-		var weight := 2 if card.get("archetype", "") == current_primary or card.get("archetype", "") == "neutral" else 1
-		for i in range(weight):
-			weighted.append(card_id)
-
-	return weighted[rng.randi_range(0, weighted.size() - 1)]
+	return shop_economy_service.pick_card_by_rarity(rarity, _current_primary_archetype())
 
 
 func _rarity_rank(rarity: String) -> int:
-	match rarity:
-		"common":
-			return 0
-		"uncommon":
-			return 1
-		"rare":
-			return 2
-		"mythic":
-			return 3
-		_:
-			return 0
+	return shop_economy_service.rarity_rank(rarity)
 
 
 func _reveal_next_card() -> void:
-	if int(run.pack_index) >= run.current_pack.size():
-		_show_packs()
-		return
-
-	var entry: Dictionary = run.current_pack[int(run.pack_index)]
-	var card_id: String = entry.cardId
-	var owned_before := _owned_count(card_id)
-	_add_to_collection(card_id, 1)
-
-	var note := ""
-	if owned_before == 0:
-		note = "NEW"
-	elif owned_before < _deck_limit(card_id):
-		note = "Useful copy"
-	else:
-		note = "Duplicate"
-
-	if _card_matches_current_deck(card_id):
-		note += " | Fits deck"
-
-	run.revealed_pack.append({ "cardId": card_id, "note": note })
-	run.pack_index = int(run.pack_index) + 1
+	shop_economy_service.reveal_next_card(run, _current_primary_archetype())
 	_show_packs()
 
 
 func _reveal_all_cards() -> void:
-	while int(run.pack_index) < run.current_pack.size():
-		var entry: Dictionary = run.current_pack[int(run.pack_index)]
-		var card_id: String = entry.cardId
-		var owned_before := _owned_count(card_id)
-		_add_to_collection(card_id, 1)
-		var note := "NEW" if owned_before == 0 else ("Useful copy" if owned_before < _deck_limit(card_id) else "Duplicate")
-		if _card_matches_current_deck(card_id):
-			note += " | Fits deck"
-		run.revealed_pack.append({ "cardId": card_id, "note": note })
-		run.pack_index = int(run.pack_index) + 1
+	shop_economy_service.reveal_all_cards(run, _current_primary_archetype())
 	_show_packs()
 
 
 func _card_matches_current_deck(card_id: String) -> bool:
-	var primary: String = String(_calculate_deck_metrics(run.deck, run.sideboard).primary)
-	var card: Dictionary = cards_by_id[card_id]
-	return card.get("archetype", "") == primary or card.get("archetype", "") == "neutral"
+	return shop_economy_service.card_matches_current_deck(card_id, _current_primary_archetype())
 
 
 func _buy_single(card_id: String) -> void:
-	var price := _card_price(card_id)
-	if run.money < price:
-		_set_footer("Not enough money for " + cards_by_id[card_id].name + ".")
+	var result: Dictionary = shop_economy_service.buy_single(run, card_id)
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	run.money -= price
-	_add_to_collection(card_id, 1)
-	_set_footer("Bought %s for $%d." % [cards_by_id[card_id].name, price])
+	_set_footer(result.message)
 	_generate_shop_inventory()
 	_show_shop()
 
 
 func _sell_extra_copies() -> void:
-	var total := 0
-	for card_id in run.collection.keys():
-		var owned := _owned_count(card_id)
-		var in_use := _deck_count(card_id) + _sideboard_count(card_id)
-		var keep: int = max(_deck_limit(card_id), in_use)
-		if owned > keep:
-			var extras: int = owned - keep
-			total += extras * max(1, int(floor(float(cards_by_id[card_id].value) * 0.45)))
-			run.collection[card_id] = keep
-
-	run.money += total
+	var total: int = run_state_service.sell_extra_copies(run)
 	if total > 0:
 		_set_footer("Sold extra copies for $%d." % total)
 	else:
@@ -586,60 +460,21 @@ func _sell_extra_copies() -> void:
 
 
 func _generate_shop_inventory() -> void:
-	if run.is_empty():
-		return
-
-	var shop := []
-	var primary: String = String(_calculate_deck_metrics(run.deck, run.sideboard).primary)
-	var rarity_budget := ["common", "common", "uncommon", "uncommon", "rare"]
-
-	for rarity in rarity_budget:
-		shop.append(_pick_shop_card(rarity, primary, shop))
-
-	while shop.size() < 8:
-		var rarity := "common"
-		var roll := rng.randf()
-		if roll > 0.9:
-			rarity = "rare"
-		elif roll > 0.55:
-			rarity = "uncommon"
-		shop.append(_pick_shop_card(rarity, primary, shop))
-
-	run.shop = shop
+	shop_economy_service.generate_shop_inventory(run, _current_primary_archetype())
 
 
 func _pick_shop_card(rarity: String, primary: String, excluded: Array) -> String:
-	var pool := []
-	for card in cards:
-		if card.rarity != rarity:
-			continue
-		if excluded.has(card.id):
-			continue
-		var weight := 1
-		if card.archetype == primary:
-			weight += 2
-		if card.archetype == "neutral":
-			weight += 1
-		for i in range(weight):
-			pool.append(card.id)
-
-	if pool.is_empty():
-		for card in cards:
-			if not excluded.has(card.id):
-				pool.append(card.id)
-
-	return pool[rng.randi_range(0, pool.size() - 1)]
+	return shop_economy_service.pick_shop_card(rarity, primary, excluded)
 
 
 func _card_price(card_id: String) -> int:
-	var card: Dictionary = cards_by_id[card_id]
-	var base := int(card.get("value", 1))
-	var demand := 1.0
-	if card.get("archetype", "") != "neutral" and run.has("meta"):
-		demand += float(run.meta.get(card.archetype, 0.0)) * 0.35
-	if card.get("rarity", "") == "mythic":
-		demand += 0.2
-	return max(1, int(ceil(float(base) * demand)))
+	return shop_economy_service.card_price(run, card_id)
+
+
+func _current_primary_archetype() -> String:
+	if run.is_empty():
+		return String(ARCHETYPE_ORDER[0])
+	return String(_calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {})).primary)
 
 
 func _show_deckbuilder() -> void:
@@ -652,6 +487,10 @@ func _show_deckbuilder() -> void:
 
 	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
 	var legal := _deck_is_legal()
+	var collection_ids: Array = _sorted_card_ids(run.collection.keys(), metrics.primary)
+	var preview_card_id := ""
+	if not collection_ids.is_empty():
+		preview_card_id = String(collection_ids[0])
 
 	var summary := _add_panel(content, "Deckbuilder")
 	_add_body_text(summary, _format_metrics(metrics))
@@ -665,12 +504,13 @@ func _show_deckbuilder() -> void:
 
 	var collection_panel := _add_panel(columns, "Collection")
 	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var ids: Array = _sorted_card_ids(run.collection.keys(), metrics.primary)
-	for card_id in ids:
+	for card_id in collection_ids:
 		var owned := _owned_count(card_id)
 		var available := _available_count(card_id)
 		var card: Dictionary = cards_by_id[card_id]
 		var row_panel := PanelContainer.new()
+		row_panel.name = "DeckbuilderCardRow"
+		row_panel.set_meta("card_id", String(card_id))
 		row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var row_style := StyleBoxFlat.new()
 		row_style.bg_color = _rarity_line_color(card.get("rarity", "common"))
@@ -729,16 +569,29 @@ func _show_deckbuilder() -> void:
 		_connect_pressed(add_side, func() -> void: _add_to_sideboard(side_id))
 		row.add_child(add_side)
 
+	var preview_panel := _add_panel(columns, "Card Preview")
+	preview_panel.name = "DeckbuilderCardPreview"
+	preview_panel.custom_minimum_size = Vector2(260, 0)
+	var preview_body := VBoxContainer.new()
+	preview_body.name = "DeckbuilderCardPreviewBody"
+	preview_body.add_theme_constant_override("separation", 6)
+	preview_panel.add_child(preview_body)
+	_show_deckbuilder_card_preview(preview_body, preview_card_id)
+
+	for row_panel in collection_panel.get_children():
+		if row_panel is Control and row_panel.has_meta("card_id"):
+			_bind_deckbuilder_card_hover(row_panel, String(row_panel.get_meta("card_id")), preview_body)
+
 	var deck_panel := _add_panel(columns, "Main Deck %d/%d" % [_deck_total(run.deck), MAIN_DECK_SIZE])
 	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(deck_panel, run.deck, true)
+	_add_deck_list(deck_panel, run.deck, true, preview_body)
 
 	var side_panel := _add_panel(columns, "Sideboard %d/%d" % [_deck_total(run.sideboard), SIDEBOARD_SIZE])
 	side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(side_panel, run.sideboard, false)
+	_add_deck_list(side_panel, run.sideboard, false, preview_body)
 
 
-func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool) -> void:
+func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool, preview_body: VBoxContainer = null) -> void:
 	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
 	var ids: Array = _sorted_card_ids(deck.keys(), metrics.primary)
 	if ids.is_empty():
@@ -748,6 +601,8 @@ func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool) -> v
 	for card_id in ids:
 		var card: Dictionary = cards_by_id[card_id]
 		var row_panel := PanelContainer.new()
+		row_panel.name = "DeckbuilderCardRow"
+		row_panel.set_meta("card_id", String(card_id))
 		row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var row_style := StyleBoxFlat.new()
 		row_style.bg_color = _rarity_line_color(card.get("rarity", "common"))
@@ -800,6 +655,94 @@ func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool) -> v
 		else:
 			_connect_pressed(button, func() -> void: _remove_from_sideboard(selected_id))
 		row.add_child(button)
+		_bind_deckbuilder_card_hover(row_panel, String(card_id), preview_body)
+
+
+func _bind_deckbuilder_card_hover(control: Control, card_id: String, preview_body: VBoxContainer) -> void:
+	if control == null or preview_body == null:
+		return
+	control.mouse_entered.connect(func() -> void: _show_deckbuilder_card_preview(preview_body, card_id))
+
+
+func _show_deckbuilder_card_preview(preview_body: VBoxContainer, card_id: String) -> void:
+	if preview_body == null or not is_instance_valid(preview_body):
+		return
+	for child in preview_body.get_children():
+		child.free()
+	if not cards_by_id.has(card_id):
+		return
+
+	card_frame_factory.add_frame(
+		preview_body,
+		_card_frame_data(card_id),
+		{
+			"panel_name": "DeckbuilderPreviewFrame",
+			"contents_name": "DeckbuilderPreviewContents",
+			"name_prefix": "DeckbuilderPreview",
+			"compact": false,
+			"min_size": Vector2(248, 0),
+			"show_deck_stats": true,
+			"show_rules_text": true,
+			"border_width": 2
+		}
+	)
+
+
+func _card_frame_data(card_id: String, overrides: Dictionary = {}) -> Dictionary:
+	var card: Dictionary = cards_by_id.get(card_id, {})
+	var combat: Dictionary = card.get("combat", {})
+	var animal_type := _card_animal_type(card) if not card.is_empty() else "neutral"
+	var kind := String(combat.get("kind", _combat_card_type(card) if not card.is_empty() else "card")).capitalize()
+	var attack := -1
+	var health := -1
+	if String(combat.get("kind", "")) == "unit":
+		attack = int(combat.get("attack", -1))
+		health = int(combat.get("health", -1))
+
+	var data := {
+		"card_id": card_id,
+		"title": String(card.get("name", card_id)),
+		"cost": int(card.get("cost", -1)),
+		"rarity": String(card.get("rarity", "")),
+		"type_line": _combat_card_type_line(card) if not card.is_empty() else "",
+		"meta_line": "%s | %s | Limit %d" % [
+			String(card.get("rarity", "common")).capitalize(),
+			kind,
+			_deck_limit(card_id) if cards_by_id.has(card_id) else 0
+		],
+		"combat_stats": _manual_inspect_stats(card, "") if not card.is_empty() else "",
+		"deck_stats": _deckbuilder_stats_line(card) if not card.is_empty() else "",
+		"effect_text": _combat_effect_summary(card) if not card.is_empty() else "",
+		"rules_text": String(card.get("text", "")),
+		"attack": attack,
+		"health": health,
+		"show_attack_health": attack >= 0 and health >= 0,
+		"area_text": String(card.get("role", "card")).capitalize(),
+		"art_text": "Picture\nplaceholder",
+		"animal_color": _affinity_color(animal_type),
+		"frame_color": _rarity_line_color(String(card.get("rarity", "common"))),
+		"art_color": _combat_placeholder_color(card_id),
+		"border_color": _affinity_color(animal_type).lightened(0.12),
+		"border_width": 1
+	}
+
+	for key in overrides.keys():
+		data[key] = overrides[key]
+	return data
+
+
+func _deckbuilder_stats_line(card: Dictionary) -> String:
+	var stats: Dictionary = card.get("stats", {})
+	if stats.is_empty():
+		return ""
+	return "Speed %d | Power %d | Interaction %d\nResilience %d | Advantage %d | Consistency %d" % [
+		int(stats.get("speed", 0)),
+		int(stats.get("power", 0)),
+		int(stats.get("interaction", 0)),
+		int(stats.get("resilience", 0)),
+		int(stats.get("advantage", 0)),
+		int(stats.get("consistency", 0))
+	]
 
 
 func _add_sort_controls(parent: VBoxContainer) -> void:
@@ -872,46 +815,29 @@ func _affinity_rank(archetype_id: String, primary_archetype: String) -> int:
 
 
 func _add_to_deck(card_id: String) -> void:
-	if _available_count(card_id) <= 0:
-		_set_footer("No available copies of " + cards_by_id[card_id].name + ".")
+	var result: Dictionary = run_state_service.add_to_deck(run, card_id)
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	if _deck_total(run.deck) >= MAIN_DECK_SIZE:
-		_set_footer("Main deck is already full.")
-		return
-	if _deck_count(card_id) >= _deck_limit(card_id):
-		_set_footer("Deck copy limit reached for " + cards_by_id[card_id].name + ".")
-		return
-	run.deck[card_id] = _deck_count(card_id) + 1
 	_show_deckbuilder()
 
 
 func _remove_from_deck(card_id: String) -> void:
-	if not run.deck.has(card_id):
-		return
-	run.deck[card_id] = int(run.deck[card_id]) - 1
-	if int(run.deck[card_id]) <= 0:
-		run.deck.erase(card_id)
-	_show_deckbuilder()
+	if run_state_service.remove_from_deck(run, card_id):
+		_show_deckbuilder()
 
 
 func _add_to_sideboard(card_id: String) -> void:
-	if _available_count(card_id) <= 0:
-		_set_footer("No available copies of " + cards_by_id[card_id].name + ".")
+	var result: Dictionary = run_state_service.add_to_sideboard(run, card_id)
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	if _deck_total(run.sideboard) >= SIDEBOARD_SIZE:
-		_set_footer("Sideboard is already full.")
-		return
-	run.sideboard[card_id] = _sideboard_count(card_id) + 1
 	_show_deckbuilder()
 
 
 func _remove_from_sideboard(card_id: String) -> void:
-	if not run.sideboard.has(card_id):
-		return
-	run.sideboard[card_id] = int(run.sideboard[card_id]) - 1
-	if int(run.sideboard[card_id]) <= 0:
-		run.sideboard.erase(card_id)
-	_show_deckbuilder()
+	if run_state_service.remove_from_sideboard(run, card_id):
+		_show_deckbuilder()
 
 
 func _show_combat_lab() -> void:
@@ -994,6 +920,8 @@ func _show_ui_combat() -> void:
 	if _guard_run_over():
 		return
 	current_screen = "ui_combat"
+	if manual_drag_candidate.is_empty() and manual_drag_state.is_empty():
+		_manual_free_orphan_hand_drag_ghosts()
 	_render_nav()
 	_clear(content)
 	_update_status()
@@ -1068,6 +996,7 @@ func _combat_lab_opponent_for(player_archetype: String) -> String:
 
 
 func _set_combat_lab_opponent(archetype_id: String) -> void:
+	_manual_clear_hand_card_drag()
 	run.combat_lab_opponent = archetype_id
 	run.last_combat = {}
 	run.manual_combat = {}
@@ -1108,6 +1037,7 @@ func _run_combat_lab_duel() -> void:
 
 
 func _start_manual_combat_lab_battle() -> void:
+	_manual_clear_hand_card_drag()
 	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
 	var player_archetype := String(metrics.primary)
 	var opponent_archetype := _combat_lab_opponent_for(player_archetype)
@@ -1126,12 +1056,26 @@ func _start_manual_combat_lab_battle() -> void:
 
 
 func _manual_play_card(card_id: String) -> void:
+	_manual_play_card_to_slot(card_id, -1)
+
+
+func _manual_play_card_to_slot(card_id: String, desired_slot_index: int = -1) -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var after_state: Dictionary = combat_service.manual_play_card(before_state.duplicate(true), card_id)
 	var destination_anchor := _manual_play_destination_anchor(before_state, after_state, card_id, "auto", current_screen == "ui_combat")
+	if cards_by_id.has(card_id):
+		match _combat_card_type(cards_by_id[card_id]):
+			"threat":
+				var placed_slot_index := _manual_assign_new_unit_board_slot(before_state, after_state, "player", card_id, desired_slot_index)
+				destination_anchor = _manual_play_destination_anchor(before_state, after_state, card_id, "auto", current_screen == "ui_combat", placed_slot_index)
+			"engine":
+				var placed_engine_slot := _manual_assign_new_engine_slot(before_state, after_state, "player", card_id, desired_slot_index)
+				if current_screen == "ui_combat" and placed_engine_slot >= 0:
+					destination_anchor = _manual_engine_slot_anchor(true, placed_engine_slot)
 	_manual_stage_or_commit_player_action(before_state, after_state, {
 		"card_id": card_id,
 		"source_zone": "Your Hand",
@@ -1149,6 +1093,7 @@ func _manual_play_card(card_id: String) -> void:
 func _manual_play_card_target(card_id: String, target_type: String, target_instance_id: int = -1) -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var after_state: Dictionary = combat_service.manual_play_card_with_target(before_state.duplicate(true), card_id, target_type, target_instance_id)
@@ -1170,6 +1115,7 @@ func _manual_play_card_target(card_id: String, target_type: String, target_insta
 func _manual_attack(instance_id: int, target_mode: String) -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var attacker := _manual_find_player_unit(before_state, instance_id)
@@ -1193,6 +1139,7 @@ func _manual_attack(instance_id: int, target_mode: String) -> void:
 func _manual_attack_target(instance_id: int, target_type: String, target_instance_id: int = -1) -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var attacker := _manual_find_player_unit(before_state, instance_id)
@@ -1215,6 +1162,7 @@ func _manual_attack_target(instance_id: int, target_type: String, target_instanc
 func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	var unit := _manual_find_player_unit(before_state, instance_id)
@@ -1237,6 +1185,7 @@ func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void
 func _manual_end_turn() -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
+	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
 	run.manual_combat = combat_service.manual_end_player_turn(run.manual_combat)
@@ -1246,6 +1195,7 @@ func _manual_end_turn() -> void:
 
 
 func _clear_manual_battle() -> void:
+	_manual_clear_hand_card_drag()
 	run.manual_combat = {}
 	run.manual_selection = {}
 	run.manual_inspect = {}
@@ -1332,6 +1282,17 @@ func _manual_commit_action_animation(before_state: Dictionary, after_state: Dict
 
 func _manual_stage_or_commit_player_action(before_state: Dictionary, after_state: Dictionary, descriptor: Dictionary, log_start: int) -> void:
 	var animation := _manual_build_action_animation(before_state, after_state, descriptor, log_start)
+	if current_screen == "ui_combat" and _manual_card_action_commits_immediately(descriptor):
+		run.manual_combat = after_state
+		run.manual_pending_action = {}
+		if animation.is_empty():
+			run.manual_animation = {}
+			run.manual_animation_queue = []
+		else:
+			animation["board_vfx_started"] = true
+			run.manual_animation = animation
+			run.manual_animation_queue = []
+		return
 	if current_screen == "ui_combat" and not animation.is_empty():
 		_manual_stage_pending_action(after_state, animation)
 		return
@@ -1343,6 +1304,15 @@ func _manual_stage_or_commit_player_action(before_state: Dictionary, after_state
 	else:
 		run.manual_animation = animation
 		run.manual_animation_queue = []
+
+
+func _manual_card_action_commits_immediately(descriptor: Dictionary) -> bool:
+	if String(descriptor.get("source_zone", "")) != "Your Hand":
+		return false
+	var card_id := String(descriptor.get("card_id", ""))
+	if card_id == "" or not cards_by_id.has(card_id):
+		return false
+	return _combat_card_type(cards_by_id[card_id]) == "threat"
 
 
 func _manual_stage_pending_action(after_state: Dictionary, animation: Dictionary) -> void:
@@ -1872,13 +1842,15 @@ func _manual_target_zone_label(state: Dictionary, target_type: String, target_in
 			return "Target"
 
 
-func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dictionary, card_id: String, target_type: String, prefer_slot_anchor: bool = false) -> String:
+func _manual_play_destination_anchor(before_state: Dictionary, after_state: Dictionary, card_id: String, target_type: String, prefer_slot_anchor: bool = false, preferred_slot_index: int = -1) -> String:
 	if not cards_by_id.has(card_id):
 		return "ManualZone_PlayerDiscard"
 	var card: Dictionary = cards_by_id[card_id]
 	match _combat_card_type(card):
 		"threat":
 			if prefer_slot_anchor:
+				if preferred_slot_index >= 0:
+					return _manual_board_slot_anchor(true, preferred_slot_index)
 				var slot_anchor := _manual_new_unit_slot_anchor(before_state, after_state, "player", card_id)
 				if slot_anchor != "":
 					return slot_anchor
@@ -1900,10 +1872,13 @@ func _manual_new_unit_slot_anchor(before_state: Dictionary, after_state: Diction
 	for unit in before_combatant.get("board", []):
 		before_ids.append(int(unit.get("instance_id", -1)))
 	var after_board: Array = after_combatant.get("board", [])
-	for unit_index in range(after_board.size()):
-		var unit: Dictionary = after_board[unit_index]
+	var slotted_units := _manual_units_by_board_slot(after_board)
+	for slot_index in range(slotted_units.size()):
+		var unit: Dictionary = slotted_units[slot_index]
+		if unit.is_empty():
+			continue
 		if String(unit.get("card_id", "")) == card_id and not before_ids.has(int(unit.get("instance_id", -1))):
-			return _manual_board_slot_anchor(side == "player", unit_index)
+			return _manual_board_slot_anchor(side == "player", slot_index)
 	return ""
 
 
@@ -1945,12 +1920,136 @@ func _manual_new_unit_anchor(before_state: Dictionary, after_state: Dictionary, 
 
 
 func _manual_unit_slot_index(combatant: Dictionary, instance_id: int) -> int:
-	var board: Array = combatant.get("board", [])
-	for unit_index in range(board.size()):
-		var unit: Dictionary = board[unit_index]
+	var slotted_units := _manual_units_by_board_slot(combatant.get("board", []))
+	for unit_index in range(slotted_units.size()):
+		var unit: Dictionary = slotted_units[unit_index]
 		if int(unit.get("instance_id", -1)) == instance_id:
 			return unit_index
 	return -1
+
+
+func _manual_assign_new_unit_board_slot(before_state: Dictionary, after_state: Dictionary, side: String, card_id: String, desired_slot_index: int) -> int:
+	var before_combatant: Dictionary = before_state.get("player" if side == "player" else "opponent", {})
+	var after_combatant: Dictionary = after_state.get("player" if side == "player" else "opponent", {})
+	var before_ids: Array = []
+	for unit in before_combatant.get("board", []):
+		before_ids.append(int(unit.get("instance_id", -1)))
+
+	var slot_index := desired_slot_index
+	if not _manual_board_slot_is_open(before_combatant, slot_index):
+		slot_index = _manual_first_open_board_slot(before_combatant)
+	if slot_index < 0:
+		return -1
+
+	var after_board: Array = after_combatant.get("board", [])
+	for unit in after_board:
+		if String(unit.get("card_id", "")) == card_id and not before_ids.has(int(unit.get("instance_id", -1))):
+			unit["board_slot"] = slot_index
+			return slot_index
+	return -1
+
+
+func _manual_board_slot_is_open(combatant: Dictionary, slot_index: int) -> bool:
+	if slot_index < 0 or slot_index >= COMBAT_BOARD_SLOTS:
+		return false
+	var slotted_units := _manual_units_by_board_slot(combatant.get("board", []))
+	return slot_index < slotted_units.size() and slotted_units[slot_index].is_empty()
+
+
+func _manual_first_open_board_slot(combatant: Dictionary) -> int:
+	var slotted_units := _manual_units_by_board_slot(combatant.get("board", []))
+	for slot_index in range(slotted_units.size()):
+		if slotted_units[slot_index].is_empty():
+			return slot_index
+	return -1
+
+
+func _manual_units_by_board_slot(units: Array) -> Array:
+	var slotted_units: Array = []
+	for i in range(COMBAT_BOARD_SLOTS):
+		slotted_units.append({})
+
+	var deferred_units: Array = []
+	for unit_value in units:
+		var unit: Dictionary = unit_value
+		var desired_slot := int(unit.get("board_slot", -1))
+		if desired_slot >= 0 and desired_slot < COMBAT_BOARD_SLOTS and slotted_units[desired_slot].is_empty():
+			slotted_units[desired_slot] = unit
+		else:
+			deferred_units.append(unit)
+
+	for unit in deferred_units:
+		for slot_index in range(COMBAT_BOARD_SLOTS):
+			if slotted_units[slot_index].is_empty():
+				slotted_units[slot_index] = unit
+				break
+	return slotted_units
+
+
+func _manual_assign_new_engine_slot(before_state: Dictionary, after_state: Dictionary, side: String, card_id: String, desired_slot_index: int) -> int:
+	var before_combatant: Dictionary = before_state.get("player" if side == "player" else "opponent", {})
+	var after_combatant: Dictionary = after_state.get("player" if side == "player" else "opponent", {})
+	var slot_index := desired_slot_index
+	if not _manual_engine_slot_is_open(before_combatant, slot_index):
+		slot_index = _manual_first_open_engine_slot(before_combatant)
+	if slot_index < 0:
+		return -1
+
+	var remaining_existing := 0
+	for engine in before_combatant.get("engines", []):
+		if String(engine.get("card_id", "")) == card_id:
+			remaining_existing += 1
+
+	for engine in after_combatant.get("engines", []):
+		if String(engine.get("card_id", "")) != card_id:
+			continue
+		if remaining_existing > 0:
+			remaining_existing -= 1
+			continue
+		engine["engine_slot"] = slot_index
+		return slot_index
+	return -1
+
+
+func _manual_engine_slot_is_open(combatant: Dictionary, slot_index: int) -> bool:
+	if slot_index < 0 or slot_index >= COMBAT_ENGINE_SLOTS:
+		return false
+	var slotted_engines := _manual_engines_by_slot(combatant.get("engines", []))
+	return slot_index < slotted_engines.size() and slotted_engines[slot_index].is_empty()
+
+
+func _manual_first_open_engine_slot(combatant: Dictionary) -> int:
+	var slotted_engines := _manual_engines_by_slot(combatant.get("engines", []))
+	for slot_index in range(slotted_engines.size()):
+		if slotted_engines[slot_index].is_empty():
+			return slot_index
+	return -1
+
+
+func _manual_engines_by_slot(engines: Array) -> Array:
+	var slotted_engines: Array = []
+	for i in range(COMBAT_ENGINE_SLOTS):
+		slotted_engines.append({})
+
+	var deferred_engines: Array = []
+	for engine_value in engines:
+		var engine: Dictionary = engine_value
+		var desired_slot := int(engine.get("engine_slot", -1))
+		if desired_slot >= 0 and desired_slot < COMBAT_ENGINE_SLOTS and slotted_engines[desired_slot].is_empty():
+			slotted_engines[desired_slot] = engine
+		else:
+			deferred_engines.append(engine)
+
+	for engine in deferred_engines:
+		for slot_index in range(COMBAT_ENGINE_SLOTS):
+			if slotted_engines[slot_index].is_empty():
+				slotted_engines[slot_index] = engine
+				break
+	return slotted_engines
+
+
+func _manual_engine_slot_anchor(is_player: bool, slot_index: int) -> String:
+	return "ManualEngineSlot_%s_%d" % ["Player" if is_player else "Opponent", slot_index + 1]
 
 
 func _manual_board_slot_anchor(is_player: bool, slot_index: int) -> String:
@@ -2167,24 +2266,10 @@ func _add_ui_combat_duel(parent: Node, state: Dictionary, is_over: bool, phase: 
 	battlefield.add_child(arena)
 
 	_add_ui_combat_opponent_hand(arena, opponent, state)
-	_add_manual_summary_zone(
-		arena,
-		"Engine Zone",
-		_summarize_engines(opponent.get("engines", [])),
-		"OpponentEngine",
-		COMBAT_ENGINE_SLOTS,
-		"#18232d"
-	)
+	_add_manual_engine_zone(arena, opponent.get("engines", []), false)
 	_add_manual_board(arena, opponent.get("board", []), false, state)
 	_add_manual_board(arena, player.get("board", []), true, state)
-	_add_manual_summary_zone(
-		arena,
-		"Engine Zone",
-		_summarize_engines(player.get("engines", [])),
-		"PlayerEngine",
-		COMBAT_ENGINE_SLOTS,
-		"#18232d"
-	)
+	_add_manual_engine_zone(arena, player.get("engines", []), true)
 	_add_manual_hand(arena, player, state)
 
 	var board_arc_layer := Node2D.new()
@@ -2612,6 +2697,7 @@ func _refresh_manual_board_arc_layer(layer: Node2D) -> void:
 		root = root.get_parent()
 
 	_add_manual_selection_preview_arcs(layer, root, state)
+	_add_manual_drag_preview_arc(layer, root, state)
 	_add_manual_committed_board_arc(layer, root)
 
 
@@ -2653,6 +2739,64 @@ func _add_manual_selection_preview_arcs(layer: Node2D, root: Node, state: Dictio
 		if _manual_selected_can_target_unit(state, target_unit):
 			var target_anchor := _manual_unit_anchor(state, "opponent", int(target_unit.get("instance_id", -1)))
 			_manual_draw_board_arc(layer, root, source_anchor, target_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true)
+
+
+func _add_manual_drag_preview_arc(layer: Node2D, root: Node, state: Dictionary) -> void:
+	if manual_drag_state.is_empty():
+		return
+	var card_id := String(manual_drag_state.get("card_id", ""))
+	if not cards_by_id.has(card_id):
+		return
+	if _combat_card_type(cards_by_id[card_id]) != "action":
+		return
+	var drop_target: Dictionary = manual_drag_state.get("drop_target", {})
+	if String(drop_target.get("kind", "")) != "action_target":
+		return
+	var source_global_data: Variant = manual_drag_state.get("global_position", [])
+	if typeof(source_global_data) != TYPE_ARRAY or source_global_data.size() < 2:
+		return
+	var target_anchor := ""
+	match String(drop_target.get("target_type", "")):
+		"face":
+			target_anchor = "ManualOpponentFanHand"
+		"unit":
+			target_anchor = _manual_unit_card_anchor(false, int(drop_target.get("target_instance_id", -1)))
+		_:
+			return
+	if target_anchor == "":
+		return
+	var drew_arc := _manual_draw_board_arc(
+		layer,
+		root,
+		"",
+		target_anchor,
+		"ManualDragTargetPreviewArc",
+		"ManualDragTargetPreviewArrowHead",
+		Color("#7fb8ff"),
+		4.0,
+		true,
+		0.0,
+		source_global_data
+	)
+	if drew_arc:
+		return
+	var fallback_source_data: Variant = manual_drag_state.get("source_global", [])
+	if typeof(fallback_source_data) == TYPE_VECTOR2:
+		var fallback_source: Vector2 = fallback_source_data
+		fallback_source_data = [fallback_source.x, fallback_source.y]
+	_manual_draw_board_arc(
+		layer,
+		root,
+		"",
+		target_anchor,
+		"ManualDragTargetPreviewArc",
+		"ManualDragTargetPreviewArrowHead",
+		Color("#7fb8ff"),
+		4.0,
+		true,
+		0.0,
+		fallback_source_data
+	)
 
 
 func _add_manual_committed_board_arc(layer: Node2D, root: Node) -> void:
@@ -3283,7 +3427,7 @@ func _add_manual_battlefield(parent: Node) -> Control:
 	playmat.name = "ManualBattlefield"
 	playmat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if compact_duel:
-		playmat.custom_minimum_size = Vector2(940, 500)
+		playmat.custom_minimum_size = Vector2(1040, 860)
 		playmat.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#16201c")
@@ -3748,27 +3892,13 @@ func _add_manual_combatant_panel(parent: Node, label: String, combatant: Diction
 	if current_screen == "ui_combat":
 		if is_player:
 			_add_manual_board(panel, combatant.get("board", []), is_player, state)
-			_add_manual_summary_zone(
-				panel,
-				"Engine Zone",
-				_summarize_engines(combatant.get("engines", [])),
-				"PlayerEngine",
-				COMBAT_ENGINE_SLOTS,
-				"#18232d"
-			)
+			_add_manual_engine_zone(panel, combatant.get("engines", []), is_player)
 			_add_manual_hand(panel, combatant, state)
 		else:
 			_add_manual_hidden_hand_zone(panel, combatant.get("hand", []).size())
 			_add_manual_face_target(panel, state)
 			_add_manual_board(panel, combatant.get("board", []), is_player, state)
-			_add_manual_summary_zone(
-				panel,
-				"Engine Zone",
-				_summarize_engines(combatant.get("engines", [])),
-				"OpponentEngine",
-				COMBAT_ENGINE_SLOTS,
-				"#18232d"
-			)
+			_add_manual_engine_zone(panel, combatant.get("engines", []), is_player)
 		return
 
 	if not is_player:
@@ -3776,14 +3906,7 @@ func _add_manual_combatant_panel(parent: Node, label: String, combatant: Diction
 
 	_add_manual_board(panel, combatant.get("board", []), is_player, state)
 
-	_add_manual_summary_zone(
-		panel,
-		"Engine Zone",
-		_summarize_engines(combatant.get("engines", [])),
-		"PlayerEngine" if is_player else "OpponentEngine",
-		COMBAT_ENGINE_SLOTS,
-		"#18232d"
-	)
+	_add_manual_engine_zone(panel, combatant.get("engines", []), is_player)
 	if is_player:
 		_add_manual_hand(panel, combatant, state)
 	else:
@@ -3808,7 +3931,7 @@ func _add_manual_zone(parent: Node, title: String, zone_name: String, accent: St
 		if fixed_height > 0.0:
 			panel.custom_minimum_size = Vector2(0, fixed_height)
 			panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		panel.clip_contents = true
+		panel.clip_contents = zone_name != "PlayerHand"
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(accent)
 	style.border_color = Color("#586575")
@@ -3850,9 +3973,9 @@ func _ui_combat_zone_height(zone_name: String) -> float:
 		"OpponentEngine", "PlayerEngine":
 			return 38.0
 		"OpponentBoard", "PlayerBoard":
-			return 82.0
+			return 190.0
 		"PlayerHand":
-			return 108.0
+			return 240.0
 		_:
 			return 0.0
 
@@ -3883,6 +4006,69 @@ func _add_manual_summary_zone(parent: Node, title: String, entries: Array, zone_
 
 	for i in range(max(0, slot_count - entries.size())):
 		_add_manual_empty_zone_slot(grid, "Open Slot")
+
+
+func _add_manual_engine_zone(parent: Node, engines: Array, is_player: bool) -> void:
+	var zone_name := "PlayerEngine" if is_player else "OpponentEngine"
+	var zone := _add_manual_zone(parent, "Engine Zone", zone_name, "#18232d")
+	var grid := GridContainer.new()
+	grid.columns = COMBAT_ENGINE_SLOTS
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 4 if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("v_separation", 4 if current_screen == "ui_combat" else 6)
+	zone.add_child(grid)
+
+	var slotted_engines := _manual_engines_by_slot(engines)
+	for slot_index in range(COMBAT_ENGINE_SLOTS):
+		var slot := _add_manual_engine_slot(grid, is_player, slot_index)
+		var engine: Dictionary = slotted_engines[slot_index]
+		if engine.is_empty():
+			_add_manual_empty_zone_slot(slot, "Open Slot")
+			continue
+
+		var card_id := String(engine.get("card_id", ""))
+		var summary := "Unknown Engine"
+		if cards_by_id.has(card_id):
+			var card: Dictionary = cards_by_id[card_id]
+			summary = String(card.get("name", card_id))
+			if card.has("cost"):
+				summary += " | cost %d" % int(card.get("cost", 0))
+		_add_manual_zone_item(slot, summary, card_id, "Engine Zone")
+
+
+func _add_manual_engine_slot(parent: Node, is_player: bool, slot_index: int) -> VBoxContainer:
+	var compact_duel := current_screen == "ui_combat"
+	var slot := PanelContainer.new()
+	slot.name = _manual_engine_slot_anchor(is_player, slot_index)
+	slot.custom_minimum_size = Vector2(96, 24) if compact_duel else Vector2(132, 44)
+	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#111922")
+	style.border_color = Color("#3f4a59")
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	slot.add_theme_stylebox_override("panel", style)
+	parent.add_child(slot)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 2)
+	margin.add_theme_constant_override("margin_right", 2)
+	margin.add_theme_constant_override("margin_top", 2)
+	margin.add_theme_constant_override("margin_bottom", 2)
+	slot.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.name = "ManualEngineSlotContents"
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 2)
+	margin.add_child(box)
+	return box
 
 
 func _add_manual_hidden_hand_zone(parent: Node, hand_count: int) -> void:
@@ -4017,7 +4203,7 @@ func _add_manual_board_slot(parent: Node, is_player: bool, slot_index: int) -> V
 	var compact_duel := current_screen == "ui_combat"
 	var slot := PanelContainer.new()
 	slot.name = "ManualBoardSlot_%s_%d" % ["Player" if is_player else "Opponent", slot_index + 1]
-	slot.custom_minimum_size = Vector2(96, 58) if compact_duel else Vector2(178, 148)
+	slot.custom_minimum_size = Vector2(108, 166) if compact_duel else Vector2(188, 250)
 	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#14221a") if is_player else Color("#24171d")
@@ -4065,13 +4251,14 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 	grid.add_theme_constant_override("v_separation", 2 if current_screen == "ui_combat" else 8)
 	zone.add_child(grid)
 
+	var slotted_units := _manual_units_by_board_slot(units)
 	for slot_index in range(COMBAT_BOARD_SLOTS):
 		var slot := _add_manual_board_slot(grid, is_player, slot_index)
-		if slot_index >= units.size():
+		var unit: Dictionary = slotted_units[slot_index]
+		if unit.is_empty():
 			_add_manual_empty_zone_slot(slot, "Open Board Slot")
 			continue
 
-		var unit: Dictionary = units[slot_index]
 		var border_color := Color("#465060")
 		var border_width := 1
 		var selected_attacker := is_player and _manual_selection_is_attacker(unit)
@@ -4207,7 +4394,7 @@ func _add_manual_hand(parent: VBoxContainer, combatant: Dictionary, state: Dicti
 func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictionary) -> void:
 	var fan := Control.new()
 	fan.name = "ManualFanHand"
-	fan.custom_minimum_size = Vector2(0, 88)
+	fan.custom_minimum_size = Vector2(0, 216)
 	fan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(fan)
 
@@ -4285,12 +4472,13 @@ func _layout_manual_fanned_hand(fan: Control) -> void:
 	var total_width: float = card_size.x + spread * float(max(0, count - 1))
 	var start_x: float = max(0.0, (available_width - total_width) * 0.5)
 	var center_index: float = float(count - 1) * 0.5
+	var base_y := -12.0 if current_screen == "ui_combat" else 0.0
 	for index in range(count):
 		var card_panel: Control = card_panels[index]
 		var offset: float = float(index) - center_index
 		card_panel.size = card_panel.custom_minimum_size
 		card_panel.pivot_offset = card_panel.custom_minimum_size * 0.5
-		card_panel.position = Vector2(start_x + spread * float(index), 0.0 + abs(offset) * 2.8)
+		card_panel.position = Vector2(start_x + spread * float(index), base_y + abs(offset) * 2.8)
 		card_panel.rotation_degrees = offset * 7.0
 		card_panel.z_index = index
 
@@ -4298,10 +4486,359 @@ func _layout_manual_fanned_hand(fan: Control) -> void:
 func _manual_card_panel_from_contents(contents: Node) -> Control:
 	var node := contents
 	while node != null:
-		if node is Control and String(node.name).begins_with("CombatCardPanel"):
+		if node is PanelContainer and (String(node.name).begins_with("CombatCardPanel") or String(node.name).begins_with("ManualDragCardGhost")):
 			return node as Control
 		node = node.get_parent()
 	return null
+
+
+func _manual_handle_hand_card_drag_input(event: InputEvent) -> bool:
+	if manual_drag_candidate.is_empty() and manual_drag_state.is_empty():
+		return false
+	if event is InputEventMouseMotion:
+		_manual_update_hand_card_drag(get_global_mouse_position())
+		get_viewport().set_input_as_handled()
+		return true
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		_manual_finish_hand_card_drag(get_global_mouse_position())
+		get_viewport().set_input_as_handled()
+		return true
+	return false
+
+
+func _manual_try_begin_hand_card_drag(card_id: String, source_panel: Control) -> bool:
+	if current_screen != "ui_combat":
+		return false
+	if not _manual_can_drag_hand_card(card_id):
+		return false
+	if source_panel == null or not is_instance_valid(source_panel):
+		return false
+	_manual_free_orphan_hand_drag_ghosts()
+	var source_rect := source_panel.get_global_rect()
+	manual_drag_candidate = {
+		"card_id": card_id,
+		"start_global": get_global_mouse_position(),
+		"source_global": source_rect.get_center()
+	}
+	return true
+
+
+func _manual_can_drag_hand_card(card_id: String) -> bool:
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
+		return false
+	if not cards_by_id.has(card_id):
+		return false
+	var card: Dictionary = cards_by_id[card_id]
+	var combat_type := _combat_card_type(card)
+	if not _manual_can_play_card(run.manual_combat, card_id):
+		return false
+	if combat_type == "threat" or combat_type == "engine":
+		return true
+	return combat_type == "action" and _manual_card_needs_target(card)
+
+
+func _manual_update_hand_card_drag(global_position: Vector2) -> void:
+	if manual_drag_state.is_empty():
+		if manual_drag_candidate.is_empty():
+			return
+		var start: Vector2 = manual_drag_candidate.get("start_global", global_position)
+		if start.distance_to(global_position) < 8.0:
+			return
+		_manual_start_hand_card_drag()
+
+	if manual_drag_state.is_empty():
+		return
+
+	_manual_position_hand_drag_ghost(global_position)
+	var card_id := String(manual_drag_state.get("card_id", ""))
+	var drop_target := _manual_hand_card_drag_target(card_id, global_position)
+	var valid_drop := not drop_target.is_empty()
+	manual_drag_state["drop_target"] = drop_target
+	manual_drag_state["global_position"] = [global_position.x, global_position.y]
+	manual_drag_state["valid_drop"] = valid_drop
+	_manual_set_hand_drag_visual_state(valid_drop)
+	_manual_refresh_drag_preview_layer()
+
+
+func _manual_start_hand_card_drag() -> void:
+	if manual_drag_candidate.is_empty():
+		return
+	var card_id := String(manual_drag_candidate.get("card_id", ""))
+	if not _manual_can_drag_hand_card(card_id):
+		_manual_clear_hand_card_drag()
+		return
+	var source_global: Vector2 = manual_drag_candidate.get("source_global", get_global_mouse_position())
+	manual_drag_state = {
+		"card_id": card_id,
+		"source_global": source_global,
+		"valid_drop": false
+	}
+	manual_drag_ghost = _create_manual_hand_drag_ghost(card_id)
+	_manual_position_hand_drag_ghost(get_global_mouse_position())
+	_manual_set_drag_board_highlight(true)
+	_set_footer(_manual_drag_footer_text(card_id))
+
+
+func _manual_finish_hand_card_drag(global_position: Vector2) -> void:
+	if manual_drag_state.is_empty():
+		if not manual_drag_candidate.is_empty():
+			var clicked_card_id := String(manual_drag_candidate.get("card_id", ""))
+			_manual_clear_hand_card_drag()
+			if cards_by_id.has(clicked_card_id):
+				_manual_set_inspect_card(clicked_card_id, "Hand", "", true)
+				call_deferred("_show_active_combat_screen")
+		return
+
+	var card_id := String(manual_drag_state.get("card_id", ""))
+	var drop_target := _manual_hand_card_drag_target(card_id, global_position)
+	var valid_drop := not drop_target.is_empty()
+	var source_global: Vector2 = manual_drag_state.get("source_global", global_position)
+	if valid_drop:
+		_manual_clear_hand_card_drag()
+		match String(drop_target.get("kind", "")):
+			"board_slot", "engine_slot":
+				_manual_play_card_to_slot(card_id, int(drop_target.get("slot_index", -1)))
+			"action_target":
+				_manual_play_card_target(card_id, String(drop_target.get("target_type", "face")), int(drop_target.get("target_instance_id", -1)))
+	else:
+		_manual_snap_back_hand_drag_ghost(source_global)
+		manual_drag_candidate = {}
+		manual_drag_state = {}
+		_manual_set_drag_board_highlight(false)
+		_set_footer(_manual_drag_footer_text(card_id))
+
+
+func _manual_clear_hand_card_drag() -> void:
+	manual_drag_candidate = {}
+	manual_drag_state = {}
+	_manual_set_drag_board_highlight(false)
+	if manual_drag_ghost != null and is_instance_valid(manual_drag_ghost):
+		manual_drag_ghost.queue_free()
+	manual_drag_ghost = null
+	_manual_free_orphan_hand_drag_ghosts()
+	_manual_refresh_drag_preview_layer()
+
+
+func _manual_free_orphan_hand_drag_ghosts() -> void:
+	_manual_free_descendants_by_prefix(self, "ManualDragCardGhost")
+
+
+func _manual_free_descendants_by_prefix(root: Node, target_prefix: String) -> void:
+	for child in root.get_children():
+		if String(child.name).begins_with(target_prefix):
+			child.queue_free()
+		else:
+			_manual_free_descendants_by_prefix(child, target_prefix)
+
+
+func _manual_snap_back_hand_drag_ghost(source_global: Vector2) -> void:
+	if manual_drag_ghost == null or not is_instance_valid(manual_drag_ghost):
+		manual_drag_ghost = null
+		return
+	var ghost := manual_drag_ghost
+	manual_drag_ghost = null
+	var ghost_size := ghost.custom_minimum_size
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(ghost, "global_position", source_global - ghost_size * 0.5, 0.14)
+	tween.parallel().tween_property(ghost, "modulate", Color(1, 1, 1, 0.0), 0.14)
+	tween.tween_callback(Callable(ghost, "queue_free"))
+
+
+func _manual_position_hand_drag_ghost(global_position: Vector2) -> void:
+	if manual_drag_ghost == null or not is_instance_valid(manual_drag_ghost):
+		return
+	var ghost_size := manual_drag_ghost.custom_minimum_size
+	manual_drag_ghost.global_position = global_position - ghost_size * 0.5
+	manual_drag_ghost.visible = true
+
+
+func _manual_set_hand_drag_visual_state(valid_drop: bool) -> void:
+	if manual_drag_ghost != null and is_instance_valid(manual_drag_ghost):
+		manual_drag_ghost.modulate = Color(0.92, 1.08, 0.95, 0.94) if valid_drop else Color(1.08, 0.92, 0.92, 0.88)
+	var card_id := String(manual_drag_state.get("card_id", manual_drag_candidate.get("card_id", "")))
+	_manual_apply_drag_zone_highlight(card_id, valid_drop, true)
+
+
+func _manual_set_drag_board_highlight(active: bool) -> void:
+	var card_id := String(manual_drag_state.get("card_id", manual_drag_candidate.get("card_id", "")))
+	_manual_apply_drag_zone_highlight(card_id, false, active)
+
+
+func _manual_refresh_drag_preview_layer() -> void:
+	var layer := _find_descendant_by_prefix(self, "ManualBoardArcLayer")
+	if layer != null and layer is Node2D:
+		_refresh_manual_board_arc_layer(layer)
+
+
+func _manual_hand_card_drag_drop_is_valid(card_id: String, global_position: Vector2) -> bool:
+	return not _manual_hand_card_drag_target(card_id, global_position).is_empty()
+
+
+func _manual_hand_card_drag_target(card_id: String, global_position: Vector2) -> Dictionary:
+	if not _manual_can_drag_hand_card(card_id):
+		return {}
+	var card: Dictionary = cards_by_id[card_id]
+	match _combat_card_type(card):
+		"threat":
+			var board_slot := _manual_hand_card_drag_target_slot(global_position)
+			if board_slot >= 0 and _manual_board_slot_is_open(run.manual_combat.get("player", {}), board_slot):
+				return { "kind": "board_slot", "slot_index": board_slot }
+		"engine":
+			var engine_slot := _manual_hand_card_drag_engine_target_slot(global_position)
+			if engine_slot >= 0 and _manual_engine_slot_is_open(run.manual_combat.get("player", {}), engine_slot):
+				return { "kind": "engine_slot", "slot_index": engine_slot }
+		"action":
+			return _manual_hand_card_drag_action_target(card_id, global_position)
+	return {}
+
+
+func _manual_hand_card_drag_target_slot(global_position: Vector2) -> int:
+	for slot_index in range(COMBAT_BOARD_SLOTS):
+		var slot := _find_descendant_by_prefix(self, _manual_board_slot_anchor(true, slot_index))
+		if slot != null and slot is Control and (slot as Control).get_global_rect().has_point(global_position):
+			return slot_index
+	return -1
+
+
+func _manual_hand_card_drag_engine_target_slot(global_position: Vector2) -> int:
+	for slot_index in range(COMBAT_ENGINE_SLOTS):
+		var slot := _find_descendant_by_prefix(self, _manual_engine_slot_anchor(true, slot_index))
+		if slot != null and slot is Control and (slot as Control).get_global_rect().has_point(global_position):
+			return slot_index
+	return -1
+
+
+func _manual_hand_card_drag_action_target(card_id: String, global_position: Vector2) -> Dictionary:
+	if not cards_by_id.has(card_id):
+		return {}
+	var card: Dictionary = cards_by_id[card_id]
+	var state: Dictionary = run.get("manual_combat", {})
+	if state.is_empty():
+		return {}
+	if _manual_card_can_target_units(card):
+		var opponent: Dictionary = state.get("opponent", {})
+		for unit in opponent.get("board", []):
+			var instance_id := int(unit.get("instance_id", -1))
+			var anchor := _manual_unit_card_anchor(false, instance_id)
+			if _manual_global_point_hits_anchor(anchor, global_position):
+				return {
+					"kind": "action_target",
+					"target_type": "unit",
+					"target_instance_id": instance_id
+				}
+	if _manual_card_can_target_face(card) and _manual_global_point_hits_anchor("ManualOpponentFanHand", global_position):
+		return {
+			"kind": "action_target",
+			"target_type": "face",
+			"target_instance_id": -1
+		}
+	return {}
+
+
+func _manual_global_point_hits_anchor(anchor: String, global_position: Vector2) -> bool:
+	var node := _find_descendant_by_prefix(self, anchor)
+	return node != null and node is Control and (node as Control).get_global_rect().has_point(global_position)
+
+
+func _manual_apply_drag_zone_highlight(card_id: String, valid_drop: bool, active: bool) -> void:
+	var anchors := [
+		"ManualZone_PlayerBoard",
+		"ManualZone_PlayerEngine",
+		"ManualOpponentFanHand",
+		"ManualZone_OpponentBoard"
+	]
+	for anchor in anchors:
+		var node := _find_descendant_by_prefix(self, anchor)
+		if node != null and node is Control:
+			(node as Control).modulate = Color.WHITE
+	var state: Dictionary = run.get("manual_combat", {})
+	var opponent: Dictionary = state.get("opponent", {})
+	for unit_value in opponent.get("board", []):
+		var unit: Dictionary = unit_value
+		var unit_anchor := _manual_unit_card_anchor(false, int(unit.get("instance_id", -1)))
+		var unit_node := _find_descendant_by_prefix(self, unit_anchor)
+		if unit_node != null and unit_node is Control:
+			(unit_node as Control).modulate = Color.WHITE
+	if not active or not cards_by_id.has(card_id):
+		return
+
+	var color := Color(1.08, 1.16, 1.08, 1.0) if valid_drop else Color(1.12, 1.02, 1.02, 1.0)
+	var card: Dictionary = cards_by_id[card_id]
+	var target_anchors: Array = []
+	match _combat_card_type(card):
+		"threat":
+			target_anchors.append("ManualZone_PlayerBoard")
+		"engine":
+			target_anchors.append("ManualZone_PlayerEngine")
+		"action":
+			if _manual_card_can_target_face(card):
+				target_anchors.append("ManualOpponentFanHand")
+			if _manual_card_can_target_units(card):
+				target_anchors.append("ManualZone_OpponentBoard")
+	for anchor in target_anchors:
+		var node := _find_descendant_by_prefix(self, anchor)
+		if node != null and node is Control:
+			(node as Control).modulate = color
+	if valid_drop:
+		var drop_target: Dictionary = manual_drag_state.get("drop_target", {})
+		if String(drop_target.get("kind", "")) == "action_target":
+			var exact_anchor := ""
+			match String(drop_target.get("target_type", "")):
+				"face":
+					exact_anchor = "ManualOpponentFanHand"
+				"unit":
+					exact_anchor = _manual_unit_card_anchor(false, int(drop_target.get("target_instance_id", -1)))
+			if exact_anchor != "":
+				var exact_node := _find_descendant_by_prefix(self, exact_anchor)
+				if exact_node != null and exact_node is Control:
+					(exact_node as Control).modulate = Color(1.18, 1.24, 1.08, 1.0)
+
+
+func _manual_drag_footer_text(card_id: String) -> String:
+	if not cards_by_id.has(card_id):
+		return "Drop the card on a legal target."
+	var card: Dictionary = cards_by_id[card_id]
+	var name := String(card.get("name", card_id))
+	match _combat_card_type(card):
+		"threat":
+			return "Drag onto an open board slot to play " + name + "."
+		"engine":
+			return "Drag onto an open engine slot to play " + name + "."
+		"action":
+			return "Drag onto the opponent hand or a legal unit target to cast " + name + "."
+	return "Drop " + name + " on a legal target."
+
+
+func _create_manual_hand_drag_ghost(card_id: String) -> Control:
+	var box: VBoxContainer = card_frame_factory.add_frame(
+		self,
+		_card_frame_data(card_id),
+		{
+			"panel_name": "ManualDragCardGhost",
+			"contents_name": "ManualDragCardGhostContents",
+			"name_prefix": "ManualDragCard",
+			"compact": true,
+			"min_size": Vector2(104, 154),
+			"mouse_filter": Control.MOUSE_FILTER_IGNORE,
+			"show_deck_stats": false,
+			"show_rules_text": false,
+			"border_color": Color("#ffe08a"),
+			"border_width": 2
+		}
+	)
+	var ghost := _manual_card_panel_from_contents(box)
+	if ghost == null:
+		return box
+	ghost.set_as_top_level(true)
+	ghost.z_index = 420
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.size = ghost.custom_minimum_size
+	ghost.scale = Vector2(1.08, 1.08)
+	ghost.modulate = Color(1, 1, 1, 0.92)
+	ghost.visible = false
+	return ghost
 
 
 func _add_manual_ability_buttons(card_box: VBoxContainer, unit: Dictionary, state: Dictionary) -> void:
@@ -4348,48 +4885,6 @@ func _add_manual_card_badge(parent: Node, text: String, color: Color) -> void:
 
 func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "") -> VBoxContainer:
 	var compact_duel := current_screen == "ui_combat"
-	var panel := PanelContainer.new()
-	panel.name = node_anchor if node_anchor != "" else "CombatCardPanel"
-	panel.custom_minimum_size = Vector2(96, 62) if compact_duel else Vector2(172, 132)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.mouse_filter = Control.MOUSE_FILTER_PASS
-	panel.pivot_offset = panel.custom_minimum_size * 0.5
-	var style := StyleBoxFlat.new()
-	style.bg_color = accent
-	style.border_color = border_color
-	style.border_width_left = border_width
-	style.border_width_right = border_width
-	style.border_width_top = border_width
-	style.border_width_bottom = border_width
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	panel.add_theme_stylebox_override("panel", style)
-	parent.add_child(panel)
-	_apply_combat_card_motion(panel, inspect_card_id, inspect_zone, inspect_current)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 4 if compact_duel else 8)
-	margin.add_theme_constant_override("margin_right", 4 if compact_duel else 8)
-	margin.add_theme_constant_override("margin_top", 3 if compact_duel else 7)
-	margin.add_theme_constant_override("margin_bottom", 3 if compact_duel else 7)
-	panel.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.name = "CombatCardContents"
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 2 if compact_duel else 5)
-	margin.add_child(box)
-
-	var title_label := Label.new()
-	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 9 if compact_duel else 14)
-	title_label.add_theme_color_override("font_color", Color("#f3efe4"))
-	title_label.autowrap_mode = TextServer.AUTOWRAP_OFF if compact_duel else TextServer.AUTOWRAP_WORD_SMART
-	title_label.clip_text = compact_duel
-	box.add_child(title_label)
-
 	var type_text := printed_type
 	var animal_type := printed_animal_type if printed_animal_type != "" else "neutral"
 	if inspect_card_id != "" and cards_by_id.has(inspect_card_id):
@@ -4398,46 +4893,72 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 		animal_type = _card_animal_type(inspect_card) if printed_animal_type == "" else printed_animal_type
 	elif type_text == "":
 		animal_type = "neutral"
-	if type_text != "":
-		var type_strip := PanelContainer.new()
-		type_strip.name = "CombatCardTypeStrip"
-		type_strip.custom_minimum_size = Vector2(0, 12 if compact_duel else 18)
-		_style_card_type_strip(type_strip, animal_type, compact_duel)
-		box.add_child(type_strip)
 
-		var type_margin := MarginContainer.new()
-		type_margin.add_theme_constant_override("margin_left", 4)
-		type_margin.add_theme_constant_override("margin_right", 4)
-		type_margin.add_theme_constant_override("margin_top", 0)
-		type_margin.add_theme_constant_override("margin_bottom", 0)
-		type_strip.add_child(type_margin)
+	var frame_data := _card_frame_data(inspect_card_id, {
+		"title": title,
+		"type_line": type_text,
+		"animal_color": _affinity_color(animal_type),
+		"frame_color": accent,
+		"border_color": border_color,
+		"border_width": border_width,
+		"combat_stats": inspect_current if inspect_current != "" else subtitle,
+		"effect_text": _combat_effect_summary(cards_by_id[inspect_card_id]) if inspect_card_id != "" and cards_by_id.has(inspect_card_id) else body,
+		"rules_text": String(cards_by_id[inspect_card_id].get("text", "")) if inspect_card_id != "" and cards_by_id.has(inspect_card_id) else body,
+		"art_text": "",
+		"area_text": ""
+	})
+	var current_stats := _attack_health_from_text(inspect_current if inspect_current != "" else subtitle)
+	if not current_stats.is_empty():
+		frame_data.attack = int(current_stats.attack)
+		frame_data.health = int(current_stats.health)
+		frame_data.show_attack_health = true
 
-		var type_label := Label.new()
-		type_label.text = type_text.to_upper()
-		type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		type_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		type_label.clip_text = true
-		type_label.add_theme_font_size_override("font_size", 7 if compact_duel else 10)
-		type_label.add_theme_color_override("font_color", _affinity_color(animal_type).lightened(0.68))
-		type_margin.add_child(type_label)
-
-	var subtitle_label := Label.new()
-	subtitle_label.text = subtitle
-	if compact_duel:
-		subtitle_label.add_theme_font_size_override("font_size", 8)
-	subtitle_label.add_theme_color_override("font_color", Color("#c7d0df"))
-	subtitle_label.autowrap_mode = TextServer.AUTOWRAP_OFF if compact_duel else TextServer.AUTOWRAP_WORD_SMART
-	subtitle_label.clip_text = compact_duel
-	box.add_child(subtitle_label)
-
-	if body != "" and not compact_duel:
-		var body_label := Label.new()
-		body_label.text = body
-		body_label.add_theme_color_override("font_color", Color("#d8dfec"))
-		body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(body_label)
-
+	var box: VBoxContainer = card_frame_factory.add_frame(
+		parent,
+		frame_data,
+		{
+			"panel_name": node_anchor if node_anchor != "" else "CombatCardPanel",
+			"contents_name": "CombatCardContents",
+			"name_prefix": "CombatCardFrame",
+			"compact": compact_duel,
+			"min_size": Vector2(104, 154) if compact_duel else Vector2(176, 236),
+			"border_color": border_color,
+			"border_width": border_width,
+			"show_deck_stats": false,
+			"show_rules_text": not compact_duel
+		}
+	)
+	var panel := _manual_card_panel_from_contents(box)
+	if panel != null:
+		_apply_combat_card_motion(panel, inspect_card_id, inspect_zone, inspect_current)
 	return box
+
+
+func _attack_health_from_text(text: String) -> Dictionary:
+	var slash_index := text.find("/")
+	if slash_index < 0:
+		return {}
+
+	var attack_start := slash_index - 1
+	while attack_start >= 0 and _is_digit(text.substr(attack_start, 1)):
+		attack_start -= 1
+	attack_start += 1
+
+	var health_end := slash_index + 1
+	while health_end < text.length() and _is_digit(text.substr(health_end, 1)):
+		health_end += 1
+
+	if attack_start >= slash_index or health_end <= slash_index + 1:
+		return {}
+
+	return {
+		"attack": int(text.substr(attack_start, slash_index - attack_start)),
+		"health": int(text.substr(slash_index + 1, health_end - slash_index - 1))
+	}
+
+
+func _is_digit(character: String) -> bool:
+	return character >= "0" and character <= "9"
 
 
 func _apply_combat_card_motion(card_panel: Control, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "") -> void:
@@ -4455,6 +4976,9 @@ func _apply_combat_card_motion(card_panel: Control, inspect_card_id: String = ""
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				card_panel.accept_event()
+				if _manual_try_begin_hand_card_drag(inspect_card_id, card_panel):
+					_tween_control_feedback(card_panel, Vector2(1.035, 1.035), Color(1.10, 1.10, 1.10, 1.0), 0.06)
+					return
 				if inspect_card_id != "":
 					_manual_set_inspect_card(inspect_card_id, inspect_zone, inspect_current, true)
 					if current_screen == "ui_combat":
@@ -5187,19 +5711,7 @@ func _weighted_meta_pick() -> String:
 
 
 func _predator_archetype(archetype_id: String) -> String:
-	match archetype_id:
-		"flightless_birds":
-			return "snake"
-		"snake":
-			return "oxen"
-		"oxen":
-			return "flightless_birds"
-		"glires":
-			return "insect"
-		"insect":
-			return "flightless_birds"
-		_:
-			return "flightless_birds"
+	return run_state_service.predator_archetype(archetype_id)
 
 
 func _simulate_combat_match(opponent: Dictionary, deck_metrics: Dictionary) -> Dictionary:
@@ -5303,29 +5815,11 @@ func _update_meta_after_event(primary: String, wins: int, rounds: int) -> void:
 
 
 func _normalize_meta() -> void:
-	var total := 0.0
-	for archetype_id in ARCHETYPE_ORDER:
-		total += float(run.meta.get(archetype_id, 0.0))
-
-	if total <= 0.0:
-		var even_share := 1.0 / float(ARCHETYPE_ORDER.size())
-		for archetype_id in ARCHETYPE_ORDER:
-			run.meta[archetype_id] = even_share
-		return
-
-	for archetype_id in ARCHETYPE_ORDER:
-		run.meta[archetype_id] = float(run.meta.get(archetype_id, 0.0)) / total
+	run_state_service.normalize_meta(run)
 
 
 func _dominant_archetype() -> String:
-	var leader := String(ARCHETYPE_ORDER[0])
-	var leader_share := float(run.meta.get(leader, 0.0))
-	for archetype_id in ARCHETYPE_ORDER:
-		var share := float(run.meta.get(archetype_id, 0.0))
-		if share > leader_share:
-			leader = String(archetype_id)
-			leader_share = share
-	return leader
+	return run_state_service.dominant_archetype(run)
 
 
 func _show_meta() -> void:
@@ -5355,21 +5849,7 @@ func _calculate_deck_metrics(deck: Dictionary, sideboard: Dictionary) -> Diction
 
 
 func _deck_is_legal() -> Dictionary:
-	if _deck_total(run.deck) != MAIN_DECK_SIZE:
-		return { "ok": false, "reason": "Main deck must contain exactly %d cards." % MAIN_DECK_SIZE }
-	if _deck_total(run.sideboard) > SIDEBOARD_SIZE:
-		return { "ok": false, "reason": "Sideboard cannot exceed %d cards." % SIDEBOARD_SIZE }
-	for card_id in run.deck.keys():
-		if _deck_count(card_id) > _deck_limit(card_id):
-			return { "ok": false, "reason": "Too many copies of " + cards_by_id[card_id].name + "." }
-		if _deck_count(card_id) + _sideboard_count(card_id) > _owned_count(card_id):
-			return { "ok": false, "reason": "Deck uses more copies than owned: " + cards_by_id[card_id].name + "." }
-	for card_id in run.sideboard.keys():
-		if _sideboard_count(card_id) > _deck_limit(card_id):
-			return { "ok": false, "reason": "Too many sideboard copies of " + cards_by_id[card_id].name + "." }
-		if _deck_count(card_id) + _sideboard_count(card_id) > _owned_count(card_id):
-			return { "ok": false, "reason": "Sideboard uses more copies than owned: " + cards_by_id[card_id].name + "." }
-	return { "ok": true, "reason": "Legal" }
+	return run_state_service.deck_is_legal(run)
 
 
 func _format_metrics(metrics: Dictionary) -> String:
@@ -5397,34 +5877,31 @@ func _format_metrics_short(metrics: Dictionary) -> String:
 
 
 func _owned_count(card_id: String) -> int:
-	return int(run.get("collection", {}).get(card_id, 0))
+	return run_state_service.owned_count(run, card_id)
 
 
 func _deck_count(card_id: String) -> int:
-	return int(run.get("deck", {}).get(card_id, 0))
+	return run_state_service.deck_count(run, card_id)
 
 
 func _sideboard_count(card_id: String) -> int:
-	return int(run.get("sideboard", {}).get(card_id, 0))
+	return run_state_service.sideboard_count(run, card_id)
 
 
 func _available_count(card_id: String) -> int:
-	return _owned_count(card_id) - _deck_count(card_id) - _sideboard_count(card_id)
+	return run_state_service.available_count(run, card_id)
 
 
 func _deck_limit(card_id: String) -> int:
-	return int(cards_by_id[card_id].get("deckLimit", 3))
+	return run_state_service.deck_limit(card_id)
 
 
 func _deck_total(deck: Dictionary) -> int:
-	var total := 0
-	for card_id in deck.keys():
-		total += int(deck[card_id])
-	return total
+	return run_state_service.deck_total(deck)
 
 
 func _add_to_collection(card_id: String, count: int) -> void:
-	run.collection[card_id] = _owned_count(card_id) + count
+	run_state_service.add_to_collection(run, card_id, count)
 
 
 func _add_panel(parent: Node, title: String, accent: String = "#202734") -> VBoxContainer:
@@ -5748,70 +6225,24 @@ func _guard_run_over() -> bool:
 
 
 func _save_run() -> void:
-	if run.is_empty():
-		_set_footer("No run to save.")
-		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		_set_footer("Could not save run.")
-		return
-	file.store_string(JSON.stringify(run, "\t"))
-	_set_footer("Run saved.")
+	var result: Dictionary = run_state_service.save_run(run)
+	_set_footer(result.message)
 
 
 func _load_run_from_disk() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		_set_footer("No saved run found.")
+	_manual_clear_hand_card_drag()
+	var result: Dictionary = run_state_service.load_run()
+	if not result.ok:
+		_set_footer(result.message)
 		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		_set_footer("Saved run is invalid.")
-		return
-	run = parsed
-	if not run.has("last_combat"):
-		run.last_combat = {}
-	if not run.has("manual_combat"):
-		run.manual_combat = {}
-	if not run.has("manual_selection"):
-		run.manual_selection = {}
-	if not run.has("manual_inspect"):
-		run.manual_inspect = {}
-	if not run.has("manual_battle_log_open"):
-		run.manual_battle_log_open = false
-	if not run.has("manual_animation"):
-		run.manual_animation = {}
-	if not run.has("manual_animation_queue"):
-		run.manual_animation_queue = []
-	run.manual_pending_action = {}
-	_migrate_legacy_run_archetypes()
+	run = result.run
 	if not run.has("combat_lab_opponent"):
 		var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 		run.combat_lab_opponent = _predator_archetype(String(metrics.primary))
 	_generate_shop_inventory()
-	_set_footer("Run loaded.")
+	_set_footer(result.message)
 	_show_shop()
 
 
 func _migrate_legacy_run_archetypes() -> void:
-	var legacy_map := {
-		"redline_aggro": "flightless_birds",
-		"lantern_control": "snake",
-		"verdant_midrange": "oxen",
-		"canine": "oxen"
-	}
-	if legacy_map.has(String(run.get("starter", ""))):
-		run.starter = legacy_map[String(run.starter)]
-	if legacy_map.has(String(run.get("combat_lab_opponent", ""))):
-		run.combat_lab_opponent = legacy_map[String(run.combat_lab_opponent)]
-	if run.has("meta"):
-		var migrated_meta := {}
-		for archetype_id in run.meta.keys():
-			var id := String(archetype_id)
-			id = String(legacy_map.get(id, id))
-			migrated_meta[id] = float(migrated_meta.get(id, 0.0)) + float(run.meta[archetype_id])
-		for archetype_id in ARCHETYPE_ORDER:
-			if not migrated_meta.has(archetype_id):
-				migrated_meta[archetype_id] = 0.12
-		run.meta = migrated_meta
-		_normalize_meta()
+	run_state_service.migrate_legacy_run_archetypes(run)
