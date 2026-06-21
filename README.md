@@ -58,6 +58,7 @@ for test in \
   RunStateSmokeTest.gd \
   ShopEconomySmokeTest.gd \
   CardFrameSmokeTest.gd \
+  SeasonHubSmokeTest.gd \
   DeckbuilderHoverSmokeTest.gd \
   CombatSmokeTest.gd \
   UISmokeTest.gd \

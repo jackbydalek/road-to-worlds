@@ -16,6 +16,7 @@ const RUN_STATE_SERVICE_SCRIPT := preload("res://scripts/RunStateService.gd")
 const SHOP_ECONOMY_SERVICE_SCRIPT := preload("res://scripts/ShopEconomyService.gd")
 const CARD_FRAME_FACTORY_SCRIPT := preload("res://scripts/CardFrameFactory.gd")
 const DECKBUILDER_SCREEN_SCRIPT := preload("res://scripts/DeckbuilderScreen.gd")
+const SEASON_HUB_SCREEN_SCRIPT := preload("res://scripts/SeasonHubScreen.gd")
 const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
 const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
 const COMBAT_UI_SCREEN_SCRIPT := preload("res://scripts/CombatUIScreen.gd")
@@ -34,6 +35,7 @@ var run_state_service: RefCounted
 var shop_economy_service: RefCounted
 var card_frame_factory: RefCounted
 var deckbuilder_screen: RefCounted
+var season_hub_screen: RefCounted
 var season_flow_service: RefCounted
 var tournament_service: RefCounted
 var combat_ui_screen: RefCounted
@@ -89,6 +91,7 @@ func _ready() -> void:
 	shop_economy_service.setup(cards, cards_by_id, boosters_by_id, rng)
 	card_frame_factory = CARD_FRAME_FACTORY_SCRIPT.new()
 	deckbuilder_screen = DECKBUILDER_SCREEN_SCRIPT.new()
+	season_hub_screen = SEASON_HUB_SCREEN_SCRIPT.new()
 	season_flow_service = SEASON_FLOW_SERVICE_SCRIPT.new()
 	season_flow_service.setup(run_state_service, tournaments_by_id)
 	tournament_service = TOURNAMENT_SERVICE_SCRIPT.new()
@@ -706,166 +709,8 @@ func _set_calendar_prep_notice(event_id: String) -> void:
 	season_flow_service.set_prep_notice(run, event_id)
 
 
-func _add_season_calendar(parent: Node, selected_event_id: String) -> void:
-	var calendar_panel := _add_panel(parent, "Season Calendar", "#17202c")
-	_add_body_text(calendar_panel, "Win condition: %s" % String(run.get("season_goal", "Win Worlds before your season lives run out.")))
-	_add_body_text(calendar_panel, "Progress: %d/%d events cleared. Select an unlocked event, then register when your deck is ready." % [
-		_season_completed_count(),
-		_season_calendar_ids().size()
-	])
-
-	var grid := GridContainer.new()
-	grid.columns = max(1, min(5, _season_calendar_ids().size()))
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	calendar_panel.add_child(grid)
-
-	var ids := _season_calendar_ids()
-	for index in range(ids.size()):
-		var event_id := String(ids[index])
-		var event := _season_event_by_id(event_id)
-		var completed := _season_event_completed(event_id)
-		var unlocked := _season_event_unlocked(event_id)
-		var selected := event_id == selected_event_id
-		var accent := "#253044"
-		var border := "#3a4352"
-		var status := "Locked"
-		if completed:
-			accent = "#1f3329"
-			border = "#6f9f6d"
-			status = "Cleared"
-		elif selected:
-			accent = "#2e3040"
-			border = "#ffe08a"
-			status = "Selected"
-		elif unlocked:
-			accent = "#202734"
-			border = "#7da7ff"
-			status = "Available"
-
-		var event_box := _add_bordered_panel(grid, "%s: %s" % [status, String(event.get("name", event_id))], accent, border, 2)
-		event_box.custom_minimum_size = Vector2(180, 170)
-		_add_body_text(event_box, "Week %d | %d rounds | Need %d wins" % [
-			int(event.get("calendarWeek", index + 1)),
-			int(event.get("rounds", 0)),
-			int(event.get("requiredWins", 0))
-		])
-		_add_body_text(event_box, "Entry $%d | %s" % [
-			int(event.get("entryFee", 0)),
-			String(event.get("stage", "Tournament"))
-		])
-		_add_body_text(event_box, String(event.get("summary", "")))
-		var button_label := "Select Event"
-		if completed:
-			button_label = "Cleared"
-		elif not unlocked:
-			button_label = "Locked"
-		elif selected:
-			button_label = "Selected"
-		var button := _make_button(button_label)
-		button.disabled = completed or not unlocked or selected or _season_tournament_active()
-		var selected_calendar_event_id := event_id
-		_connect_pressed(button, func() -> void: _select_season_event(selected_calendar_event_id))
-		event_box.add_child(button)
-
-
 func _show_season_run() -> void:
-	if _guard_run_over():
-		return
-	current_screen = "season"
-	_render_nav()
-	_clear(content)
-	_update_status()
-
-	_normalize_season_calendar_state()
-	var event: Dictionary = _selected_season_event()
-	var event_id := String(event.get("id", _selected_season_event_id()))
-	var legal := _deck_is_legal()
-	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
-	var primary_archetype: Dictionary = archetypes_by_id[String(metrics.primary)]
-	var primary_name := String(primary_archetype.get("name", String(metrics.primary)))
-
-	var top := HBoxContainer.new()
-	top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_theme_constant_override("separation", 10)
-	content.add_child(top)
-
-	var season_panel := _add_panel(top, "Season Run", "#1f3329")
-	season_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var difficulty := _difficulty_data(_run_difficulty_id())
-	_add_body_text(season_panel, "Week %d | $%d | Prize packs: %d" % [
-		int(run.get("week", 1)),
-		int(run.get("money", 0)),
-		int(run.get("prize_packs", 0))
-	])
-	_add_body_text(season_panel, "%s Border | Lives %d/%d | %s" % [
-		String(difficulty.get("name", "White")),
-		int(run.get("season_lives", 0)),
-		int(run.get("max_season_lives", 0)),
-		String(difficulty.get("summary", ""))
-	])
-	_add_body_text(season_panel, "Goal: %s" % String(run.get("season_goal", "Win Worlds before your season lives run out.")))
-	_add_body_text(season_panel, "Selected event: %s | %d rounds | Need %d wins | Entry $%d" % [
-		String(event.get("name", event_id)),
-		int(event.get("rounds", 0)),
-		int(event.get("requiredWins", 0)),
-		int(event.get("entryFee", 0))
-	])
-	_add_body_text(season_panel, String(event.get("winConditionText", "")))
-	_add_body_text(season_panel, "Deck: %s | %s" % [
-		primary_name,
-		"Ready" if bool(legal.get("ok", false)) else String(legal.get("reason", "Not legal"))
-	])
-
-	var event_button := _make_button("Register: %s" % String(event.get("name", event_id)))
-	event_button.disabled = not bool(legal.get("ok", false)) or int(run.get("money", 0)) < int(event.get("entryFee", 0)) or not _season_event_selectable(event_id)
-	_connect_pressed(event_button, _show_tournament)
-	season_panel.add_child(event_button)
-
-	var deck_panel := _add_panel(top, "Deck Readiness", "#222936")
-	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(deck_panel, _format_metrics(metrics))
-	var deck_button := _make_button("Tune Deck")
-	_connect_pressed(deck_button, _show_deckbuilder)
-	deck_panel.add_child(deck_button)
-
-	var notice := String(run.get("season_notice", ""))
-	if notice != "":
-		var prep_panel := _add_panel(content, "Next Prep", "#263222")
-		_add_body_text(prep_panel, notice)
-
-	_add_season_calendar(content, event_id)
-
-	var loop := _add_panel(content, "This Week")
-	var actions := GridContainer.new()
-	actions.columns = 4
-	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_theme_constant_override("h_separation", 8)
-	actions.add_theme_constant_override("v_separation", 8)
-	loop.add_child(actions)
-	_add_season_action(actions, "Card Shop", "Buy singles, sell extras, and decide whether packs are worth the cash.", _show_shop)
-	_add_season_action(actions, "Open Packs", "Reveal boosters one card at a time and add them to the collection.", _show_packs)
-	_add_season_action(actions, "Deckbuilder", "Convert the collection into the best legal 30-card list.", _show_deckbuilder)
-	_add_season_action(actions, "Tournament", "Pay entry, play the event, and either advance the week or end the run.", _show_tournament)
-
-	if run.get("last_result", []).size() > 0:
-		var last := _add_panel(content, "Last Result")
-		for line in run.last_result:
-			_add_body_text(last, line)
-
-	var meta := _add_panel(content, "Metagame Notes", "#202734")
-	for line in run.get("reports", []):
-		_add_body_text(meta, "• " + String(line))
-
-
-func _add_season_action(parent: Node, title: String, description: String, callback: Callable) -> void:
-	var panel := _add_panel(parent, title, "#202734")
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(panel, description)
-	var button := _make_button(title)
-	_connect_pressed(button, callback)
-	panel.add_child(button)
+	season_hub_screen.show(self)
 
 
 func _show_shop() -> void:
