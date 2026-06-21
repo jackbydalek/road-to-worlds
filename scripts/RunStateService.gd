@@ -8,6 +8,8 @@ var main_deck_size := 30
 var sideboard_size := 6
 var starting_money := 20
 var save_path := ""
+const DEFAULT_SEASON_CALENDAR := ["weekly_locals", "monthly_regionals", "state_championship", "nationals", "worlds"]
+const DEFAULT_SEASON_GOAL := "Win Worlds before your season lives run out."
 
 
 func setup(
@@ -28,14 +30,19 @@ func setup(
 	save_path = run_save_path
 
 
-func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_opponent: String) -> Dictionary:
+func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_opponent: String, run_mode: String = "debug", difficulty_id: String = "white") -> Dictionary:
 	var starter_collection := {}
 	for card_id in starter_deck.keys():
 		starter_collection[card_id] = starter_deck[card_id]
+	var lives := starting_lives_for_difficulty(difficulty_id)
 
 	return {
 		"week": 1,
-		"money": starting_money,
+		"run_mode": run_mode,
+		"difficulty": difficulty_id,
+		"money": starting_money_for_difficulty(difficulty_id),
+		"season_lives": lives,
+		"max_season_lives": lives,
 		"starter": archetype_id,
 		"collection": starter_collection,
 		"deck": starter_deck.duplicate(true),
@@ -58,7 +65,15 @@ func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_oppon
 		"pack_index": 0,
 		"prize_packs": 0,
 		"run_over": false,
+		"season_goal": DEFAULT_SEASON_GOAL,
+		"season_calendar": default_season_calendar(),
+		"calendar_unlocked_index": 0,
+		"calendar_completed": [],
+		"selected_event_id": "weekly_locals",
+		"season_champion": false,
+		"season_notice": "Weekly Locals is open. Tune your starter deck, check the shop, then register when ready.",
 		"last_result": [],
+		"last_event_result": {},
 		"combat_lab_opponent": combat_lab_opponent,
 		"manual_selection": {},
 		"manual_inspect": {},
@@ -66,9 +81,27 @@ func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_oppon
 		"manual_animation": {},
 		"manual_animation_queue": [],
 		"manual_pending_action": {},
+		"manual_opponent_pending_state": {},
 		"manual_combat": {},
-		"last_combat": {}
+		"last_combat": {},
+		"active_tournament": {}
 	}
+
+
+func default_season_calendar() -> Array:
+	return DEFAULT_SEASON_CALENDAR.duplicate()
+
+
+func starting_money_for_difficulty(difficulty_id: String) -> int:
+	if difficulty_id == "yellow":
+		return max(0, int(round(float(starting_money) * 0.65)))
+	return starting_money
+
+
+func starting_lives_for_difficulty(difficulty_id: String) -> int:
+	if difficulty_id == "silver":
+		return 1
+	return 3
 
 
 func deck_is_legal(target_run: Dictionary) -> Dictionary:
@@ -211,8 +244,88 @@ func normalize_loaded_run(target_run: Dictionary) -> void:
 		target_run.manual_animation = {}
 	if not target_run.has("manual_animation_queue"):
 		target_run.manual_animation_queue = []
+	if not target_run.has("manual_opponent_pending_state"):
+		target_run.manual_opponent_pending_state = {}
+	if not target_run.has("run_mode"):
+		target_run.run_mode = "debug"
+	if not target_run.has("difficulty"):
+		target_run.difficulty = "white"
+	if not target_run.has("max_season_lives"):
+		target_run.max_season_lives = starting_lives_for_difficulty(String(target_run.get("difficulty", "white")))
+	if not target_run.has("season_lives"):
+		target_run.season_lives = int(target_run.get("max_season_lives", starting_lives_for_difficulty(String(target_run.get("difficulty", "white")))))
+	if not target_run.has("active_tournament"):
+		target_run.active_tournament = {}
+	if not target_run.has("season_goal"):
+		target_run.season_goal = DEFAULT_SEASON_GOAL
+	target_run.season_calendar = _normalized_season_calendar(target_run.get("season_calendar", []))
+	target_run.calendar_completed = _normalized_completed_events(target_run.get("calendar_completed", []), target_run.season_calendar)
+	target_run.calendar_unlocked_index = _normalized_unlocked_index(target_run)
+	var selected_event_id := String(target_run.get("selected_event_id", ""))
+	var selected_event_index: int = target_run.season_calendar.find(selected_event_id)
+	if selected_event_index < 0 or selected_event_index > int(target_run.calendar_unlocked_index) or target_run.calendar_completed.has(selected_event_id):
+		target_run.selected_event_id = _first_available_calendar_event(target_run)
+	if not target_run.has("season_champion"):
+		target_run.season_champion = false
+	if not target_run.has("season_notice"):
+		target_run.season_notice = ""
+	if not target_run.has("last_event_result"):
+		target_run.last_event_result = {}
 	target_run.manual_pending_action = {}
+	target_run.manual_opponent_pending_state = {}
 	migrate_legacy_run_archetypes(target_run)
+
+
+func _normalized_season_calendar(value: Variant) -> Array:
+	var normalized: Array = []
+	if value is Array:
+		for raw_event_id in value:
+			var event_id := String(raw_event_id)
+			if event_id != "" and not normalized.has(event_id):
+				normalized.append(event_id)
+	if normalized.is_empty():
+		return default_season_calendar()
+	return normalized
+
+
+func _normalized_completed_events(value: Variant, calendar: Array) -> Array:
+	var normalized: Array = []
+	if value is Array:
+		for raw_event_id in value:
+			var event_id := String(raw_event_id)
+			if calendar.has(event_id) and not normalized.has(event_id):
+				normalized.append(event_id)
+	return normalized
+
+
+func _normalized_unlocked_index(target_run: Dictionary) -> int:
+	var calendar: Array = target_run.get("season_calendar", default_season_calendar())
+	if calendar.is_empty():
+		return 0
+	var completed_unlocked := _calendar_unlocked_index_from_completed(target_run)
+	var requested := int(target_run.get("calendar_unlocked_index", completed_unlocked))
+	return clamp(max(requested, completed_unlocked), 0, calendar.size() - 1)
+
+
+func _calendar_unlocked_index_from_completed(target_run: Dictionary) -> int:
+	var calendar: Array = target_run.get("season_calendar", default_season_calendar())
+	var completed: Array = target_run.get("calendar_completed", [])
+	var unlocked := 0
+	for index in range(calendar.size()):
+		if completed.has(String(calendar[index])):
+			unlocked = min(index + 1, calendar.size() - 1)
+	return unlocked
+
+
+func _first_available_calendar_event(target_run: Dictionary) -> String:
+	var calendar: Array = target_run.get("season_calendar", default_season_calendar())
+	var completed: Array = target_run.get("calendar_completed", [])
+	var unlocked := int(target_run.get("calendar_unlocked_index", 0))
+	for index in range(calendar.size()):
+		var event_id := String(calendar[index])
+		if index <= unlocked and not completed.has(event_id):
+			return event_id
+	return String(calendar[max(0, min(unlocked, calendar.size() - 1))])
 
 
 func migrate_legacy_run_archetypes(target_run: Dictionary) -> void:

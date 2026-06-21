@@ -43,6 +43,12 @@ func _init() -> void:
 		quit(1)
 		return
 
+	var opponent_first_result: Dictionary = combat_service.start_manual_game(player_deck, "flightless_birds", opponent_deck, "oxen", 98765, "opponent")
+	if opponent_first_result.get("phase", "") != "player_main" or int(opponent_first_result["opponent"].get("turns_taken", 0)) < 1:
+		push_error("Manual combat did not support an opponent-first start roll.")
+		quit(1)
+		return
+
 	var playable_card := _first_playable_card(manual_result)
 	if playable_card != "":
 		manual_result = combat_service.manual_play_card(manual_result, playable_card)

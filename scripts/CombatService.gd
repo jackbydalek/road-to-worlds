@@ -50,7 +50,7 @@ func auto_play_game(player_deck: Dictionary, player_archetype: String, opponent_
 	return state
 
 
-func start_manual_game(player_deck: Dictionary, player_archetype: String, opponent_deck: Dictionary, opponent_archetype: String, seed_value: int = 0) -> Dictionary:
+func start_manual_game(player_deck: Dictionary, player_archetype: String, opponent_deck: Dictionary, opponent_archetype: String, seed_value: int = 0, first_side: String = "player") -> Dictionary:
 	if seed_value == 0:
 		rng.randomize()
 	else:
@@ -67,6 +67,17 @@ func start_manual_game(player_deck: Dictionary, player_archetype: String, oppone
 	for i in range(OPENING_HAND_SIZE):
 		_draw_card(state, state["player"], false, false)
 		_draw_card(state, state["opponent"], false, false)
+
+	if first_side == "opponent":
+		_log(state, "Opening hands drawn. Opponent wins the start roll and takes the first turn.")
+		_take_turn(state, "opponent")
+		if bool(state["game_over"]):
+			state["phase"] = "game_over"
+			return state
+		state["turn"] = int(state["turn"]) + 1
+		_log(state, "Your first turn begins.")
+		_begin_manual_player_turn(state)
+		return state
 
 	_log(state, "Opening hands drawn. Your first turn begins.")
 	_begin_manual_player_turn(state)

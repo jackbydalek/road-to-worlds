@@ -49,11 +49,22 @@ The recommended MVP path is to build a data-driven prototype first: collection, 
 
 ## Validation Commands
 
-When Godot is available from the downloaded zip used during development:
+When Godot is installed in `/Applications`, or when `GODOT_BIN` points at another Godot executable:
 
 ```sh
-env HOME=/private/tmp/rtw-godot-home /private/tmp/rtw-godot/Godot.app/Contents/MacOS/Godot --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --quit-after 2
-env HOME=/private/tmp/rtw-godot-home /private/tmp/rtw-godot/Godot.app/Contents/MacOS/Godot --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script res://scripts/CombatSmokeTest.gd
-env HOME=/private/tmp/rtw-godot-home /private/tmp/rtw-godot/Godot.app/Contents/MacOS/Godot --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script res://scripts/UISmokeTest.gd
-env HOME=/private/tmp/rtw-godot-home /private/tmp/rtw-godot/Godot.app/Contents/MacOS/Godot --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script res://scripts/TournamentSmokeTest.gd
+GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
+env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --quit-after 2
+for test in \
+  RunStateSmokeTest.gd \
+  ShopEconomySmokeTest.gd \
+  CardFrameSmokeTest.gd \
+  DeckbuilderHoverSmokeTest.gd \
+  CombatSmokeTest.gd \
+  UISmokeTest.gd \
+  TournamentSmokeTest.gd \
+  Wave1SmokeTest.gd \
+  Wave2SmokeTest.gd
+do
+  env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script "res://scripts/$test"
+done
 ```

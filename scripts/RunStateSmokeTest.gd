@@ -25,6 +25,21 @@ func _run() -> void:
 
 	var starter_deck: Dictionary = catalog.deck_entries_to_dict(catalog.archetypes_by_id["oxen"].starterDeck)
 	var run: Dictionary = service.create_run("oxen", starter_deck, service.predator_archetype("oxen"))
+	if String(run.get("run_mode", "")) != "debug":
+		_fail("Run state smoke did not default new runs to debug mode.")
+		return
+	if String(run.get("difficulty", "")) != "white":
+		_fail("Run state smoke did not default new runs to White difficulty.")
+		return
+	if int(run.get("season_lives", 0)) != 3 or int(run.get("max_season_lives", 0)) != 3:
+		_fail("Run state smoke did not initialize base season lives.")
+		return
+	if not run.has("active_tournament") or not run.active_tournament.is_empty():
+		_fail("Run state smoke did not initialize an empty active tournament state.")
+		return
+	if not run.has("manual_opponent_pending_state") or not run.manual_opponent_pending_state.is_empty():
+		_fail("Run state smoke did not initialize an empty pending opponent state.")
+		return
 	var legal: Dictionary = service.deck_is_legal(run)
 	if not bool(legal.get("ok", false)):
 		_fail("Run state smoke starter deck was illegal: " + String(legal.get("reason", "")))
@@ -41,6 +56,15 @@ func _run() -> void:
 		return
 	if not service.remove_from_sideboard(run, card_id):
 		_fail("Run state smoke could not remove a sideboard card.")
+		return
+
+	var yellow_run: Dictionary = service.create_run("oxen", starter_deck, service.predator_archetype("oxen"), "season", "yellow")
+	if int(yellow_run.get("money", 0)) >= STARTING_MONEY:
+		_fail("Run state smoke did not apply Yellow Border reduced money.")
+		return
+	var silver_run: Dictionary = service.create_run("oxen", starter_deck, service.predator_archetype("oxen"), "season", "silver")
+	if int(silver_run.get("season_lives", 0)) != 1:
+		_fail("Run state smoke did not apply Silver Border reduced lives.")
 		return
 
 	var save_result: Dictionary = service.save_run(run)
@@ -74,8 +98,43 @@ func _run() -> void:
 	if not legacy_run.has("manual_pending_action"):
 		_fail("Run state smoke did not normalize manual pending action.")
 		return
+	if String(legacy_run.get("run_mode", "")) != "debug":
+		_fail("Run state smoke did not default legacy runs to debug mode.")
+		return
+	if String(legacy_run.get("difficulty", "")) != "white":
+		_fail("Run state smoke did not default legacy runs to White difficulty.")
+		return
+	if int(legacy_run.get("season_lives", 0)) != 3:
+		_fail("Run state smoke did not normalize legacy season lives.")
+		return
+	if not legacy_run.has("active_tournament"):
+		_fail("Run state smoke did not normalize active tournament state.")
+		return
+	if not legacy_run.has("manual_opponent_pending_state") or not legacy_run.manual_opponent_pending_state.is_empty():
+		_fail("Run state smoke did not normalize pending opponent state.")
+		return
 
-	print("Run state smoke covered create, mutate, save/load, and legacy migration.")
+	var malformed_calendar_run := {
+		"season_calendar": ["weekly_locals", "monthly_regionals", "monthly_regionals", ""],
+		"calendar_completed": ["weekly_locals", "bogus_event", "weekly_locals"],
+		"calendar_unlocked_index": -5,
+		"selected_event_id": "weekly_locals"
+	}
+	service.normalize_loaded_run(malformed_calendar_run)
+	if malformed_calendar_run.season_calendar.size() != 2 or malformed_calendar_run.season_calendar[0] != "weekly_locals" or malformed_calendar_run.season_calendar[1] != "monthly_regionals":
+		_fail("Run state smoke did not deduplicate malformed season calendar data.")
+		return
+	if malformed_calendar_run.calendar_completed.size() != 1 or malformed_calendar_run.calendar_completed[0] != "weekly_locals":
+		_fail("Run state smoke did not remove duplicate or unknown completed events.")
+		return
+	if int(malformed_calendar_run.get("calendar_unlocked_index", 0)) != 1:
+		_fail("Run state smoke did not unlock the next event after a completed calendar entry.")
+		return
+	if String(malformed_calendar_run.get("selected_event_id", "")) != "monthly_regionals":
+		_fail("Run state smoke did not move selected event away from an already cleared event.")
+		return
+
+	print("Run state smoke covered create, mutate, save/load, legacy migration, and calendar repair.")
 	quit(0)
 
 

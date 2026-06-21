@@ -148,12 +148,24 @@ func _run() -> void:
 		push_error("UI smoke test did not render exact player unit card anchors.")
 		quit(1)
 		return
-	if _count_named_nodes(main, "ManualUnitTargetButton") == 0:
-		push_error("UI smoke test did not render a legal unit target button.")
+	if _count_named_nodes(main, "ManualCardActionBubble") == 0:
+		push_error("UI smoke test did not render a selected-card action bubble.")
 		quit(1)
 		return
-	if _count_named_nodes(main, "ManualTargetBadge") == 0:
-		push_error("UI smoke test did not render a legal target badge.")
+	if not _node_center_right_of(main, "ManualCardActionBubble", "CombatCardPanel_PlayerUnit_777"):
+		push_error("UI smoke test did not place the board action bubble to the right of the selected unit.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualAttackSelectButton") > 0:
+		push_error("UI smoke test rendered the old bottom attack button in UI Combat.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualUnitTargetButton") > 0:
+		push_error("UI smoke test rendered the old legal unit target button in UI Combat.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualTargetBadge") > 0:
+		push_error("UI smoke test rendered the old legal target badge in UI Combat.")
 		quit(1)
 		return
 
@@ -168,8 +180,20 @@ func _run() -> void:
 		push_error("UI smoke test did not render face target affordance.")
 		quit(1)
 		return
-	if _count_named_nodes(main, "ManualFaceTargetButton") == 0:
-		push_error("UI smoke test did not render face target button.")
+	if _count_named_nodes(main, "ManualFaceTargetButton") > 0:
+		push_error("UI smoke test rendered the old face target button in UI Combat.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualCardActionBubble") == 0:
+		push_error("UI smoke test did not render a hand-card action bubble.")
+		quit(1)
+		return
+	if not _node_center_above(main, "ManualCardActionBubble", "CombatCardPanel_Hand_red_quick_spark"):
+		push_error("UI smoke test did not place the hand action bubble above the selected card.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualCardSelectButton") > 0 or _count_named_nodes(main, "ManualCardPlayButton") > 0:
+		push_error("UI smoke test rendered old bottom hand-card buttons in UI Combat.")
 		quit(1)
 		return
 	if not _node_center_closer_to(main, "ManualFaceTargetAffordance", "ManualOpponentFanHand", "ManualOpponentResourceReadout"):
@@ -189,7 +213,11 @@ func _run() -> void:
 		quit(1)
 		return
 
-	main._manual_target_unit(778)
+	var double_click_target := _find_named_node(main, "CombatCardPanel_OpponentUnit_778")
+	if double_click_target == null or not main._manual_handle_card_double_click(double_click_target, "Opponent Board"):
+		push_error("UI smoke test could not commit a selected action through double-click unit targeting.")
+		quit(1)
+		return
 	await process_frame
 	await process_frame
 
@@ -257,6 +285,108 @@ func _run() -> void:
 		quit(1)
 		return
 
+	main._start_manual_combat_lab_battle()
+	await process_frame
+	await process_frame
+	main.run.manual_combat["player"]["board"] = [{
+		"instance_id": 901,
+		"card_id": "red_spark_runner",
+		"name": "Drag Runner",
+		"attack": 2,
+		"health": 1,
+		"max_health": 1,
+		"ready": true,
+		"tags": ["fast"]
+	}]
+	main.run.manual_combat["opponent"]["board"] = [{
+		"instance_id": 902,
+		"card_id": "ver_trail_guardian",
+		"name": "Drag Target",
+		"attack": 1,
+		"health": 5,
+		"max_health": 5,
+		"ready": false,
+		"tags": []
+	}]
+	main._show_active_combat_screen()
+	await process_frame
+	await process_frame
+	var drag_attacker := _find_named_node(main, "CombatCardPanel_PlayerUnit_901")
+	var drag_unit_target := _find_named_node(main, "CombatCardPanel_OpponentUnit_902")
+	if drag_attacker == null or drag_unit_target == null:
+		push_error("UI smoke test could not find attack drag source or enemy unit target.")
+		quit(1)
+		return
+	main._manual_try_begin_unit_attack_drag(drag_attacker)
+	main._manual_update_hand_card_drag(_node_global_center(drag_unit_target))
+	await process_frame
+	if _count_named_nodes(main, "ManualDragAttackPreviewArc") == 0:
+		push_error("UI smoke test did not render a live drag preview arc for an attack onto a unit.")
+		quit(1)
+		return
+	main._manual_finish_hand_card_drag(_node_global_center(drag_unit_target))
+	await process_frame
+	await process_frame
+	if _opponent_unit_health(main, 902) != 5:
+		push_error("UI smoke test committed a dragged attack before its animation finished.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualBoardTargetArc") == 0:
+		push_error("UI smoke test did not render a committed attack arc after dragging onto a unit.")
+		quit(1)
+		return
+	await create_timer(1.2).timeout
+	await process_frame
+	if _opponent_unit_health(main, 902) != 3:
+		push_error("UI smoke test did not resolve a dragged attack onto an enemy unit.")
+		quit(1)
+		return
+
+	main._start_manual_combat_lab_battle()
+	await process_frame
+	await process_frame
+	main.run.manual_combat["player"]["board"] = [{
+		"instance_id": 903,
+		"card_id": "red_spark_runner",
+		"name": "Face Runner",
+		"attack": 2,
+		"health": 1,
+		"max_health": 1,
+		"ready": true,
+		"tags": ["fast"]
+	}]
+	main.run.manual_combat["opponent"]["board"] = []
+	main.run.manual_combat["opponent"]["life"] = 20
+	main._show_active_combat_screen()
+	await process_frame
+	await process_frame
+	var face_drag_attacker := _find_named_node(main, "CombatCardPanel_PlayerUnit_903")
+	var face_drag_target := _find_named_node(main, "ManualOpponentFanHand")
+	if face_drag_attacker == null or face_drag_target == null:
+		push_error("UI smoke test could not find attack drag source or face target.")
+		quit(1)
+		return
+	main._manual_try_begin_unit_attack_drag(face_drag_attacker)
+	main._manual_update_hand_card_drag(_node_global_center(face_drag_target))
+	await process_frame
+	if _count_named_nodes(main, "ManualDragAttackPreviewArc") == 0:
+		push_error("UI smoke test did not render a live drag preview arc for an attack onto face.")
+		quit(1)
+		return
+	main._manual_finish_hand_card_drag(_node_global_center(face_drag_target))
+	await process_frame
+	await process_frame
+	if int(main.run.manual_combat["opponent"].get("life", 0)) != 20:
+		push_error("UI smoke test committed a dragged face attack before its animation finished.")
+		quit(1)
+		return
+	await create_timer(1.2).timeout
+	await process_frame
+	if int(main.run.manual_combat["opponent"].get("life", 0)) != 18:
+		push_error("UI smoke test did not resolve a dragged attack onto face.")
+		quit(1)
+		return
+
 	main.run.manual_animation = {}
 	main.run.manual_animation_queue = []
 	main.run.manual_combat["opponent"]["hand"] = ["red_quick_spark"]
@@ -276,9 +406,18 @@ func _run() -> void:
 	main._show_active_combat_screen()
 	await process_frame
 	await process_frame
+	var player_life_before_opponent_turn := int(main.run.manual_combat["player"].get("life", 0))
 	main._manual_end_turn()
 	await process_frame
 	await process_frame
+	if main.run.get("manual_opponent_pending_state", {}).is_empty():
+		push_error("UI smoke test did not stage pending opponent state during opponent animations.")
+		quit(1)
+		return
+	if int(main.run.manual_combat["player"].get("life", 0)) != player_life_before_opponent_turn:
+		push_error("UI smoke test committed opponent effects before their animations finished.")
+		quit(1)
+		return
 	if main.run.manual_animation.is_empty():
 		push_error("UI smoke test did not create an opponent action animation after end turn.")
 		quit(1)
@@ -299,8 +438,89 @@ func _run() -> void:
 		push_error("UI smoke test did not queue a follow-up opponent action animation.")
 		quit(1)
 		return
-	main.run.manual_animation = {}
-	main.run.manual_animation_queue = []
+	for i in range(6):
+		if main.run.get("manual_opponent_pending_state", {}).is_empty():
+			break
+		await create_timer(1.25).timeout
+		await process_frame
+	if not main.run.get("manual_opponent_pending_state", {}).is_empty():
+		push_error("UI smoke test did not commit pending opponent state after animations finished.")
+		quit(1)
+		return
+	if String(main.run.manual_combat.get("phase", "")) != "player_main" and not bool(main.run.manual_combat.get("game_over", false)):
+		push_error("UI smoke test did not return to player control after opponent animations finished.")
+		quit(1)
+		return
+
+	var staged_visible_state: Dictionary = main.run.manual_combat.duplicate(true)
+	staged_visible_state["active_side"] = "opponent"
+	staged_visible_state["phase"] = "opponent_animating"
+	staged_visible_state["game_over"] = false
+	staged_visible_state["winner"] = ""
+	var staged_visible_opponent: Dictionary = staged_visible_state.get("opponent", {})
+	staged_visible_opponent["hand"] = ["red_spark_runner", "red_quick_spark"]
+	staged_visible_opponent["board"] = []
+	staged_visible_opponent["engines"] = []
+	staged_visible_state["opponent"] = staged_visible_opponent
+	var staged_pending_state: Dictionary = staged_visible_state.duplicate(true)
+	staged_pending_state["active_side"] = "player"
+	staged_pending_state["phase"] = "player_main"
+	var staged_pending_opponent: Dictionary = staged_pending_state.get("opponent", {})
+	staged_pending_opponent["hand"] = []
+	staged_pending_opponent["board"] = [{
+		"instance_id": 990,
+		"card_id": "red_spark_runner",
+		"name": "Revealed Opponent Threat",
+		"attack": 2,
+		"health": 1,
+		"max_health": 1,
+		"ready": false,
+		"tags": ["fast"],
+		"board_slot": 2
+	}]
+	staged_pending_state["opponent"] = staged_pending_opponent
+	main.run.manual_combat = staged_visible_state
+	main.run.manual_opponent_pending_state = staged_pending_state
+	main.run.manual_animation = {
+		"card_id": "red_spark_runner",
+		"card_name": "Spark Runner",
+		"source_zone": "Opponent Hand",
+		"destination_zone": "Opponent Board",
+		"source_anchor": "ManualOpponentFanHand",
+		"target_anchor": "ManualZone_OpponentBoard",
+		"destination_anchor": "ManualZone_OpponentBoard",
+		"verb": "Play"
+	}
+	main.run.manual_animation_queue = [{
+		"card_id": "red_quick_spark",
+		"card_name": "Quick Peck",
+		"source_zone": "Opponent Hand",
+		"destination_zone": "Opponent Discard",
+		"source_anchor": "ManualOpponentFanHand",
+		"target_anchor": "ManualFanHand",
+		"destination_anchor": "ManualZone_OpponentDiscard",
+		"verb": "Cast"
+	}]
+	main._manual_advance_manual_animation_queue()
+	await process_frame
+	if not _opponent_board_has_card(main, "red_spark_runner"):
+		push_error("UI smoke test did not reveal an opponent threat after its play animation advanced.")
+		quit(1)
+		return
+	if main.run.manual_combat["opponent"]["hand"].has("red_spark_runner"):
+		push_error("UI smoke test did not remove a revealed opponent threat from the visible hand.")
+		quit(1)
+		return
+	if String(main.run.manual_animation.get("card_id", "")) != "red_quick_spark":
+		push_error("UI smoke test did not advance to the next opponent animation after revealing a threat.")
+		quit(1)
+		return
+	if main.run.get("manual_opponent_pending_state", {}).is_empty():
+		push_error("UI smoke test fully committed the opponent turn while only revealing a completed play.")
+		quit(1)
+		return
+	main._manual_commit_pending_opponent_turn()
+	await process_frame
 
 	main.run.manual_combat["player"]["hand"].append("lan_late_fee_drake")
 	main.run.manual_combat["player"]["focus"] = max(int(main.run.manual_combat["player"].get("focus", 0)), 5)
@@ -489,18 +709,12 @@ func _run() -> void:
 	main._manual_finish_hand_card_drag(_node_global_center(engine_target_slot))
 	await process_frame
 	await process_frame
-	if _player_engine_has_card(main, "red_reckless_recruiter"):
-		push_error("UI smoke test committed a dragged engine before its play animation finished.")
-		quit(1)
-		return
-	if _count_named_nodes(main, "ManualBoardMovingCardGhost") == 0:
-		push_error("UI smoke test did not animate a dragged engine play.")
-		quit(1)
-		return
-	await create_timer(1.2).timeout
-	await process_frame
 	if not _player_engine_has_card(main, "red_reckless_recruiter"):
-		push_error("UI smoke test did not commit dragged engine after the play animation finished.")
+		push_error("UI smoke test did not commit a dragged engine immediately.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualBoardMovingCardGhost") > 0:
+		push_error("UI smoke test animated a card ghost for an immediate dragged engine.")
 		quit(1)
 		return
 	if _player_engine_visual_slot(main, "red_reckless_recruiter") != 1:
@@ -638,6 +852,22 @@ func _node_center_closer_to(root_node: Node, target_name: String, near_name: Str
 	return target_center.distance_to(_node_global_center(near)) < target_center.distance_to(_node_global_center(far))
 
 
+func _node_center_right_of(root_node: Node, target_name: String, reference_name: String) -> bool:
+	var target := _find_named_node(root_node, target_name)
+	var reference := _find_named_node(root_node, reference_name)
+	if target == null or reference == null:
+		return false
+	return _node_global_center(target).x > _node_global_center(reference).x
+
+
+func _node_center_above(root_node: Node, target_name: String, reference_name: String) -> bool:
+	var target := _find_named_node(root_node, target_name)
+	var reference := _find_named_node(root_node, reference_name)
+	if target == null or reference == null:
+		return false
+	return _node_global_center(target).y < _node_global_center(reference).y
+
+
 func _point_closer_to(root_node: Node, point_data: Variant, near_name: String, far_name: String) -> bool:
 	if typeof(point_data) != TYPE_ARRAY or point_data.size() < 2:
 		return false
@@ -679,6 +909,14 @@ func _player_engine_visual_slot(main, card_id: String) -> int:
 		if String(engine.get("card_id", "")) == card_id:
 			return int(engine.get("engine_slot", -1))
 	return -1
+
+
+func _opponent_board_has_card(main, card_id: String) -> bool:
+	var board: Array = main.run.manual_combat.get("opponent", {}).get("board", [])
+	for unit in board:
+		if String(unit.get("card_id", "")) == card_id:
+			return true
+	return false
 
 
 func _opponent_unit_health(main, instance_id: int) -> int:

@@ -8,12 +8,20 @@ const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
 const ARCHETYPE_ORDER := ["flightless_birds", "snake", "oxen", "glires", "insect"]
+const DIFFICULTY_ORDER := ["white", "blue", "yellow", "silver", "gold"]
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/CombatService.gd")
 const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
 const RUN_STATE_SERVICE_SCRIPT := preload("res://scripts/RunStateService.gd")
 const SHOP_ECONOMY_SERVICE_SCRIPT := preload("res://scripts/ShopEconomyService.gd")
 const CARD_FRAME_FACTORY_SCRIPT := preload("res://scripts/CardFrameFactory.gd")
+const DECKBUILDER_SCREEN_SCRIPT := preload("res://scripts/DeckbuilderScreen.gd")
+const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
+const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
+const COMBAT_UI_SCREEN_SCRIPT := preload("res://scripts/CombatUIScreen.gd")
+const MANUAL_COMBAT_UI_SCRIPT := preload("res://scripts/ManualCombatUI.gd")
+const MANUAL_COMBAT_VFX_SCRIPT := preload("res://scripts/ManualCombatVFX.gd")
+const MANUAL_COMBAT_INPUT_SCRIPT := preload("res://scripts/ManualCombatInput.gd")
 const COMBAT_BOARD_SLOTS := 5
 const COMBAT_ENGINE_SLOTS := 3
 const MANUAL_PENDING_ACTION_COMMIT_DELAY := 1.0
@@ -25,6 +33,13 @@ var deck_metrics_service: RefCounted
 var run_state_service: RefCounted
 var shop_economy_service: RefCounted
 var card_frame_factory: RefCounted
+var deckbuilder_screen: RefCounted
+var season_flow_service: RefCounted
+var tournament_service: RefCounted
+var combat_ui_screen: RefCounted
+var manual_combat_ui: RefCounted
+var manual_combat_vfx: RefCounted
+var manual_combat_input: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -35,6 +50,8 @@ var tournaments_by_id: Dictionary = {}
 var run: Dictionary = {}
 var current_screen := "start"
 var deckbuilder_sort_mode := SORT_AFFINITY
+var season_setup_archetype_index := 0
+var season_setup_difficulty_index := 0
 
 var root_margin: MarginContainer
 var shell: VBoxContainer
@@ -56,6 +73,7 @@ var manual_inspect_text_label: Label
 var manual_drag_candidate: Dictionary = {}
 var manual_drag_state: Dictionary = {}
 var manual_drag_ghost: Control
+var manual_action_bubble_layer: Control
 
 
 func _ready() -> void:
@@ -70,6 +88,14 @@ func _ready() -> void:
 	shop_economy_service = SHOP_ECONOMY_SERVICE_SCRIPT.new()
 	shop_economy_service.setup(cards, cards_by_id, boosters_by_id, rng)
 	card_frame_factory = CARD_FRAME_FACTORY_SCRIPT.new()
+	deckbuilder_screen = DECKBUILDER_SCREEN_SCRIPT.new()
+	season_flow_service = SEASON_FLOW_SERVICE_SCRIPT.new()
+	season_flow_service.setup(run_state_service, tournaments_by_id)
+	tournament_service = TOURNAMENT_SERVICE_SCRIPT.new()
+	combat_ui_screen = COMBAT_UI_SCREEN_SCRIPT.new()
+	manual_combat_ui = MANUAL_COMBAT_UI_SCRIPT.new()
+	manual_combat_vfx = MANUAL_COMBAT_VFX_SCRIPT.new()
+	manual_combat_input = MANUAL_COMBAT_INPUT_SCRIPT.new()
 	_build_shell()
 	_show_start()
 
@@ -79,12 +105,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if _manual_handle_hand_card_drag_input(event):
 		return
-	if run.get("manual_inspect", {}).is_empty():
+	if run.get("manual_inspect", {}).is_empty() and _manual_selection().is_empty():
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		var hovered := get_viewport().gui_get_hovered_control()
 		if not _ui_combat_click_keeps_inspect(hovered):
-			call_deferred("_manual_clear_inspect_overlay")
+			call_deferred("_manual_clear_ui_combat_context")
 
 
 func _ui_combat_click_keeps_inspect(control: Control) -> bool:
@@ -94,6 +120,10 @@ func _ui_combat_click_keeps_inspect(control: Control) -> bool:
 		if node_name.begins_with("CombatCardPanel"):
 			return true
 		if node_name.begins_with("ManualInspectPanelOverlay"):
+			return true
+		if node_name.begins_with("ManualCardActionBubble"):
+			return true
+		if node_name.begins_with("ManualOpponentFanHand") or node_name.begins_with("ManualFaceTargetAffordance"):
 			return true
 		if node_name.begins_with("ManualCardPlayButton") or node_name.begins_with("ManualCardSelectButton"):
 			return true
@@ -188,17 +218,58 @@ func _connect_pressed(button: Button, callback: Callable) -> void:
 func _show_start() -> void:
 	current_screen = "start"
 	run = {}
+	season_setup_archetype_index = 0
+	season_setup_difficulty_index = 0
 	_apply_screen_chrome()
 	_clear(nav)
 	_clear(content)
 	_update_status()
-	_set_footer("Choose a starter deck. The first prototype is about opening packs, tuning a list, and trying to survive Weekly Locals.")
+	_set_footer("Choose how you want to start: the clean Season Run path or the full debug sandbox.")
 
-	var intro := _add_panel(content, "Choose Your Starter")
+	var intro := _add_panel(content, "Road to Worlds")
 	_add_body_text(
 		intro,
-		"You are starting a new competitive season with a small budget and a borrowed deck shell. Each starter is legal for Weekly Locals, but neither is optimized."
+		"Start a competitive TCG season, tune a starter deck, and try to survive the climb from locals toward bigger events."
 	)
+
+	var mode_row := HBoxContainer.new()
+	mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_row.add_theme_constant_override("separation", 10)
+	content.add_child(mode_row)
+
+	var season_panel := _add_panel(mode_row, "Season Run", "#1f3329")
+	season_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(season_panel, "The actual game path: choose a starter deck, choose a season border, then enter the shop-to-tournament loop.")
+	var season_button := _make_button("Start Season Run")
+	_style_button(season_button, "action")
+	_connect_pressed(season_button, _show_season_run_setup)
+	season_panel.add_child(season_button)
+
+	var debug_panel := _add_panel(mode_row, "Debug Sandbox", "#2b2f44")
+	debug_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(debug_panel, "The development menu: choose a deck, then open Shop, Packs, Deckbuilder, Combat Lab, UI Combat, Tournament, and Metagame.")
+	var debug_button := _make_button("Open Debug Sandbox")
+	_connect_pressed(debug_button, _show_debug_starter_selection)
+	debug_panel.add_child(debug_button)
+
+	var load_panel := _add_panel(content, "Continue")
+	_add_body_text(load_panel, "Load your saved run if you already have one.")
+	var load_button := _make_button("Load Run")
+	_connect_pressed(load_button, _load_run_from_disk)
+	load_panel.add_child(load_button)
+
+
+func _show_debug_starter_selection() -> void:
+	current_screen = "debug_starter"
+	run = {}
+	_apply_screen_chrome()
+	_clear(nav)
+	_clear(content)
+	_update_status()
+	_set_footer("Choose a starter deck for the debug sandbox.")
+
+	var intro := _add_panel(content, "Choose Debug Starter")
+	_add_body_text(intro, "Debug starts with the full prototype menu unlocked so we can test individual systems quickly.")
 
 	var starter_grid := HBoxContainer.new()
 	starter_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -214,19 +285,213 @@ func _show_start() -> void:
 		_add_body_text(box, _format_metrics_short(metrics))
 		var button := _make_button("Start With " + archetype.get("name", archetype_id))
 		var selected_id: String = archetype_id
-		_connect_pressed(button, func() -> void: _start_new_run(selected_id))
+		_connect_pressed(button, func() -> void: _start_new_run_with_mode(selected_id, "debug", "white"))
 		box.add_child(button)
+
+	var back_button := _make_button("Back")
+	_connect_pressed(back_button, _show_start)
+	content.add_child(back_button)
+
+
+func _show_season_run_setup() -> void:
+	current_screen = "season_setup"
+	run = {}
+	_apply_screen_chrome()
+	_clear(nav)
+	_clear(content)
+	_update_status()
+	_set_footer("Choose a starter deck and season border. Borders are difficulty modifiers for the run.")
+
+	var selected_archetype_id := String(ARCHETYPE_ORDER[season_setup_archetype_index])
+	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
+	var archetype: Dictionary = archetypes_by_id[selected_archetype_id]
+	var difficulty := _difficulty_data(selected_difficulty_id)
+	var starter_deck := _deck_entries_to_dict(archetype.get("starterDeck", []))
+	var metrics := _calculate_deck_metrics(starter_deck, {})
+
+	var panel := _add_panel(content, "Season Registration", "#17202c")
+	_add_body_text(panel, "Pick your deck shell, then pick the border that defines the run's difficulty modifier.")
+
+	var deck_row := HBoxContainer.new()
+	deck_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_row.add_theme_constant_override("separation", 10)
+	panel.add_child(deck_row)
+
+	var previous_deck := _make_button("<")
+	previous_deck.custom_minimum_size = Vector2(48, 150)
+	_connect_pressed(previous_deck, func() -> void: _shift_season_setup_archetype(-1))
+	deck_row.add_child(previous_deck)
+
+	var deck_card := _add_bordered_panel(
+		deck_row,
+		String(archetype.get("name", selected_archetype_id)),
+		String(archetype.get("color", "#2d3442")),
+		String(difficulty.get("border_color", "#f3efe4")),
+		3
+	)
+	deck_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_card.custom_minimum_size = Vector2(420, 150)
+	_add_body_text(deck_card, String(archetype.get("summary", "")))
+	_add_body_text(deck_card, _format_metrics_short(metrics))
+	_add_body_text(deck_card, "Starter deck: %d cards | Predator matchup: %s" % [
+		_deck_total(starter_deck),
+		_archetype_label(_predator_archetype(selected_archetype_id))
+	])
+
+	var next_deck := _make_button(">")
+	next_deck.custom_minimum_size = Vector2(48, 150)
+	_connect_pressed(next_deck, func() -> void: _shift_season_setup_archetype(1))
+	deck_row.add_child(next_deck)
+
+	var difficulty_row := HBoxContainer.new()
+	difficulty_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	difficulty_row.add_theme_constant_override("separation", 10)
+	panel.add_child(difficulty_row)
+
+	var previous_difficulty := _make_button("<")
+	previous_difficulty.custom_minimum_size = Vector2(48, 118)
+	_connect_pressed(previous_difficulty, func() -> void: _shift_season_setup_difficulty(-1))
+	difficulty_row.add_child(previous_difficulty)
+
+	var difficulty_card := _add_bordered_panel(
+		difficulty_row,
+		"%s Border" % String(difficulty.get("name", "White")),
+		String(difficulty.get("accent", "#202734")),
+		String(difficulty.get("border_color", "#f3efe4")),
+		4
+	)
+	difficulty_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	difficulty_card.custom_minimum_size = Vector2(420, 118)
+	_add_body_text(difficulty_card, String(difficulty.get("summary", "")))
+	_add_body_text(difficulty_card, String(difficulty.get("rules_text", "")))
+	_add_body_text(difficulty_card, "Start: $%d | Lives: %d" % [
+		run_state_service.starting_money_for_difficulty(selected_difficulty_id),
+		run_state_service.starting_lives_for_difficulty(selected_difficulty_id)
+	])
+
+	var next_difficulty := _make_button(">")
+	next_difficulty.custom_minimum_size = Vector2(48, 118)
+	_connect_pressed(next_difficulty, func() -> void: _shift_season_setup_difficulty(1))
+	difficulty_row.add_child(next_difficulty)
+
+	var action_row := HBoxContainer.new()
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_theme_constant_override("separation", 10)
+	panel.add_child(action_row)
+
+	var play_button := _make_button("Start Season")
+	_style_button(play_button, "action")
+	_connect_pressed(play_button, _confirm_season_run_setup)
+	action_row.add_child(play_button)
+
+	var back_button := _make_button("Back")
+	_connect_pressed(back_button, _show_start)
+	action_row.add_child(back_button)
+
+
+func _shift_season_setup_archetype(delta: int) -> void:
+	season_setup_archetype_index = posmod(season_setup_archetype_index + delta, ARCHETYPE_ORDER.size())
+	_show_season_run_setup()
+
+
+func _shift_season_setup_difficulty(delta: int) -> void:
+	season_setup_difficulty_index = posmod(season_setup_difficulty_index + delta, DIFFICULTY_ORDER.size())
+	_show_season_run_setup()
+
+
+func _confirm_season_run_setup() -> void:
+	var selected_archetype_id := String(ARCHETYPE_ORDER[season_setup_archetype_index])
+	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
+	_start_new_run_with_mode(selected_archetype_id, "season", selected_difficulty_id)
 
 
 func _start_new_run(archetype_id: String) -> void:
 	_manual_clear_hand_card_drag()
 	var archetype: Dictionary = archetypes_by_id[archetype_id]
 	var starter_deck := _deck_entries_to_dict(archetype.get("starterDeck", []))
-	run = run_state_service.create_run(archetype_id, starter_deck, _predator_archetype(archetype_id))
+	run = run_state_service.create_run(archetype_id, starter_deck, _predator_archetype(archetype_id), "unselected", "white")
+	run.run_mode = "unselected"
 
 	_generate_shop_inventory()
-	_set_footer("New season started. You have $%d, a legal starter deck, and one shot at this week's locals." % run.money)
-	_show_shop()
+	_set_footer("Starter chosen. Pick whether this run opens in the clean season path or the full debug sandbox.")
+	_show_run_path_choice()
+
+
+func _start_new_run_with_mode(archetype_id: String, mode: String, difficulty_id: String = "white") -> void:
+	_manual_clear_hand_card_drag()
+	var archetype: Dictionary = archetypes_by_id[archetype_id]
+	var starter_deck := _deck_entries_to_dict(archetype.get("starterDeck", []))
+	run = run_state_service.create_run(archetype_id, starter_deck, _predator_archetype(archetype_id), mode, difficulty_id)
+	_generate_shop_inventory()
+	match mode:
+		"season":
+			_set_footer("Season started with %s on %s Border." % [
+				String(archetype.get("name", archetype_id)),
+				String(_difficulty_data(difficulty_id).get("name", "White"))
+			])
+			_show_season_run()
+		_:
+			_set_footer("Debug Sandbox started with " + String(archetype.get("name", archetype_id)) + ".")
+			_show_shop()
+
+
+func _show_run_path_choice() -> void:
+	if run.is_empty():
+		_show_start()
+		return
+	current_screen = "path_choice"
+	_render_nav()
+	_clear(content)
+	_update_status()
+
+	var starter_id := String(run.get("starter", ""))
+	var starter: Dictionary = archetypes_by_id.get(starter_id, {})
+	var starter_name := String(starter.get("name", starter_id))
+	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
+
+	var intro := _add_panel(content, "Choose Your Path", "#222936")
+	_add_body_text(intro, "Starter: %s | Money: $%d | Main deck: %d/%d" % [
+		starter_name,
+		int(run.get("money", 0)),
+		_deck_total(run.get("deck", {})),
+		MAIN_DECK_SIZE
+	])
+	_add_body_text(intro, _format_metrics_short(metrics))
+
+	var options := HBoxContainer.new()
+	options.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	options.add_theme_constant_override("separation", 10)
+	content.add_child(options)
+
+	var season_panel := _add_panel(options, "Season Run", "#1f3329")
+	season_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(season_panel, "Play the actual roguelike path: shop, packs, deck tuning, tournament entry, rewards, and run failure.")
+	_add_body_text(season_panel, "This is the route we will keep tightening into the vertical slice.")
+	var season_button := _make_button("Start Season Run")
+	_connect_pressed(season_button, func() -> void: _choose_run_path("season"))
+	season_panel.add_child(season_button)
+
+	var debug_panel := _add_panel(options, "Debug Sandbox", "#2b2f44")
+	debug_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(debug_panel, "Open the current full prototype menu with Combat Lab, UI Combat, Tournament, Metagame, and all test surfaces.")
+	_add_body_text(debug_panel, "Use this when we are building or debugging specific systems.")
+	var debug_button := _make_button("Open Debug Menu")
+	_connect_pressed(debug_button, func() -> void: _choose_run_path("debug"))
+	debug_panel.add_child(debug_button)
+
+
+func _choose_run_path(mode: String) -> void:
+	if run.is_empty():
+		_show_start()
+		return
+	run.run_mode = mode
+	match mode:
+		"season":
+			_set_footer("Season Run selected. Follow the weekly loop: shop, tune, enter the event, survive.")
+			_show_season_run()
+		_:
+			_set_footer("Debug Sandbox selected. All prototype tools are available.")
+			_show_shop()
 
 
 func _deck_entries_to_dict(entries: Array) -> Dictionary:
@@ -237,6 +502,34 @@ func _render_nav() -> void:
 	_clear(nav)
 	_apply_screen_chrome()
 	if run.is_empty():
+		return
+
+	var mode := _run_mode()
+	if mode == "unselected":
+		_add_nav_button("Choose Path", _show_run_path_choice)
+		var unselected_spacer := Control.new()
+		unselected_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nav.add_child(unselected_spacer)
+		_add_nav_button("Save", _save_run)
+		_add_nav_button("Load", _load_run_from_disk)
+		_add_nav_button("New Run", _show_start)
+		return
+
+	if mode == "season":
+		_add_nav_button("Season", _show_season_run)
+		_add_nav_button("Shop", _show_shop)
+		_add_nav_button("Packs", _show_packs)
+		_add_nav_button("Deckbuilder", _show_deckbuilder)
+		_add_nav_button("Tournament", _show_tournament)
+		_add_nav_button("Metagame", _show_meta)
+
+		var season_spacer := Control.new()
+		season_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nav.add_child(season_spacer)
+
+		_add_nav_button("Save", _save_run)
+		_add_nav_button("Load", _load_run_from_disk)
+		_add_nav_button("New Run", _show_start)
 		return
 
 	_add_nav_button("Shop", _show_shop)
@@ -254,6 +547,67 @@ func _render_nav() -> void:
 	_add_nav_button("Save", _save_run)
 	_add_nav_button("Load", _load_run_from_disk)
 	_add_nav_button("New Run", _show_start)
+
+
+func _run_mode() -> String:
+	if run.is_empty():
+		return "debug"
+	return String(run.get("run_mode", "debug"))
+
+
+func _run_difficulty_id() -> String:
+	if run.is_empty():
+		return "white"
+	return String(run.get("difficulty", "white"))
+
+
+func _difficulty_data(difficulty_id: String) -> Dictionary:
+	match difficulty_id:
+		"blue":
+			return {
+				"id": "blue",
+				"name": "Blue",
+				"accent": "#20334a",
+				"border_color": "#6aa8ff",
+				"summary": "Opponents upgrade into stronger cards earlier.",
+				"rules_text": "Rivals get a quality bump and swap weak starter cards for better same-faction cards sooner."
+			}
+		"yellow":
+			return {
+				"id": "yellow",
+				"name": "Yellow",
+				"accent": "#44391e",
+				"border_color": "#f0c94a",
+				"summary": "The season starts on a tighter budget.",
+				"rules_text": "You start with less money, so every pack, single, and entry fee matters more."
+			}
+		"silver":
+			return {
+				"id": "silver",
+				"name": "Silver",
+				"accent": "#30343a",
+				"border_color": "#cfd6df",
+				"summary": "You have fewer season lives.",
+				"rules_text": "Missing a required event record costs a life. Silver starts with only one."
+			}
+		"gold":
+			return {
+				"id": "gold",
+				"name": "Gold",
+				"accent": "#42351c",
+				"border_color": "#e2b84c",
+				"summary": "First player is no longer guaranteed.",
+				"rules_text": "Each tournament round flips for first or second before the duel starts."
+			}
+		_:
+			return {
+				"id": "white",
+				"name": "White",
+				"accent": "#29313b",
+				"border_color": "#f3efe4",
+				"summary": "Base season rules.",
+				"rules_text": "Normal money, normal lives, starter-level opponents, and you begin each match."
+			}
 
 
 func _apply_screen_chrome() -> void:
@@ -275,6 +629,245 @@ func _add_nav_button(label: String, callback: Callable) -> void:
 	nav.add_child(button)
 
 
+func _normalize_season_calendar_state() -> void:
+	season_flow_service.normalize_calendar_state(run)
+
+
+func _season_calendar_ids() -> Array:
+	return season_flow_service.calendar_ids(run)
+
+
+func _season_event_index(event_id: String) -> int:
+	return season_flow_service.event_index(run, event_id)
+
+
+func _season_event_by_id(event_id: String) -> Dictionary:
+	return season_flow_service.event_by_id(event_id)
+
+
+func _first_selectable_season_event_id() -> String:
+	return season_flow_service.first_selectable_event_id(run)
+
+
+func _selected_season_event_id() -> String:
+	return season_flow_service.selected_event_id(run)
+
+
+func _selected_season_event() -> Dictionary:
+	return season_flow_service.selected_event(run)
+
+
+func _selected_tournament_event() -> Dictionary:
+	if _run_mode() == "season":
+		return _selected_season_event()
+	return _season_event_by_id("weekly_locals")
+
+
+func _season_event_completed(event_id: String) -> bool:
+	return season_flow_service.event_completed(run, event_id)
+
+
+func _season_event_unlocked(event_id: String) -> bool:
+	return season_flow_service.event_unlocked(run, event_id)
+
+
+func _season_event_selectable(event_id: String) -> bool:
+	return season_flow_service.event_selectable(run, event_id, _season_tournament_active())
+
+
+func _select_season_event(event_id: String) -> void:
+	if _season_tournament_active():
+		_set_footer("Finish the active tournament before choosing another event.")
+		return
+	if _season_event_completed(event_id):
+		_set_footer("%s is already cleared." % String(_season_event_by_id(event_id).get("name", event_id)))
+		return
+	if not _season_event_unlocked(event_id):
+		_set_footer("Clear the earlier calendar events before registering for %s." % String(_season_event_by_id(event_id).get("name", event_id)))
+		return
+	run.selected_event_id = event_id
+	_set_footer("Selected %s on the season calendar." % String(_season_event_by_id(event_id).get("name", event_id)))
+	_show_season_run()
+
+
+func _season_completed_count() -> int:
+	return season_flow_service.completed_count(run)
+
+
+func _season_event_is_final(event_id: String) -> bool:
+	return season_flow_service.event_is_final(run, event_id)
+
+
+func _season_mark_event_completed(event_id: String) -> void:
+	season_flow_service.mark_event_completed(run, event_id)
+
+
+func _set_calendar_prep_notice(event_id: String) -> void:
+	season_flow_service.set_prep_notice(run, event_id)
+
+
+func _add_season_calendar(parent: Node, selected_event_id: String) -> void:
+	var calendar_panel := _add_panel(parent, "Season Calendar", "#17202c")
+	_add_body_text(calendar_panel, "Win condition: %s" % String(run.get("season_goal", "Win Worlds before your season lives run out.")))
+	_add_body_text(calendar_panel, "Progress: %d/%d events cleared. Select an unlocked event, then register when your deck is ready." % [
+		_season_completed_count(),
+		_season_calendar_ids().size()
+	])
+
+	var grid := GridContainer.new()
+	grid.columns = max(1, min(5, _season_calendar_ids().size()))
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	calendar_panel.add_child(grid)
+
+	var ids := _season_calendar_ids()
+	for index in range(ids.size()):
+		var event_id := String(ids[index])
+		var event := _season_event_by_id(event_id)
+		var completed := _season_event_completed(event_id)
+		var unlocked := _season_event_unlocked(event_id)
+		var selected := event_id == selected_event_id
+		var accent := "#253044"
+		var border := "#3a4352"
+		var status := "Locked"
+		if completed:
+			accent = "#1f3329"
+			border = "#6f9f6d"
+			status = "Cleared"
+		elif selected:
+			accent = "#2e3040"
+			border = "#ffe08a"
+			status = "Selected"
+		elif unlocked:
+			accent = "#202734"
+			border = "#7da7ff"
+			status = "Available"
+
+		var event_box := _add_bordered_panel(grid, "%s: %s" % [status, String(event.get("name", event_id))], accent, border, 2)
+		event_box.custom_minimum_size = Vector2(180, 170)
+		_add_body_text(event_box, "Week %d | %d rounds | Need %d wins" % [
+			int(event.get("calendarWeek", index + 1)),
+			int(event.get("rounds", 0)),
+			int(event.get("requiredWins", 0))
+		])
+		_add_body_text(event_box, "Entry $%d | %s" % [
+			int(event.get("entryFee", 0)),
+			String(event.get("stage", "Tournament"))
+		])
+		_add_body_text(event_box, String(event.get("summary", "")))
+		var button_label := "Select Event"
+		if completed:
+			button_label = "Cleared"
+		elif not unlocked:
+			button_label = "Locked"
+		elif selected:
+			button_label = "Selected"
+		var button := _make_button(button_label)
+		button.disabled = completed or not unlocked or selected or _season_tournament_active()
+		var selected_calendar_event_id := event_id
+		_connect_pressed(button, func() -> void: _select_season_event(selected_calendar_event_id))
+		event_box.add_child(button)
+
+
+func _show_season_run() -> void:
+	if _guard_run_over():
+		return
+	current_screen = "season"
+	_render_nav()
+	_clear(content)
+	_update_status()
+
+	_normalize_season_calendar_state()
+	var event: Dictionary = _selected_season_event()
+	var event_id := String(event.get("id", _selected_season_event_id()))
+	var legal := _deck_is_legal()
+	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
+	var primary_archetype: Dictionary = archetypes_by_id[String(metrics.primary)]
+	var primary_name := String(primary_archetype.get("name", String(metrics.primary)))
+
+	var top := HBoxContainer.new()
+	top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_theme_constant_override("separation", 10)
+	content.add_child(top)
+
+	var season_panel := _add_panel(top, "Season Run", "#1f3329")
+	season_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var difficulty := _difficulty_data(_run_difficulty_id())
+	_add_body_text(season_panel, "Week %d | $%d | Prize packs: %d" % [
+		int(run.get("week", 1)),
+		int(run.get("money", 0)),
+		int(run.get("prize_packs", 0))
+	])
+	_add_body_text(season_panel, "%s Border | Lives %d/%d | %s" % [
+		String(difficulty.get("name", "White")),
+		int(run.get("season_lives", 0)),
+		int(run.get("max_season_lives", 0)),
+		String(difficulty.get("summary", ""))
+	])
+	_add_body_text(season_panel, "Goal: %s" % String(run.get("season_goal", "Win Worlds before your season lives run out.")))
+	_add_body_text(season_panel, "Selected event: %s | %d rounds | Need %d wins | Entry $%d" % [
+		String(event.get("name", event_id)),
+		int(event.get("rounds", 0)),
+		int(event.get("requiredWins", 0)),
+		int(event.get("entryFee", 0))
+	])
+	_add_body_text(season_panel, String(event.get("winConditionText", "")))
+	_add_body_text(season_panel, "Deck: %s | %s" % [
+		primary_name,
+		"Ready" if bool(legal.get("ok", false)) else String(legal.get("reason", "Not legal"))
+	])
+
+	var event_button := _make_button("Register: %s" % String(event.get("name", event_id)))
+	event_button.disabled = not bool(legal.get("ok", false)) or int(run.get("money", 0)) < int(event.get("entryFee", 0)) or not _season_event_selectable(event_id)
+	_connect_pressed(event_button, _show_tournament)
+	season_panel.add_child(event_button)
+
+	var deck_panel := _add_panel(top, "Deck Readiness", "#222936")
+	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(deck_panel, _format_metrics(metrics))
+	var deck_button := _make_button("Tune Deck")
+	_connect_pressed(deck_button, _show_deckbuilder)
+	deck_panel.add_child(deck_button)
+
+	var notice := String(run.get("season_notice", ""))
+	if notice != "":
+		var prep_panel := _add_panel(content, "Next Prep", "#263222")
+		_add_body_text(prep_panel, notice)
+
+	_add_season_calendar(content, event_id)
+
+	var loop := _add_panel(content, "This Week")
+	var actions := GridContainer.new()
+	actions.columns = 4
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_theme_constant_override("h_separation", 8)
+	actions.add_theme_constant_override("v_separation", 8)
+	loop.add_child(actions)
+	_add_season_action(actions, "Card Shop", "Buy singles, sell extras, and decide whether packs are worth the cash.", _show_shop)
+	_add_season_action(actions, "Open Packs", "Reveal boosters one card at a time and add them to the collection.", _show_packs)
+	_add_season_action(actions, "Deckbuilder", "Convert the collection into the best legal 30-card list.", _show_deckbuilder)
+	_add_season_action(actions, "Tournament", "Pay entry, play the event, and either advance the week or end the run.", _show_tournament)
+
+	if run.get("last_result", []).size() > 0:
+		var last := _add_panel(content, "Last Result")
+		for line in run.last_result:
+			_add_body_text(last, line)
+
+	var meta := _add_panel(content, "Metagame Notes", "#202734")
+	for line in run.get("reports", []):
+		_add_body_text(meta, "• " + String(line))
+
+
+func _add_season_action(parent: Node, title: String, description: String, callback: Callable) -> void:
+	var panel := _add_panel(parent, title, "#202734")
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(panel, description)
+	var button := _make_button(title)
+	_connect_pressed(button, callback)
+	panel.add_child(button)
+
+
 func _show_shop() -> void:
 	if _guard_run_over():
 		return
@@ -283,7 +876,7 @@ func _show_shop() -> void:
 	_clear(content)
 	_update_status()
 
-	var event: Dictionary = tournaments_by_id["weekly_locals"]
+	var event: Dictionary = _selected_tournament_event()
 	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
 
 	var top := HBoxContainer.new()
@@ -296,7 +889,12 @@ func _show_shop() -> void:
 	_add_body_text(
 		event_panel,
 		"Next event: %s, %d rounds, need %d wins. Entry fee: $%d."
-		% [event.name, event.rounds, event.requiredWins, event.entryFee]
+		% [
+			String(event.get("name", "Weekly Locals")),
+			int(event.get("rounds", 3)),
+			int(event.get("requiredWins", 2)),
+			int(event.get("entryFee", 0))
+		]
 	)
 	_add_body_text(event_panel, "Money: $%d | Prize packs waiting: %d" % [run.money, run.prize_packs])
 
@@ -478,214 +1076,7 @@ func _current_primary_archetype() -> String:
 
 
 func _show_deckbuilder() -> void:
-	if _guard_run_over():
-		return
-	current_screen = "deck"
-	_render_nav()
-	_clear(content)
-	_update_status()
-
-	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
-	var legal := _deck_is_legal()
-	var collection_ids: Array = _sorted_card_ids(run.collection.keys(), metrics.primary)
-	var preview_card_id := ""
-	if not collection_ids.is_empty():
-		preview_card_id = String(collection_ids[0])
-
-	var summary := _add_panel(content, "Deckbuilder")
-	_add_body_text(summary, _format_metrics(metrics))
-	_add_body_text(summary, "Legality: " + ("Legal for Weekly Locals" if legal.ok else legal.reason))
-	_add_sort_controls(summary)
-
-	var columns := HBoxContainer.new()
-	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	columns.add_theme_constant_override("separation", 10)
-	content.add_child(columns)
-
-	var collection_panel := _add_panel(columns, "Collection")
-	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for card_id in collection_ids:
-		var owned := _owned_count(card_id)
-		var available := _available_count(card_id)
-		var card: Dictionary = cards_by_id[card_id]
-		var row_panel := PanelContainer.new()
-		row_panel.name = "DeckbuilderCardRow"
-		row_panel.set_meta("card_id", String(card_id))
-		row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var row_style := StyleBoxFlat.new()
-		row_style.bg_color = _rarity_line_color(card.get("rarity", "common"))
-		row_style.border_color = Color("#3a4352")
-		row_style.border_width_left = 1
-		row_style.border_width_right = 1
-		row_style.border_width_top = 1
-		row_style.border_width_bottom = 1
-		row_style.corner_radius_top_left = 4
-		row_style.corner_radius_top_right = 4
-		row_style.corner_radius_bottom_left = 4
-		row_style.corner_radius_bottom_right = 4
-		row_panel.add_theme_stylebox_override("panel", row_style)
-		collection_panel.add_child(row_panel)
-
-		var row_margin := MarginContainer.new()
-		row_margin.add_theme_constant_override("margin_left", 6)
-		row_margin.add_theme_constant_override("margin_right", 6)
-		row_margin.add_theme_constant_override("margin_top", 4)
-		row_margin.add_theme_constant_override("margin_bottom", 4)
-		row_panel.add_child(row_margin)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		row_margin.add_child(row)
-
-		var dot := Label.new()
-		dot.text = "●"
-		dot.tooltip_text = _affinity_label(_card_animal_type(card))
-		dot.add_theme_color_override("font_color", _affinity_color(_card_animal_type(card)))
-		row.add_child(dot)
-
-		var label := Label.new()
-		label.text = "%s x%d | %s %s | cost %d | %s" % [
-			card.name,
-			owned,
-			String(card.rarity).capitalize(),
-			String(card.role).capitalize(),
-			int(card.cost),
-			_affinity_label(_card_animal_type(card))
-		]
-		label.tooltip_text = card.text
-		label.add_theme_color_override("font_color", _rarity_text_color(card.get("rarity", "common")))
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-
-		var add_main := _make_button("+ Main")
-		add_main.disabled = available <= 0 or _deck_total(run.deck) >= MAIN_DECK_SIZE or _deck_count(card_id) >= _deck_limit(card_id)
-		var main_id := String(card_id)
-		_connect_pressed(add_main, func() -> void: _add_to_deck(main_id))
-		row.add_child(add_main)
-
-		var add_side := _make_button("+ Side")
-		add_side.disabled = available <= 0 or _deck_total(run.sideboard) >= SIDEBOARD_SIZE or _sideboard_count(card_id) >= _deck_limit(card_id)
-		var side_id := String(card_id)
-		_connect_pressed(add_side, func() -> void: _add_to_sideboard(side_id))
-		row.add_child(add_side)
-
-	var preview_panel := _add_panel(columns, "Card Preview")
-	preview_panel.name = "DeckbuilderCardPreview"
-	preview_panel.custom_minimum_size = Vector2(260, 0)
-	var preview_body := VBoxContainer.new()
-	preview_body.name = "DeckbuilderCardPreviewBody"
-	preview_body.add_theme_constant_override("separation", 6)
-	preview_panel.add_child(preview_body)
-	_show_deckbuilder_card_preview(preview_body, preview_card_id)
-
-	for row_panel in collection_panel.get_children():
-		if row_panel is Control and row_panel.has_meta("card_id"):
-			_bind_deckbuilder_card_hover(row_panel, String(row_panel.get_meta("card_id")), preview_body)
-
-	var deck_panel := _add_panel(columns, "Main Deck %d/%d" % [_deck_total(run.deck), MAIN_DECK_SIZE])
-	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(deck_panel, run.deck, true, preview_body)
-
-	var side_panel := _add_panel(columns, "Sideboard %d/%d" % [_deck_total(run.sideboard), SIDEBOARD_SIZE])
-	side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(side_panel, run.sideboard, false, preview_body)
-
-
-func _add_deck_list(parent: VBoxContainer, deck: Dictionary, is_main: bool, preview_body: VBoxContainer = null) -> void:
-	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
-	var ids: Array = _sorted_card_ids(deck.keys(), metrics.primary)
-	if ids.is_empty():
-		_add_body_text(parent, "No cards yet.")
-		return
-
-	for card_id in ids:
-		var card: Dictionary = cards_by_id[card_id]
-		var row_panel := PanelContainer.new()
-		row_panel.name = "DeckbuilderCardRow"
-		row_panel.set_meta("card_id", String(card_id))
-		row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var row_style := StyleBoxFlat.new()
-		row_style.bg_color = _rarity_line_color(card.get("rarity", "common"))
-		row_style.border_color = Color("#3a4352")
-		row_style.border_width_left = 1
-		row_style.border_width_right = 1
-		row_style.border_width_top = 1
-		row_style.border_width_bottom = 1
-		row_style.corner_radius_top_left = 4
-		row_style.corner_radius_top_right = 4
-		row_style.corner_radius_bottom_left = 4
-		row_style.corner_radius_bottom_right = 4
-		row_panel.add_theme_stylebox_override("panel", row_style)
-		parent.add_child(row_panel)
-
-		var row_margin := MarginContainer.new()
-		row_margin.add_theme_constant_override("margin_left", 6)
-		row_margin.add_theme_constant_override("margin_right", 6)
-		row_margin.add_theme_constant_override("margin_top", 4)
-		row_margin.add_theme_constant_override("margin_bottom", 4)
-		row_panel.add_child(row_margin)
-
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		row_margin.add_child(row)
-
-		var dot := Label.new()
-		dot.text = "●"
-		dot.tooltip_text = _affinity_label(_card_animal_type(card))
-		dot.add_theme_color_override("font_color", _affinity_color(_card_animal_type(card)))
-		row.add_child(dot)
-
-		var label := Label.new()
-		label.text = "%s x%d | %s | cost %d" % [
-			card.name,
-			int(deck[card_id]),
-			String(card.rarity).capitalize(),
-			int(card.cost)
-		]
-		label.tooltip_text = card.text
-		label.add_theme_color_override("font_color", _rarity_text_color(card.get("rarity", "common")))
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-
-		var button := _make_button("−")
-		button.tooltip_text = "Remove " + String(card.name)
-		var selected_id := String(card_id)
-		if is_main:
-			_connect_pressed(button, func() -> void: _remove_from_deck(selected_id))
-		else:
-			_connect_pressed(button, func() -> void: _remove_from_sideboard(selected_id))
-		row.add_child(button)
-		_bind_deckbuilder_card_hover(row_panel, String(card_id), preview_body)
-
-
-func _bind_deckbuilder_card_hover(control: Control, card_id: String, preview_body: VBoxContainer) -> void:
-	if control == null or preview_body == null:
-		return
-	control.mouse_entered.connect(func() -> void: _show_deckbuilder_card_preview(preview_body, card_id))
-
-
-func _show_deckbuilder_card_preview(preview_body: VBoxContainer, card_id: String) -> void:
-	if preview_body == null or not is_instance_valid(preview_body):
-		return
-	for child in preview_body.get_children():
-		child.free()
-	if not cards_by_id.has(card_id):
-		return
-
-	card_frame_factory.add_frame(
-		preview_body,
-		_card_frame_data(card_id),
-		{
-			"panel_name": "DeckbuilderPreviewFrame",
-			"contents_name": "DeckbuilderPreviewContents",
-			"name_prefix": "DeckbuilderPreview",
-			"compact": false,
-			"min_size": Vector2(248, 0),
-			"show_deck_stats": true,
-			"show_rules_text": true,
-			"border_width": 2
-		}
-	)
+	deckbuilder_screen.show(self)
 
 
 func _card_frame_data(card_id: String, overrides: Dictionary = {}) -> Dictionary:
@@ -716,19 +1107,45 @@ func _card_frame_data(card_id: String, overrides: Dictionary = {}) -> Dictionary
 		"rules_text": String(card.get("text", "")),
 		"attack": attack,
 		"health": health,
+		"max_health": health,
 		"show_attack_health": attack >= 0 and health >= 0,
 		"area_text": String(card.get("role", "card")).capitalize(),
 		"art_text": "Picture\nplaceholder",
 		"animal_color": _affinity_color(animal_type),
-		"frame_color": _rarity_line_color(String(card.get("rarity", "common"))),
-		"art_color": _combat_placeholder_color(card_id),
-		"border_color": _affinity_color(animal_type).lightened(0.12),
-		"border_width": 1
-	}
+			"frame_color": _rarity_line_color(String(card.get("rarity", "common"))),
+			"art_color": _combat_placeholder_color(card_id),
+			"border_color": _affinity_color(animal_type).lightened(0.12),
+			"border_width": 1,
+			"frame_id": _card_frame_template_id(card),
+			"border_id": _run_difficulty_id()
+		}
 
 	for key in overrides.keys():
 		data[key] = overrides[key]
 	return data
+
+
+func _card_frame_template_id(card: Dictionary) -> String:
+	if card.is_empty():
+		return "action_engine_generic"
+	var frame_kind := "threat" if _combat_card_type(card) == "threat" else "action_engine"
+	return "%s_%s" % [frame_kind, _card_frame_archetype_id(card)]
+
+
+func _card_frame_archetype_id(card: Dictionary) -> String:
+	match _card_animal_type(card):
+		"flightless_birds":
+			return "aggro"
+		"snake":
+			return "control"
+		"oxen":
+			return "ramp"
+		"glires":
+			return "prop"
+		"insect":
+			return "revive"
+		_:
+			return "generic"
 
 
 func _deckbuilder_stats_line(card: Dictionary) -> String:
@@ -743,75 +1160,6 @@ func _deckbuilder_stats_line(card: Dictionary) -> String:
 		int(stats.get("advantage", 0)),
 		int(stats.get("consistency", 0))
 	]
-
-
-func _add_sort_controls(parent: VBoxContainer) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	parent.add_child(row)
-
-	var label := Label.new()
-	label.text = "Sort cards:"
-	label.add_theme_color_override("font_color", Color("#c7d0df"))
-	row.add_child(label)
-
-	_add_sort_button(row, "Deck Affinity", SORT_AFFINITY)
-	_add_sort_button(row, "Rarity", SORT_RARITY)
-	_add_sort_button(row, "Name", SORT_NAME)
-
-
-func _add_sort_button(parent: HBoxContainer, label: String, mode: String) -> void:
-	var button := _make_button(label)
-	button.disabled = deckbuilder_sort_mode == mode
-	_connect_pressed(button, func() -> void: _set_deckbuilder_sort(mode))
-	parent.add_child(button)
-
-
-func _set_deckbuilder_sort(mode: String) -> void:
-	deckbuilder_sort_mode = mode
-	_set_footer("Deckbuilder sorted by " + mode + ".")
-	_show_deckbuilder()
-
-
-func _sorted_card_ids(ids: Array, primary_archetype: String) -> Array:
-	var sorted_ids: Array = ids.duplicate()
-	sorted_ids.sort_custom(func(a, b) -> bool: return _card_id_comes_before(String(a), String(b), primary_archetype))
-	return sorted_ids
-
-
-func _card_id_comes_before(a: String, b: String, primary_archetype: String) -> bool:
-	var card_a: Dictionary = cards_by_id[a]
-	var card_b: Dictionary = cards_by_id[b]
-
-	match deckbuilder_sort_mode:
-		SORT_RARITY:
-			var rarity_a := _rarity_rank(card_a.get("rarity", "common"))
-			var rarity_b := _rarity_rank(card_b.get("rarity", "common"))
-			if rarity_a != rarity_b:
-				return rarity_a > rarity_b
-		SORT_AFFINITY:
-			var affinity_a := _affinity_rank(card_a.get("archetype", "neutral"), primary_archetype)
-			var affinity_b := _affinity_rank(card_b.get("archetype", "neutral"), primary_archetype)
-			if affinity_a != affinity_b:
-				return affinity_a < affinity_b
-			var rarity_a := _rarity_rank(card_a.get("rarity", "common"))
-			var rarity_b := _rarity_rank(card_b.get("rarity", "common"))
-			if rarity_a != rarity_b:
-				return rarity_a > rarity_b
-
-	var name_a := String(card_a.get("name", a)).to_lower()
-	var name_b := String(card_b.get("name", b)).to_lower()
-	if name_a == name_b:
-		return a < b
-	return name_a < name_b
-
-
-func _affinity_rank(archetype_id: String, primary_archetype: String) -> int:
-	if archetype_id == primary_archetype:
-		return 0
-	if archetype_id == "neutral":
-		return 1
-	return 2
 
 
 func _add_to_deck(card_id: String) -> void:
@@ -917,69 +1265,7 @@ func _show_combat_lab() -> void:
 
 
 func _show_ui_combat() -> void:
-	if _guard_run_over():
-		return
-	current_screen = "ui_combat"
-	if manual_drag_candidate.is_empty() and manual_drag_state.is_empty():
-		_manual_free_orphan_hand_drag_ghosts()
-	_render_nav()
-	_clear(content)
-	_update_status()
-
-	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
-	var player_archetype: String = String(metrics.primary)
-	var opponent_archetype: String = _combat_lab_opponent_for(player_archetype)
-	var legal := _deck_is_legal()
-
-	if not run.get("manual_combat", {}).is_empty():
-		var setup_bar := HBoxContainer.new()
-		setup_bar.name = "UICombatSetupBar"
-		setup_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		setup_bar.add_theme_constant_override("separation", 8)
-		content.add_child(setup_bar)
-
-		var setup_label := Label.new()
-		setup_label.text = "%s vs %s" % [archetypes_by_id[player_archetype].name, archetypes_by_id[opponent_archetype].name]
-		setup_label.add_theme_color_override("font_color", Color("#9aa7b7"))
-		setup_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		setup_bar.add_child(setup_label)
-
-		var restart_button := _make_button("Restart UI Battle")
-		restart_button.disabled = not legal.ok
-		_connect_pressed(restart_button, _start_manual_combat_lab_battle)
-		setup_bar.add_child(restart_button)
-
-		_add_manual_combat_lab(content, run.manual_combat)
-		return
-
-	var panel := _add_panel(content, "UI Combat")
-	_add_body_text(panel, "Your deck: %s | Opponent: %s" % [archetypes_by_id[player_archetype].name, archetypes_by_id[opponent_archetype].name])
-	_add_body_text(panel, "Deck status: " + ("Ready" if legal.ok else legal.reason))
-
-	var opponent_row := HBoxContainer.new()
-	opponent_row.add_theme_constant_override("separation", 6)
-	panel.add_child(opponent_row)
-
-	var opponent_label := Label.new()
-	opponent_label.text = "Opponent:"
-	opponent_label.add_theme_color_override("font_color", Color("#c7d0df"))
-	opponent_row.add_child(opponent_label)
-
-	for archetype_id in ARCHETYPE_ORDER:
-		var archetype: Dictionary = archetypes_by_id[archetype_id]
-		var opponent_button := _make_button(archetype.get("name", archetype_id))
-		opponent_button.disabled = String(archetype_id) == opponent_archetype
-		var selected_id: String = String(archetype_id)
-		_connect_pressed(opponent_button, func() -> void: _set_combat_lab_opponent(selected_id))
-		opponent_row.add_child(opponent_button)
-
-	var start_button := _make_button("Start UI Battle" if run.get("manual_combat", {}).is_empty() else "Restart UI Battle")
-	start_button.disabled = not legal.ok
-	_connect_pressed(start_button, _start_manual_combat_lab_battle)
-	panel.add_child(start_button)
-
-	if run.get("manual_combat", {}).is_empty():
-		return
+	combat_ui_screen.show(self)
 
 
 func _show_active_combat_screen() -> void:
@@ -987,6 +1273,18 @@ func _show_active_combat_screen() -> void:
 		_show_ui_combat()
 	else:
 		_show_combat_lab()
+
+
+func _reset_manual_runtime_state(clear_combat: bool = true) -> void:
+	if clear_combat:
+		run.manual_combat = {}
+	run.manual_selection = {}
+	run.manual_inspect = {}
+	run.manual_battle_log_open = false
+	run.manual_animation = {}
+	run.manual_animation_queue = []
+	run.manual_pending_action = {}
+	run.manual_opponent_pending_state = {}
 
 
 func _combat_lab_opponent_for(player_archetype: String) -> String:
@@ -999,13 +1297,7 @@ func _set_combat_lab_opponent(archetype_id: String) -> void:
 	_manual_clear_hand_card_drag()
 	run.combat_lab_opponent = archetype_id
 	run.last_combat = {}
-	run.manual_combat = {}
-	run.manual_selection = {}
-	run.manual_inspect = {}
-	run.manual_battle_log_open = false
-	run.manual_animation = {}
-	run.manual_animation_queue = []
-	run.manual_pending_action = {}
+	_reset_manual_runtime_state()
 	_set_footer("Combat Lab opponent set to " + archetypes_by_id[archetype_id].name + ".")
 	_show_active_combat_screen()
 
@@ -1044,12 +1336,7 @@ func _start_manual_combat_lab_battle() -> void:
 	var opponent_deck := _deck_entries_to_dict(archetypes_by_id[opponent_archetype].get("starterDeck", []))
 	var seed_value := rng.randi()
 	run.manual_combat = combat_service.start_manual_game(run.deck, player_archetype, opponent_deck, opponent_archetype, seed_value)
-	run.manual_selection = {}
-	run.manual_inspect = {}
-	run.manual_battle_log_open = false
-	run.manual_animation = {}
-	run.manual_animation_queue = []
-	run.manual_pending_action = {}
+	_reset_manual_runtime_state(false)
 	run.last_combat = {}
 	_set_footer("Manual battle started.")
 	_show_active_combat_screen()
@@ -1084,7 +1371,8 @@ func _manual_play_card_to_slot(card_id: String, desired_slot_index: int = -1) ->
 		"source_anchor": _manual_hand_card_anchor(card_id),
 		"target_anchor": destination_anchor,
 		"destination_anchor": destination_anchor,
-		"verb": "Play"
+		"verb": "Play",
+		"desired_slot_index": desired_slot_index
 	}, log_start)
 	run.manual_selection = {}
 	_show_active_combat_screen()
@@ -1183,26 +1471,31 @@ func _manual_activate_unit_ability(instance_id: int, ability_index: int) -> void
 
 
 func _manual_end_turn() -> void:
-	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
+	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action() or _manual_has_pending_opponent_turn():
 		return
 	_manual_clear_hand_card_drag()
 	var before_state: Dictionary = run.manual_combat.duplicate(true)
 	var log_start: int = before_state.get("log", []).size()
-	run.manual_combat = combat_service.manual_end_player_turn(run.manual_combat)
-	_manual_set_animation_queue(_manual_build_opponent_turn_animation_queue(before_state, run.manual_combat, log_start))
+	var after_state: Dictionary = combat_service.manual_end_player_turn(before_state.duplicate(true))
+	var animations := _manual_build_opponent_turn_animation_queue(before_state, after_state, log_start)
+	if current_screen == "ui_combat" and not animations.is_empty():
+		run.manual_combat = _manual_visible_opponent_turn_animation_state(before_state, after_state)
+		run.manual_opponent_pending_state = after_state
+		_manual_set_animation_queue(animations)
+	else:
+		run.manual_combat = after_state
+		run.manual_opponent_pending_state = {}
+		_manual_set_animation_queue(animations)
 	run.manual_selection = {}
 	_show_active_combat_screen()
 
 
 func _clear_manual_battle() -> void:
+	if _season_tournament_active():
+		_season_forfeit_current_round()
+		return
 	_manual_clear_hand_card_drag()
-	run.manual_combat = {}
-	run.manual_selection = {}
-	run.manual_inspect = {}
-	run.manual_battle_log_open = false
-	run.manual_animation = {}
-	run.manual_animation_queue = []
-	run.manual_pending_action = {}
+	_reset_manual_runtime_state()
 	_set_footer("Manual battle cleared.")
 	_show_active_combat_screen()
 
@@ -1224,6 +1517,14 @@ func _manual_clear_inspect_overlay() -> void:
 		_show_active_combat_screen()
 	else:
 		_refresh_manual_inspect_panel()
+
+
+func _manual_clear_ui_combat_context() -> void:
+	if run.is_empty():
+		return
+	run.manual_inspect = {}
+	run.manual_selection = {}
+	_show_active_combat_screen()
 
 
 func _manual_select_card(card_id: String) -> void:
@@ -1312,7 +1613,12 @@ func _manual_card_action_commits_immediately(descriptor: Dictionary) -> bool:
 	var card_id := String(descriptor.get("card_id", ""))
 	if card_id == "" or not cards_by_id.has(card_id):
 		return false
-	return _combat_card_type(cards_by_id[card_id]) == "threat"
+	match _combat_card_type(cards_by_id[card_id]):
+		"threat":
+			return true
+		"engine":
+			return int(descriptor.get("desired_slot_index", -1)) >= 0
+	return false
 
 
 func _manual_stage_pending_action(after_state: Dictionary, animation: Dictionary) -> void:
@@ -1406,6 +1712,123 @@ func _manual_set_animation_queue(animations: Array) -> void:
 		return
 	run.manual_animation = animations[0]
 	run.manual_animation_queue = animations.slice(1, animations.size()) if animations.size() > 1 else []
+
+
+func _manual_visible_opponent_turn_animation_state(before_state: Dictionary, after_state: Dictionary) -> Dictionary:
+	var visible := before_state.duplicate(true)
+	visible["active_side"] = "opponent"
+	visible["phase"] = "opponent_animating"
+	visible["game_over"] = false
+	visible["winner"] = ""
+	visible["log"] = after_state.get("log", []).duplicate(true)
+	return visible
+
+
+func _manual_has_pending_opponent_turn() -> bool:
+	return not run.get("manual_opponent_pending_state", {}).is_empty()
+
+
+func _manual_schedule_pending_opponent_turn_commit(animation: Dictionary) -> void:
+	if not _manual_has_pending_opponent_turn():
+		return
+	if bool(animation.get("opponent_commit_scheduled", false)):
+		return
+	animation["opponent_commit_scheduled"] = true
+	run.manual_animation = animation
+	var timer := get_tree().create_timer(1.12)
+	timer.timeout.connect(Callable(self, "_manual_commit_pending_opponent_turn"))
+
+
+func _manual_commit_pending_opponent_turn() -> void:
+	if run.is_empty():
+		return
+	var pending: Dictionary = run.get("manual_opponent_pending_state", {})
+	if pending.is_empty():
+		return
+	run.manual_combat = pending
+	run.manual_opponent_pending_state = {}
+	run.manual_animation = {}
+	run.manual_animation_queue = []
+	run.manual_selection = {}
+	if current_screen == "ui_combat":
+		_show_active_combat_screen()
+
+
+func _manual_apply_completed_opponent_play_animation(animation: Dictionary) -> void:
+	if animation.is_empty() or not _manual_has_pending_opponent_turn():
+		return
+	if String(animation.get("verb", "")) != "Play" or String(animation.get("source_zone", "")) != "Opponent Hand":
+		return
+	var card_id := String(animation.get("card_id", ""))
+	if card_id == "":
+		return
+	var visible: Dictionary = run.get("manual_combat", {})
+	var pending: Dictionary = run.get("manual_opponent_pending_state", {})
+	if visible.is_empty() or pending.is_empty() or String(visible.get("phase", "")) != "opponent_animating":
+		return
+	var revealed := false
+	match String(animation.get("destination_zone", "")):
+		"Opponent Board":
+			revealed = _manual_reveal_pending_opponent_unit(visible, pending, card_id)
+		"Opponent Engine Zone":
+			revealed = _manual_reveal_pending_opponent_engine(visible, pending, card_id)
+	if revealed:
+		_manual_remove_visible_opponent_hand_card(visible, card_id)
+		run.manual_combat = visible
+
+
+func _manual_reveal_pending_opponent_unit(visible: Dictionary, pending: Dictionary, card_id: String) -> bool:
+	var visible_opponent: Dictionary = visible.get("opponent", {})
+	var pending_opponent: Dictionary = pending.get("opponent", {})
+	var visible_ids := {}
+	for visible_unit in visible_opponent.get("board", []):
+		visible_ids[int(visible_unit.get("instance_id", -1))] = true
+	for pending_unit in pending_opponent.get("board", []):
+		if String(pending_unit.get("card_id", "")) != card_id:
+			continue
+		var instance_id := int(pending_unit.get("instance_id", -1))
+		if visible_ids.has(instance_id):
+			continue
+		var visible_board: Array = visible_opponent.get("board", [])
+		visible_board.append(pending_unit.duplicate(true))
+		visible_opponent["board"] = visible_board
+		visible["opponent"] = visible_opponent
+		return true
+	return false
+
+
+func _manual_reveal_pending_opponent_engine(visible: Dictionary, pending: Dictionary, card_id: String) -> bool:
+	var visible_opponent: Dictionary = visible.get("opponent", {})
+	var pending_opponent: Dictionary = pending.get("opponent", {})
+	var visible_engines: Array = visible_opponent.get("engines", [])
+	var pending_engines: Array = pending_opponent.get("engines", [])
+	var visible_count := 0
+	for visible_engine in visible_engines:
+		if String(visible_engine.get("card_id", "")) == card_id:
+			visible_count += 1
+	var matching_pending_seen := 0
+	for pending_engine in pending_engines:
+		if String(pending_engine.get("card_id", "")) != card_id:
+			continue
+		if matching_pending_seen < visible_count:
+			matching_pending_seen += 1
+			continue
+		visible_engines.append(pending_engine.duplicate(true))
+		visible_opponent["engines"] = visible_engines
+		visible["opponent"] = visible_opponent
+		return true
+	return false
+
+
+func _manual_remove_visible_opponent_hand_card(visible: Dictionary, card_id: String) -> void:
+	var visible_opponent: Dictionary = visible.get("opponent", {})
+	var hand: Array = visible_opponent.get("hand", [])
+	var hand_index := hand.find(card_id)
+	if hand_index < 0:
+		return
+	hand.remove_at(hand_index)
+	visible_opponent["hand"] = hand
+	visible["opponent"] = visible_opponent
 
 
 func _manual_build_opponent_turn_animation_queue(before_state: Dictionary, after_state: Dictionary, log_start: int) -> Array:
@@ -2077,460 +2500,20 @@ func _manual_anchor_token(value: String) -> String:
 
 
 func _add_manual_combat_lab(parent: Node, state: Dictionary) -> void:
-	var is_over := bool(state.get("game_over", false))
-	var phase := String(state.get("phase", ""))
-	var player: Dictionary = state.get("player", {})
-	var opponent: Dictionary = state.get("opponent", {})
-	var opponent_name := _archetype_label(String(opponent.get("archetype", "")))
-
-	if current_screen == "ui_combat":
-		_add_ui_combat_header(parent, state, is_over, phase, opponent_name)
-		_add_ui_combat_battle_log(parent, state)
-		_add_ui_combat_duel(parent, state, is_over, phase)
-		return
-
-	var panel := _add_panel(parent, "Manual Battle", "#253044" if not is_over else "#442525")
-	if is_over:
-		_add_body_text(panel, "Winner: %s | Opponent: %s | Turn %d" % [
-			String(state.get("winner", "")).capitalize(),
-			opponent_name,
-			int(state.get("turn", 0))
-		])
-	else:
-		_add_body_text(panel, "Phase: %s | Opponent: %s | Turn %d | Seed %d" % [
-			phase.replace("_", " ").capitalize(),
-			opponent_name,
-			int(state.get("turn", 0)),
-			int(state.get("seed", 0))
-		])
-
-	var controls := HBoxContainer.new()
-	controls.add_theme_constant_override("separation", 6)
-	panel.add_child(controls)
-
-	var end_button := _make_button("End Turn")
-	end_button.disabled = is_over or phase != "player_main" or _manual_has_pending_action()
-	_connect_pressed(end_button, _manual_end_turn)
-	controls.add_child(end_button)
-
-	var clear_button := _make_button("Clear Manual Battle")
-	_connect_pressed(clear_button, _clear_manual_battle)
-	controls.add_child(clear_button)
-
-	var selection_row := HBoxContainer.new()
-	selection_row.add_theme_constant_override("separation", 6)
-	panel.add_child(selection_row)
-
-	var selection_label := Label.new()
-	selection_label.text = _manual_selection_label(state)
-	selection_label.add_theme_color_override("font_color", Color("#ffe08a") if not _manual_selection().is_empty() else Color("#c7d0df"))
-	selection_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	selection_row.add_child(selection_label)
-
-	var cancel_selection := _make_button("Cancel Selection")
-	cancel_selection.disabled = _manual_selection().is_empty()
-	_connect_pressed(cancel_selection, _manual_clear_selection)
-	selection_row.add_child(cancel_selection)
-
-	_add_manual_recent_events(parent, state)
-	if current_screen == "ui_combat":
-		_add_manual_action_summary(parent)
-	else:
-		_add_manual_action_animation(parent)
-
-	var battlefield := _add_manual_battlefield(parent)
-	_add_manual_inspect_panel(battlefield, state)
-	var arena := VBoxContainer.new()
-	arena.name = "ManualArenaZones"
-	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	arena.add_theme_constant_override("separation", 10)
-	battlefield.add_child(arena)
-	_add_manual_combatant_panel(arena, "Opponent", opponent, false, state)
-	_add_manual_combatant_panel(arena, "You", player, true, state)
-	if current_screen == "ui_combat":
-		var board_arc_layer := Node2D.new()
-		board_arc_layer.name = "ManualBoardArcLayer"
-		board_arc_layer.z_index = 120
-		arena.add_child(board_arc_layer)
-		call_deferred("_refresh_manual_board_arc_layer", board_arc_layer)
-
-	var log_panel := _add_panel(parent, "Manual Battle Log")
-	var log_lines: Array = state.get("log", [])
-	var start_index: int = max(0, log_lines.size() - 18)
-	for i in range(start_index, log_lines.size()):
-		_add_body_text(log_panel, "• " + String(log_lines[i]))
+	combat_ui_screen.add_manual_combat_lab(self, parent, state)
 
 
-func _add_ui_combat_header(parent: Node, state: Dictionary, is_over: bool, phase: String, opponent_name: String) -> void:
-	var panel := _add_panel(parent, "", "#1b2330" if not is_over else "#442525")
-	panel.name = "UICombatHeader"
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	panel.add_child(row)
-
-	var log_open := bool(run.get("manual_battle_log_open", false))
-	var log_button := _make_button("Hide Log" if log_open else "Battle Log")
-	log_button.name = "ManualBattleLogButton"
-	_style_button(log_button, "selected" if log_open else "action")
-	_connect_pressed(log_button, _toggle_manual_battle_log)
-	row.add_child(log_button)
-
-	var status := Label.new()
-	status.text = "Duel | Turn %d | %s | Opponent: %s" % [
-		int(state.get("turn", 0)),
-		phase.replace("_", " ").capitalize(),
-		opponent_name
-	]
-	status.add_theme_color_override("font_color", Color("#d8dfec"))
-	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(status)
-
-	var selection := Label.new()
-	selection.text = _manual_selection_label(state)
-	selection.add_theme_color_override("font_color", Color("#ffe08a") if not _manual_selection().is_empty() else Color("#9aa7b7"))
-	selection.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(selection)
-
-	var cancel_selection := _make_button("Cancel")
-	cancel_selection.disabled = _manual_selection().is_empty()
-	_connect_pressed(cancel_selection, _manual_clear_selection)
-	row.add_child(cancel_selection)
-
-	var clear_button := _make_button("Clear")
-	_connect_pressed(clear_button, _clear_manual_battle)
-	row.add_child(clear_button)
+func _add_manual_action_bubble_layer(parent: Control) -> Control:
+	return manual_combat_ui.add_action_bubble_layer(self, parent)
 
 
-func _add_ui_combat_battle_log(parent: Node, state: Dictionary) -> void:
-	if not bool(run.get("manual_battle_log_open", false)):
-		return
-
-	var panel := _add_panel(parent, "Battle Log", "#151d28")
-	panel.name = "ManualBattleLogPanel"
-
-	var row := HBoxContainer.new()
-	row.name = "ManualBattleLogRow"
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 8)
-	panel.add_child(row)
-
-	_add_manual_action_summary(row)
-	_add_manual_recent_events(row, state)
-
-	var log_lines: Array = state.get("log", [])
-	var lines_box := VBoxContainer.new()
-	lines_box.name = "ManualBattleLogLines"
-	lines_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lines_box.add_theme_constant_override("separation", 2)
-	row.add_child(lines_box)
-
-	if log_lines.is_empty():
-		var empty_label := Label.new()
-		empty_label.text = "No battle events yet."
-		empty_label.add_theme_color_override("font_color", Color("#7e8794"))
-		lines_box.add_child(empty_label)
-		return
-
-	var start_index: int = max(0, log_lines.size() - 5)
-	for i in range(start_index, log_lines.size()):
-		var line := Label.new()
-		line.text = "• " + String(log_lines[i])
-		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		line.add_theme_font_size_override("font_size", 11)
-		line.add_theme_color_override("font_color", _manual_log_line_color(String(log_lines[i])))
-		lines_box.add_child(line)
-
-
-func _add_ui_combat_duel(parent: Node, state: Dictionary, is_over: bool, phase: String) -> void:
-	var player: Dictionary = state.get("player", {})
-	var opponent: Dictionary = state.get("opponent", {})
-
-	var battlefield := _add_manual_battlefield(parent)
-	battlefield.name = "UICombatBattlefield"
-	battlefield.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			_manual_clear_inspect_overlay()
-	)
-
-	var arena := VBoxContainer.new()
-	arena.name = "ManualArenaZones"
-	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	arena.set_anchors_preset(Control.PRESET_FULL_RECT)
-	arena.offset_left = 0
-	arena.offset_top = 0
-	arena.offset_right = 0
-	arena.offset_bottom = 0
-	arena.add_theme_constant_override("separation", 4)
-	battlefield.add_child(arena)
-
-	_add_ui_combat_opponent_hand(arena, opponent, state)
-	_add_manual_engine_zone(arena, opponent.get("engines", []), false)
-	_add_manual_board(arena, opponent.get("board", []), false, state)
-	_add_manual_board(arena, player.get("board", []), true, state)
-	_add_manual_engine_zone(arena, player.get("engines", []), true)
-	_add_manual_hand(arena, player, state)
-
-	var board_arc_layer := Node2D.new()
-	board_arc_layer.name = "ManualBoardArcLayer"
-	board_arc_layer.z_index = 120
-	arena.add_child(board_arc_layer)
-	call_deferred("_refresh_manual_board_arc_layer", board_arc_layer)
-
-	_add_ui_combat_resource_readout(battlefield, player, true, state)
-	_add_ui_combat_resource_readout(battlefield, opponent, false, state)
-	_add_ui_combat_end_turn_overlay(battlefield, is_over, phase)
-	_add_manual_inspect_panel(battlefield, state)
-
-
-func _add_ui_combat_opponent_hand(parent: Node, opponent: Dictionary, state: Dictionary) -> void:
-	var zone := _add_manual_zone(parent, "Hand Zone", "OpponentHand", "#182537")
-	zone.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-
-	var fan := Control.new()
-	fan.name = "ManualOpponentFanHand"
-	fan.custom_minimum_size = Vector2(0, 34)
-	fan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	zone.add_child(fan)
-
-	var hand_count := int(opponent.get("hand", []).size())
-	if hand_count <= 0:
-		_add_manual_empty_zone_slot(fan, "Empty Hand")
-	else:
-		for i in range(hand_count):
-			_add_ui_combat_blank_hand_card(fan, i)
-		call_deferred("_layout_ui_combat_opponent_hand", fan)
-	if _manual_selection_can_try_face(state):
-		_add_ui_combat_face_target_anchor(fan, _manual_selected_can_target_face(state))
-
-
-func _add_ui_combat_face_target_anchor(parent: Control, selected_can_face: bool) -> void:
-	var anchor := PanelContainer.new()
-	anchor.name = "ManualFaceTargetAffordance"
-	anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	anchor.set_anchors_preset(Control.PRESET_FULL_RECT)
-	anchor.offset_left = 0.0
-	anchor.offset_top = 0.0
-	anchor.offset_right = 0.0
-	anchor.offset_bottom = 0.0
-	anchor.z_index = 25
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.22, 0.14, 0.12) if selected_can_face else Color(0.26, 0.14, 0.14, 0.10)
-	style.border_color = Color(0.62, 0.9, 0.43, 0.68) if selected_can_face else Color(0.85, 0.63, 0.63, 0.35)
-	style.border_width_left = 2 if selected_can_face else 1
-	style.border_width_right = 2 if selected_can_face else 1
-	style.border_width_top = 2 if selected_can_face else 1
-	style.border_width_bottom = 2 if selected_can_face else 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	anchor.add_theme_stylebox_override("panel", style)
-	parent.add_child(anchor)
-
-
-func _add_ui_combat_blank_hand_card(parent: Node, index: int) -> void:
-	var back := PanelContainer.new()
-	back.name = "ManualCardBackSlot_%d" % (index + 1)
-	back.custom_minimum_size = Vector2(32, 40)
-	back.size = back.custom_minimum_size
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#172a36")
-	style.border_color = Color("#05070a")
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = 7
-	style.corner_radius_top_right = 7
-	style.corner_radius_bottom_left = 7
-	style.corner_radius_bottom_right = 7
-	back.add_theme_stylebox_override("panel", style)
-	parent.add_child(back)
-
-
-func _layout_ui_combat_opponent_hand(fan: Control) -> void:
-	if not is_instance_valid(fan):
-		return
-	var backs: Array = []
-	for child in fan.get_children():
-		if child is Control and String(child.name).begins_with("ManualCardBackSlot"):
-			backs.append(child)
-	var count := backs.size()
-	if count <= 0:
-		return
-	var card_size: Vector2 = backs[0].custom_minimum_size
-	var available_width := fan.size.x
-	if available_width <= 1.0:
-		available_width = max(card_size.x, card_size.x + 34.0 * float(max(0, count - 1)))
-	var spread: float = 0.0 if count == 1 else clamp((available_width - card_size.x) / float(count - 1), 30.0, 46.0)
-	var total_width: float = card_size.x + spread * float(max(0, count - 1))
-	var start_x: float = max(0.0, (available_width - total_width) * 0.5)
-	var center_index: float = float(count - 1) * 0.5
-	for index in range(count):
-		var card_panel: Control = backs[index]
-		var offset: float = float(index) - center_index
-		card_panel.size = card_panel.custom_minimum_size
-		card_panel.pivot_offset = card_panel.custom_minimum_size * 0.5
-		card_panel.position = Vector2(start_x + spread * float(index), -6.0 + abs(offset) * 1.5)
-		card_panel.rotation_degrees = offset * 8.0
-		card_panel.z_index = index
-
-
-func _add_ui_combat_resource_readout(parent: Node, combatant: Dictionary, is_player: bool, state: Dictionary) -> void:
-	var can_try_face := not is_player and _manual_selection_can_try_face(state)
-	var selected_can_face := can_try_face and _manual_selected_can_target_face(state)
-	var panel := PanelContainer.new()
-	panel.name = "ManualPlayerResourceReadout" if is_player else "ManualOpponentResourceReadout"
-	panel.z_index = 110
-	panel.mouse_filter = Control.MOUSE_FILTER_PASS
-	if is_player:
-		panel.anchor_left = 0.0
-		panel.anchor_top = 1.0
-		panel.anchor_right = 0.0
-		panel.anchor_bottom = 1.0
-		panel.offset_left = 20.0
-		panel.offset_top = -116.0
-		panel.offset_right = 196.0
-		panel.offset_bottom = -18.0
-	else:
-		panel.anchor_left = 1.0
-		panel.anchor_top = 0.0
-		panel.anchor_right = 1.0
-		panel.anchor_bottom = 0.0
-		panel.offset_left = -222.0
-		panel.offset_top = 18.0
-		panel.offset_right = -24.0
-		panel.offset_bottom = 124.0
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.12, 0.17, 0.72)
-	style.border_color = Color(0.18, 0.27, 0.36, 0.62)
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	panel.add_theme_stylebox_override("panel", style)
-	parent.add_child(panel)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
-	panel.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	margin.add_child(box)
-
-	var readout := Label.new()
-	readout.name = "ManualResourceReadoutText"
-	readout.text = "Life: %d\nFocus: %d/%d%s" % [
-		int(combatant.get("life", 0)),
-		int(combatant.get("focus", 0)),
-		int(combatant.get("max_focus", 0)),
-		_manual_restricted_focus_text(combatant)
-	]
-	readout.add_theme_font_size_override("font_size", 22)
-	readout.add_theme_color_override("font_color", Color("#f3efe4"))
-	box.add_child(readout)
-
-	if can_try_face:
-		var face_button := _make_button(_manual_target_action_label() + " Face")
-		face_button.name = "ManualFaceTargetButton"
-		_style_button(face_button, "target" if selected_can_face else "danger")
-		face_button.custom_minimum_size = Vector2(0, 24)
-		face_button.disabled = not selected_can_face
-		if not selected_can_face:
-			face_button.tooltip_text = _manual_face_block_reason(state)
-		_connect_pressed(face_button, _manual_target_face)
-		box.add_child(face_button)
-
-
-func _add_ui_combat_end_turn_overlay(parent: Node, is_over: bool, phase: String) -> void:
-	var panel := PanelContainer.new()
-	panel.name = "ManualContextPanel"
-	panel.z_index = 115
-	panel.anchor_left = 1.0
-	panel.anchor_top = 0.5
-	panel.anchor_right = 1.0
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -194.0
-	panel.offset_top = -24.0
-	panel.offset_right = -28.0
-	panel.offset_bottom = 22.0
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.13, 0.2, 0.78)
-	style.border_color = Color("#05070a")
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = 7
-	style.corner_radius_top_right = 7
-	style.corner_radius_bottom_left = 7
-	style.corner_radius_bottom_right = 7
-	panel.add_theme_stylebox_override("panel", style)
-	parent.add_child(panel)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 4)
-	margin.add_theme_constant_override("margin_right", 4)
-	margin.add_theme_constant_override("margin_top", 4)
-	margin.add_theme_constant_override("margin_bottom", 4)
-	panel.add_child(margin)
-
-	var end_button := _make_button("End Turn")
-	end_button.name = "ManualEndTurnButton"
-	_style_button(end_button, "action")
-	end_button.add_theme_font_size_override("font_size", 18)
-	end_button.custom_minimum_size = Vector2(150, 32)
-	end_button.disabled = is_over or phase != "player_main" or _manual_has_pending_action()
-	_connect_pressed(end_button, _manual_end_turn)
-	margin.add_child(end_button)
-
-
-func _add_ui_combat_board_controls(parent: Node, state: Dictionary, is_over: bool, phase: String) -> void:
-	var row := HBoxContainer.new()
-	row.name = "ManualBoardControls"
-	row.custom_minimum_size = Vector2(0, 46)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 8)
-	parent.add_child(row)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
-
-	var panel := _add_panel(row, "", "#172333")
-	panel.name = "ManualContextPanel"
-	panel.custom_minimum_size = Vector2(150, 0)
-
-	var player: Dictionary = state.get("player", {})
-	var focus := Label.new()
-	focus.name = "ManualFocusReadout"
-	focus.text = "Focus %d/%d%s" % [
-		int(player.get("focus", 0)),
-		int(player.get("max_focus", 0)),
-		_manual_restricted_focus_text(player)
-	]
-	focus.add_theme_color_override("font_color", Color("#a9c7ff"))
-	focus.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	panel.add_child(focus)
-
-	_add_ui_context_selection_actions(panel, state)
-
-	var end_button := _make_button("End Turn")
-	end_button.name = "ManualEndTurnButton"
-	_style_button(end_button, "action")
-	end_button.disabled = is_over or phase != "player_main"
-	_connect_pressed(end_button, _manual_end_turn)
-	panel.add_child(end_button)
+func _manual_action_bubble_layer() -> Control:
+	if manual_action_bubble_layer != null and is_instance_valid(manual_action_bubble_layer) and not manual_action_bubble_layer.is_queued_for_deletion():
+		return manual_action_bubble_layer
+	var layer := _find_descendant_by_prefix(self, "ManualActionBubbleLayer")
+	if layer != null and layer.is_queued_for_deletion():
+		return null
+	return layer as Control if layer is Control else null
 
 
 func _add_ui_context_selection_actions(parent: Node, state: Dictionary) -> void:
@@ -2574,397 +2557,55 @@ func _add_ui_context_selection_actions(parent: Node, state: Dictionary) -> void:
 
 
 func _add_manual_recent_events(parent: Node, state: Dictionary) -> void:
-	var log_lines: Array = state.get("log", [])
-	if log_lines.is_empty():
-		return
-
-	var panel := _add_panel(parent, "Combat Feedback", "#1c2430")
-	panel.name = "ManualFeedbackPanel"
-	var chips := HBoxContainer.new()
-	chips.name = "ManualFeedbackChips"
-	chips.add_theme_constant_override("separation", 8)
-	panel.add_child(chips)
-
-	var start_index: int = max(0, log_lines.size() - 4)
-	for i in range(start_index, log_lines.size()):
-		_add_manual_feedback_chip(chips, String(log_lines[i]))
+	manual_combat_vfx.add_recent_events(self, parent, state)
 
 
 func _add_manual_action_animation(parent: Node) -> void:
-	var animation: Dictionary = run.get("manual_animation", {})
-	if animation.is_empty():
-		return
-
-	var panel := _add_panel(parent, "Action Animation", "#151d28")
-	panel.name = "ManualAnimationPanel"
-
-	var summary := Label.new()
-	summary.name = "ManualAnimationSummary"
-	summary.text = "%s: %s" % [
-		String(animation.get("verb", "Action")),
-		String(animation.get("card_name", "Card"))
-	]
-	summary.add_theme_color_override("font_color", Color("#f3efe4"))
-	panel.add_child(summary)
-
-	var route := Label.new()
-	route.name = "ManualAnimationRoute"
-	route.text = "%s -> %s -> %s" % [
-		String(animation.get("source_zone", "Source")),
-		String(animation.get("target_zone", "Target")),
-		String(animation.get("destination_zone", "Destination"))
-	]
-	route.add_theme_color_override("font_color", Color("#a9c7ff"))
-	route.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	panel.add_child(route)
-
-	var track := Control.new()
-	track.name = "ManualAnimationTrack"
-	track.custom_minimum_size = Vector2(0, 88)
-	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_child(track)
-
-	var rail := ColorRect.new()
-	rail.name = "ManualAnimationRail"
-	rail.color = Color("#273241")
-	rail.position = Vector2(10, 42)
-	rail.size = Vector2(500, 3)
-	track.add_child(rail)
-
-	_add_manual_target_arc(track, animation)
-
-	var ghost := _create_manual_animation_ghost(animation)
-	track.add_child(ghost)
-	_animate_manual_ghost(ghost)
-
-	var badges := HBoxContainer.new()
-	badges.name = "ManualImpactBadges"
-	badges.add_theme_constant_override("separation", 8)
-	panel.add_child(badges)
-	for badge in animation.get("badges", []):
-		_add_manual_impact_badge(badges, badge)
+	manual_combat_vfx.add_action_animation(self, parent)
 
 
 func _add_manual_action_summary(parent: Node) -> void:
-	var animation: Dictionary = run.get("manual_animation", {})
-	if animation.is_empty():
-		return
-
-	var panel := _add_panel(parent, "Last Action", "#151d28")
-	panel.name = "ManualActionSummaryPanel"
-
-	var summary := Label.new()
-	summary.name = "ManualActionSummary"
-	summary.text = "%s: %s" % [
-		String(animation.get("verb", "Action")),
-		String(animation.get("card_name", "Card"))
-	]
-	summary.add_theme_color_override("font_color", Color("#f3efe4"))
-	panel.add_child(summary)
-
-	var route := Label.new()
-	route.name = "ManualActionRoute"
-	route.text = "%s -> %s -> %s" % [
-		String(animation.get("source_zone", "Source")),
-		String(animation.get("target_zone", "Target")),
-		String(animation.get("destination_zone", "Destination"))
-	]
-	route.add_theme_color_override("font_color", Color("#a9c7ff"))
-	route.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	panel.add_child(route)
-
-	var badges := HBoxContainer.new()
-	badges.name = "ManualImpactBadges"
-	badges.add_theme_constant_override("separation", 8)
-	panel.add_child(badges)
-	for badge in animation.get("badges", []):
-		_add_manual_impact_badge(badges, badge)
+	manual_combat_vfx.add_action_summary(self, parent)
 
 
 func _refresh_manual_board_arc_layer(layer: Node2D) -> void:
-	if not is_instance_valid(layer):
-		return
-	for child in layer.get_children():
-		child.queue_free()
-
-	var state: Dictionary = run.get("manual_combat", {})
-	if state.is_empty():
-		return
-	var root := layer.get_parent()
-	if root == null:
-		return
-	if current_screen == "ui_combat" and root.get_parent() != null:
-		root = root.get_parent()
-
-	_add_manual_selection_preview_arcs(layer, root, state)
-	_add_manual_drag_preview_arc(layer, root, state)
-	_add_manual_committed_board_arc(layer, root)
+	manual_combat_vfx.refresh_board_arc_layer(self, layer)
 
 
 func _add_manual_selection_preview_arcs(layer: Node2D, root: Node, state: Dictionary) -> void:
-	var selection := _manual_selection()
-	if selection.is_empty():
-		return
-
-	var source_anchor := ""
-	var arc_color := Color("#ffe08a")
-	match String(selection.get("kind", "")):
-		"attacker":
-			var attacker_id := int(selection.get("instance_id", -1))
-			var attacker := _manual_find_player_unit(state, attacker_id)
-			if attacker.is_empty() or not bool(attacker.get("ready", false)):
-				return
-			source_anchor = _manual_unit_anchor(state, "player", attacker_id)
-			arc_color = _manual_arc_color("Attack")
-		"card":
-			var card_id := String(selection.get("card_id", ""))
-			if not cards_by_id.has(card_id) or not _manual_can_play_card(state, card_id):
-				return
-			return
-		_:
-			return
-
-	if source_anchor == "":
-		return
-
-	if _manual_selected_can_target_face(state):
-		var face_anchor := _manual_target_anchor(state, "face", -1, true)
-		var fallback_face_anchor := "ManualOpponentFanHand" if current_screen == "ui_combat" else "ManualOpponentPanel"
-		if not _manual_draw_board_arc(layer, root, source_anchor, face_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true):
-			_manual_draw_board_arc(layer, root, source_anchor, fallback_face_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true)
-
-	var opponent: Dictionary = state.get("opponent", {})
-	for unit in opponent.get("board", []):
-		var target_unit: Dictionary = unit
-		if _manual_selected_can_target_unit(state, target_unit):
-			var target_anchor := _manual_unit_anchor(state, "opponent", int(target_unit.get("instance_id", -1)))
-			_manual_draw_board_arc(layer, root, source_anchor, target_anchor, "ManualBoardPreviewArc", "ManualBoardPreviewArrowHead", arc_color, 3.0, true)
+	manual_combat_vfx.add_selection_preview_arcs(self, layer, root, state)
 
 
 func _add_manual_drag_preview_arc(layer: Node2D, root: Node, state: Dictionary) -> void:
-	if manual_drag_state.is_empty():
-		return
-	var card_id := String(manual_drag_state.get("card_id", ""))
-	if not cards_by_id.has(card_id):
-		return
-	if _combat_card_type(cards_by_id[card_id]) != "action":
-		return
-	var drop_target: Dictionary = manual_drag_state.get("drop_target", {})
-	if String(drop_target.get("kind", "")) != "action_target":
-		return
-	var source_global_data: Variant = manual_drag_state.get("global_position", [])
-	if typeof(source_global_data) != TYPE_ARRAY or source_global_data.size() < 2:
-		return
-	var target_anchor := ""
-	match String(drop_target.get("target_type", "")):
-		"face":
-			target_anchor = "ManualOpponentFanHand"
-		"unit":
-			target_anchor = _manual_unit_card_anchor(false, int(drop_target.get("target_instance_id", -1)))
-		_:
-			return
-	if target_anchor == "":
-		return
-	var drew_arc := _manual_draw_board_arc(
-		layer,
-		root,
-		"",
-		target_anchor,
-		"ManualDragTargetPreviewArc",
-		"ManualDragTargetPreviewArrowHead",
-		Color("#7fb8ff"),
-		4.0,
-		true,
-		0.0,
-		source_global_data
-	)
-	if drew_arc:
-		return
-	var fallback_source_data: Variant = manual_drag_state.get("source_global", [])
-	if typeof(fallback_source_data) == TYPE_VECTOR2:
-		var fallback_source: Vector2 = fallback_source_data
-		fallback_source_data = [fallback_source.x, fallback_source.y]
-	_manual_draw_board_arc(
-		layer,
-		root,
-		"",
-		target_anchor,
-		"ManualDragTargetPreviewArc",
-		"ManualDragTargetPreviewArrowHead",
-		Color("#7fb8ff"),
-		4.0,
-		true,
-		0.0,
-		fallback_source_data
-	)
+	manual_combat_vfx.add_drag_preview_arc(self, layer, root, state)
+
+
+func _add_manual_attack_drag_preview_arc(layer: Node2D, root: Node) -> void:
+	manual_combat_vfx.add_attack_drag_preview_arc(self, layer, root)
 
 
 func _add_manual_committed_board_arc(layer: Node2D, root: Node) -> void:
-	var animation: Dictionary = run.get("manual_animation", {})
-	if animation.is_empty():
-		return
-	if bool(animation.get("board_vfx_started", false)):
-		return
-	var source_anchor := String(animation.get("source_anchor", ""))
-	var target_anchor := String(animation.get("target_anchor", ""))
-	var destination_anchor := String(animation.get("destination_anchor", ""))
-	if target_anchor == "":
-		target_anchor = destination_anchor
-	if destination_anchor == "":
-		destination_anchor = target_anchor
-	var should_draw_arrow := _manual_animation_should_draw_target_arrow(animation, target_anchor, destination_anchor)
-	if current_screen == "ui_combat":
-		source_anchor = _manual_visible_anchor_or_fallback(root, source_anchor, _manual_ui_combat_vfx_source_fallback_anchor(animation))
-		var fallback_anchor := _manual_ui_combat_vfx_fallback_anchor(animation)
-		target_anchor = _manual_visible_anchor_or_fallback(root, target_anchor, fallback_anchor)
-		destination_anchor = _manual_visible_anchor_or_fallback(root, destination_anchor, target_anchor)
-	if source_anchor == "" or target_anchor == "":
-		return
-	var started_vfx := false
-	if should_draw_arrow:
-		started_vfx = _manual_draw_board_arc(
-			layer,
-			root,
-			source_anchor,
-			target_anchor,
-			"ManualBoardTargetArc",
-			"ManualBoardTargetArrowHead",
-			_manual_arc_color(String(animation.get("verb", "Action"))),
-			5.0,
-			false,
-			0.85,
-			animation.get("source_global_point", []),
-			animation.get("target_global_point", [])
-		)
-	if _add_manual_board_card_travel(layer, root, animation, source_anchor, target_anchor, destination_anchor):
-		started_vfx = true
-	if not started_vfx:
-		return
-	animation["board_vfx_started"] = true
-	run.manual_animation = animation
-	if _manual_has_pending_action():
-		_manual_schedule_pending_action_commit()
-	elif not run.get("manual_animation_queue", []).is_empty():
-		_manual_schedule_animation_queue_advance(animation)
-	_pulse_manual_anchor(root, source_anchor, Color("#ffe08a"))
-	if should_draw_arrow:
-		_pulse_manual_anchor(root, target_anchor, _manual_arc_color(String(animation.get("verb", "Action"))))
-	if destination_anchor != target_anchor:
-		_pulse_manual_anchor(root, destination_anchor, Color("#9ee66e"))
-	elif not should_draw_arrow:
-		_pulse_manual_anchor(root, destination_anchor, Color("#9ee66e"))
-	_add_manual_board_impact_badges(layer, root, animation, target_anchor if should_draw_arrow else destination_anchor)
+	manual_combat_vfx.add_committed_board_arc(self, layer, root)
 
 
 func _manual_draw_board_arc(layer: Node2D, root: Node, source_anchor: String, target_anchor: String, line_name: String, arrow_name: String, color: Color, width: float, preview: bool, lifetime: float = 0.0, source_global_data: Variant = [], target_global_data: Variant = []) -> bool:
-	var source_data := _manual_anchor_or_stored_point_in_layer(layer, root, source_anchor, source_global_data)
-	var target_data := _manual_anchor_or_stored_point_in_layer(layer, root, target_anchor, target_global_data)
-	if not bool(source_data.get("ok", false)) or not bool(target_data.get("ok", false)):
-		return false
-
-	var source: Vector2 = source_data.get("point", Vector2.ZERO)
-	var target: Vector2 = target_data.get("point", Vector2.ZERO)
-	if source.distance_to(target) < 4.0:
-		return false
-
-	var curve_control := _manual_board_arc_control_point(source, target)
-	var line_color := color
-	if preview:
-		line_color.a = 0.48
-
-	var arc := Line2D.new()
-	arc.name = line_name
-	arc.width = width
-	arc.default_color = line_color
-	arc.antialiased = true
-	for i in range(24):
-		var t := float(i) / 23.0
-		var a := source.lerp(curve_control, t)
-		var b := curve_control.lerp(target, t)
-		arc.add_point(a.lerp(b, t))
-	layer.add_child(arc)
-
-	var previous := arc.get_point_position(max(0, arc.get_point_count() - 2))
-	var direction := (target - previous).normalized()
-	if direction == Vector2.ZERO:
-		direction = Vector2.RIGHT
-	var normal := Vector2(-direction.y, direction.x)
-	var arrow_size := 16.0 if preview else 20.0
-	var arrow := Line2D.new()
-	arrow.name = arrow_name
-	arrow.width = width
-	arrow.default_color = line_color
-	arrow.antialiased = true
-	arrow.add_point(target)
-	arrow.add_point(target - direction * arrow_size + normal * (arrow_size * 0.55))
-	arrow.add_point(target)
-	arrow.add_point(target - direction * arrow_size - normal * (arrow_size * 0.55))
-	layer.add_child(arrow)
-
-	if not preview:
-		arc.modulate = Color(1, 1, 1, 0.25)
-		arrow.modulate = Color(1, 1, 1, 0.25)
-		var tween := create_tween()
-		tween.tween_property(arc, "modulate", Color.WHITE, 0.12)
-		tween.parallel().tween_property(arrow, "modulate", Color.WHITE, 0.12)
-		tween.tween_property(arc, "width", width + 2.0, 0.08)
-		tween.parallel().tween_property(arrow, "width", width + 2.0, 0.08)
-		tween.tween_property(arc, "width", width, 0.12)
-		tween.parallel().tween_property(arrow, "width", width, 0.12)
-		if lifetime > 0.0:
-			tween.tween_interval(lifetime)
-			tween.tween_property(arc, "modulate", Color(1, 1, 1, 0), 0.20)
-			tween.parallel().tween_property(arrow, "modulate", Color(1, 1, 1, 0), 0.20)
-			tween.tween_callback(Callable(arc, "queue_free"))
-			tween.tween_callback(Callable(arrow, "queue_free"))
-
-	return true
+	return manual_combat_vfx.draw_board_arc(self, layer, root, source_anchor, target_anchor, line_name, arrow_name, color, width, preview, lifetime, source_global_data, target_global_data)
 
 
 func _manual_animation_should_draw_target_arrow(animation: Dictionary, target_anchor: String, destination_anchor: String) -> bool:
-	var verb := String(animation.get("verb", "Action"))
-	if verb == "Attack":
-		return true
-	if verb != "Cast":
-		return false
-	if target_anchor == "" or target_anchor == destination_anchor:
-		return false
-	var target_zone := String(animation.get("target_zone", ""))
-	return target_zone.contains("Opponent") or target_zone.contains("Your")
+	return manual_combat_vfx.animation_should_draw_target_arrow(animation, target_anchor, destination_anchor)
 
 
 func _manual_visible_anchor_or_fallback(root: Node, anchor: String, fallback_anchor: String) -> String:
-	if anchor != "" and _find_descendant_by_prefix(root, anchor) != null:
-		return anchor
-	return fallback_anchor
+	return manual_combat_vfx.visible_anchor_or_fallback(root, anchor, fallback_anchor)
 
 
 func _manual_ui_combat_vfx_fallback_anchor(animation: Dictionary) -> String:
-	var target_zone := String(animation.get("target_zone", "")).to_lower()
-	var destination_zone := String(animation.get("destination_zone", "")).to_lower()
-	var target_text := "%s %s" % [target_zone, destination_zone]
-	if target_zone.contains("your face"):
-		return "ManualFanHand"
-	if target_zone.contains("your board"):
-		return "ManualZone_PlayerBoard"
-	if target_zone.contains("opponent face"):
-		return "ManualOpponentFanHand"
-	if target_zone.contains("opponent board"):
-		return "ManualZone_OpponentBoard"
-	return "ManualOpponentFanHand" if target_text.contains("opponent") else "ManualPlayerResourceReadout"
+	return manual_combat_vfx.ui_combat_vfx_fallback_anchor(animation)
 
 
 func _manual_ui_combat_vfx_source_fallback_anchor(animation: Dictionary) -> String:
-	var source_zone := String(animation.get("source_zone", "")).to_lower()
-	if source_zone.contains("opponent hand"):
-		return "ManualOpponentFanHand"
-	if source_zone.contains("your hand"):
-		return "ManualFanHand"
-	if source_zone.contains("opponent board"):
-		return "ManualZone_OpponentBoard"
-	if source_zone.contains("your board"):
-		return "ManualZone_PlayerBoard"
-	return "ManualFanHand"
+	return manual_combat_vfx.ui_combat_vfx_source_fallback_anchor(animation)
 
 
 func _manual_schedule_animation_queue_advance(animation: Dictionary) -> void:
@@ -2982,6 +2623,7 @@ func _manual_advance_manual_animation_queue() -> void:
 	var queue: Array = run.get("manual_animation_queue", [])
 	if queue.is_empty():
 		return
+	_manual_apply_completed_opponent_play_animation(run.get("manual_animation", {}))
 	run.manual_animation = queue[0]
 	run.manual_animation_queue = queue.slice(1, queue.size()) if queue.size() > 1 else []
 	if current_screen == "ui_combat":
@@ -2989,482 +2631,91 @@ func _manual_advance_manual_animation_queue() -> void:
 
 
 func _add_manual_board_card_travel(layer: Node2D, root: Node, animation: Dictionary, source_anchor: String, target_anchor: String, destination_anchor: String) -> bool:
-	var source_data := _manual_anchor_or_stored_point_in_layer(layer, root, source_anchor, animation.get("source_global_point", []))
-	var target_data := _manual_anchor_or_stored_point_in_layer(layer, root, target_anchor, animation.get("target_global_point", []))
-	var destination_data := _manual_anchor_or_stored_point_in_layer(layer, root, destination_anchor, animation.get("destination_global_point", []))
-	if not bool(source_data.get("ok", false)) or not bool(target_data.get("ok", false)):
-		return false
-	if not bool(destination_data.get("ok", false)):
-		destination_data = target_data
-
-	var source: Vector2 = source_data.get("point", Vector2.ZERO)
-	var target: Vector2 = target_data.get("point", Vector2.ZERO)
-	var destination: Vector2 = destination_data.get("point", Vector2.ZERO)
-	var ghost := _create_manual_board_action_ghost(animation)
-	var ghost_size := ghost.custom_minimum_size
-	ghost.position = source - ghost_size * 0.5
-	ghost.pivot_offset = ghost_size * 0.5
-	layer.add_child(ghost)
-
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_CUBIC)
-	tween.set_ease(Tween.EASE_OUT)
-	ghost.modulate = Color(1, 1, 1, 0.0)
-	ghost.scale = Vector2(0.92, 0.92)
-	tween.tween_property(ghost, "modulate", Color(1, 1, 1, 0.94), 0.08)
-	tween.parallel().tween_property(ghost, "scale", Vector2(1.04, 1.04), 0.08)
-	tween.tween_property(ghost, "position", target - ghost_size * 0.5, 0.22)
-	tween.parallel().tween_property(ghost, "rotation_degrees", 2.0, 0.22)
-	tween.tween_property(ghost, "scale", Vector2(1.12, 1.12), 0.08)
-	tween.tween_property(ghost, "scale", Vector2.ONE, 0.10)
-	if destination.distance_to(target) > 10.0:
-		tween.tween_property(ghost, "position", destination - ghost_size * 0.5, 0.20)
-		tween.parallel().tween_property(ghost, "rotation_degrees", -2.0, 0.20)
-	tween.tween_interval(0.10)
-	tween.tween_property(ghost, "modulate", Color(1, 1, 1, 0), 0.22)
-	tween.parallel().tween_property(ghost, "scale", Vector2(0.94, 0.94), 0.22)
-	tween.tween_callback(Callable(ghost, "queue_free"))
-	return true
+	return manual_combat_vfx.add_board_card_travel(self, layer, root, animation, source_anchor, target_anchor, destination_anchor)
 
 
 func _create_manual_board_action_ghost(animation: Dictionary) -> PanelContainer:
-	var card_id := String(animation.get("card_id", ""))
-	var ghost := PanelContainer.new()
-	ghost.name = "ManualBoardMovingCardGhost"
-	ghost.custom_minimum_size = Vector2(154, 92)
-	var style := StyleBoxFlat.new()
-	style.bg_color = _combat_placeholder_color(card_id) if cards_by_id.has(card_id) else Color("#2d3442")
-	style.border_color = Color("#ffe08a")
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	ghost.add_theme_stylebox_override("panel", style)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 7)
-	margin.add_theme_constant_override("margin_bottom", 7)
-	ghost.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	margin.add_child(box)
-
-	var label := Label.new()
-	label.text = String(animation.get("card_name", "Card"))
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", Color("#f3efe4"))
-	box.add_child(label)
-
-	var route := Label.new()
-	route.text = String(animation.get("verb", "Action"))
-	route.add_theme_font_size_override("font_size", 12)
-	route.add_theme_color_override("font_color", Color("#c7d0df"))
-	box.add_child(route)
-	return ghost
+	return manual_combat_vfx.create_board_action_ghost(self, animation)
 
 
 func _pulse_manual_anchor(root: Node, anchor: String, color: Color) -> void:
-	var node := _find_descendant_by_prefix(root, anchor)
-	if node == null or not (node is Control):
-		return
-	var control := node as Control
-	control.pivot_offset = control.size * 0.5
-	var original_modulate := control.modulate
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(control, "scale", Vector2(1.025, 1.025), 0.08)
-	tween.parallel().tween_property(control, "modulate", Color(
-		min(1.45, color.r + 0.35),
-		min(1.45, color.g + 0.35),
-		min(1.45, color.b + 0.35),
-		1.0
-	), 0.08)
-	tween.tween_property(control, "scale", Vector2.ONE, 0.18)
-	tween.parallel().tween_property(control, "modulate", original_modulate, 0.18)
+	manual_combat_vfx.pulse_anchor(self, root, anchor, color)
 
 
 func _add_manual_board_impact_badges(layer: Node2D, root: Node, animation: Dictionary, target_anchor: String) -> void:
-	var badges: Array = animation.get("badges", [])
-	if badges.is_empty():
-		return
-	var target_node := _find_descendant_by_prefix(root, target_anchor)
-	if target_node == null:
-		return
-	var target := _manual_node_center_in_layer(layer, target_node)
-	var offset_index := 0
-	for badge in badges.slice(0, min(3, badges.size())):
-		var board_badge := _create_manual_board_impact_badge(badge)
-		board_badge.position = target + Vector2(18 * offset_index, -26 - 14 * offset_index)
-		board_badge.pivot_offset = Vector2(35, 18)
-		layer.add_child(board_badge)
-		_animate_manual_board_impact_badge(board_badge)
-		offset_index += 1
+	manual_combat_vfx.add_board_impact_badges(self, layer, root, animation, target_anchor)
 
 
 func _create_manual_board_impact_badge(badge: Dictionary) -> PanelContainer:
-	var impact := PanelContainer.new()
-	impact.name = "ManualBoardImpactBadge"
-	impact.custom_minimum_size = Vector2(70, 36)
-	var colors := _manual_impact_badge_colors(String(badge.get("kind", "log")))
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(colors.get("background", "#26303d"))
-	style.border_color = Color(colors.get("border", "#465060"))
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	impact.add_theme_stylebox_override("panel", style)
-
-	var label := Label.new()
-	label.text = String(badge.get("text", ""))
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_color_override("font_color", Color(colors.get("text", "#eef3ff")))
-	impact.add_child(label)
-	return impact
+	return manual_combat_vfx.create_board_impact_badge(badge)
 
 
 func _animate_manual_board_impact_badge(badge: Control) -> void:
-	badge.scale = Vector2(0.78, 0.78)
-	badge.modulate = Color(1, 1, 1, 0.0)
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_BACK)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(badge, "modulate", Color.WHITE, 0.08)
-	tween.parallel().tween_property(badge, "scale", Vector2(1.16, 1.16), 0.12)
-	tween.tween_property(badge, "position", badge.position + Vector2(0, -24), 0.34)
-	tween.parallel().tween_property(badge, "modulate", Color(1, 1, 1, 0), 0.34)
-	tween.tween_callback(Callable(badge, "queue_free"))
+	manual_combat_vfx.animate_board_impact_badge(self, badge)
 
 
 func _manual_board_arc_control_point(source: Vector2, target: Vector2) -> Vector2:
-	var midpoint := (source + target) * 0.5
-	var lift: float = clamp(source.distance_to(target) * 0.22, 48.0, 140.0)
-	return midpoint + Vector2(0, -lift)
+	return manual_combat_vfx.board_arc_control_point(source, target)
 
 
 func _manual_node_center_in_layer(layer: Node2D, node: Node) -> Vector2:
-	if node is Control:
-		var rect := (node as Control).get_global_rect()
-		return layer.to_local(rect.get_center())
-	if node is Node2D:
-		return layer.to_local((node as Node2D).global_position)
-	return Vector2.ZERO
+	return manual_combat_vfx.node_center_in_layer(layer, node)
 
 
 func _manual_capture_anchor_global_point(anchor: String) -> Array:
-	if anchor == "":
-		return []
-	var node := _find_descendant_by_prefix(self, anchor)
-	if node == null:
-		return []
-	var center := _manual_node_global_center(node)
-	return [center.x, center.y]
+	return manual_combat_vfx.capture_anchor_global_point(self, anchor)
 
 
 func _manual_anchor_or_stored_point_in_layer(layer: Node2D, root: Node, anchor: String, global_data: Variant) -> Dictionary:
-	var node := _find_descendant_by_prefix(root, anchor)
-	if node != null:
-		return {
-			"ok": true,
-			"point": _manual_node_center_in_layer(layer, node)
-		}
-	var stored := _manual_global_point_from_data(global_data)
-	if bool(stored.get("ok", false)):
-		return {
-			"ok": true,
-			"point": layer.to_local(stored.get("point", Vector2.ZERO))
-		}
-	return {
-		"ok": false,
-		"point": Vector2.ZERO
-	}
+	return manual_combat_vfx.anchor_or_stored_point_in_layer(layer, root, anchor, global_data)
 
 
 func _manual_global_point_from_data(global_data: Variant) -> Dictionary:
-	if typeof(global_data) == TYPE_ARRAY and global_data.size() >= 2:
-		return {
-			"ok": true,
-			"point": Vector2(float(global_data[0]), float(global_data[1]))
-		}
-	return {
-		"ok": false,
-		"point": Vector2.ZERO
-	}
+	return manual_combat_vfx.global_point_from_data(global_data)
 
 
 func _manual_node_global_center(node: Node) -> Vector2:
-	if node is Control:
-		return (node as Control).get_global_rect().get_center()
-	if node is Node2D:
-		return (node as Node2D).global_position
-	return Vector2.ZERO
+	return manual_combat_vfx.node_global_center(node)
 
 
 func _find_descendant_by_prefix(root: Node, target_prefix: String) -> Node:
-	if target_prefix == "":
-		return null
-	if String(root.name).begins_with(target_prefix):
-		return root
-	for child in root.get_children():
-		var found := _find_descendant_by_prefix(child, target_prefix)
-		if found != null:
-			return found
-	return null
+	return manual_combat_vfx.find_descendant_by_prefix(root, target_prefix)
 
 
 func _add_manual_target_arc(parent: Node, animation: Dictionary) -> void:
-	var source := Vector2(66, 66)
-	var control := Vector2(245, 2)
-	var target := Vector2(424, 66)
-	var destination := Vector2(532, 66)
-
-	var arc := Line2D.new()
-	arc.name = "ManualTargetArc"
-	arc.width = 4.0
-	arc.default_color = _manual_arc_color(String(animation.get("verb", "Action")))
-	arc.antialiased = true
-	for i in range(18):
-		var t := float(i) / 17.0
-		var a := source.lerp(control, t)
-		var b := control.lerp(target, t)
-		arc.add_point(a.lerp(b, t))
-	parent.add_child(arc)
-
-	var arrow := Line2D.new()
-	arrow.name = "ManualTargetArrowHead"
-	arrow.width = 4.0
-	arrow.default_color = arc.default_color
-	arrow.antialiased = true
-	arrow.add_point(target)
-	arrow.add_point(target + Vector2(-16, -10))
-	arrow.add_point(target)
-	arrow.add_point(target + Vector2(-16, 10))
-	parent.add_child(arrow)
-
-	_add_manual_arc_marker(parent, "ManualArcSourceMarker", source, "SRC", String(animation.get("source_zone", "Source")), Color("#a9c7ff"))
-	_add_manual_arc_marker(parent, "ManualArcTargetMarker", target, "TGT", String(animation.get("target_zone", "Target")), Color("#ffb3a6"))
-	_add_manual_arc_marker(parent, "ManualArcDestinationMarker", destination, "DST", String(animation.get("destination_zone", "Destination")), Color("#9ee66e"))
-
-	var tween := create_tween()
-	arc.modulate = Color(1, 1, 1, 0.2)
-	arrow.modulate = Color(1, 1, 1, 0.2)
-	tween.tween_property(arc, "modulate", Color(1, 1, 1, 1), 0.16)
-	tween.parallel().tween_property(arrow, "modulate", Color(1, 1, 1, 1), 0.16)
-	tween.tween_property(arc, "width", 6.0, 0.10)
-	tween.parallel().tween_property(arrow, "width", 6.0, 0.10)
-	tween.tween_property(arc, "width", 4.0, 0.12)
-	tween.parallel().tween_property(arrow, "width", 4.0, 0.12)
+	manual_combat_vfx.add_target_arc(self, parent, animation)
 
 
 func _manual_arc_color(verb: String) -> Color:
-	match verb:
-		"Attack":
-			return Color("#f06f5f")
-		"Cast":
-			return Color("#7fb8ff")
-		"Activate":
-			return Color("#ffe08a")
-		_:
-			return Color("#9ee66e")
+	return manual_combat_vfx.arc_color(verb)
 
 
 func _add_manual_arc_marker(parent: Node, node_name: String, position: Vector2, short_text: String, tooltip: String, color: Color) -> void:
-	var marker := PanelContainer.new()
-	marker.name = node_name
-	marker.position = position - Vector2(28, 16)
-	marker.custom_minimum_size = Vector2(56, 30)
-	marker.tooltip_text = tooltip
-	var style := StyleBoxFlat.new()
-	style.bg_color = color.darkened(0.55)
-	style.border_color = color
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 15
-	style.corner_radius_top_right = 15
-	style.corner_radius_bottom_left = 15
-	style.corner_radius_bottom_right = 15
-	marker.add_theme_stylebox_override("panel", style)
-	parent.add_child(marker)
-
-	var label := Label.new()
-	label.text = short_text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 11)
-	label.add_theme_color_override("font_color", Color("#eef3ff"))
-	marker.add_child(label)
+	manual_combat_vfx.add_arc_marker(parent, node_name, position, short_text, tooltip, color)
 
 
 func _create_manual_animation_ghost(animation: Dictionary) -> PanelContainer:
-	var card_id := String(animation.get("card_id", ""))
-	var ghost := PanelContainer.new()
-	ghost.name = "ManualMovingCardGhost"
-	ghost.custom_minimum_size = Vector2(154, 58)
-	ghost.position = Vector2(10, 14)
-	ghost.pivot_offset = Vector2(77, 29)
-	var style := StyleBoxFlat.new()
-	style.bg_color = _combat_placeholder_color(card_id) if cards_by_id.has(card_id) else Color("#2d3442")
-	style.border_color = Color("#ffe08a")
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	ghost.add_theme_stylebox_override("panel", style)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
-	ghost.add_child(margin)
-
-	var label := Label.new()
-	label.text = String(animation.get("card_name", "Card"))
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", Color("#f3efe4"))
-	margin.add_child(label)
-	return ghost
+	return manual_combat_vfx.create_animation_ghost(self, animation)
 
 
 func _animate_manual_ghost(ghost: Control) -> void:
-	ghost.modulate = Color(1, 1, 1, 0.82)
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_CUBIC)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(ghost, "position", Vector2(150, 4), 0.18)
-	tween.tween_property(ghost, "position", Vector2(330, 14), 0.24)
-	tween.parallel().tween_property(ghost, "modulate", Color(1.18, 1.18, 1.18, 1.0), 0.18)
-	tween.tween_property(ghost, "scale", Vector2(1.05, 1.05), 0.08)
-	tween.tween_property(ghost, "scale", Vector2.ONE, 0.12)
+	manual_combat_vfx.animate_ghost(self, ghost)
 
 
 func _add_manual_impact_badge(parent: Node, badge: Dictionary) -> void:
-	var impact := PanelContainer.new()
-	impact.name = "ManualImpactBadge"
-	impact.custom_minimum_size = Vector2(82, 42)
-	impact.pivot_offset = Vector2(41, 21)
-	var colors := _manual_impact_badge_colors(String(badge.get("kind", "log")))
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(colors.get("background", "#26303d"))
-	style.border_color = Color(colors.get("border", "#465060"))
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	impact.add_theme_stylebox_override("panel", style)
-	parent.add_child(impact)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
-	impact.add_child(margin)
-
-	var label := Label.new()
-	label.name = "ManualImpactBadgeText"
-	label.text = String(badge.get("text", "FX"))
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 16)
-	label.add_theme_color_override("font_color", Color(colors.get("text", "#eef3ff")))
-	label.tooltip_text = String(badge.get("line", ""))
-	margin.add_child(label)
-
-	_animate_manual_impact_badge(impact)
+	manual_combat_vfx.add_impact_badge(self, parent, badge)
 
 
 func _manual_impact_badge_colors(kind: String) -> Dictionary:
-	match kind:
-		"damage":
-			return { "background": "#3a211f", "border": "#f06f5f", "text": "#ffb3a6" }
-		"heal":
-			return { "background": "#1f3323", "border": "#7fc46b", "text": "#bfe8a5" }
-		"draw":
-			return { "background": "#1d2a43", "border": "#6f99e8", "text": "#a9c7ff" }
-		"ko":
-			return { "background": "#371f2c", "border": "#d46a95", "text": "#ff9fc2" }
-		"focus":
-			return { "background": "#25351c", "border": "#a7d469", "text": "#d7ff9d" }
-		_:
-			return { "background": "#352d1c", "border": "#d6a84e", "text": "#ffe08a" }
+	return manual_combat_vfx.impact_badge_colors(kind)
 
 
 func _animate_manual_impact_badge(badge: Control) -> void:
-	badge.scale = Vector2(0.88, 0.88)
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_BACK)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(badge, "scale", Vector2(1.18, 1.18), 0.12)
-	tween.tween_property(badge, "scale", Vector2.ONE, 0.16)
+	manual_combat_vfx.animate_impact_badge(self, badge)
 
 
 func _add_manual_battlefield(parent: Node) -> Control:
-	var compact_duel := current_screen == "ui_combat"
-	var playmat := PanelContainer.new()
-	playmat.name = "ManualBattlefield"
-	playmat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if compact_duel:
-		playmat.custom_minimum_size = Vector2(1040, 860)
-		playmat.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#16201c")
-	style.border_color = Color("#526149")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	playmat.add_theme_stylebox_override("panel", style)
-	parent.add_child(playmat)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 6 if compact_duel else 10)
-	margin.add_theme_constant_override("margin_right", 6 if compact_duel else 10)
-	margin.add_theme_constant_override("margin_top", 6 if compact_duel else 10)
-	margin.add_theme_constant_override("margin_bottom", 6 if compact_duel else 10)
-	playmat.add_child(margin)
-
-	var battlefield: Control
-	if compact_duel:
-		var canvas := Control.new()
-		canvas.clip_contents = true
-		canvas.mouse_filter = Control.MOUSE_FILTER_STOP
-		battlefield = canvas
-	else:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		battlefield = row
-	battlefield.name = "ManualBattlefield"
-	battlefield.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	battlefield.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(battlefield)
-	return battlefield
+	return manual_combat_ui.add_battlefield(self, parent)
 
 
 func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
@@ -3796,77 +3047,15 @@ func _set_manual_inspect_art_color(color: Color) -> void:
 
 
 func _add_manual_feedback_chip(parent: Node, line: String) -> void:
-	var feedback := _manual_feedback_data(line)
-	var chip := PanelContainer.new()
-	chip.name = "ManualFeedbackChip"
-	chip.custom_minimum_size = Vector2(132 if current_screen == "ui_combat" else 170, 0)
-	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(feedback.get("background", "#26303d"))
-	style.border_color = Color(feedback.get("border", "#465060"))
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	chip.add_theme_stylebox_override("panel", style)
-	parent.add_child(chip)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
-	chip.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	margin.add_child(box)
-
-	var tag := Label.new()
-	tag.name = "ManualFeedbackKind"
-	tag.text = String(feedback.get("tag", "LOG"))
-	tag.add_theme_font_size_override("font_size", 12)
-	tag.add_theme_color_override("font_color", Color(feedback.get("color", "#d8dfec")))
-	box.add_child(tag)
-
-	var body := Label.new()
-	body.name = "ManualFeedbackText"
-	body.text = line
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_theme_color_override("font_color", Color("#eef3ff"))
-	box.add_child(body)
+	manual_combat_vfx.add_feedback_chip(self, parent, line)
 
 
 func _manual_feedback_data(line: String) -> Dictionary:
-	var lower := line.to_lower()
-	if lower.contains("damage") or lower.contains("deals") or lower.contains("attacks") or lower.contains("trades"):
-		return { "tag": "DMG", "color": "#ffb3a6", "background": "#3a211f", "border": "#f06f5f" }
-	if lower.contains("dies") or lower.contains("destroy"):
-		return { "tag": "KO", "color": "#ff9fc2", "background": "#371f2c", "border": "#d46a95" }
-	if lower.contains("restore") or lower.contains("heal"):
-		return { "tag": "HEAL", "color": "#bfe8a5", "background": "#1f3323", "border": "#7fc46b" }
-	if lower.contains("draw"):
-		return { "tag": "DRAW", "color": "#a9c7ff", "background": "#1d2a43", "border": "#6f99e8" }
-	if lower.contains("create") or lower.contains("token") or lower.contains("plays"):
-		return { "tag": "PLAY", "color": "#ffe08a", "background": "#352d1c", "border": "#d6a84e" }
-	if lower.contains("turn") or lower.contains("focus"):
-		return { "tag": "TURN", "color": "#c7d0df", "background": "#242b36", "border": "#5d6a7a" }
-	return { "tag": "LOG", "color": "#d8dfec", "background": "#26303d", "border": "#465060" }
+	return manual_combat_vfx.feedback_data(line)
 
 
 func _manual_log_line_color(line: String) -> Color:
-	var lower := line.to_lower()
-	if lower.contains("damage") or lower.contains("deals") or lower.contains("attacks") or lower.contains("trades") or lower.contains("dies"):
-		return Color("#ffb3a6")
-	if lower.contains("restore") or lower.contains("draw") or lower.contains("creates"):
-		return Color("#bfe8a5")
-	if lower.contains("turn"):
-		return Color("#a9c7ff")
-	return Color("#d8dfec")
+	return manual_combat_vfx.log_line_color(line)
 
 
 func _add_manual_combatant_panel(parent: Node, label: String, combatant: Dictionary, is_player: bool, state: Dictionary) -> void:
@@ -3922,62 +3111,11 @@ func _add_manual_combatant_panel(parent: Node, label: String, combatant: Diction
 
 
 func _add_manual_zone(parent: Node, title: String, zone_name: String, accent: String) -> VBoxContainer:
-	var compact_duel := current_screen == "ui_combat"
-	var panel := PanelContainer.new()
-	panel.name = "ManualZone_" + zone_name
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if compact_duel:
-		var fixed_height := _ui_combat_zone_height(zone_name)
-		if fixed_height > 0.0:
-			panel.custom_minimum_size = Vector2(0, fixed_height)
-			panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		panel.clip_contents = zone_name != "PlayerHand"
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(accent)
-	style.border_color = Color("#586575")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	panel.add_theme_stylebox_override("panel", style)
-	parent.add_child(panel)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 5 if compact_duel else 8)
-	margin.add_theme_constant_override("margin_right", 5 if compact_duel else 8)
-	margin.add_theme_constant_override("margin_top", 2 if compact_duel else 6)
-	margin.add_theme_constant_override("margin_bottom", 3 if compact_duel else 8)
-	panel.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 2 if compact_duel else 6)
-	margin.add_child(box)
-
-	var label := Label.new()
-	label.text = title
-	label.add_theme_font_size_override("font_size", 9 if compact_duel else 13)
-	label.add_theme_color_override("font_color", Color("#f3efe4"))
-	box.add_child(label)
-	return box
+	return manual_combat_ui.add_zone(self, parent, title, zone_name, accent)
 
 
 func _ui_combat_zone_height(zone_name: String) -> float:
-	match zone_name:
-		"OpponentHand":
-			return 46.0
-		"OpponentEngine", "PlayerEngine":
-			return 38.0
-		"OpponentBoard", "PlayerBoard":
-			return 190.0
-		"PlayerHand":
-			return 240.0
-		_:
-			return 0.0
+	return manual_combat_ui.ui_combat_zone_height(zone_name)
 
 
 func _add_manual_summary_zone(parent: Node, title: String, entries: Array, zone_name: String, slot_count: int, accent: String) -> void:
@@ -4037,38 +3175,7 @@ func _add_manual_engine_zone(parent: Node, engines: Array, is_player: bool) -> v
 
 
 func _add_manual_engine_slot(parent: Node, is_player: bool, slot_index: int) -> VBoxContainer:
-	var compact_duel := current_screen == "ui_combat"
-	var slot := PanelContainer.new()
-	slot.name = _manual_engine_slot_anchor(is_player, slot_index)
-	slot.custom_minimum_size = Vector2(96, 24) if compact_duel else Vector2(132, 44)
-	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#111922")
-	style.border_color = Color("#3f4a59")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	slot.add_theme_stylebox_override("panel", style)
-	parent.add_child(slot)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 2)
-	margin.add_theme_constant_override("margin_right", 2)
-	margin.add_theme_constant_override("margin_top", 2)
-	margin.add_theme_constant_override("margin_bottom", 2)
-	slot.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.name = "ManualEngineSlotContents"
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 2)
-	margin.add_child(box)
-	return box
+	return manual_combat_ui.add_engine_slot(self, parent, is_player, slot_index)
 
 
 func _add_manual_hidden_hand_zone(parent: Node, hand_count: int) -> void:
@@ -4128,117 +3235,15 @@ func _add_manual_zone_item(parent: Node, text: String, card_id: String = "", zon
 
 
 func _add_manual_empty_zone_slot(parent: Node, text: String) -> void:
-	var compact_duel := current_screen == "ui_combat"
-	var slot := PanelContainer.new()
-	slot.name = "ManualEmptyZoneSlot"
-	slot.custom_minimum_size = Vector2(96, 24) if compact_duel else Vector2(132, 44)
-	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#141a22")
-	style.border_color = Color("#3f4a59")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	slot.add_theme_stylebox_override("panel", style)
-	parent.add_child(slot)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 4 if compact_duel else 6)
-	margin.add_theme_constant_override("margin_right", 4 if compact_duel else 6)
-	margin.add_theme_constant_override("margin_top", 3 if compact_duel else 5)
-	margin.add_theme_constant_override("margin_bottom", 3 if compact_duel else 5)
-	slot.add_child(margin)
-
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if compact_duel:
-		label.add_theme_font_size_override("font_size", 8)
-	label.add_theme_color_override("font_color", Color("#7e8794"))
-	margin.add_child(label)
+	manual_combat_ui.add_empty_zone_slot(self, parent, text)
 
 
 func _add_manual_card_back_slot(parent: Node, text: String) -> void:
-	var compact_duel := current_screen == "ui_combat"
-	var back := PanelContainer.new()
-	back.name = "ManualCardBackSlot"
-	back.custom_minimum_size = Vector2(70, 30) if compact_duel else Vector2(96, 44)
-	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#171c2b")
-	style.border_color = Color("#6f99e8")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
-	back.add_theme_stylebox_override("panel", style)
-	parent.add_child(back)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 4 if compact_duel else 6)
-	margin.add_theme_constant_override("margin_right", 4 if compact_duel else 6)
-	margin.add_theme_constant_override("margin_top", 3 if compact_duel else 5)
-	margin.add_theme_constant_override("margin_bottom", 3 if compact_duel else 5)
-	back.add_child(margin)
-
-	var label := Label.new()
-	label.text = "Card" if compact_duel else text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if compact_duel:
-		label.add_theme_font_size_override("font_size", 10)
-	label.add_theme_color_override("font_color", Color("#a9c7ff"))
-	margin.add_child(label)
+	manual_combat_ui.add_card_back_slot(self, parent, text)
 
 
 func _add_manual_board_slot(parent: Node, is_player: bool, slot_index: int) -> VBoxContainer:
-	var compact_duel := current_screen == "ui_combat"
-	var slot := PanelContainer.new()
-	slot.name = "ManualBoardSlot_%s_%d" % ["Player" if is_player else "Opponent", slot_index + 1]
-	slot.custom_minimum_size = Vector2(108, 166) if compact_duel else Vector2(188, 250)
-	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#14221a") if is_player else Color("#24171d")
-	style.border_color = Color("#445443") if is_player else Color("#5a404a")
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	slot.add_theme_stylebox_override("panel", style)
-	parent.add_child(slot)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 3 if compact_duel else 4)
-	margin.add_theme_constant_override("margin_right", 3 if compact_duel else 4)
-	margin.add_theme_constant_override("margin_top", 2 if compact_duel else 4)
-	margin.add_theme_constant_override("margin_bottom", 2 if compact_duel else 4)
-	slot.add_child(margin)
-
-	var box := VBoxContainer.new()
-	box.name = "ManualBoardSlotContents"
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 2 if compact_duel else 4)
-	margin.add_child(box)
-
-	var label := Label.new()
-	label.text = "Slot %d" % (slot_index + 1)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 8 if compact_duel else 10)
-	label.add_theme_color_override("font_color", Color("#7e8794"))
-	box.add_child(label)
-	return box
+	return manual_combat_ui.add_board_slot(self, parent, is_player, slot_index)
 
 
 func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, state: Dictionary) -> void:
@@ -4282,33 +3287,41 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 			_combat_placeholder_color(unit.get("card_id", "")),
 			border_color,
 			border_width,
-			String(unit.get("card_id", "")),
-			"Your Board" if is_player else "Opponent Board",
-			_manual_current_unit_summary(unit),
-			_manual_unit_card_anchor(is_player, int(unit.get("instance_id", -1))),
-			_unit_card_type_line(unit),
-			_unit_animal_type(unit)
-		)
+				String(unit.get("card_id", "")),
+				"Your Board" if is_player else "Opponent Board",
+				_manual_current_unit_summary(unit),
+				_manual_unit_card_anchor(is_player, int(unit.get("instance_id", -1))),
+				_unit_card_type_line(unit),
+				_unit_animal_type(unit),
+				int(unit.get("max_health", unit.get("health", 0)))
+			)
+		var unit_card_panel := _manual_card_panel_from_contents(card_box)
+		if unit_card_panel != null and selected_attacker and current_screen == "ui_combat":
+			unit_card_panel.z_index = 120
 
-		if selected_attacker:
-			_add_manual_card_badge(card_box, "ATTACKER SELECTED", Color("#ffe08a"))
-		elif is_player and bool(unit.get("ready", false)):
-			_add_manual_card_badge(card_box, "READY", Color("#a9c7ff"))
-		elif legal_target:
-			_add_manual_card_badge(card_box, "LEGAL TARGET", Color("#9ee66e"))
+		if current_screen != "ui_combat":
+			if selected_attacker:
+				_add_manual_card_badge(card_box, "ATTACKER SELECTED", Color("#ffe08a"))
+			elif is_player and bool(unit.get("ready", false)):
+				_add_manual_card_badge(card_box, "READY", Color("#a9c7ff"))
+			elif legal_target:
+				_add_manual_card_badge(card_box, "LEGAL TARGET", Color("#9ee66e"))
 
 		if is_player and _manual_combat_accepts_input(state) and bool(unit.get("ready", false)):
 			var instance_id := int(unit.get("instance_id", -1))
-			var attack_button := _make_button("Selected" if _manual_selection_is_attacker(unit) else ("Attack" if current_screen == "ui_combat" else "Select Attack"))
-			attack_button.name = "ManualAttackSelectButton"
-			_style_button(attack_button, "selected" if _manual_selection_is_attacker(unit) else "action")
-			_compact_manual_card_button(attack_button)
-			if _manual_selection_is_attacker(unit):
-				_connect_pressed(attack_button, _manual_clear_selection)
+			if current_screen == "ui_combat":
+				_add_manual_selected_unit_action_bubbles(card_box, unit, state)
 			else:
-				_connect_pressed(attack_button, func() -> void: _manual_select_attacker(instance_id))
-			card_box.add_child(attack_button)
-		elif legal_target:
+				var attack_button := _make_button("Selected" if _manual_selection_is_attacker(unit) else "Select Attack")
+				attack_button.name = "ManualAttackSelectButton"
+				_style_button(attack_button, "selected" if _manual_selection_is_attacker(unit) else "action")
+				_compact_manual_card_button(attack_button)
+				if _manual_selection_is_attacker(unit):
+					_connect_pressed(attack_button, _manual_clear_selection)
+				else:
+					_connect_pressed(attack_button, func() -> void: _manual_select_attacker(instance_id))
+				card_box.add_child(attack_button)
+		elif legal_target and current_screen != "ui_combat":
 			var target_instance_id := int(unit.get("instance_id", -1))
 			var target_button := _make_button("Target" if current_screen == "ui_combat" else _manual_target_action_label() + " Target")
 			target_button.name = "ManualUnitTargetButton"
@@ -4316,6 +3329,8 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 			_compact_manual_card_button(target_button)
 			_connect_pressed(target_button, func() -> void: _manual_target_unit(target_instance_id))
 			card_box.add_child(target_button)
+		elif is_player and current_screen == "ui_combat" and _manual_combat_accepts_input(state):
+			_add_manual_selected_unit_action_bubbles(card_box, unit, state)
 
 		if is_player and _manual_combat_accepts_input(state):
 			_add_manual_ability_buttons(card_box, unit, state)
@@ -4365,30 +3380,37 @@ func _add_manual_hand(parent: VBoxContainer, combatant: Dictionary, state: Dicti
 			_manual_hand_card_anchor(card_id, hand_index)
 		)
 		card_box.tooltip_text = card.get("text", "")
-		if selected:
+		if selected and current_screen != "ui_combat":
 			_add_manual_card_badge(card_box, "SELECTED", Color("#ffe08a"))
 
 		var selected_card_id := card_id
 		var can_play := _manual_can_play_card(state, card_id)
-		if _manual_card_needs_target(card):
-			var select_button := _make_button("Selected" if selected else "Select")
-			select_button.name = "ManualCardSelectButton"
-			_style_button(select_button, "selected" if selected else "action")
-			_compact_manual_card_button(select_button)
-			select_button.disabled = not can_play and not selected
-			if selected:
-				_connect_pressed(select_button, _manual_clear_selection)
-			else:
-				_connect_pressed(select_button, func() -> void: _manual_select_card(selected_card_id))
-			card_box.add_child(select_button)
+		if current_screen == "ui_combat":
+			if selected and can_play:
+				if _manual_card_needs_target(card):
+					_add_manual_action_bubble(card_box, "Target", _manual_show_target_hint)
+				else:
+					_add_manual_action_bubble(card_box, "Play", func() -> void: _manual_play_card(selected_card_id))
 		else:
-			var play_button := _make_button("Play")
-			play_button.name = "ManualCardPlayButton"
-			_style_button(play_button, "action")
-			_compact_manual_card_button(play_button)
-			play_button.disabled = not can_play
-			_connect_pressed(play_button, func() -> void: _manual_play_card(selected_card_id))
-			card_box.add_child(play_button)
+			if _manual_card_needs_target(card):
+				var select_button := _make_button("Selected" if selected else "Select")
+				select_button.name = "ManualCardSelectButton"
+				_style_button(select_button, "selected" if selected else "action")
+				_compact_manual_card_button(select_button)
+				select_button.disabled = not can_play and not selected
+				if selected:
+					_connect_pressed(select_button, _manual_clear_selection)
+				else:
+					_connect_pressed(select_button, func() -> void: _manual_select_card(selected_card_id))
+				card_box.add_child(select_button)
+			else:
+				var play_button := _make_button("Play")
+				play_button.name = "ManualCardPlayButton"
+				_style_button(play_button, "action")
+				_compact_manual_card_button(play_button)
+				play_button.disabled = not can_play
+				_connect_pressed(play_button, func() -> void: _manual_play_card(selected_card_id))
+				card_box.add_child(play_button)
 
 
 func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictionary) -> void:
@@ -4425,423 +3447,268 @@ func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictiona
 			card_panel.size = card_panel.custom_minimum_size
 			card_panel.position = Vector2(16 + hand_index * 52, 12)
 			card_panel.z_index = hand_index
+			if selected:
+				card_panel.z_index += 100
 		card_box.tooltip_text = card.get("text", "")
-		if selected:
+		if selected and current_screen != "ui_combat":
 			_add_manual_card_badge(card_box, "SELECTED", Color("#ffe08a"))
 
 		var selected_card_id := card_id
 		var can_play := _manual_can_play_card(state, card_id)
-		if _manual_card_needs_target(card):
-			var select_button := _make_button("Selected" if selected else "Select")
-			select_button.name = "ManualCardSelectButton"
-			_style_button(select_button, "selected" if selected else "action")
-			_compact_manual_card_button(select_button)
-			select_button.disabled = not can_play and not selected
-			if selected:
-				_connect_pressed(select_button, _manual_clear_selection)
-			else:
-				_connect_pressed(select_button, func() -> void: _manual_select_card(selected_card_id))
-			card_box.add_child(select_button)
+		if current_screen == "ui_combat":
+			if selected and can_play:
+				if _manual_card_needs_target(card):
+					_add_manual_action_bubble(card_box, "Target", _manual_show_target_hint)
+				else:
+					_add_manual_action_bubble(card_box, "Play", func() -> void: _manual_play_card(selected_card_id))
 		else:
-			var play_button := _make_button("Play")
-			play_button.name = "ManualCardPlayButton"
-			_style_button(play_button, "action")
-			_compact_manual_card_button(play_button)
-			play_button.disabled = not can_play
-			_connect_pressed(play_button, func() -> void: _manual_play_card(selected_card_id))
-			card_box.add_child(play_button)
+			if _manual_card_needs_target(card):
+				var select_button := _make_button("Selected" if selected else "Select")
+				select_button.name = "ManualCardSelectButton"
+				_style_button(select_button, "selected" if selected else "action")
+				_compact_manual_card_button(select_button)
+				select_button.disabled = not can_play and not selected
+				if selected:
+					_connect_pressed(select_button, _manual_clear_selection)
+				else:
+					_connect_pressed(select_button, func() -> void: _manual_select_card(selected_card_id))
+				card_box.add_child(select_button)
+			else:
+				var play_button := _make_button("Play")
+				play_button.name = "ManualCardPlayButton"
+				_style_button(play_button, "action")
+				_compact_manual_card_button(play_button)
+				play_button.disabled = not can_play
+				_connect_pressed(play_button, func() -> void: _manual_play_card(selected_card_id))
+				card_box.add_child(play_button)
 
 	call_deferred("_layout_manual_fanned_hand", fan)
 
 
 func _layout_manual_fanned_hand(fan: Control) -> void:
-	if not is_instance_valid(fan):
-		return
-	var card_panels: Array = []
-	for child in fan.get_children():
-		if child is Control and String(child.name).begins_with("CombatCardPanel_Hand"):
-			card_panels.append(child)
-	var count := card_panels.size()
-	if count <= 0:
-		return
-	var card_size: Vector2 = card_panels[0].custom_minimum_size
-	var available_width := fan.size.x
-	if available_width <= 1.0:
-		available_width = max(card_size.x, card_size.x + 58.0 * float(max(0, count - 1)))
-	var spread: float = 0.0 if count == 1 else clamp((available_width - card_size.x) / float(count - 1), 58.0, 88.0)
-	var total_width: float = card_size.x + spread * float(max(0, count - 1))
-	var start_x: float = max(0.0, (available_width - total_width) * 0.5)
-	var center_index: float = float(count - 1) * 0.5
-	var base_y := -12.0 if current_screen == "ui_combat" else 0.0
-	for index in range(count):
-		var card_panel: Control = card_panels[index]
-		var offset: float = float(index) - center_index
-		card_panel.size = card_panel.custom_minimum_size
-		card_panel.pivot_offset = card_panel.custom_minimum_size * 0.5
-		card_panel.position = Vector2(start_x + spread * float(index), base_y + abs(offset) * 2.8)
-		card_panel.rotation_degrees = offset * 7.0
-		card_panel.z_index = index
+	manual_combat_ui.layout_fanned_hand(self, fan)
+
+
+func _manual_hand_card_id_from_panel(card_panel: Control) -> String:
+	return manual_combat_ui.hand_card_id_from_panel(card_panel)
+
+
+func _add_manual_action_bubble(card_box: Node, label: String, callback: Callable, stack_index: int = 0) -> void:
+	manual_combat_ui.add_action_bubble(self, card_box, label, callback, stack_index)
+
+
+func _manual_show_target_hint() -> void:
+	_set_footer("Choose a highlighted target or drag the card onto one.")
+
+
+func _manual_show_attack_target_hint() -> void:
+	_set_footer("Double-click a highlighted target, double-click the opponent hand, or drag the attacker.")
+
+
+func _position_manual_action_bubbles_for_card(card_panel: Control) -> void:
+	manual_combat_ui.position_action_bubbles_for_card(self, card_panel)
+
+
+func _position_manual_action_bubble(bubble: Button, card_panel: Control) -> void:
+	manual_combat_ui.position_action_bubble(bubble, card_panel)
+
+
+func _place_manual_action_bubble(bubble: Button, global_position: Vector2) -> void:
+	manual_combat_ui.place_action_bubble(bubble, global_position)
+
+
+func _style_manual_action_bubble(button: Button) -> void:
+	manual_combat_ui.style_action_bubble(button)
+
+
+func _manual_action_bubble_stylebox(background: Color, border: Color, border_width: int) -> StyleBoxFlat:
+	return manual_combat_ui.action_bubble_stylebox(background, border, border_width)
 
 
 func _manual_card_panel_from_contents(contents: Node) -> Control:
-	var node := contents
-	while node != null:
-		if node is PanelContainer and (String(node.name).begins_with("CombatCardPanel") or String(node.name).begins_with("ManualDragCardGhost")):
-			return node as Control
-		node = node.get_parent()
-	return null
+	return manual_combat_ui.card_panel_from_contents(contents)
 
 
 func _manual_handle_hand_card_drag_input(event: InputEvent) -> bool:
-	if manual_drag_candidate.is_empty() and manual_drag_state.is_empty():
-		return false
-	if event is InputEventMouseMotion:
-		_manual_update_hand_card_drag(get_global_mouse_position())
-		get_viewport().set_input_as_handled()
-		return true
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-		_manual_finish_hand_card_drag(get_global_mouse_position())
-		get_viewport().set_input_as_handled()
-		return true
-	return false
+	return manual_combat_input.handle_hand_card_drag_input(self, event)
 
 
 func _manual_try_begin_hand_card_drag(card_id: String, source_panel: Control) -> bool:
-	if current_screen != "ui_combat":
-		return false
-	if not _manual_can_drag_hand_card(card_id):
-		return false
-	if source_panel == null or not is_instance_valid(source_panel):
-		return false
-	_manual_free_orphan_hand_drag_ghosts()
-	var source_rect := source_panel.get_global_rect()
-	manual_drag_candidate = {
-		"card_id": card_id,
-		"start_global": get_global_mouse_position(),
-		"source_global": source_rect.get_center()
-	}
-	return true
+	return manual_combat_input.try_begin_hand_card_drag(self, card_id, source_panel)
+
+
+func _manual_try_begin_unit_attack_drag(source_panel: Control) -> bool:
+	return manual_combat_input.try_begin_unit_attack_drag(self, source_panel)
+
+
+func _manual_player_unit_instance_id_from_panel(source_panel: Control) -> int:
+	return manual_combat_input.player_unit_instance_id_from_panel(source_panel)
+
+
+func _manual_opponent_unit_instance_id_from_panel(source_panel: Control) -> int:
+	return manual_combat_input.opponent_unit_instance_id_from_panel(source_panel)
+
+
+func _manual_can_drag_attack_unit(instance_id: int) -> bool:
+	return manual_combat_input.can_drag_attack_unit(self, instance_id)
 
 
 func _manual_can_drag_hand_card(card_id: String) -> bool:
-	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
-		return false
-	if not cards_by_id.has(card_id):
-		return false
-	var card: Dictionary = cards_by_id[card_id]
-	var combat_type := _combat_card_type(card)
-	if not _manual_can_play_card(run.manual_combat, card_id):
-		return false
-	if combat_type == "threat" or combat_type == "engine":
-		return true
-	return combat_type == "action" and _manual_card_needs_target(card)
+	return manual_combat_input.can_drag_hand_card(self, card_id)
 
 
 func _manual_update_hand_card_drag(global_position: Vector2) -> void:
-	if manual_drag_state.is_empty():
-		if manual_drag_candidate.is_empty():
-			return
-		var start: Vector2 = manual_drag_candidate.get("start_global", global_position)
-		if start.distance_to(global_position) < 8.0:
-			return
-		_manual_start_hand_card_drag()
-
-	if manual_drag_state.is_empty():
-		return
-
-	_manual_position_hand_drag_ghost(global_position)
-	var card_id := String(manual_drag_state.get("card_id", ""))
-	var drop_target := _manual_hand_card_drag_target(card_id, global_position)
-	var valid_drop := not drop_target.is_empty()
-	manual_drag_state["drop_target"] = drop_target
-	manual_drag_state["global_position"] = [global_position.x, global_position.y]
-	manual_drag_state["valid_drop"] = valid_drop
-	_manual_set_hand_drag_visual_state(valid_drop)
-	_manual_refresh_drag_preview_layer()
+	manual_combat_input.update_hand_card_drag(self, global_position)
 
 
 func _manual_start_hand_card_drag() -> void:
-	if manual_drag_candidate.is_empty():
-		return
-	var card_id := String(manual_drag_candidate.get("card_id", ""))
-	if not _manual_can_drag_hand_card(card_id):
-		_manual_clear_hand_card_drag()
-		return
-	var source_global: Vector2 = manual_drag_candidate.get("source_global", get_global_mouse_position())
-	manual_drag_state = {
-		"card_id": card_id,
-		"source_global": source_global,
-		"valid_drop": false
-	}
-	manual_drag_ghost = _create_manual_hand_drag_ghost(card_id)
-	_manual_position_hand_drag_ghost(get_global_mouse_position())
-	_manual_set_drag_board_highlight(true)
-	_set_footer(_manual_drag_footer_text(card_id))
+	manual_combat_input.start_hand_card_drag(self)
 
 
 func _manual_finish_hand_card_drag(global_position: Vector2) -> void:
-	if manual_drag_state.is_empty():
-		if not manual_drag_candidate.is_empty():
-			var clicked_card_id := String(manual_drag_candidate.get("card_id", ""))
-			_manual_clear_hand_card_drag()
-			if cards_by_id.has(clicked_card_id):
-				_manual_set_inspect_card(clicked_card_id, "Hand", "", true)
-				call_deferred("_show_active_combat_screen")
-		return
-
-	var card_id := String(manual_drag_state.get("card_id", ""))
-	var drop_target := _manual_hand_card_drag_target(card_id, global_position)
-	var valid_drop := not drop_target.is_empty()
-	var source_global: Vector2 = manual_drag_state.get("source_global", global_position)
-	if valid_drop:
-		_manual_clear_hand_card_drag()
-		match String(drop_target.get("kind", "")):
-			"board_slot", "engine_slot":
-				_manual_play_card_to_slot(card_id, int(drop_target.get("slot_index", -1)))
-			"action_target":
-				_manual_play_card_target(card_id, String(drop_target.get("target_type", "face")), int(drop_target.get("target_instance_id", -1)))
-	else:
-		_manual_snap_back_hand_drag_ghost(source_global)
-		manual_drag_candidate = {}
-		manual_drag_state = {}
-		_manual_set_drag_board_highlight(false)
-		_set_footer(_manual_drag_footer_text(card_id))
+	manual_combat_input.finish_hand_card_drag(self, global_position)
 
 
 func _manual_clear_hand_card_drag() -> void:
-	manual_drag_candidate = {}
-	manual_drag_state = {}
-	_manual_set_drag_board_highlight(false)
-	if manual_drag_ghost != null and is_instance_valid(manual_drag_ghost):
-		manual_drag_ghost.queue_free()
-	manual_drag_ghost = null
-	_manual_free_orphan_hand_drag_ghosts()
-	_manual_refresh_drag_preview_layer()
+	manual_combat_input.clear_hand_card_drag(self)
 
 
 func _manual_free_orphan_hand_drag_ghosts() -> void:
-	_manual_free_descendants_by_prefix(self, "ManualDragCardGhost")
+	manual_combat_input.free_orphan_hand_drag_ghosts(self)
 
 
 func _manual_free_descendants_by_prefix(root: Node, target_prefix: String) -> void:
-	for child in root.get_children():
-		if String(child.name).begins_with(target_prefix):
-			child.queue_free()
-		else:
-			_manual_free_descendants_by_prefix(child, target_prefix)
+	manual_combat_input.free_descendants_by_prefix(self, root, target_prefix)
 
 
 func _manual_snap_back_hand_drag_ghost(source_global: Vector2) -> void:
-	if manual_drag_ghost == null or not is_instance_valid(manual_drag_ghost):
-		manual_drag_ghost = null
-		return
-	var ghost := manual_drag_ghost
-	manual_drag_ghost = null
-	var ghost_size := ghost.custom_minimum_size
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(ghost, "global_position", source_global - ghost_size * 0.5, 0.14)
-	tween.parallel().tween_property(ghost, "modulate", Color(1, 1, 1, 0.0), 0.14)
-	tween.tween_callback(Callable(ghost, "queue_free"))
+	manual_combat_input.snap_back_hand_drag_ghost(self, source_global)
 
 
 func _manual_position_hand_drag_ghost(global_position: Vector2) -> void:
-	if manual_drag_ghost == null or not is_instance_valid(manual_drag_ghost):
-		return
-	var ghost_size := manual_drag_ghost.custom_minimum_size
-	manual_drag_ghost.global_position = global_position - ghost_size * 0.5
-	manual_drag_ghost.visible = true
+	manual_combat_input.position_hand_drag_ghost(self, global_position)
 
 
 func _manual_set_hand_drag_visual_state(valid_drop: bool) -> void:
-	if manual_drag_ghost != null and is_instance_valid(manual_drag_ghost):
-		manual_drag_ghost.modulate = Color(0.92, 1.08, 0.95, 0.94) if valid_drop else Color(1.08, 0.92, 0.92, 0.88)
-	var card_id := String(manual_drag_state.get("card_id", manual_drag_candidate.get("card_id", "")))
-	_manual_apply_drag_zone_highlight(card_id, valid_drop, true)
+	manual_combat_input.set_hand_drag_visual_state(self, valid_drop)
 
 
 func _manual_set_drag_board_highlight(active: bool) -> void:
-	var card_id := String(manual_drag_state.get("card_id", manual_drag_candidate.get("card_id", "")))
-	_manual_apply_drag_zone_highlight(card_id, false, active)
+	manual_combat_input.set_drag_board_highlight(self, active)
 
 
 func _manual_refresh_drag_preview_layer() -> void:
-	var layer := _find_descendant_by_prefix(self, "ManualBoardArcLayer")
-	if layer != null and layer is Node2D:
-		_refresh_manual_board_arc_layer(layer)
+	manual_combat_input.refresh_drag_preview_layer(self)
 
 
 func _manual_hand_card_drag_drop_is_valid(card_id: String, global_position: Vector2) -> bool:
-	return not _manual_hand_card_drag_target(card_id, global_position).is_empty()
+	return manual_combat_input.hand_card_drag_drop_is_valid(self, card_id, global_position)
 
 
 func _manual_hand_card_drag_target(card_id: String, global_position: Vector2) -> Dictionary:
-	if not _manual_can_drag_hand_card(card_id):
-		return {}
-	var card: Dictionary = cards_by_id[card_id]
-	match _combat_card_type(card):
-		"threat":
-			var board_slot := _manual_hand_card_drag_target_slot(global_position)
-			if board_slot >= 0 and _manual_board_slot_is_open(run.manual_combat.get("player", {}), board_slot):
-				return { "kind": "board_slot", "slot_index": board_slot }
-		"engine":
-			var engine_slot := _manual_hand_card_drag_engine_target_slot(global_position)
-			if engine_slot >= 0 and _manual_engine_slot_is_open(run.manual_combat.get("player", {}), engine_slot):
-				return { "kind": "engine_slot", "slot_index": engine_slot }
-		"action":
-			return _manual_hand_card_drag_action_target(card_id, global_position)
-	return {}
+	return manual_combat_input.hand_card_drag_target(self, card_id, global_position)
 
 
 func _manual_hand_card_drag_target_slot(global_position: Vector2) -> int:
-	for slot_index in range(COMBAT_BOARD_SLOTS):
-		var slot := _find_descendant_by_prefix(self, _manual_board_slot_anchor(true, slot_index))
-		if slot != null and slot is Control and (slot as Control).get_global_rect().has_point(global_position):
-			return slot_index
-	return -1
+	return manual_combat_input.hand_card_drag_target_slot(self, global_position)
 
 
 func _manual_hand_card_drag_engine_target_slot(global_position: Vector2) -> int:
-	for slot_index in range(COMBAT_ENGINE_SLOTS):
-		var slot := _find_descendant_by_prefix(self, _manual_engine_slot_anchor(true, slot_index))
-		if slot != null and slot is Control and (slot as Control).get_global_rect().has_point(global_position):
-			return slot_index
-	return -1
+	return manual_combat_input.hand_card_drag_engine_target_slot(self, global_position)
 
 
 func _manual_hand_card_drag_action_target(card_id: String, global_position: Vector2) -> Dictionary:
-	if not cards_by_id.has(card_id):
-		return {}
-	var card: Dictionary = cards_by_id[card_id]
-	var state: Dictionary = run.get("manual_combat", {})
-	if state.is_empty():
-		return {}
-	if _manual_card_can_target_units(card):
-		var opponent: Dictionary = state.get("opponent", {})
-		for unit in opponent.get("board", []):
-			var instance_id := int(unit.get("instance_id", -1))
-			var anchor := _manual_unit_card_anchor(false, instance_id)
-			if _manual_global_point_hits_anchor(anchor, global_position):
-				return {
-					"kind": "action_target",
-					"target_type": "unit",
-					"target_instance_id": instance_id
-				}
-	if _manual_card_can_target_face(card) and _manual_global_point_hits_anchor("ManualOpponentFanHand", global_position):
-		return {
-			"kind": "action_target",
-			"target_type": "face",
-			"target_instance_id": -1
-		}
-	return {}
+	return manual_combat_input.hand_card_drag_action_target(self, card_id, global_position)
+
+
+func _manual_attack_drag_target(instance_id: int, global_position: Vector2) -> Dictionary:
+	return manual_combat_input.attack_drag_target(self, instance_id, global_position)
+
+
+func _manual_attack_drag_can_target_face(state: Dictionary, instance_id: int) -> bool:
+	return manual_combat_input.attack_drag_can_target_face(self, state, instance_id)
+
+
+func _manual_attack_drag_target_anchor(drop_target: Dictionary) -> String:
+	return manual_combat_input.attack_drag_target_anchor(self, drop_target)
 
 
 func _manual_global_point_hits_anchor(anchor: String, global_position: Vector2) -> bool:
-	var node := _find_descendant_by_prefix(self, anchor)
-	return node != null and node is Control and (node as Control).get_global_rect().has_point(global_position)
+	return manual_combat_input.global_point_hits_anchor(self, anchor, global_position)
+
+
+func _manual_reset_drag_highlights() -> void:
+	manual_combat_input.reset_drag_highlights(self)
 
 
 func _manual_apply_drag_zone_highlight(card_id: String, valid_drop: bool, active: bool) -> void:
-	var anchors := [
-		"ManualZone_PlayerBoard",
-		"ManualZone_PlayerEngine",
-		"ManualOpponentFanHand",
-		"ManualZone_OpponentBoard"
-	]
-	for anchor in anchors:
-		var node := _find_descendant_by_prefix(self, anchor)
-		if node != null and node is Control:
-			(node as Control).modulate = Color.WHITE
-	var state: Dictionary = run.get("manual_combat", {})
-	var opponent: Dictionary = state.get("opponent", {})
-	for unit_value in opponent.get("board", []):
-		var unit: Dictionary = unit_value
-		var unit_anchor := _manual_unit_card_anchor(false, int(unit.get("instance_id", -1)))
-		var unit_node := _find_descendant_by_prefix(self, unit_anchor)
-		if unit_node != null and unit_node is Control:
-			(unit_node as Control).modulate = Color.WHITE
-	if not active or not cards_by_id.has(card_id):
-		return
+	manual_combat_input.apply_drag_zone_highlight(self, card_id, valid_drop, active)
 
-	var color := Color(1.08, 1.16, 1.08, 1.0) if valid_drop else Color(1.12, 1.02, 1.02, 1.0)
-	var card: Dictionary = cards_by_id[card_id]
-	var target_anchors: Array = []
-	match _combat_card_type(card):
-		"threat":
-			target_anchors.append("ManualZone_PlayerBoard")
-		"engine":
-			target_anchors.append("ManualZone_PlayerEngine")
-		"action":
-			if _manual_card_can_target_face(card):
-				target_anchors.append("ManualOpponentFanHand")
-			if _manual_card_can_target_units(card):
-				target_anchors.append("ManualZone_OpponentBoard")
-	for anchor in target_anchors:
-		var node := _find_descendant_by_prefix(self, anchor)
-		if node != null and node is Control:
-			(node as Control).modulate = color
-	if valid_drop:
-		var drop_target: Dictionary = manual_drag_state.get("drop_target", {})
-		if String(drop_target.get("kind", "")) == "action_target":
-			var exact_anchor := ""
-			match String(drop_target.get("target_type", "")):
-				"face":
-					exact_anchor = "ManualOpponentFanHand"
-				"unit":
-					exact_anchor = _manual_unit_card_anchor(false, int(drop_target.get("target_instance_id", -1)))
-			if exact_anchor != "":
-				var exact_node := _find_descendant_by_prefix(self, exact_anchor)
-				if exact_node != null and exact_node is Control:
-					(exact_node as Control).modulate = Color(1.18, 1.24, 1.08, 1.0)
+
+func _manual_apply_attack_drag_highlight(instance_id: int, valid_drop: bool, active: bool) -> void:
+	manual_combat_input.apply_attack_drag_highlight(self, instance_id, valid_drop, active)
 
 
 func _manual_drag_footer_text(card_id: String) -> String:
-	if not cards_by_id.has(card_id):
-		return "Drop the card on a legal target."
-	var card: Dictionary = cards_by_id[card_id]
-	var name := String(card.get("name", card_id))
-	match _combat_card_type(card):
-		"threat":
-			return "Drag onto an open board slot to play " + name + "."
-		"engine":
-			return "Drag onto an open engine slot to play " + name + "."
-		"action":
-			return "Drag onto the opponent hand or a legal unit target to cast " + name + "."
-	return "Drop " + name + " on a legal target."
+	return manual_combat_input.drag_footer_text(self, card_id)
+
+
+func _manual_attack_drag_footer_text(unit: Dictionary) -> String:
+	return manual_combat_input.attack_drag_footer_text(self, unit)
 
 
 func _create_manual_hand_drag_ghost(card_id: String) -> Control:
-	var box: VBoxContainer = card_frame_factory.add_frame(
-		self,
-		_card_frame_data(card_id),
-		{
-			"panel_name": "ManualDragCardGhost",
-			"contents_name": "ManualDragCardGhostContents",
-			"name_prefix": "ManualDragCard",
-			"compact": true,
-			"min_size": Vector2(104, 154),
-			"mouse_filter": Control.MOUSE_FILTER_IGNORE,
-			"show_deck_stats": false,
-			"show_rules_text": false,
-			"border_color": Color("#ffe08a"),
-			"border_width": 2
-		}
-	)
-	var ghost := _manual_card_panel_from_contents(box)
-	if ghost == null:
-		return box
-	ghost.set_as_top_level(true)
-	ghost.z_index = 420
-	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ghost.size = ghost.custom_minimum_size
-	ghost.scale = Vector2(1.08, 1.08)
-	ghost.modulate = Color(1, 1, 1, 0.92)
-	ghost.visible = false
-	return ghost
+	return manual_combat_input.create_hand_drag_ghost(self, card_id)
+
+
+func _create_manual_attack_drag_ghost(unit: Dictionary) -> Control:
+	return manual_combat_input.create_attack_drag_ghost(self, unit)
+
+
+func _add_manual_selected_unit_action_bubbles(card_box: VBoxContainer, unit: Dictionary, state: Dictionary) -> void:
+	if current_screen != "ui_combat":
+		return
+	if not _manual_selection_is_attacker(unit):
+		return
+	var stack_index := 0
+	var instance_id := int(unit.get("instance_id", -1))
+	if bool(unit.get("ready", false)):
+		_add_manual_action_bubble(card_box, "Attack", _manual_show_attack_target_hint, stack_index)
+		stack_index += 1
+	for ability_data in _manual_available_unit_abilities(state, unit):
+		var ability_index := int(ability_data.get("index", -1))
+		var label := "Use\nAbility"
+		_add_manual_action_bubble(card_box, label, func() -> void: _manual_activate_unit_ability(instance_id, ability_index), stack_index)
+		stack_index += 1
+
+
+func _manual_available_unit_abilities(state: Dictionary, unit: Dictionary) -> Array:
+	var card_id := String(unit.get("card_id", ""))
+	if not cards_by_id.has(card_id):
+		return []
+	var card: Dictionary = cards_by_id[card_id]
+	var combat: Dictionary = card.get("combat", {})
+	var abilities: Array = combat.get("abilities", [])
+	var available: Array = []
+	for index in range(abilities.size()):
+		var ability: Dictionary = abilities[index]
+		if _manual_can_activate_ability(state, unit, ability, index):
+			available.append({
+				"index": index,
+				"label": String(ability.get("label", "Use"))
+			})
+	return available
+
+
+func _manual_unit_has_action_bubbles(state: Dictionary, unit: Dictionary) -> bool:
+	if unit.is_empty() or not _manual_combat_accepts_input(state):
+		return false
+	return bool(unit.get("ready", false)) or not _manual_available_unit_abilities(state, unit).is_empty()
 
 
 func _add_manual_ability_buttons(card_box: VBoxContainer, unit: Dictionary, state: Dictionary) -> void:
+	if current_screen == "ui_combat":
+		return
 	var card_id := String(unit.get("card_id", ""))
 	if not cards_by_id.has(card_id):
 		return
@@ -4864,26 +3731,10 @@ func _add_manual_ability_buttons(card_box: VBoxContainer, unit: Dictionary, stat
 
 
 func _add_manual_card_badge(parent: Node, text: String, color: Color) -> void:
-	var compact_duel := current_screen == "ui_combat"
-	var badge := Label.new()
-	badge.name = "ManualTargetBadge" if text == "LEGAL TARGET" else "ManualCardBadge"
-	var display_text := text
-	if compact_duel:
-		match text:
-			"ATTACKER SELECTED":
-				display_text = "ATTACKER"
-			"LEGAL TARGET":
-				display_text = "TARGET"
-			"SELECTED":
-				display_text = "SEL"
-	badge.text = display_text
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.add_theme_font_size_override("font_size", 9 if compact_duel else 11)
-	badge.add_theme_color_override("font_color", color)
-	parent.add_child(badge)
+	manual_combat_ui.add_card_badge(self, parent, text, color)
 
 
-func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "") -> VBoxContainer:
+func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "", printed_max_health: int = -1) -> VBoxContainer:
 	var compact_duel := current_screen == "ui_combat"
 	var type_text := printed_type
 	var animal_type := printed_animal_type if printed_animal_type != "" else "neutral"
@@ -4911,6 +3762,7 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 	if not current_stats.is_empty():
 		frame_data.attack = int(current_stats.attack)
 		frame_data.health = int(current_stats.health)
+		frame_data.max_health = printed_max_health if printed_max_health >= 0 else int(current_stats.health)
 		frame_data.show_attack_health = true
 
 	var box: VBoxContainer = card_frame_factory.add_frame(
@@ -4921,7 +3773,8 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 			"contents_name": "CombatCardContents",
 			"name_prefix": "CombatCardFrame",
 			"compact": compact_duel,
-			"min_size": Vector2(104, 154) if compact_duel else Vector2(176, 236),
+			"min_size": Vector2(96, 164) if compact_duel else Vector2(176, 236),
+			"size_flags_horizontal": Control.SIZE_SHRINK_CENTER if compact_duel else Control.SIZE_EXPAND_FILL,
 			"border_color": border_color,
 			"border_width": border_width,
 			"show_deck_stats": false,
@@ -4962,42 +3815,15 @@ func _is_digit(character: String) -> bool:
 
 
 func _apply_combat_card_motion(card_panel: Control, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "") -> void:
-	card_panel.mouse_entered.connect(func() -> void:
-		if inspect_card_id != "" and current_screen != "ui_combat":
-			_manual_set_inspect_card(inspect_card_id, inspect_zone, inspect_current, false)
-		_tween_control_feedback(card_panel, Vector2(1.035, 1.035), Color(1.12, 1.12, 1.12, 1.0), 0.08)
-	)
-	card_panel.mouse_exited.connect(func() -> void:
-		if inspect_card_id != "" and current_screen != "ui_combat":
-			_manual_clear_hover_inspect(inspect_card_id, inspect_zone, inspect_current)
-		_tween_control_feedback(card_panel, Vector2.ONE, Color.WHITE, 0.10)
-	)
-	card_panel.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				card_panel.accept_event()
-				if _manual_try_begin_hand_card_drag(inspect_card_id, card_panel):
-					_tween_control_feedback(card_panel, Vector2(1.035, 1.035), Color(1.10, 1.10, 1.10, 1.0), 0.06)
-					return
-				if inspect_card_id != "":
-					_manual_set_inspect_card(inspect_card_id, inspect_zone, inspect_current, true)
-					if current_screen == "ui_combat":
-						call_deferred("_show_active_combat_screen")
-				_tween_control_feedback(card_panel, Vector2(0.985, 0.985), Color(0.95, 0.95, 0.95, 1.0), 0.05)
-			else:
-				card_panel.accept_event()
-				_tween_control_feedback(card_panel, Vector2(1.035, 1.035), Color(1.12, 1.12, 1.12, 1.0), 0.07)
-	)
+	manual_combat_input.apply_combat_card_motion(self, card_panel, inspect_card_id, inspect_zone, inspect_current)
+
+
+func _manual_handle_card_double_click(card_panel: Control, inspect_zone: String) -> bool:
+	return manual_combat_input.handle_card_double_click(self, card_panel, inspect_zone)
 
 
 func _tween_control_feedback(control: Control, target_scale: Vector2, target_modulate: Color, duration: float) -> void:
-	if not is_instance_valid(control):
-		return
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(control, "scale", target_scale, duration)
-	tween.parallel().tween_property(control, "modulate", target_modulate, duration)
+	manual_combat_input.tween_control_feedback(self, control, target_scale, target_modulate, duration)
 
 
 func _add_manual_face_target(parent: VBoxContainer, state: Dictionary) -> void:
@@ -5152,6 +3978,14 @@ func _manual_find_player_unit(state: Dictionary, instance_id: int) -> Dictionary
 	return {}
 
 
+func _manual_find_opponent_unit(state: Dictionary, instance_id: int) -> Dictionary:
+	var opponent: Dictionary = state.get("opponent", {})
+	for unit in opponent.get("board", []):
+		if int(unit.get("instance_id", -1)) == instance_id:
+			return unit
+	return {}
+
+
 func _manual_face_block_reason(state: Dictionary) -> String:
 	var guard_unit := _manual_guard_unit(state)
 	if not guard_unit.is_empty():
@@ -5197,13 +4031,14 @@ func _combat_effect_summary(card: Dictionary) -> String:
 	match String(combat.get("kind", "")):
 		"unit":
 			var keywords: Array = combat.get("keywords", [])
-			var keyword_text := ""
+			var pieces: Array = []
 			if not keywords.is_empty():
-				keyword_text = " | " + ", ".join(PackedStringArray(keywords))
-			var on_play_text := ""
+				var keyword_pieces: Array = []
+				for keyword in keywords:
+					keyword_pieces.append(String(keyword).capitalize())
+				pieces.append(", ".join(PackedStringArray(keyword_pieces)))
 			if not combat.get("onPlay", []).is_empty():
-				on_play_text = " | On play: " + _effect_list_summary(combat.get("onPlay", []))
-			var trigger_text := ""
+				pieces.append("On play: " + _effect_list_summary(combat.get("onPlay", [])))
 			if not combat.get("triggers", []).is_empty():
 				var trigger_pieces: Array = []
 				for trigger in combat.get("triggers", []):
@@ -5211,8 +4046,7 @@ func _combat_effect_summary(card: Dictionary) -> String:
 						String(trigger.get("timing", "trigger")).replace("_", " ").capitalize(),
 						_effect_list_summary(trigger.get("effects", []))
 					])
-				trigger_text = " | " + " | ".join(PackedStringArray(trigger_pieces))
-			var ability_text := ""
+				pieces.append(" | ".join(PackedStringArray(trigger_pieces)))
 			if not combat.get("abilities", []).is_empty():
 				var ability_pieces: Array = []
 				for ability in combat.get("abilities", []):
@@ -5221,13 +4055,8 @@ func _combat_effect_summary(card: Dictionary) -> String:
 						int(ability.get("cost", 0)),
 						_effect_list_summary(ability.get("effects", []))
 					])
-				ability_text = " | " + " | ".join(PackedStringArray(ability_pieces))
-			return "%d/%d%s%s" % [
-				int(combat.get("attack", 0)),
-				int(combat.get("health", 0)),
-				keyword_text,
-				on_play_text + trigger_text + ability_text
-			]
+				pieces.append(" | ".join(PackedStringArray(ability_pieces)))
+			return " | ".join(PackedStringArray(pieces))
 		"action":
 			return _effect_list_summary(combat.get("effects", []))
 		"engine":
@@ -5581,16 +4410,38 @@ func _show_tournament() -> void:
 	_clear(content)
 	_update_status()
 
-	var event: Dictionary = tournaments_by_id["weekly_locals"]
+	if _run_mode() == "season" and _season_tournament_active():
+		_add_season_tournament_progress(content)
+		return
+
+	var event: Dictionary = _selected_tournament_event()
+	var event_id := String(event.get("id", "weekly_locals"))
 	var legal := _deck_is_legal()
-	var panel := _add_panel(content, event.name)
-	_add_body_text(panel, "Format: 3 rounds, best-of-three matches. You need 2 wins to keep the run alive.")
-	_add_body_text(panel, "Entry fee: $%d | Current money: $%d" % [event.entryFee, run.money])
+	var panel := _add_panel(content, String(event.get("name", event_id)))
+	_add_body_text(panel, "Format: %d rounds. You need %d wins to keep the run alive." % [
+		int(event.get("rounds", 3)),
+		int(event.get("requiredWins", 2))
+	])
+	_add_body_text(panel, String(event.get("winConditionText", "")))
+	if _run_mode() == "season":
+		var difficulty := _difficulty_data(_run_difficulty_id())
+		_add_body_text(panel, "%s Border: %s" % [
+			String(difficulty.get("name", "White")),
+			String(difficulty.get("rules_text", ""))
+		])
+	if _run_mode() == "season":
+		_add_body_text(panel, "Season mode uses live UI Combat duels for each round.")
+	else:
+		_add_body_text(panel, "Debug mode auto-resolves the full event for quick testing.")
+	_add_body_text(panel, "Entry fee: $%d | Current money: $%d" % [int(event.get("entryFee", 0)), int(run.get("money", 0))])
 	_add_body_text(panel, "Deck status: " + ("Ready" if legal.ok else legal.reason))
 
-	var enter := _make_button("Enter Weekly Locals")
-	enter.disabled = not legal.ok or run.money < int(event.entryFee)
-	_connect_pressed(enter, _run_tournament)
+	var enter := _make_button("Enter %s" % String(event.get("name", event_id)))
+	enter.disabled = not legal.ok or int(run.get("money", 0)) < int(event.get("entryFee", 0)) or (_run_mode() == "season" and not _season_event_selectable(event_id))
+	if _run_mode() == "season":
+		_connect_pressed(enter, _start_season_tournament)
+	else:
+		_connect_pressed(enter, _run_tournament)
 	panel.add_child(enter)
 
 	if run.last_result.size() > 0:
@@ -5599,8 +4450,273 @@ func _show_tournament() -> void:
 			_add_body_text(last, line)
 
 
+func _add_season_tournament_progress(parent: Node) -> void:
+	var active: Dictionary = run.get("active_tournament", {})
+	var panel := _add_panel(parent, String(active.get("event_name", "Tournament")) + " In Progress", "#1f3329")
+	var difficulty := _difficulty_data(_run_difficulty_id())
+	_add_body_text(panel, "Round %d/%d | Record %d-%d | Need %d wins" % [
+		int(active.get("round", 1)),
+		int(active.get("rounds", 1)),
+		int(active.get("wins", 0)),
+		int(active.get("losses", 0)),
+		int(active.get("required_wins", 1))
+	])
+	_add_body_text(panel, "%s Border | Lives %d/%d" % [
+		String(difficulty.get("name", "White")),
+		int(run.get("season_lives", 0)),
+		int(run.get("max_season_lives", 0))
+	])
+
+	var current: Dictionary = run.get("manual_combat", {})
+	if not current.is_empty() and not bool(current.get("game_over", false)):
+		var current_button := _make_button("Return to Current Duel")
+		_connect_pressed(current_button, _show_ui_combat)
+		panel.add_child(current_button)
+	elif not current.is_empty() and bool(current.get("game_over", false)):
+		var record_button := _make_button("Record Round Result")
+		_connect_pressed(record_button, _season_record_current_round_result)
+		panel.add_child(record_button)
+	else:
+		var next_button := _make_button("Start Round %d" % int(active.get("round", 1)))
+		_connect_pressed(next_button, _start_season_tournament_round)
+		panel.add_child(next_button)
+
+	var logs: Array = active.get("logs", [])
+	if not logs.is_empty():
+		var log_panel := _add_panel(parent, "Event Log")
+		for line in logs:
+			_add_body_text(log_panel, "• " + String(line))
+
+
+func _start_season_tournament() -> void:
+	var event: Dictionary = _selected_season_event()
+	var event_id := String(event.get("id", _selected_season_event_id()))
+	var legal := _deck_is_legal()
+	if not bool(legal.get("ok", false)):
+		_set_footer(String(legal.get("reason", "")))
+		return
+	if not _season_event_selectable(event_id):
+		_set_footer("Select an available calendar event before registering.")
+		return
+	if int(run.get("money", 0)) < int(event.get("entryFee", 0)):
+		_set_footer("You cannot afford the entry fee.")
+		return
+
+	run.money = int(run.money) - int(event.get("entryFee", 0))
+	var deck_metrics := _calculate_deck_metrics(run.deck, run.sideboard)
+	run.active_tournament = tournament_service.create_active_tournament(self, event, deck_metrics)
+	run.last_result = []
+	_start_season_tournament_round()
+
+
+func _start_season_tournament_round() -> void:
+	if not _season_tournament_active():
+		_show_tournament()
+		return
+	_manual_clear_hand_card_drag()
+	var active: Dictionary = run.get("active_tournament", {})
+	var round_number := int(active.get("round", 1))
+	var event := _season_event_by_id(String(active.get("event_id", "weekly_locals")))
+	var deck_metrics := _calculate_deck_metrics(run.deck, run.sideboard)
+	var opponent := _generate_opponent(round_number, deck_metrics, event)
+	var opponent_archetype := String(opponent.get("archetype", _predator_archetype(String(deck_metrics.primary))))
+	var opponent_deck := _opponent_deck_for_round(opponent_archetype, round_number, event)
+	var seed_value := rng.randi()
+	var first_side := _season_round_first_side()
+
+	run.manual_combat = combat_service.start_manual_game(run.deck, String(deck_metrics.primary), opponent_deck, opponent_archetype, seed_value, first_side)
+	_reset_manual_runtime_state(false)
+
+	active["current_opponent"] = opponent
+	active["current_seed"] = seed_value
+	active["current_first_side"] = first_side
+	active["round_result_recorded"] = false
+	run.active_tournament = active
+	_set_footer("%s round %d started. %s Win the duel to add a match win to your record." % [
+		String(active.get("event_name", "Tournament")),
+		round_number,
+		"You start." if first_side == "player" else "Opponent starts."
+	])
+	_show_ui_combat()
+
+
+func _season_record_current_round_result() -> void:
+	if not _season_tournament_active():
+		return
+	var state: Dictionary = run.get("manual_combat", {})
+	if state.is_empty() or not bool(state.get("game_over", false)):
+		_set_footer("Finish the current duel before recording the result.")
+		return
+	var active: Dictionary = run.get("active_tournament", {})
+	if bool(active.get("round_result_recorded", false)):
+		_show_tournament()
+		return
+
+	var won := String(state.get("winner", "")) == "player"
+	if won:
+		active["wins"] = int(active.get("wins", 0)) + 1
+	else:
+		active["losses"] = int(active.get("losses", 0)) + 1
+
+	var opponent: Dictionary = active.get("current_opponent", {})
+	var round_number := int(active.get("round", 1))
+	var player_life := int(state.get("player", {}).get("life", 0))
+	var opponent_life := int(state.get("opponent", {}).get("life", 0))
+	var logs: Array = active.get("logs", [])
+	logs.append("Round %d vs %s on %s: %s. Turn %d, life %d-%d, seed %d." % [
+		round_number,
+		String(opponent.get("name", "Opponent")),
+		_archetype_label(String(opponent.get("archetype", ""))),
+		"Won" if won else "Lost",
+		int(state.get("turn", 0)),
+		player_life,
+		opponent_life,
+		int(active.get("current_seed", 0))
+	])
+	active["logs"] = logs
+	active["round_result_recorded"] = true
+	run.active_tournament = active
+
+	if _season_tournament_should_finish(active):
+		_finish_season_tournament()
+		return
+
+	active["round"] = round_number + 1
+	active["current_opponent"] = {}
+	active["current_seed"] = 0
+	active["round_result_recorded"] = false
+	run.active_tournament = active
+	_reset_manual_runtime_state()
+	_set_footer("Round recorded. Prepare for round %d." % int(active.get("round", 1)))
+	_show_tournament()
+
+
+func _season_tournament_should_finish(active: Dictionary) -> bool:
+	return tournament_service.should_finish(active)
+
+
+func _finish_season_tournament() -> void:
+	var active: Dictionary = run.get("active_tournament", {})
+	var event_id := String(active.get("event_id", "weekly_locals"))
+	var event: Dictionary = _season_event_by_id(event_id)
+	var wins := int(active.get("wins", 0))
+	var losses := int(active.get("losses", 0))
+	var required := int(active.get("required_wins", int(event.get("requiredWins", 2))))
+	var logs: Array = active.get("logs", [])
+	var made_record := wins >= required
+	var run_continues := made_record
+	var reward_money := 0
+	var reward_packs := 0
+	var lives_lost := 0
+	if made_record:
+		reward_money = int(event.get("rewardMoney", {}).get(str(wins), 0))
+		reward_packs = int(event.get("rewardPacks", {}).get(str(wins), 0))
+		run.money = int(run.money) + reward_money
+		run.prize_packs = int(run.prize_packs) + reward_packs
+		run.week = int(run.week) + 1
+		_season_mark_event_completed(event_id)
+		if _season_event_is_final(event_id):
+			run.season_champion = true
+			run.run_over = true
+			run_continues = false
+			logs.append("Record: %d-%d. Win condition achieved: you won Worlds. Prize: $%d and %d pack(s)." % [wins, losses, reward_money, reward_packs])
+		else:
+			logs.append("Record: %d-%d. Calendar advanced. Prize: $%d and %d pack(s)." % [wins, losses, reward_money, reward_packs])
+	else:
+		lives_lost = 1
+		run.season_lives = max(0, int(run.get("season_lives", 1)) - 1)
+		if int(run.get("season_lives", 0)) > 0:
+			run_continues = true
+			run.week = int(run.week) + 1
+			run.selected_event_id = event_id
+			run.season_notice = "%s missed. You lost a season life, but the run is still alive. Tune your deck, then retry the same calendar event." % String(event.get("name", event_id))
+			logs.append("Record: %d-%d. Required record missed. You lose a season life (%d/%d remaining) and continue with no prize." % [
+				wins,
+				losses,
+				int(run.get("season_lives", 0)),
+				int(run.get("max_season_lives", 0))
+			])
+		else:
+			run.run_over = true
+			run.season_notice = "%s missed. No season lives remain." % String(event.get("name", event_id))
+			logs.append("Record: %d-%d. Required record missed and no season lives remain. The season ends here." % [wins, losses])
+
+	_update_meta_after_event(String(active.get("deck_primary", _current_primary_archetype())), wins, max(1, wins + losses))
+	_generate_shop_inventory()
+	run.last_result = logs
+	run.last_event_result = _build_event_result_summary(
+		event,
+		wins,
+		losses,
+		required,
+		made_record,
+		reward_money,
+		reward_packs,
+		lives_lost,
+		run_continues
+	)
+	run.active_tournament = {}
+	_reset_manual_runtime_state()
+	_show_tournament_result(logs, run_continues)
+
+
+func _build_event_result_summary(
+	event: Dictionary,
+	wins: int,
+	losses: int,
+	required: int,
+	made_record: bool,
+	reward_money: int,
+	reward_packs: int,
+	lives_lost: int,
+	run_continues: bool
+) -> Dictionary:
+	return tournament_service.build_event_result_summary(
+		self,
+		event,
+		wins,
+		losses,
+		required,
+		made_record,
+		reward_money,
+		reward_packs,
+		lives_lost,
+		run_continues
+	)
+
+
+func _season_forfeit_current_round() -> void:
+	if not _season_tournament_active():
+		return
+	var state: Dictionary = run.get("manual_combat", {})
+	if state.is_empty():
+		_show_tournament()
+		return
+	state["game_over"] = true
+	state["winner"] = "opponent"
+	state["phase"] = "game_over"
+	var log_lines: Array = state.get("log", [])
+	log_lines.append("You forfeited the round.")
+	state["log"] = log_lines
+	run.manual_combat = state
+	run.manual_selection = {}
+	run.manual_animation = {}
+	run.manual_animation_queue = []
+	run.manual_pending_action = {}
+	run.manual_opponent_pending_state = {}
+	_set_footer("Round forfeited. Record the result to continue.")
+	_show_ui_combat()
+
+
+func _season_tournament_active() -> bool:
+	if run.is_empty():
+		return false
+	var active: Dictionary = run.get("active_tournament", {})
+	return not active.is_empty() and bool(active.get("active", false))
+
+
 func _run_tournament() -> void:
-	var event: Dictionary = tournaments_by_id["weekly_locals"]
+	var event: Dictionary = _selected_tournament_event()
 	var legal := _deck_is_legal()
 	if not legal.ok:
 		_set_footer(legal.reason)
@@ -5619,7 +4735,7 @@ func _run_tournament() -> void:
 	logs.append("Entered %s with %s. Entry paid: $%d." % [event.name, archetypes_by_id[deck_metrics.primary].name, event.entryFee])
 
 	for round_number in range(1, int(event.rounds) + 1):
-		var opponent := _generate_opponent(round_number, deck_metrics)
+		var opponent := _generate_opponent(round_number, deck_metrics, event)
 		var result := _simulate_combat_match(opponent, deck_metrics)
 		if result.won:
 			wins += 1
@@ -5666,38 +4782,131 @@ func _show_tournament_result(logs: Array, survived: bool) -> void:
 	_clear(content)
 	_update_status()
 
-	var panel := _add_panel(content, "Tournament Result", "#253044" if survived else "#442525")
+	var champion := bool(run.get("season_champion", false))
+	var result_summary: Dictionary = run.get("last_event_result", {})
+	var made_record := bool(result_summary.get("made_record", survived))
+	var panel_title := "Season Champion" if champion else "Tournament Result"
+	var panel_accent := "#2c3a25" if champion else ("#253044" if survived and made_record else ("#3f3222" if survived else "#442525"))
+	var panel := _add_panel(content, panel_title, panel_accent)
+	if champion:
+		_add_body_text(panel, "Win condition achieved: Worlds cleared. This run is complete.")
+	_add_event_result_summary(panel)
 	for line in logs:
 		_add_body_text(panel, line)
 
-	if survived:
-		var continue_button := _make_button("Return to Card Shop")
-		_connect_pressed(continue_button, _show_shop)
-		panel.add_child(continue_button)
+	if champion:
+		var restart_button := _make_button("Start New Season")
+		_connect_pressed(restart_button, _show_start)
+		panel.add_child(restart_button)
+	elif survived:
+		if _run_mode() == "season":
+			_add_season_result_action_buttons(panel)
+		else:
+			var continue_button := _make_button("Return to Card Shop")
+			_connect_pressed(continue_button, _show_shop)
+			panel.add_child(continue_button)
 	else:
 		var restart_button := _make_button("Start New Run")
 		_connect_pressed(restart_button, _show_start)
 		panel.add_child(restart_button)
 
 
-func _generate_opponent(round_number: int, deck_metrics: Dictionary) -> Dictionary:
-	var names := ["Mina", "Owen", "Priya", "Cal", "Nico", "Sam", "Jules", "Iris"]
-	if round_number == 3:
-		var boss_archetype: String = _predator_archetype(String(deck_metrics.primary))
-		return {
-			"name": "Local Rival Tess",
-			"archetype": boss_archetype,
-			"quality": 52.0 + float(run.week) * 1.8,
-			"tags": archetypes_by_id[boss_archetype].tags
-		}
+func _add_season_result_action_buttons(parent: Node) -> void:
+	var actions := HBoxContainer.new()
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_theme_constant_override("separation", 8)
+	parent.add_child(actions)
 
-	var archetype_id: String = _weighted_meta_pick()
-	return {
-		"name": names[rng.randi_range(0, names.size() - 1)],
-		"archetype": archetype_id,
-		"quality": 43.0 + float(round_number) * 3.0 + float(run.week) * 1.2 + rng.randf_range(-3.0, 3.0),
-		"tags": archetypes_by_id[archetype_id].tags
-	}
+	var summary: Dictionary = run.get("last_event_result", {})
+	var made_record := bool(summary.get("made_record", true))
+	if not made_record:
+		var event_id := String(summary.get("event_id", _selected_season_event_id()))
+		var event := _season_event_by_id(event_id)
+		var retry_button := _make_button("Retry %s" % String(event.get("name", event_id)))
+		retry_button.disabled = not _deck_is_legal().ok or int(run.get("money", 0)) < int(event.get("entryFee", 0))
+		_style_button(retry_button, "action")
+		_connect_pressed(retry_button, _show_tournament)
+		actions.add_child(retry_button)
+
+	var current_pack: Array = run.get("current_pack", [])
+	if int(run.get("prize_packs", 0)) > 0 or not current_pack.is_empty():
+		var pack_button := _make_button("Open Prize Packs (%d)" % int(run.get("prize_packs", 0)))
+		_style_button(pack_button, "action")
+		_connect_pressed(pack_button, _open_reward_pack_flow)
+		actions.add_child(pack_button)
+
+	var shop_button := _make_button("Visit Card Shop")
+	_connect_pressed(shop_button, _show_shop)
+	actions.add_child(shop_button)
+
+	var calendar_button := _make_button("View Calendar")
+	_connect_pressed(calendar_button, _show_season_run)
+	actions.add_child(calendar_button)
+
+
+func _open_reward_pack_flow() -> void:
+	var current_pack: Array = run.get("current_pack", [])
+	if not current_pack.is_empty():
+		_show_packs()
+		return
+	if int(run.get("prize_packs", 0)) > 0:
+		_open_prize_pack()
+		return
+	_show_packs()
+
+
+func _add_event_result_summary(parent: Node) -> void:
+	var summary: Dictionary = run.get("last_event_result", {})
+	if summary.is_empty():
+		return
+	var made_record := bool(summary.get("made_record", false))
+	var champion := bool(summary.get("season_champion", false))
+	var run_over := bool(summary.get("run_over", false))
+	var outcome := "Advanced"
+	if champion:
+		outcome = "Season Won"
+	elif not made_record and run_over:
+		outcome = "Season Ended"
+	elif not made_record:
+		outcome = "Retry Event"
+	_add_body_text(parent, "%s Result: %s" % [String(summary.get("event_name", "Event")), outcome])
+	_add_body_text(parent, "Record: %d-%d | Required: %d win(s) | Rounds: %d" % [
+		int(summary.get("wins", 0)),
+		int(summary.get("losses", 0)),
+		int(summary.get("required_wins", 0)),
+		int(summary.get("rounds", 0))
+	])
+	if made_record:
+		_add_body_text(parent, "Rewards: $%d | Prize packs: %d" % [
+			int(summary.get("reward_money", 0)),
+			int(summary.get("reward_packs", 0))
+		])
+		if not champion:
+			_add_body_text(parent, "Next calendar event: %s" % String(summary.get("next_event_name", "Next Event")))
+	else:
+		_add_body_text(parent, "Season lives: %d/%d%s" % [
+			int(summary.get("lives_remaining", 0)),
+			int(summary.get("max_lives", 0)),
+			" | Lost 1 life" if int(summary.get("lives_lost", 0)) > 0 else ""
+		])
+		if not run_over:
+			_add_body_text(parent, "Retry available: %s stays selected on the calendar." % String(summary.get("event_name", "This event")))
+
+
+func _generate_opponent(round_number: int, deck_metrics: Dictionary, event: Dictionary = {}) -> Dictionary:
+	return tournament_service.generate_opponent(self, round_number, deck_metrics, event)
+
+
+func _difficulty_opponent_quality_bonus() -> float:
+	return tournament_service.difficulty_opponent_quality_bonus(self)
+
+
+func _season_round_first_side() -> String:
+	return tournament_service.season_round_first_side(self)
+
+
+func _opponent_deck_for_round(opponent_archetype: String, round_number: int, event: Dictionary = {}) -> Dictionary:
+	return tournament_service.opponent_deck_for_round(self, opponent_archetype, round_number, event)
 
 
 func _weighted_meta_pick() -> String:
@@ -5706,7 +4915,7 @@ func _weighted_meta_pick() -> String:
 	for archetype_id in ARCHETYPE_ORDER:
 		cursor += float(run.meta.get(archetype_id, 0.0))
 		if roll <= cursor:
-				return String(archetype_id)
+			return String(archetype_id)
 	return String(ARCHETYPE_ORDER.back())
 
 
@@ -5715,52 +4924,11 @@ func _predator_archetype(archetype_id: String) -> String:
 
 
 func _simulate_combat_match(opponent: Dictionary, deck_metrics: Dictionary) -> Dictionary:
-	var opponent_deck := _deck_entries_to_dict(archetypes_by_id[String(opponent.archetype)].get("starterDeck", []))
-	var player_game_wins := 0
-	var opponent_game_wins := 0
-	var game_number := 1
-	var game_summaries: Array = []
-
-	while player_game_wins < 2 and opponent_game_wins < 2:
-		var seed_value := rng.randi()
-		var result: Dictionary = combat_service.auto_play_game(run.deck, String(deck_metrics.primary), opponent_deck, String(opponent.archetype), seed_value)
-		if String(result.get("winner", "")) == "player":
-			player_game_wins += 1
-		else:
-			opponent_game_wins += 1
-
-		game_summaries.append("Game %d: %s on turn %d. Life %d-%d. Seed %d." % [
-			game_number,
-			"Won" if String(result.get("winner", "")) == "player" else "Lost",
-			int(result.get("turn", 0)),
-			int(result.get("player", {}).get("life", 0)),
-			int(result.get("opponent", {}).get("life", 0)),
-			seed_value
-		])
-		game_number += 1
-
-	return {
-		"won": player_game_wins > opponent_game_wins,
-		"player_game_wins": player_game_wins,
-		"opponent_game_wins": opponent_game_wins,
-		"display_probability": _estimate_match_probability(opponent, deck_metrics),
-		"game_summaries": game_summaries
-	}
+	return tournament_service.simulate_combat_match(self, opponent, deck_metrics)
 
 
 func _estimate_match_probability(opponent: Dictionary, deck_metrics: Dictionary) -> float:
-	var player_score := float(deck_metrics.score)
-	player_score += _matchup_tech_bonus(opponent.tags)
-	player_score += rng.randf_range(-2.0, 2.0)
-
-	var opponent_score := float(opponent.quality)
-	var matchup_mod := 0.0
-	var player_archetype: Dictionary = archetypes_by_id[deck_metrics.primary]
-	if player_archetype.get("matchups", {}).has(opponent.archetype):
-		matchup_mod = float(player_archetype.matchups[opponent.archetype])
-
-	var base_probability: float = clamp(0.5 + ((player_score - opponent_score) * 0.018) + matchup_mod, 0.08, 0.92)
-	return base_probability
+	return tournament_service.estimate_match_probability(self, opponent, deck_metrics)
 
 
 func _matchup_tech_bonus(target_tags: Array) -> float:
@@ -5938,6 +5106,45 @@ func _add_panel(parent: Node, title: String, accent: String = "#202734") -> VBox
 		var label := Label.new()
 		label.text = title
 		label.add_theme_font_size_override("font_size", 14 if compact_duel else 18)
+		label.add_theme_color_override("font_color", Color("#f3efe4"))
+		box.add_child(label)
+
+	return box
+
+
+func _add_bordered_panel(parent: Node, title: String, accent: String, border: String, border_width: int = 2) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(accent)
+	style.border_color = Color(border)
+	style.border_width_left = border_width
+	style.border_width_right = border_width
+	style.border_width_top = border_width
+	style.border_width_bottom = border_width
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", style)
+	parent.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 6)
+	margin.add_child(box)
+
+	if title != "":
+		var label := Label.new()
+		label.text = title
+		label.add_theme_font_size_override("font_size", 20)
 		label.add_theme_color_override("font_color", Color("#f3efe4"))
 		box.add_child(label)
 
@@ -6198,9 +5405,18 @@ func _update_status() -> void:
 		return
 	var main_count := _deck_total(run.deck)
 	var side_count := _deck_total(run.sideboard)
-	status_label.text = "Week %d | $%d | Main %d/%d | Side %d/%d" % [
+	var difficulty := _difficulty_data(_run_difficulty_id())
+	var life_text := ""
+	if _run_mode() == "season":
+		life_text = " | Lives %d/%d" % [
+			int(run.get("season_lives", 0)),
+			int(run.get("max_season_lives", 0))
+		]
+	status_label.text = "Week %d | $%d | %s Border%s | Main %d/%d | Side %d/%d" % [
 		int(run.week),
 		int(run.money),
+		String(difficulty.get("name", "White")),
+		life_text,
 		main_count,
 		MAIN_DECK_SIZE,
 		side_count,
@@ -6241,7 +5457,13 @@ func _load_run_from_disk() -> void:
 		run.combat_lab_opponent = _predator_archetype(String(metrics.primary))
 	_generate_shop_inventory()
 	_set_footer(result.message)
-	_show_shop()
+	match _run_mode():
+		"season":
+			_show_season_run()
+		"unselected":
+			_show_run_path_choice()
+		_:
+			_show_shop()
 
 
 func _migrate_legacy_run_archetypes() -> void:

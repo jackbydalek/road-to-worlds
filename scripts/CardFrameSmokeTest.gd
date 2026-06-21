@@ -50,8 +50,51 @@ func _run() -> void:
 	if _count_named_nodes(main, "CombatCardFrameHealthStat") == 0:
 		_fail("Card frame smoke did not render combat card health chips.")
 		return
+	if _count_named_nodes(main, "CombatCardFrameCombatStats") > 0:
+		_fail("Card frame smoke rendered the removed center stat line.")
+		return
+	var rarity_symbol := _find_named_node(main, "CombatCardFrameRarity")
+	if rarity_symbol == null or not rarity_symbol is Label or (rarity_symbol as Label).text != "•":
+		_fail("Card frame smoke did not render common rarity as a dot.")
+		return
+	if _count_named_nodes(main, "CombatCardFrameCostHalo") == 0:
+		_fail("Card frame smoke did not render the focus orb flair.")
+		return
+	var printed_card := _find_named_node(main, "CombatCardFramePrintedCard")
+	if printed_card == null or not printed_card is Control:
+		_fail("Card frame smoke did not render a printed card face.")
+		return
+	var printed_size: Vector2 = (printed_card as Control).custom_minimum_size
+	if printed_size.y <= printed_size.x * 1.20:
+		_fail("Card frame smoke rendered a horizontally squashed printed card face.")
+		return
+	var frame_texture := _find_named_node(main, "CombatCardFrameFrameTexture")
+	if frame_texture == null or not frame_texture is TextureRect:
+		_fail("Card frame smoke did not render the printed frame texture.")
+		return
+	if (frame_texture as TextureRect).expand_mode != TextureRect.EXPAND_IGNORE_SIZE:
+		_fail("Card frame smoke rendered a frame texture that can crop instead of scale.")
+		return
+	if main.card_frame_factory._printed_frame_texture_path("threat_aggro") != "res://assets/card_frames/threat_aggro_silver.png":
+		_fail("Card frame smoke did not route threat cards to the threat frame.")
+		return
+	if main.card_frame_factory._printed_frame_texture_path("action_engine_aggro") != "res://assets/card_frames/action_or_engine_aggro_silver.png":
+		_fail("Card frame smoke did not route action/engine cards to the shared frame.")
+		return
+	if main.card_frame_factory._printed_frame_texture_path("threat_generic") != "res://assets/card_frames/threat_generic_silver.png":
+		_fail("Card frame smoke did not route neutral threat cards to the generic frame.")
+		return
+	if main.card_frame_factory._printed_frame_texture_path("action_engine_generic") != "res://assets/card_frames/action_or_engine_generic_silver.png":
+		_fail("Card frame smoke did not route neutral action/engine cards to the generic frame.")
+		return
+	if main._card_frame_template_id(main.cards_by_id["red_spark_runner"]) != "threat_aggro":
+		_fail("Card frame smoke did not classify threat cards for the aggro threat frame.")
+		return
+	if main._card_frame_template_id(main.cards_by_id["red_quick_spark"]) != "action_engine_aggro":
+		_fail("Card frame smoke did not classify action cards for the aggro action/engine frame.")
+		return
 
-	print("Card frame smoke rendered reusable frames in combat UI.")
+	print("Card frame smoke rendered archetype frames in combat UI.")
 	quit(0)
 
 
@@ -60,6 +103,16 @@ func _count_named_nodes(node: Node, target_name: String) -> int:
 	for child in node.get_children():
 		count += _count_named_nodes(child, target_name)
 	return count
+
+
+func _find_named_node(node: Node, target_name: String) -> Node:
+	if node.name == target_name:
+		return node
+	for child in node.get_children():
+		var found := _find_named_node(child, target_name)
+		if found != null:
+			return found
+	return null
 
 
 func _fail(message: String) -> void:
