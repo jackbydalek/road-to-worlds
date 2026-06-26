@@ -1,0 +1,115 @@
+[gd_scene format=3 uid="uid://cpk43dopsnng8"]
+
+[ext_resource type="Texture2D" uid="uid://bb663as1w3kyk" path="res://assets/card pack/Untitled.png" id="1_25ae7"]
+
+[node name="Control" type="Node2D" unique_id=375189134]
+
+[node name="TableBackground" type="ColorRect" parent="." unique_id=275513703]
+offset_left = 6.0
+offset_top = 11.0
+offset_right = 1436.0
+offset_bottom = 897.0
+color = Color(0.08, 0.065, 0.05, 1)
+
+[node name="PackButton" type="TextureButton" parent="." unique_id=1458735756]
+offset_left = 510.0
+offset_top = 245.0
+offset_right = 840.0
+offset_bottom = 787.0
+
+[node name="Untitled" type="Sprite2D" parent="PackButton" unique_id=1588814902]
+position = Vector2(172, 234)
+texture = ExtResource("1_25ae7")
+
+[node name="CardFan" type="Control" parent="." unique_id=1065774735]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 32.0
+offset_top = 333.0
+offset_right = 1410.0
+offset_bottom = 885.0
+
+[node name="PackCardSlot0" type="TextureButton" parent="CardFan" unique_id=1007009109]
+layout_mode = 0
+offset_left = 92.0
+offset_top = 176.0
+offset_right = 260.0
+offset_bottom = 412.0
+rotation = -0.13
+
+[node name="PackCardSlot1" type="TextureButton" parent="CardFan" unique_id=1250817246]
+layout_mode = 0
+offset_left = 250.0
+offset_top = 112.0
+offset_right = 418.0
+offset_bottom = 348.0
+rotation = -0.09
+
+[node name="PackCardSlot2" type="TextureButton" parent="CardFan" unique_id=1748900589]
+layout_mode = 0
+offset_left = 414.0
+offset_top = 72.0
+offset_right = 582.0
+offset_bottom = 308.0
+rotation = -0.05
+
+[node name="PackCardSlot3" type="TextureButton" parent="CardFan" unique_id=277664500]
+layout_mode = 0
+offset_left = 582.0
+offset_top = 52.0
+offset_right = 750.0
+offset_bottom = 288.0
+rotation = -0.015
+
+[node name="PackCardSlot4" type="TextureButton" parent="CardFan" unique_id=471790530]
+layout_mode = 0
+offset_left = 750.0
+offset_top = 52.0
+offset_right = 918.0
+offset_bottom = 288.0
+rotation = 0.015
+
+[node name="PackCardSlot5" type="TextureButton" parent="CardFan" unique_id=990114541]
+layout_mode = 0
+offset_left = 918.0
+offset_top = 72.0
+offset_right = 1086.0
+offset_bottom = 308.0
+rotation = 0.05
+
+[node name="PackCardSlot6" type="TextureButton" parent="CardFan" unique_id=2047921630]
+layout_mode = 0
+offset_left = 1082.0
+offset_top = 112.0
+offset_right = 1250.0
+offset_bottom = 348.0
+rotation = 0.09
+
+[node name="PackCardSlot7" type="TextureButton" parent="CardFan" unique_id=120615128]
+layout_mode = 0
+offset_left = 1240.0
+offset_top = 176.0
+offset_right = 1408.0
+offset_bottom = 412.0
+rotation = 0.13
+
+[node name="PackStatusLabel" type="Label" parent="." unique_id=1840105955]
+offset_left = 84.0
+offset_top = 72.0
+offset_right = 844.0
+offset_bottom = 118.0
+text = "PackStatusLabel"
+
+[node name="DoneButton" type="Button" parent="." unique_id=2101028036]
+offset_left = 336.0
+offset_top = 805.0
+offset_right = 542.4
+offset_bottom = 863.0
+text = "Done"
+
+[node name="RevealAllButton" type="Button" parent="." unique_id=791025081]
+offset_left = 780.0
+offset_top = 811.0
+offset_right = 998.4
+offset_bottom = 871.0
+text = "reveal all"

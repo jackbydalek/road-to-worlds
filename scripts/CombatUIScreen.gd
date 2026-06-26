@@ -191,9 +191,15 @@ func _add_ui_combat_header(host, parent: Node, state: Dictionary, is_over: bool,
 	host._connect_pressed(cancel_selection, host._manual_clear_selection)
 	row.add_child(cancel_selection)
 
-	var clear_button: Button = host._make_button("Forfeit" if host._season_tournament_active() else "Clear")
-	host._connect_pressed(clear_button, host._clear_manual_battle)
-	row.add_child(clear_button)
+	if host._season_tournament_active():
+		var forfeit_button: Button = host._make_button("Forfeit")
+		host._connect_pressed(forfeit_button, host._clear_manual_battle)
+		row.add_child(forfeit_button)
+	else:
+		var restart_button: Button = host._make_button("Restart")
+		restart_button.disabled = not bool(host._deck_is_legal().get("ok", false))
+		host._connect_pressed(restart_button, host._start_manual_combat_lab_battle)
+		row.add_child(restart_button)
 
 
 func _add_ui_combat_battle_log(host, parent: Node, state: Dictionary) -> void:
@@ -239,6 +245,7 @@ func _add_ui_combat_battle_log(host, parent: Node, state: Dictionary) -> void:
 func _add_ui_combat_duel(host, parent: Node, state: Dictionary, is_over: bool, phase: String) -> void:
 	var player: Dictionary = state.get("player", {})
 	var opponent: Dictionary = state.get("opponent", {})
+	var layout: Dictionary = host._ui_combat_layout_profile()
 
 	var battlefield: Control = host._add_manual_battlefield(parent)
 	battlefield.name = "UICombatBattlefield"
@@ -253,11 +260,11 @@ func _add_ui_combat_duel(host, parent: Node, state: Dictionary, is_over: bool, p
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.set_anchors_preset(Control.PRESET_FULL_RECT)
-	arena.offset_left = 0
+	arena.offset_left = float(layout.get("side_gutter_left", 0.0))
 	arena.offset_top = 0
-	arena.offset_right = 0
+	arena.offset_right = -float(layout.get("side_gutter_right", 0.0))
 	arena.offset_bottom = 0
-	arena.add_theme_constant_override("separation", 4)
+	arena.add_theme_constant_override("separation", int(layout.get("zone_gap", 4)))
 	battlefield.add_child(arena)
 	host._add_manual_action_bubble_layer(battlefield)
 
@@ -280,10 +287,15 @@ func _add_ui_combat_duel(host, parent: Node, state: Dictionary, is_over: bool, p
 	host._add_manual_inspect_panel(battlefield, state)
 	if is_over and host._season_tournament_active():
 		_add_ui_combat_season_result_overlay(host, battlefield, state)
+	elif is_over:
+		_add_ui_combat_debug_result_overlay(host, battlefield, state)
 
 
 func _add_ui_combat_season_result_overlay(host, parent: Node, state: Dictionary) -> void:
 	var active: Dictionary = host.run.get("active_tournament", {})
+	var layout: Dictionary = host._ui_combat_layout_profile()
+	var modal_width := float(layout.get("modal_width", 420.0))
+	var modal_height := float(layout.get("modal_height", 192.0))
 	var panel := PanelContainer.new()
 	panel.name = "SeasonRoundResultOverlay"
 	panel.z_index = 140
@@ -291,10 +303,10 @@ func _add_ui_combat_season_result_overlay(host, parent: Node, state: Dictionary)
 	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -210.0
-	panel.offset_top = -96.0
-	panel.offset_right = 210.0
-	panel.offset_bottom = 96.0
+	panel.offset_left = -modal_width * 0.5
+	panel.offset_top = -modal_height * 0.5
+	panel.offset_right = modal_width * 0.5
+	panel.offset_bottom = modal_height * 0.5
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.06, 0.09, 0.13, 0.9)
 	style.border_color = Color("#88bfff") if String(state.get("winner", "")) == "player" else Color("#ff8f7f")
@@ -345,17 +357,92 @@ func _add_ui_combat_season_result_overlay(host, parent: Node, state: Dictionary)
 	box.add_child(record_button)
 
 
+func _add_ui_combat_debug_result_overlay(host, parent: Node, state: Dictionary) -> void:
+	var layout: Dictionary = host._ui_combat_layout_profile()
+	var modal_width := float(layout.get("modal_width", 420.0))
+	var modal_height := float(layout.get("modal_height", 210.0))
+	var panel := PanelContainer.new()
+	panel.name = "UIDebugCombatResultOverlay"
+	panel.z_index = 140
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -modal_width * 0.5
+	panel.offset_top = -modal_height * 0.5
+	panel.offset_right = modal_width * 0.5
+	panel.offset_bottom = modal_height * 0.5
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.09, 0.13, 0.9)
+	style.border_color = Color("#88bfff") if String(state.get("winner", "")) == "player" else Color("#ff8f7f")
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", style)
+	parent.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
+
+	var title := Label.new()
+	title.text = "Exhibition Complete"
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", Color("#f3efe4"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+
+	var winner_text := "Win" if String(state.get("winner", "")) == "player" else "Loss"
+	var summary := Label.new()
+	summary.text = "%s | Turn %d | Seed %d" % [
+		winner_text,
+		int(state.get("turn", 0)),
+		int(state.get("seed", 0))
+	]
+	summary.add_theme_color_override("font_color", Color("#c7d0df"))
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(summary)
+
+	var restart_button: Button = host._make_button("Restart UI Battle")
+	restart_button.name = "UIDebugCombatRestartButton"
+	host._style_button(restart_button, "action")
+	restart_button.disabled = not bool(host._deck_is_legal().get("ok", false))
+	host._connect_pressed(restart_button, host._start_manual_combat_lab_battle)
+	box.add_child(restart_button)
+
+	var lab_button: Button = host._make_button("Open Combat Lab")
+	host._connect_pressed(lab_button, host._show_combat_lab)
+	box.add_child(lab_button)
+
+
 func _add_ui_combat_opponent_hand(host, parent: Node, opponent: Dictionary, state: Dictionary) -> void:
+	var layout: Dictionary = host._ui_combat_layout_profile()
 	var zone: VBoxContainer = host._add_manual_zone(parent, "Hand Zone", "OpponentHand", "#182537")
 	zone.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	var fan := Control.new()
 	fan.name = "ManualOpponentFanHand"
-	fan.custom_minimum_size = Vector2(0, 34)
+	fan.custom_minimum_size = Vector2(0, float(layout.get("opponent_hand_fan_height", 34.0)))
 	fan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fan.mouse_filter = Control.MOUSE_FILTER_STOP
 	fan.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if host._manual_selected_can_target_face(host.run.get("manual_combat", {})):
+				fan.accept_event()
+				host._manual_target_face()
+				return
 			if host._manual_selection_can_try_face(host.run.get("manual_combat", {})):
 				fan.accept_event()
 			if event.double_click and host._manual_selected_can_target_face(host.run.get("manual_combat", {})):
@@ -368,8 +455,8 @@ func _add_ui_combat_opponent_hand(host, parent: Node, opponent: Dictionary, stat
 		host._add_manual_empty_zone_slot(fan, "Empty Hand")
 	else:
 		for i in range(hand_count):
-			_add_ui_combat_blank_hand_card(fan, i)
-		call_deferred("_layout_ui_combat_opponent_hand", fan)
+			_add_ui_combat_blank_hand_card(host, fan, i)
+		call_deferred("_layout_ui_combat_opponent_hand", host, fan)
 	if host._manual_selection_can_try_face(state):
 		_add_ui_combat_face_target_anchor(fan, host._manual_selected_can_target_face(state))
 
@@ -399,10 +486,11 @@ func _add_ui_combat_face_target_anchor(parent: Control, selected_can_face: bool)
 	parent.add_child(anchor)
 
 
-func _add_ui_combat_blank_hand_card(parent: Node, index: int) -> void:
+func _add_ui_combat_blank_hand_card(host, parent: Node, index: int) -> void:
+	var layout: Dictionary = host._ui_combat_layout_profile()
 	var back := PanelContainer.new()
 	back.name = "ManualCardBackSlot_%d" % (index + 1)
-	back.custom_minimum_size = Vector2(32, 40)
+	back.custom_minimum_size = layout.get("opponent_card_back_size", Vector2(32, 40))
 	back.size = back.custom_minimum_size
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#172a36")
@@ -419,9 +507,10 @@ func _add_ui_combat_blank_hand_card(parent: Node, index: int) -> void:
 	parent.add_child(back)
 
 
-func _layout_ui_combat_opponent_hand(fan: Control) -> void:
+func _layout_ui_combat_opponent_hand(host, fan: Control) -> void:
 	if not is_instance_valid(fan):
 		return
+	var layout: Dictionary = host._ui_combat_layout_profile()
 	var backs: Array = []
 	for child in fan.get_children():
 		if child is Control and String(child.name).begins_with("ManualCardBackSlot"):
@@ -433,7 +522,11 @@ func _layout_ui_combat_opponent_hand(fan: Control) -> void:
 	var available_width := fan.size.x
 	if available_width <= 1.0:
 		available_width = max(card_size.x, card_size.x + 34.0 * float(max(0, count - 1)))
-	var spread: float = 0.0 if count == 1 else clamp((available_width - card_size.x) / float(count - 1), 30.0, 46.0)
+	var spread: float = 0.0 if count == 1 else clamp(
+		(available_width - card_size.x) / float(count - 1),
+		float(layout.get("opponent_fan_spread_min", 30.0)),
+		float(layout.get("opponent_fan_spread_max", 46.0))
+	)
 	var total_width: float = card_size.x + spread * float(max(0, count - 1))
 	var start_x: float = max(0.0, (available_width - total_width) * 0.5)
 	var center_index: float = float(count - 1) * 0.5
@@ -442,12 +535,16 @@ func _layout_ui_combat_opponent_hand(fan: Control) -> void:
 		var offset: float = float(index) - center_index
 		card_panel.size = card_panel.custom_minimum_size
 		card_panel.pivot_offset = card_panel.custom_minimum_size * 0.5
-		card_panel.position = Vector2(start_x + spread * float(index), -6.0 + abs(offset) * 1.5)
+		card_panel.position = Vector2(start_x + spread * float(index), -4.0 + abs(offset) * 1.2)
 		card_panel.rotation_degrees = offset * 8.0
 		card_panel.z_index = index
 
 
 func _add_ui_combat_resource_readout(host, parent: Node, combatant: Dictionary, is_player: bool) -> void:
+	var layout: Dictionary = host._ui_combat_layout_profile()
+	var panel_width := float(layout.get("resource_width", 176.0))
+	var panel_height := float(layout.get("resource_height", 98.0))
+	var panel_margin := float(layout.get("inspect_margin", 14.0))
 	var panel := PanelContainer.new()
 	panel.name = "ManualPlayerResourceReadout" if is_player else "ManualOpponentResourceReadout"
 	panel.z_index = 110
@@ -457,19 +554,19 @@ func _add_ui_combat_resource_readout(host, parent: Node, combatant: Dictionary, 
 		panel.anchor_top = 1.0
 		panel.anchor_right = 0.0
 		panel.anchor_bottom = 1.0
-		panel.offset_left = 20.0
-		panel.offset_top = -116.0
-		panel.offset_right = 196.0
-		panel.offset_bottom = -18.0
+		panel.offset_left = panel_margin
+		panel.offset_top = -panel_height - panel_margin
+		panel.offset_right = panel_margin + panel_width
+		panel.offset_bottom = -panel_margin
 	else:
 		panel.anchor_left = 1.0
 		panel.anchor_top = 0.0
 		panel.anchor_right = 1.0
 		panel.anchor_bottom = 0.0
-		panel.offset_left = -222.0
-		panel.offset_top = 18.0
-		panel.offset_right = -24.0
-		panel.offset_bottom = 124.0
+		panel.offset_left = -panel_width - panel_margin
+		panel.offset_top = panel_margin
+		panel.offset_right = -panel_margin
+		panel.offset_bottom = panel_margin + panel_height
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.12, 0.17, 0.72)
 	style.border_color = Color(0.18, 0.27, 0.36, 0.62)
@@ -503,12 +600,16 @@ func _add_ui_combat_resource_readout(host, parent: Node, combatant: Dictionary, 
 		int(combatant.get("max_focus", 0)),
 		host._manual_restricted_focus_text(combatant)
 	]
-	readout.add_theme_font_size_override("font_size", 22)
+	readout.add_theme_font_size_override("font_size", int(layout.get("resource_font", 22)))
 	readout.add_theme_color_override("font_color", Color("#f3efe4"))
 	box.add_child(readout)
 
 
 func _add_ui_combat_end_turn_overlay(host, parent: Node, is_over: bool, phase: String) -> void:
+	var layout: Dictionary = host._ui_combat_layout_profile()
+	var panel_width := float(layout.get("context_width", 166.0))
+	var panel_height := float(layout.get("context_height", 46.0))
+	var panel_margin := float(layout.get("inspect_margin", 14.0))
 	var panel := PanelContainer.new()
 	panel.name = "ManualContextPanel"
 	panel.z_index = 115
@@ -516,10 +617,10 @@ func _add_ui_combat_end_turn_overlay(host, parent: Node, is_over: bool, phase: S
 	panel.anchor_top = 0.5
 	panel.anchor_right = 1.0
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -194.0
-	panel.offset_top = -24.0
-	panel.offset_right = -28.0
-	panel.offset_bottom = 22.0
+	panel.offset_left = -panel_width - panel_margin
+	panel.offset_top = -panel_height * 0.5
+	panel.offset_right = -panel_margin
+	panel.offset_bottom = panel_height * 0.5
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.13, 0.2, 0.78)
 	style.border_color = Color("#05070a")
@@ -544,8 +645,8 @@ func _add_ui_combat_end_turn_overlay(host, parent: Node, is_over: bool, phase: S
 	var end_button: Button = host._make_button("End Turn")
 	end_button.name = "ManualEndTurnButton"
 	host._style_button(end_button, "action")
-	end_button.add_theme_font_size_override("font_size", 18)
-	end_button.custom_minimum_size = Vector2(150, 32)
+	end_button.add_theme_font_size_override("font_size", int(layout.get("context_button_font", 18)))
+	end_button.custom_minimum_size = Vector2(panel_width - 16.0, panel_height - 14.0)
 	end_button.disabled = is_over or phase != "player_main" or host._manual_has_pending_action()
 	host._connect_pressed(end_button, host._manual_end_turn)
 	margin.add_child(end_button)

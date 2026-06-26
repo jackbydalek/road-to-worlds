@@ -436,6 +436,36 @@ The MVP should prove four things:
 3. The metagame changes runs.
 4. Tournament failure creates tension.
 
+### Demo-First Structure
+
+The near-term product goal is to finish a Steam-ready demo first, then expand outward into the full Road to Worlds season. The demo should be treated as a complete short season rather than an unfinished opening chapter.
+
+Target demo arc:
+
+1. Weekly Locals 1: introduce starter choice, shop pressure, deck tuning, and tournament survival.
+2. Weekly Locals 2: show the metagame reacting, shop restocking, and the player adapting.
+3. League Cup: deliver a harder demo climax with a named rival or boss and a clear qualification-style endpoint.
+4. Demo ending: show that Regionals, States, Nationals, and Worlds continue in the full game.
+
+The demo does not require all full-game cards, starter decks, archetypes, bosses, or tournament tiers. It should ship with a curated subset that makes the loop feel complete: a small number of polished starters, enough cards for meaningful pack pulls and singles purchases, a readable metagame shift between weeks, and a League Cup that tests what the player learned.
+
+After the demo is stable, production should expand by adding later season tiers, more starters, more cards, deeper rival arcs, sideboarding and combat depth, stronger metagame simulation, and long-run save/progression polish.
+
+### Demo Screen Flow
+
+The season calendar should be the player's main season map. It shows every scheduled event in the current run, including completed events, the next playable event, and locked future events.
+
+Target flow:
+
+1. Starter selection creates the run and opens the season calendar.
+2. The player clicks the next available calendar event.
+3. That event becomes the active upcoming event and takes the player to the card shop prep screen.
+4. The shop screen lets the player buy packs, buy singles, open rewards, read metagame notes, and tune the deck specifically for the selected event.
+5. Registration from the shop starts the event.
+6. Clearing the event returns to the calendar, advances the season, reveals rewards and metagame movement, and unlocks the next event.
+
+For the demo, the calendar should visibly contain Weekly Locals 1, Weekly Locals 2, and League Cup, with later full-game events teased as locked continuation markers. Clicking locked future events can show preview copy, but only the next available event should move the player into shop prep.
+
 ### MVP Feature Set
 
 Content:
@@ -515,4 +545,3 @@ This can later evolve into a more visual turn-based game without throwing away t
 - Learning how different metas evolve
 - Chasing Worlds wins with every archetype
 - Seed sharing and daily/weekly challenge seasons
-

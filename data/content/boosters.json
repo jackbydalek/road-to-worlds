@@ -5,12 +5,20 @@
       "name": "Base Set Booster",
       "price": 5,
       "slots": [
-        { "rarity": "common", "count": 4 },
+        { "rarity": "common", "count": 3 },
         { "rarity": "uncommon", "count": 2 },
-        { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" },
-        { "slotType": "wildcard", "count": 1, "rareChance": 0.08, "uncommonChance": 0.35, "mythicChance": 0.015 }
+        { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" }
+      ]
+    },
+    {
+      "id": "season_prize_pack",
+      "name": "Prize Pack",
+      "price": 0,
+      "slots": [
+        { "rarity": "common", "count": 1 },
+        { "rarity": "uncommon", "count": 1 },
+        { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" }
       ]
     }
   ]
 }
-

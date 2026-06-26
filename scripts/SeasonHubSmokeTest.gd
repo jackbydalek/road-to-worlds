@@ -19,39 +19,32 @@ func _run() -> void:
 	await process_frame
 
 	if main.current_screen != "season":
-		_fail("Season hub smoke did not enter the Season screen.")
+		_fail("Season hub smoke did not enter the season calendar screen.")
 		return
-	if _count_named_nodes(main, "SeasonHubCardShop") == 0:
-		_fail("Season hub smoke did not render the card shop hub.")
+	if _count_named_nodes(main, "SeasonCalendarMap") == 0:
+		_fail("Season hub smoke did not render the season calendar map.")
 		return
 	for hotspot in [
-		"SeasonHubPackWall",
-		"SeasonHubSinglesCase",
-		"SeasonHubDeckbuilderTable",
-		"SeasonHubRegisterDesk",
 		"SeasonHubEventCalendar",
-		"SeasonHubMenuBoard"
+		"SeasonHubHeader"
 	]:
 		if _count_named_nodes(main, hotspot) == 0:
-			_fail("Season hub smoke did not render hotspot: " + hotspot)
+			_fail("Season hub smoke did not render calendar element: " + hotspot)
 			return
 
-	if _count_named_nodes(main, "SeasonHubBoosterPack_0") == 0:
-		_fail("Season hub smoke did not render pack wall visuals.")
-		return
-	if _count_named_nodes(main, "SeasonHubSingleTile") == 0:
-		_fail("Season hub smoke did not render singles case previews.")
-		return
 	if _count_named_nodes(main, "SeasonHubCalendarEvent_weekly_locals") == 0:
 		_fail("Season hub smoke did not render Weekly Locals on the calendar.")
 		return
 
-	var register_button := _find_node_by_name(main, "SeasonHubRegisterButton") as Button
-	if register_button == null:
-		_fail("Season hub smoke did not render the register button.")
+	var weekly_button := _find_node_by_name(main, "SeasonHubCalendarButton_weekly_locals") as Button
+	if weekly_button == null:
+		_fail("Season hub smoke did not render the Weekly Locals prep button.")
 		return
-	if register_button.disabled:
-		_fail("Season hub smoke rendered register disabled for a legal starter deck.")
+	if weekly_button.disabled:
+		_fail("Season hub smoke rendered the next event prep button disabled.")
+		return
+	if weekly_button.text != "Prep":
+		_fail("Season hub smoke did not mark the selected next event as Prep.")
 		return
 
 	var worlds_button := _find_node_by_name(main, "SeasonHubCalendarButton_worlds") as Button
@@ -62,7 +55,18 @@ func _run() -> void:
 		_fail("Season hub smoke left the locked Worlds button enabled.")
 		return
 
-	print("Season hub smoke rendered card shop hotspots and calendar state.")
+	weekly_button.pressed.emit()
+	await process_frame
+	await process_frame
+
+	if main.current_screen != "shop":
+		_fail("Season hub smoke did not route next-event prep into the card shop.")
+		return
+	if _count_named_nodes(main, "CardShopStatusStrip") == 0:
+		_fail("Season hub smoke did not render the card shop prep screen after calendar selection.")
+		return
+
+	print("Season hub smoke rendered the calendar map and routed next-event prep to the card shop.")
 	quit(0)
 
 

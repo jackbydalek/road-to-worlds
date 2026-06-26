@@ -23,13 +23,15 @@ func try_begin_hand_card_drag(host, card_id: String, source_panel: Control) -> b
 		return false
 	if source_panel == null or not is_instance_valid(source_panel):
 		return false
+	clear_attacker_selection_for_hand_card(host)
 	free_orphan_hand_drag_ghosts(host)
 	var source_rect := source_panel.get_global_rect()
 	host.manual_drag_candidate = {
 		"kind": "hand_card",
 		"card_id": card_id,
 		"start_global": host.get_global_mouse_position(),
-		"source_global": source_rect.get_center()
+		"source_global": source_rect.get_center(),
+		"inspect_side": host._manual_inspect_side_for_global_x(source_rect.get_center().x)
 	}
 	return true
 
@@ -50,7 +52,8 @@ func try_begin_unit_attack_drag(host, source_panel: Control) -> bool:
 		"instance_id": instance_id,
 		"card_id": String(unit.get("card_id", "")),
 		"start_global": host.get_global_mouse_position(),
-		"source_global": source_rect.get_center()
+		"source_global": source_rect.get_center(),
+		"inspect_side": host._manual_inspect_side_for_global_x(source_rect.get_center().x)
 	}
 	return true
 
@@ -170,16 +173,18 @@ func finish_hand_card_drag(host, global_position: Vector2) -> void:
 			var clicked_kind := String(host.manual_drag_candidate.get("kind", "hand_card"))
 			var clicked_card_id := String(host.manual_drag_candidate.get("card_id", ""))
 			var clicked_instance_id := int(host.manual_drag_candidate.get("instance_id", -1))
+			var inspect_side := String(host.manual_drag_candidate.get("inspect_side", ""))
 			clear_hand_card_drag(host)
 			if clicked_kind == "attack":
 				var clicked_unit: Dictionary = host._manual_find_player_unit(host.run.manual_combat, clicked_instance_id)
 				if not clicked_unit.is_empty():
-					host._manual_select_attacker(clicked_instance_id)
+					host._manual_select_attacker(clicked_instance_id, inspect_side)
 			elif host.cards_by_id.has(clicked_card_id):
 				if host._manual_can_play_card(host.run.manual_combat, clicked_card_id):
-					host._manual_select_card(clicked_card_id)
+					clear_attacker_selection_for_hand_card(host)
+					host._manual_select_card(clicked_card_id, inspect_side)
 				else:
-					host._manual_set_inspect_card(clicked_card_id, "Hand", "", true)
+					host._manual_set_inspect_card(clicked_card_id, "Hand", "", true, inspect_side)
 					host.call_deferred("_show_active_combat_screen")
 		return
 
@@ -598,7 +603,7 @@ func apply_combat_card_motion(host, card_panel: Control, inspect_card_id: String
 				card_panel.accept_event()
 				if host.current_screen == "ui_combat" and event.double_click and handle_card_double_click(host, card_panel, inspect_zone):
 					return
-				if try_begin_hand_card_drag(host, inspect_card_id, card_panel):
+				if inspect_zone == "Hand" and try_begin_hand_card_drag(host, inspect_card_id, card_panel):
 					tween_control_feedback(host, card_panel, Vector2(1.035, 1.035), Color(1.10, 1.10, 1.10, 1.0), 0.06)
 					return
 				if try_begin_unit_attack_drag(host, card_panel):
@@ -610,11 +615,18 @@ func apply_combat_card_motion(host, card_panel: Control, inspect_card_id: String
 					if host._manual_unit_has_action_bubbles(host.run.get("manual_combat", {}), player_unit):
 						host._manual_select_attacker(player_instance_id)
 						return
+				if host.current_screen == "ui_combat" and inspect_zone == "Opponent Board":
+					var opponent_instance_id := opponent_unit_instance_id_from_panel(card_panel)
+					var opponent_unit: Dictionary = host._manual_find_opponent_unit(host.run.get("manual_combat", {}), opponent_instance_id)
+					if host._manual_selected_can_target_unit(host.run.get("manual_combat", {}), opponent_unit):
+						host._manual_target_unit(opponent_instance_id)
+						return
 				if inspect_card_id != "":
 					if host.current_screen == "ui_combat" and inspect_zone == "Hand" and host._manual_can_play_card(host.run.manual_combat, inspect_card_id):
-						host._manual_select_card(inspect_card_id)
+						clear_attacker_selection_for_hand_card(host)
+						host._manual_select_card(inspect_card_id, host._manual_inspect_side_for_card_panel(card_panel))
 						return
-					host._manual_set_inspect_card(inspect_card_id, inspect_zone, inspect_current, true)
+					host._manual_set_inspect_card(inspect_card_id, inspect_zone, inspect_current, true, host._manual_inspect_side_for_card_panel(card_panel))
 					if host.current_screen == "ui_combat":
 						host.call_deferred("_show_active_combat_screen")
 				tween_control_feedback(host, card_panel, Vector2(0.985, 0.985), Color(0.95, 0.95, 0.95, 1.0), 0.05)
@@ -625,6 +637,11 @@ func apply_combat_card_motion(host, card_panel: Control, inspect_card_id: String
 					return
 				tween_control_feedback(host, card_panel, Vector2(1.035, 1.035), Color(1.12, 1.12, 1.12, 1.0), 0.07)
 	)
+
+
+func clear_attacker_selection_for_hand_card(host) -> void:
+	if String(host.run.get("manual_selection", {}).get("kind", "")) == "attacker":
+		host.run.manual_selection = {}
 
 
 func handle_card_double_click(host, card_panel: Control, inspect_zone: String) -> bool:

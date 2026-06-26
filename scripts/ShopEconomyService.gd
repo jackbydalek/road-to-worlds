@@ -32,9 +32,14 @@ func open_prize_pack(target_run: Dictionary, booster_id: String, current_primary
 
 
 func start_pack(target_run: Dictionary, pack: Array) -> void:
+	for index in range(pack.size()):
+		var entry: Dictionary = pack[index]
+		entry.revealed = false
+		pack[index] = entry
 	target_run.current_pack = pack
 	target_run.revealed_pack = []
 	target_run.pack_index = 0
+	target_run.pack_opened = false
 
 
 func generate_pack(booster_id: String, current_primary: String) -> Array:
@@ -101,15 +106,44 @@ func rarity_rank(rarity: String) -> int:
 
 
 func reveal_next_card(target_run: Dictionary, current_primary: String) -> Dictionary:
-	if int(target_run.pack_index) >= target_run.current_pack.size():
-		return { "ok": false, "message": "Pack complete." }
-	_reveal_current_pack_card(target_run, current_primary)
-	return { "ok": true, "message": "" }
+	for index in range(target_run.current_pack.size()):
+		var entry: Dictionary = target_run.current_pack[index]
+		if not bool(entry.get("revealed", false)):
+			return reveal_pack_card(target_run, index, current_primary)
+	return { "ok": false, "message": "Pack complete." }
 
 
 func reveal_all_cards(target_run: Dictionary, current_primary: String) -> void:
-	while int(target_run.pack_index) < target_run.current_pack.size():
-		_reveal_current_pack_card(target_run, current_primary)
+	for index in range(target_run.current_pack.size()):
+		var entry: Dictionary = target_run.current_pack[index]
+		if not bool(entry.get("revealed", false)):
+			reveal_pack_card(target_run, index, current_primary)
+
+
+func reveal_pack_card(target_run: Dictionary, pack_index: int, current_primary: String) -> Dictionary:
+	if pack_index < 0 or pack_index >= target_run.get("current_pack", []).size():
+		return { "ok": false, "message": "That pack slot is empty." }
+
+	var entry: Dictionary = target_run.current_pack[pack_index]
+	if bool(entry.get("revealed", false)):
+		return { "ok": false, "message": "That card is already revealed." }
+
+	target_run.pack_opened = true
+	var card_id: String = String(entry.get("cardId", ""))
+	var owned_before := _owned_count(target_run, card_id)
+	_add_to_collection(target_run, card_id, 1)
+
+	var note := _pack_reveal_note(target_run, card_id, owned_before, current_primary)
+	entry.revealed = true
+	target_run.current_pack[pack_index] = entry
+	target_run.revealed_pack.append({
+		"cardId": card_id,
+		"note": note,
+		"packIndex": pack_index,
+		"rarity": String(entry.get("rarity", "common"))
+	})
+	target_run.pack_index = target_run.revealed_pack.size()
+	return { "ok": true, "message": "Revealed %s." % _card_name(card_id) }
 
 
 func card_matches_current_deck(card_id: String, current_primary: String) -> bool:
@@ -182,12 +216,7 @@ func card_price(target_run: Dictionary, card_id: String) -> int:
 	return max(1, int(ceil(float(base) * demand)))
 
 
-func _reveal_current_pack_card(target_run: Dictionary, current_primary: String) -> void:
-	var entry: Dictionary = target_run.current_pack[int(target_run.pack_index)]
-	var card_id: String = entry.cardId
-	var owned_before := _owned_count(target_run, card_id)
-	_add_to_collection(target_run, card_id, 1)
-
+func _pack_reveal_note(target_run: Dictionary, card_id: String, owned_before: int, current_primary: String) -> String:
 	var note := ""
 	if owned_before == 0:
 		note = "NEW"
@@ -199,8 +228,7 @@ func _reveal_current_pack_card(target_run: Dictionary, current_primary: String) 
 	if card_matches_current_deck(card_id, current_primary):
 		note += " | Fits deck"
 
-	target_run.revealed_pack.append({ "cardId": card_id, "note": note })
-	target_run.pack_index = int(target_run.pack_index) + 1
+	return note
 
 
 func deck_limit(card_id: String) -> int:

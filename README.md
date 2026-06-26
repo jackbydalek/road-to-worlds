@@ -45,6 +45,14 @@ Start here:
 - [Example Booster Data](data/boosters.example.json): sample pack slot definitions.
 - [Example Season Data](data/season.example.json): sample tournament tier definitions.
 
+## Current Product Direction
+
+The project should be structured demo-first, then expanded into the full season. The target Steam demo is a complete short arc: two Weekly Locals events leading into a League Cup climax, followed by a clear tease that the road continues into Regionals, States, Nationals, and Worlds in the full game.
+
+The demo does not need every planned card, starter deck, archetype, boss, or tournament tier. It should prioritize a polished and replayable slice: a curated card pool, a small set of strong starter archetypes, satisfying pack/shop/deckbuilder decisions, readable tournament results, visible metagame movement between weeks, and a memorable League Cup endpoint.
+
+After the demo loop is stable, the full game should expand outward from the same structure by adding later tournament tiers, more archetypes, more cards, deeper rival/boss content, stronger metagame simulation, and longer-run polish.
+
 The recommended MVP path is to build a data-driven prototype first: collection, deckbuilder, abstract match simulator, tournament ladder, boosters, shop, and then dynamic metagame updates.
 
 ## Validation Commands
@@ -57,6 +65,9 @@ env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack
 for test in \
   RunStateSmokeTest.gd \
   ShopEconomySmokeTest.gd \
+  CardShopScreenSmokeTest.gd \
+  PackOpeningSmokeTest.gd \
+  SeasonLoopSmokeTest.gd \
   CardFrameSmokeTest.gd \
   SeasonHubSmokeTest.gd \
   DeckbuilderHoverSmokeTest.gd \
@@ -69,3 +80,5 @@ do
   env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script "res://scripts/$test"
 done
 ```
+
+Deferred next pass: make event completion feel like a new week by explicitly presenting week advancement, shop restock, meta report changes, money, and prize rewards as a transition.

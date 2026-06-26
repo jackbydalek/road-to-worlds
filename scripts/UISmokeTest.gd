@@ -12,6 +12,49 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 
+	main._start_new_run_with_mode("flightless_birds", "debug", "white")
+	main._show_ui_combat()
+	await process_frame
+	await process_frame
+	if main.run.get("manual_combat", {}).is_empty():
+		push_error("UI smoke test did not auto-start debug UI Combat from the debug nav tile.")
+		quit(1)
+		return
+	if main.current_screen != "ui_combat":
+		push_error("UI smoke test did not route debug UI Combat into the live duel screen.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "UICombatBattlefield") == 0:
+		push_error("UI smoke test did not render the full UI Combat battlefield after debug auto-start.")
+		quit(1)
+		return
+	if not _control_rect_inside_viewport(main, "UICombatBattlefield"):
+		push_error("UI smoke test rendered the responsive UI Combat battlefield outside the viewport.")
+		quit(1)
+		return
+	if not _control_rect_inside_viewport(main, "ManualZone_PlayerHand"):
+		push_error("UI smoke test rendered the player hand zone below the visible viewport.")
+		quit(1)
+		return
+	if not _control_rect_inside_viewport(main, "ManualContextPanel") or not _control_rect_inside_viewport(main, "ManualPlayerResourceReadout"):
+		push_error("UI smoke test rendered required combat overlays outside the visible viewport.")
+		quit(1)
+		return
+	main.run.manual_combat["game_over"] = true
+	main.run.manual_combat["winner"] = "player"
+	main.run.manual_combat["phase"] = "game_over"
+	main._show_ui_combat()
+	await process_frame
+	await process_frame
+	if _count_named_nodes(main, "UIDebugCombatResultOverlay") == 0:
+		push_error("UI smoke test did not render the debug UI Combat result overlay.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "SeasonRoundResultOverlay") > 0:
+		push_error("UI smoke test rendered the season result overlay for a debug UI Combat duel.")
+		quit(1)
+		return
+
 	main._start_new_run("flightless_birds")
 	main._show_ui_combat()
 	main._start_manual_combat_lab_battle()
@@ -384,6 +427,97 @@ func _run() -> void:
 	await process_frame
 	if int(main.run.manual_combat["opponent"].get("life", 0)) != 18:
 		push_error("UI smoke test did not resolve a dragged attack onto face.")
+		quit(1)
+		return
+
+	main._start_manual_combat_lab_battle()
+	await process_frame
+	await process_frame
+	main.run.manual_combat["player"]["hand"] = ["red_spark_runner"]
+	main.run.manual_combat["player"]["focus"] = max(int(main.run.manual_combat["player"].get("focus", 0)), 1)
+	main.run.manual_combat["player"]["board"] = [{
+		"instance_id": 904,
+		"card_id": "red_spark_runner",
+		"name": "Copy Runner",
+		"attack": 2,
+		"health": 1,
+		"max_health": 1,
+		"ready": true,
+		"tags": ["fast"],
+		"board_slot": 0
+	}]
+	main.run.manual_combat["opponent"]["board"] = [{
+		"instance_id": 905,
+		"card_id": "ver_trail_guardian",
+		"name": "Click Target",
+		"attack": 1,
+		"health": 5,
+		"max_health": 5,
+		"ready": false,
+		"tags": []
+	}]
+	main._show_active_combat_screen()
+	await process_frame
+	await process_frame
+	var copy_board_card := _find_named_node(main, "CombatCardPanel_PlayerUnit_904")
+	if copy_board_card == null:
+		push_error("UI smoke test could not find same-copy board attacker.")
+		quit(1)
+		return
+	_emit_left_click(copy_board_card)
+	await process_frame
+	await process_frame
+	if String(main.run.get("manual_selection", {}).get("kind", "")) != "attacker" or int(main.run.manual_selection.get("instance_id", -1)) != 904:
+		push_error("UI smoke test selected the hand copy instead of the field attacker.")
+		quit(1)
+		return
+	if _count_named_nodes(main, "ManualInspectPanelOverlay") == 0:
+		push_error("UI smoke test did not render inspect overlay after clicking the left-side attacker.")
+		quit(1)
+		return
+	if not _node_center_right_of_screen(main, "ManualInspectPanelOverlay"):
+		push_error("UI smoke test did not move left-side card inspect to the right side.")
+		quit(1)
+		return
+
+	if not main.run.manual_combat["player"]["hand"].has("red_quick_spark"):
+		main.run.manual_combat["player"]["hand"].append("red_quick_spark")
+	main.run.manual_combat["player"]["focus"] = max(int(main.run.manual_combat["player"].get("focus", 0)), 1)
+	main._show_active_combat_screen()
+	await process_frame
+	await process_frame
+	var action_after_attacker := _find_named_node(main, "CombatCardPanel_Hand_red_quick_spark")
+	if action_after_attacker == null:
+		push_error("UI smoke test could not find an action card while an attacker was selected.")
+		quit(1)
+		return
+	_emit_left_click(action_after_attacker)
+	await process_frame
+	await process_frame
+	if String(main.run.get("manual_selection", {}).get("kind", "")) != "card" or String(main.run.manual_selection.get("card_id", "")) != "red_quick_spark":
+		push_error("UI smoke test could not switch from a selected attacker to a playable action card.")
+		quit(1)
+		return
+
+	main._manual_select_attacker(904)
+	await process_frame
+	await process_frame
+	var click_target := _find_named_node(main, "CombatCardPanel_OpponentUnit_905")
+	if click_target == null:
+		push_error("UI smoke test could not find single-click attack target.")
+		quit(1)
+		return
+	_emit_left_click(click_target)
+	await process_frame
+	await process_frame
+	if _opponent_unit_health(main, 905) != 5:
+		push_error("UI smoke test committed a clicked attack before its animation finished.")
+		quit(1)
+		return
+	await create_timer(1.2).timeout
+	await process_frame
+	if _opponent_unit_health(main, 905) != 3:
+		push_error("UI smoke test did not resolve a clicked attack onto an enemy unit.")
 		quit(1)
 		return
 
@@ -866,6 +1000,43 @@ func _node_center_above(root_node: Node, target_name: String, reference_name: St
 	if target == null or reference == null:
 		return false
 	return _node_global_center(target).y < _node_global_center(reference).y
+
+
+func _node_center_right_of_screen(root_node: Node, target_name: String) -> bool:
+	var target := _find_named_node(root_node, target_name)
+	if target == null:
+		return false
+	var viewport_width := root_node.get_viewport().get_visible_rect().size.x
+	return _node_global_center(target).x > viewport_width * 0.5
+
+
+func _control_rect_inside_viewport(root_node: Node, target_name: String, padding: float = 2.0) -> bool:
+	var target := _find_named_node(root_node, target_name)
+	if target == null or not (target is Control):
+		return false
+	var rect := (target as Control).get_global_rect()
+	var viewport := root_node.get_viewport().get_visible_rect()
+	return rect.position.x >= -padding \
+		and rect.position.y >= -padding \
+		and rect.end.x <= viewport.size.x + padding \
+		and rect.end.y <= viewport.size.y + padding
+
+
+func _emit_left_click(node: Node) -> void:
+	if not (node is Control):
+		return
+	var control := node as Control
+	var local_center := control.get_global_transform_with_canvas().affine_inverse() * _node_global_center(control)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = local_center
+	control.emit_signal("gui_input", press)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = local_center
+	control.emit_signal("gui_input", release)
 
 
 func _point_closer_to(root_node: Node, point_data: Variant, near_name: String, far_name: String) -> bool:

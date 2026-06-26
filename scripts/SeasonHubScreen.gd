@@ -18,19 +18,18 @@ func show(host) -> void:
 	var difficulty: Dictionary = host._difficulty_data(host._run_difficulty_id())
 
 	var hub := VBoxContainer.new()
-	hub.name = "SeasonHubCardShop"
+	hub.name = "SeasonCalendarMap"
 	hub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hub.add_theme_constant_override("separation", 10)
 	host.content.add_child(hub)
 
 	_add_header(host, hub, event, event_id, metrics, legal, difficulty)
-	_add_shop_floor(host, hub, event, event_id, metrics, legal)
 	_add_event_calendar(host, hub, event_id)
 	_add_notice_and_results(host, hub)
 
 
 func _add_header(host, parent: Node, event: Dictionary, event_id: String, metrics: Dictionary, legal: Dictionary, difficulty: Dictionary) -> void:
-	var header: VBoxContainer = host._add_bordered_panel(parent, "Roadside Card Shop", "#18212b", String(difficulty.get("border_color", "#f3efe4")), 3)
+	var header: VBoxContainer = host._add_bordered_panel(parent, "Season Calendar", "#18212b", String(difficulty.get("border_color", "#f3efe4")), 3)
 	header.name = "SeasonHubHeader"
 	header.custom_minimum_size = Vector2(0, 116)
 
@@ -60,6 +59,7 @@ func _add_header(host, parent: Node, event: Dictionary, event_id: String, metric
 		int(event.get("requiredWins", 0)),
 		int(event.get("entryFee", 0))
 	])
+	host._add_body_text(season_summary, "Click the next available event to head into shop prep for that tournament.")
 
 	var deck_summary := VBoxContainer.new()
 	deck_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -68,6 +68,67 @@ func _add_header(host, parent: Node, event: Dictionary, event_id: String, metric
 	host._add_body_text(deck_summary, "Deck: %s" % host._format_metrics_short(metrics))
 	host._add_body_text(deck_summary, "Legality: %s" % ("Ready for registration" if bool(legal.get("ok", false)) else String(legal.get("reason", "Not legal"))))
 	host._add_body_text(deck_summary, String(event.get("winConditionText", "")))
+
+
+func _add_next_step(host, parent: Node, event: Dictionary, event_id: String, legal: Dictionary) -> void:
+	var panel: VBoxContainer = host._add_bordered_panel(parent, "Next Step", "#20262f", "#ffe08a", 2)
+	panel.name = "SeasonHubNextStep"
+	panel.custom_minimum_size = Vector2(0, 92)
+
+	var message := ""
+	var button_text := ""
+	var callback: Callable
+	var active: Dictionary = host.run.get("active_tournament", {})
+	if bool(host.run.get("run_over", false)):
+		message = "This season is complete." if bool(host.run.get("season_champion", false)) else "This season is over."
+		button_text = "Start New Run"
+		callback = host._show_start
+	elif host._current_pack_needs_attention():
+		message = "Finish opening the pack already on the table before making the next season decision."
+		button_text = "Continue Pack"
+		callback = host._show_packs
+	elif int(host.run.get("prize_packs", 0)) > 0:
+		message = "Open your prize pack rewards, then use the new cards before registering again."
+		button_text = "Open Prize Packs"
+		callback = host._open_reward_pack_flow
+	elif not active.is_empty():
+		message = "%s is in progress. Finish or record the current round." % String(active.get("event_name", "Tournament"))
+		var current_combat: Dictionary = host.run.get("manual_combat", {})
+		if not current_combat.is_empty() and bool(current_combat.get("game_over", false)):
+			button_text = "Record Round Result"
+			callback = host._season_record_current_round_result
+		elif not current_combat.is_empty():
+			button_text = "Return to Current Duel"
+			callback = host._show_ui_combat
+		else:
+			button_text = "Start Round %d" % int(active.get("round", 1))
+			callback = host._start_season_tournament_round
+	elif not bool(legal.get("ok", false)):
+		message = "Your deck needs work before registration: %s" % String(legal.get("reason", "deck is not legal"))
+		button_text = "Tune Deck"
+		callback = host._show_deckbuilder
+	elif int(host.run.get("money", 0)) < int(event.get("entryFee", 0)):
+		message = "You need $%d more for %s entry. Work a shop shift to cover exactly the missing fee." % [
+			host._season_entry_fee_missing(event),
+			String(event.get("name", event_id))
+		]
+		button_text = "Work Shop Shift"
+		callback = host._season_work_shop_shift
+	elif not host._season_event_selectable(event_id):
+		message = "Choose an available calendar event before registering."
+		button_text = "View Calendar"
+		callback = host._show_season_run
+	else:
+		message = "Your deck is registered-ready for %s." % String(event.get("name", event_id))
+		button_text = "Register"
+		callback = host._show_tournament
+
+	host._add_body_text(panel, message)
+	var button: Button = host._make_button(button_text)
+	button.name = "SeasonHubNextStepButton"
+	host._style_button(button, "action")
+	host._connect_pressed(button, callback)
+	panel.add_child(button)
 
 
 func _add_shop_floor(host, parent: Node, event: Dictionary, event_id: String, metrics: Dictionary, legal: Dictionary) -> void:
@@ -184,6 +245,12 @@ func _add_register_desk(host, parent: Node, event: Dictionary, event_id: String,
 	host._connect_pressed(button, host._show_tournament)
 	panel.add_child(button)
 
+	if bool(legal.get("ok", false)) and host._season_event_selectable(event_id) and host._season_entry_fee_missing(event) > 0:
+		var work_button: Button = host._make_button("Work Shop Shift")
+		work_button.name = "SeasonHubWorkShiftButton"
+		host._connect_pressed(work_button, host._season_work_shop_shift)
+		panel.add_child(work_button)
+
 
 func _add_deckbuilder_table(host, parent: Node, metrics: Dictionary, legal: Dictionary) -> void:
 	var panel: VBoxContainer = host._add_bordered_panel(parent, "Deckbuilder Table", "#1f2b24", "#9ee66e", 2)
@@ -286,9 +353,16 @@ func _add_event_calendar(host, parent: Node, selected_event_id: String) -> void:
 			int(event.get("requiredWins", 0)),
 			int(event.get("rounds", 0))
 		])
-		var button: Button = host._make_button("Select")
+		var button_text := "Prep"
+		if completed:
+			button_text = "Cleared"
+		elif not unlocked:
+			button_text = "Locked"
+		elif not selected:
+			button_text = "Select"
+		var button: Button = host._make_button(button_text)
 		button.name = "SeasonHubCalendarButton_%s" % event_id
-		button.disabled = completed or not unlocked or selected or host._season_tournament_active()
+		button.disabled = completed or not unlocked or host._season_tournament_active()
 		var selected_calendar_event_id := event_id
 		host._connect_pressed(button, func() -> void: host._select_season_event(selected_calendar_event_id))
 		event_box.add_child(button)

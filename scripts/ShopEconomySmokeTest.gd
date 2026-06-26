@@ -47,7 +47,7 @@ func _run() -> void:
 	if int(run.money) != starting_money - int(catalog.boosters_by_id["base_standard_pack"].price):
 		_fail("Shop economy smoke did not subtract booster price.")
 		return
-	if run.current_pack.size() != 8 or run.revealed_pack.size() != 0 or int(run.pack_index) != 0:
+	if run.current_pack.size() != 6 or run.revealed_pack.size() != 0 or int(run.pack_index) != 0:
 		_fail("Shop economy smoke did not start pack state correctly.")
 		return
 
@@ -70,9 +70,12 @@ func _run() -> void:
 		return
 
 	run.prize_packs = 1
-	var prize_result: Dictionary = economy.open_prize_pack(run, "base_standard_pack", primary)
+	var prize_result: Dictionary = economy.open_prize_pack(run, "season_prize_pack", primary)
 	if not bool(prize_result.get("ok", false)) or int(run.prize_packs) != 0:
 		_fail("Shop economy smoke did not open prize pack.")
+		return
+	if run.current_pack.size() != 3:
+		_fail("Shop economy smoke did not open a 3-card prize pack.")
 		return
 
 	var single_id := String(run.shop[0])

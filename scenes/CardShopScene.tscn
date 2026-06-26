@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://bkx6j54p1cefv"]
+
+[ext_resource type="Texture2D" uid="uid://b1elubp33i6pw" path="res://assets/card_shop/tournament_clerk.png" id="1_4wetu"]
+
+[node name="CardShopScene" type="Node2D" unique_id=2087607324]
+
+[node name="EventCalendarButton" type="Button" parent="." unique_id=1648564605]
+offset_left = 842.0
+offset_top = 31.0
+offset_right = 1016.0
+offset_bottom = 66.0
+text = "Event Calendar"
+
+[node name="WalletButton" type="Button" parent="." unique_id=1508433414]
+offset_left = 1032.0
+offset_top = 33.0
+offset_right = 1136.0
+offset_bottom = 65.0
+text = "$$$$"
+
+[node name="DeckBoxButton" type="Button" parent="." unique_id=588071291]
+offset_left = 1159.0
+offset_top = 28.0
+offset_right = 1245.065
+offset_bottom = 66.0
+text = "deck box"
+
+[node name="MenuButton" type="Button" parent="." unique_id=1106154766]
+offset_left = 1275.0
+offset_top = 32.0
+offset_right = 1381.0
+offset_bottom = 63.0
+text = "MenuButton"
+
+[node name="BoosterDisplayButton" type="Button" parent="." unique_id=1930300019]
+offset_left = 193.0
+offset_top = 586.0
+offset_right = 1253.2537
+offset_bottom = 866.0
+text = "Buy singles"
+
+[node name="TournamentClerk2" type="Sprite2D" parent="." unique_id=1798953819]
+position = Vector2(1053, 395)
+scale = Vector2(0.292868, 0.29286796)
+texture = ExtResource("1_4wetu")
+
+[node name="TournamentPersonButton" type="Sprite2D" parent="TournamentClerk2" unique_id=673949026]
+position = Vector2(184.3833, 399.49744)
+scale = Vector2(0.761658, 0.762167)
+
+[node name="Node2D" type="Node2D" parent="TournamentClerk2" unique_id=1102956241]
+position = Vector2(212.38232, -254.04028)
+
+[node name="BoosterDisplayButton2" type="Button" parent="." unique_id=1602944071]
+offset_left = 618.0
+offset_top = 210.0
+offset_right = 842.83484
+offset_bottom = 397.5984
+text = "Buy packs"
+
+[node name="TradeBindersButton" type="Button" parent="." unique_id=1788761546]
+offset_left = 171.0
+offset_top = 319.0
+offset_right = 419.68823
+offset_bottom = 494.0219
+text = "Trade binder"

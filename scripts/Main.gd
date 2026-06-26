@@ -9,12 +9,16 @@ const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
 const ARCHETYPE_ORDER := ["flightless_birds", "snake", "oxen", "glires", "insect"]
 const DIFFICULTY_ORDER := ["white", "blue", "yellow", "silver", "gold"]
+const BASE_BOOSTER_ID := "base_standard_pack"
+const PRIZE_BOOSTER_ID := "season_prize_pack"
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/CombatService.gd")
 const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
 const RUN_STATE_SERVICE_SCRIPT := preload("res://scripts/RunStateService.gd")
 const SHOP_ECONOMY_SERVICE_SCRIPT := preload("res://scripts/ShopEconomyService.gd")
 const CARD_FRAME_FACTORY_SCRIPT := preload("res://scripts/CardFrameFactory.gd")
+const CARD_SHOP_SCREEN_SCRIPT := preload("res://scripts/CardShopScreen.gd")
+const PACK_OPENING_SCREEN_SCRIPT := preload("res://scripts/PackOpeningScreen.gd")
 const DECKBUILDER_SCREEN_SCRIPT := preload("res://scripts/DeckbuilderScreen.gd")
 const SEASON_HUB_SCREEN_SCRIPT := preload("res://scripts/SeasonHubScreen.gd")
 const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
@@ -34,6 +38,8 @@ var deck_metrics_service: RefCounted
 var run_state_service: RefCounted
 var shop_economy_service: RefCounted
 var card_frame_factory: RefCounted
+var card_shop_screen: RefCounted
+var pack_opening_screen: RefCounted
 var deckbuilder_screen: RefCounted
 var season_hub_screen: RefCounted
 var season_flow_service: RefCounted
@@ -57,6 +63,7 @@ var season_setup_difficulty_index := 0
 
 var root_margin: MarginContainer
 var shell: VBoxContainer
+var header_bar: HBoxContainer
 var title_label: Label
 var status_label: Label
 var nav: HBoxContainer
@@ -90,6 +97,8 @@ func _ready() -> void:
 	shop_economy_service = SHOP_ECONOMY_SERVICE_SCRIPT.new()
 	shop_economy_service.setup(cards, cards_by_id, boosters_by_id, rng)
 	card_frame_factory = CARD_FRAME_FACTORY_SCRIPT.new()
+	card_shop_screen = CARD_SHOP_SCREEN_SCRIPT.new()
+	pack_opening_screen = PACK_OPENING_SCREEN_SCRIPT.new()
 	deckbuilder_screen = DECKBUILDER_SCREEN_SCRIPT.new()
 	season_hub_screen = SEASON_HUB_SCREEN_SCRIPT.new()
 	season_flow_service = SEASON_FLOW_SERVICE_SCRIPT.new()
@@ -156,22 +165,22 @@ func _build_shell() -> void:
 	shell.add_theme_constant_override("separation", 10)
 	root_margin.add_child(shell)
 
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 14)
-	shell.add_child(header)
+	header_bar = HBoxContainer.new()
+	header_bar.add_theme_constant_override("separation", 14)
+	shell.add_child(header_bar)
 
 	title_label = Label.new()
 	title_label.text = "Road to Worlds"
 	title_label.add_theme_font_size_override("font_size", 28)
 	title_label.add_theme_color_override("font_color", Color("#f3efe4"))
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title_label)
+	header_bar.add_child(title_label)
 
 	status_label = Label.new()
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	status_label.add_theme_color_override("font_color", Color("#c7d0df"))
 	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(status_label)
+	header_bar.add_child(status_label)
 
 	nav = HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 8)
@@ -184,6 +193,7 @@ func _build_shell() -> void:
 
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 10)
 	scroll.add_child(content)
 
@@ -536,6 +546,7 @@ func _render_nav() -> void:
 		return
 
 	_add_nav_button("Shop", _show_shop)
+	_add_nav_button("Scene Shop", _show_card_shop_scene_test)
 	_add_nav_button("Packs", _show_packs)
 	_add_nav_button("Deckbuilder", _show_deckbuilder)
 	_add_nav_button("Combat Lab", _show_combat_lab)
@@ -617,13 +628,18 @@ func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
 	var compact_duel := current_screen == "ui_combat"
+	if header_bar != null:
+		header_bar.visible = not compact_duel
+	if nav != null:
+		nav.visible = not compact_duel
 	footer_label.visible = not compact_duel
 	footer_label.custom_minimum_size = Vector2(0, 0 if compact_duel else 78)
-	root_margin.add_theme_constant_override("margin_left", 10 if compact_duel else 18)
-	root_margin.add_theme_constant_override("margin_right", 10 if compact_duel else 18)
-	root_margin.add_theme_constant_override("margin_top", 8 if compact_duel else 14)
-	root_margin.add_theme_constant_override("margin_bottom", 8 if compact_duel else 14)
-	shell.add_theme_constant_override("separation", 6 if compact_duel else 10)
+	root_margin.add_theme_constant_override("margin_left", 6 if compact_duel else 18)
+	root_margin.add_theme_constant_override("margin_right", 6 if compact_duel else 18)
+	root_margin.add_theme_constant_override("margin_top", 4 if compact_duel else 14)
+	root_margin.add_theme_constant_override("margin_bottom", 4 if compact_duel else 14)
+	shell.add_theme_constant_override("separation", 3 if compact_duel else 10)
+	content.add_theme_constant_override("separation", 4 if compact_duel else 10)
 
 
 func _add_nav_button(label: String, callback: Callable) -> void:
@@ -689,8 +705,9 @@ func _select_season_event(event_id: String) -> void:
 		_set_footer("Clear the earlier calendar events before registering for %s." % String(_season_event_by_id(event_id).get("name", event_id)))
 		return
 	run.selected_event_id = event_id
-	_set_footer("Selected %s on the season calendar." % String(_season_event_by_id(event_id).get("name", event_id)))
-	_show_season_run()
+	_generate_shop_inventory()
+	_set_footer("Preparing for %s. Buy packs, check singles, tune your deck, then register." % String(_season_event_by_id(event_id).get("name", event_id)))
+	_show_shop()
 
 
 func _season_completed_count() -> int:
@@ -714,129 +731,19 @@ func _show_season_run() -> void:
 
 
 func _show_shop() -> void:
-	if _guard_run_over():
-		return
-	current_screen = "shop"
-	_render_nav()
-	_clear(content)
-	_update_status()
+	card_shop_screen.show(self)
 
-	var event: Dictionary = _selected_tournament_event()
-	var metrics := _calculate_deck_metrics(run.deck, run.sideboard)
 
-	var top := HBoxContainer.new()
-	top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_theme_constant_override("separation", 10)
-	content.add_child(top)
-
-	var event_panel := _add_panel(top, "Card Shop", "#1e2630")
-	event_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(
-		event_panel,
-		"Next event: %s, %d rounds, need %d wins. Entry fee: $%d."
-		% [
-			String(event.get("name", "Weekly Locals")),
-			int(event.get("rounds", 3)),
-			int(event.get("requiredWins", 2)),
-			int(event.get("entryFee", 0))
-		]
-	)
-	_add_body_text(event_panel, "Money: $%d | Prize packs waiting: %d" % [run.money, run.prize_packs])
-
-	var pack_button := _make_button("Buy & Open Base Booster ($5)")
-	pack_button.disabled = run.money < boosters_by_id["base_standard_pack"].price
-	_connect_pressed(pack_button, _buy_and_open_pack)
-	event_panel.add_child(pack_button)
-
-	var prize_button := _make_button("Open Prize Pack")
-	prize_button.disabled = run.prize_packs <= 0
-	_connect_pressed(prize_button, _open_prize_pack)
-	event_panel.add_child(prize_button)
-
-	var sell_button := _make_button("Sell Extra Copies")
-	_connect_pressed(sell_button, _sell_extra_copies)
-	event_panel.add_child(sell_button)
-
-	var deck_panel := _add_panel(top, "Current Deck", "#222936")
-	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(deck_panel, _format_metrics(metrics))
-	var deck_button := _make_button("Tune Deck")
-	_connect_pressed(deck_button, _show_deckbuilder)
-	deck_panel.add_child(deck_button)
-
-	var singles := _add_panel(content, "Singles Case")
-	_add_body_text(singles, "Singles are reliable. Packs are tempting. Your wallet is not large enough for both every week.")
-
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	singles.add_child(grid)
-
-	for card_id in run.shop:
-		var card: Dictionary = cards_by_id[card_id]
-		var price := _card_price(card_id)
-		var row := _add_card_panel(grid, card_id, "Buy for $%d" % price)
-		var button := _make_button("Buy")
-		button.disabled = run.money < price
-		var selected_id: String = String(card_id)
-		_connect_pressed(button, func() -> void: _buy_single(selected_id))
-		row.add_child(button)
-		_add_body_text(row, card.text)
-
-	var report := _add_panel(content, "Shop Talk")
-	for line in run.reports:
-		_add_body_text(report, "• " + line)
+func _show_card_shop_scene_test() -> void:
+	card_shop_screen.show_scene_test(self)
 
 
 func _show_packs() -> void:
-	if _guard_run_over():
-		return
-	current_screen = "packs"
-	_render_nav()
-	_clear(content)
-	_update_status()
-
-	var panel := _add_panel(content, "Pack Opening")
-	if run.current_pack.is_empty():
-		_add_body_text(panel, "No pack is currently open. Buy a booster from the shop or earn prize packs at locals.")
-		var buy_button := _make_button("Buy & Open Base Booster ($5)")
-		buy_button.disabled = run.money < boosters_by_id["base_standard_pack"].price
-		_connect_pressed(buy_button, _buy_and_open_pack)
-		panel.add_child(buy_button)
-		return
-
-	_add_body_text(panel, "Reveal the pack one card at a time. New cards and deck-relevant cards are highlighted.")
-
-	var reveal_grid := GridContainer.new()
-	reveal_grid.columns = 4
-	reveal_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	reveal_grid.add_theme_constant_override("h_separation", 8)
-	reveal_grid.add_theme_constant_override("v_separation", 8)
-	panel.add_child(reveal_grid)
-
-	for entry in run.revealed_pack:
-		_add_card_panel(reveal_grid, entry.cardId, entry.note)
-
-	var remaining: int = run.current_pack.size() - int(run.pack_index)
-	if remaining > 0:
-		var next_button := _make_button("Reveal Next Card (%d left)" % remaining)
-		_connect_pressed(next_button, _reveal_next_card)
-		panel.add_child(next_button)
-
-		var all_button := _make_button("Reveal All")
-		_connect_pressed(all_button, _reveal_all_cards)
-		panel.add_child(all_button)
-	else:
-		_add_body_text(panel, "Pack complete. Check the deckbuilder to see what changed.")
-		var deck_button := _make_button("Open Deckbuilder")
-		_connect_pressed(deck_button, _show_deckbuilder)
-		panel.add_child(deck_button)
+	pack_opening_screen.show(self)
 
 
 func _buy_and_open_pack() -> void:
-	var result: Dictionary = shop_economy_service.buy_and_open_pack(run, "base_standard_pack", _current_primary_archetype())
+	var result: Dictionary = shop_economy_service.buy_and_open_pack(run, BASE_BOOSTER_ID, _current_primary_archetype())
 	if not result.ok:
 		_set_footer(result.message)
 		return
@@ -845,7 +752,7 @@ func _buy_and_open_pack() -> void:
 
 
 func _open_prize_pack() -> void:
-	var result: Dictionary = shop_economy_service.open_prize_pack(run, "base_standard_pack", _current_primary_archetype())
+	var result: Dictionary = shop_economy_service.open_prize_pack(run, PRIZE_BOOSTER_ID, _current_primary_archetype())
 	if not result.ok:
 		_set_footer(result.message)
 		return
@@ -871,6 +778,11 @@ func _rarity_rank(rarity: String) -> int:
 
 func _reveal_next_card() -> void:
 	shop_economy_service.reveal_next_card(run, _current_primary_archetype())
+	_show_packs()
+
+
+func _reveal_pack_card(pack_index: int) -> void:
+	shop_economy_service.reveal_pack_card(run, pack_index, _current_primary_archetype())
 	_show_packs()
 
 
@@ -1110,7 +1022,19 @@ func _show_combat_lab() -> void:
 
 
 func _show_ui_combat() -> void:
+	if _should_auto_start_debug_ui_combat():
+		current_screen = "ui_combat"
+		_start_manual_combat_lab_battle()
+		return
 	combat_ui_screen.show(self)
+
+
+func _should_auto_start_debug_ui_combat() -> bool:
+	if run.is_empty() or _run_mode() != "debug":
+		return false
+	if not run.get("manual_combat", {}).is_empty():
+		return false
+	return bool(_deck_is_legal().get("ok", false))
 
 
 func _show_active_combat_screen() -> void:
@@ -1323,6 +1247,7 @@ func _manual_end_turn() -> void:
 	var log_start: int = before_state.get("log", []).size()
 	var after_state: Dictionary = combat_service.manual_end_player_turn(before_state.duplicate(true))
 	var animations := _manual_build_opponent_turn_animation_queue(before_state, after_state, log_start)
+	after_state.erase("_manual_action_snapshots")
 	if current_screen == "ui_combat" and not animations.is_empty():
 		run.manual_combat = _manual_visible_opponent_turn_animation_state(before_state, after_state)
 		run.manual_opponent_pending_state = after_state
@@ -1372,22 +1297,22 @@ func _manual_clear_ui_combat_context() -> void:
 	_show_active_combat_screen()
 
 
-func _manual_select_card(card_id: String) -> void:
+func _manual_select_card(card_id: String, panel_side: String = "") -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	run.manual_selection = { "kind": "card", "card_id": card_id }
-	_manual_set_inspect_card(card_id, "Hand", "", true)
+	_manual_set_inspect_card(card_id, "Hand", "", true, panel_side)
 	_set_footer("Selected " + cards_by_id[card_id].get("name", card_id) + ". Choose a highlighted target.")
 	_show_active_combat_screen()
 
 
-func _manual_select_attacker(instance_id: int) -> void:
+func _manual_select_attacker(instance_id: int, panel_side: String = "") -> void:
 	if run.get("manual_combat", {}).is_empty() or _manual_has_pending_action():
 		return
 	run.manual_selection = { "kind": "attacker", "instance_id": instance_id }
 	var attacker := _manual_find_player_unit(run.manual_combat, instance_id)
 	if not attacker.is_empty():
-		_manual_set_inspect_card(String(attacker.get("card_id", "")), "Your Board", _manual_current_unit_summary(attacker), true)
+		_manual_set_inspect_card(String(attacker.get("card_id", "")), "Your Board", _manual_current_unit_summary(attacker), true, panel_side)
 	_set_footer("Selected attacker. Choose a highlighted target.")
 	_show_active_combat_screen()
 
@@ -1599,6 +1524,21 @@ func _manual_commit_pending_opponent_turn() -> void:
 		_show_active_combat_screen()
 
 
+func _manual_apply_completed_opponent_animation_state(animation: Dictionary) -> void:
+	if animation.is_empty() or not _manual_has_pending_opponent_turn():
+		return
+	var snapshot: Dictionary = animation.get("after_state", {})
+	if snapshot.is_empty():
+		_manual_apply_completed_opponent_play_animation(animation)
+		return
+	snapshot = snapshot.duplicate(true)
+	snapshot["active_side"] = "opponent"
+	snapshot["phase"] = "opponent_animating"
+	snapshot["game_over"] = false
+	snapshot["winner"] = ""
+	run.manual_combat = snapshot
+
+
 func _manual_apply_completed_opponent_play_animation(animation: Dictionary) -> void:
 	if animation.is_empty() or not _manual_has_pending_opponent_turn():
 		return
@@ -1679,6 +1619,7 @@ func _manual_remove_visible_opponent_hand_card(visible: Dictionary, card_id: Str
 func _manual_build_opponent_turn_animation_queue(before_state: Dictionary, after_state: Dictionary, log_start: int) -> Array:
 	var animations: Array = []
 	var log_lines: Array = after_state.get("log", [])
+	var snapshots_by_log_index := _manual_opponent_turn_snapshots_by_log_index(after_state)
 	var used_new_units := {}
 	var used_action_counts := {}
 	var in_opponent_turn := false
@@ -1697,8 +1638,23 @@ func _manual_build_opponent_turn_animation_queue(before_state: Dictionary, after
 			continue
 		var animation := _manual_build_action_animation(before_state, after_state, descriptor, i, i + 1)
 		if not animation.is_empty():
+			if snapshots_by_log_index.has(i):
+				animation["after_state"] = snapshots_by_log_index[i]
 			animations.append(animation)
 	return animations
+
+
+func _manual_opponent_turn_snapshots_by_log_index(after_state: Dictionary) -> Dictionary:
+	var snapshots := {}
+	for snapshot_value in after_state.get("_manual_action_snapshots", []):
+		var snapshot: Dictionary = snapshot_value
+		var log_index := int(snapshot.get("log_index", -1))
+		var state_snapshot: Dictionary = snapshot.get("state", {})
+		if log_index < 0 or state_snapshot.is_empty():
+			continue
+		state_snapshot.erase("_manual_action_snapshots")
+		snapshots[log_index] = state_snapshot.duplicate(true)
+	return snapshots
 
 
 func _manual_opponent_animation_descriptor_for_line(line: String, before_state: Dictionary, after_state: Dictionary, used_new_units: Dictionary, used_action_counts: Dictionary) -> Dictionary:
@@ -2468,7 +2424,7 @@ func _manual_advance_manual_animation_queue() -> void:
 	var queue: Array = run.get("manual_animation_queue", [])
 	if queue.is_empty():
 		return
-	_manual_apply_completed_opponent_play_animation(run.get("manual_animation", {}))
+	_manual_apply_completed_opponent_animation_state(run.get("manual_animation", {}))
 	run.manual_animation = queue[0]
 	run.manual_animation_queue = queue.slice(1, queue.size()) if queue.size() > 1 else []
 	if current_screen == "ui_combat":
@@ -2565,6 +2521,7 @@ func _add_manual_battlefield(parent: Node) -> Control:
 
 func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
 	var compact_duel := current_screen == "ui_combat"
+	var layout := _ui_combat_layout_profile() if compact_duel else {}
 	if compact_duel:
 		var stored_inspect: Dictionary = run.get("manual_inspect", {})
 		var stored_card := String(stored_inspect.get("card_id", ""))
@@ -2574,25 +2531,29 @@ func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
 	var inspect := PanelContainer.new()
 	inspect.name = "ManualInspectPanelOverlay" if compact_duel else "ManualInspectPanel"
 	inspect.set_meta("ui_combat_overlay", compact_duel)
-	inspect.custom_minimum_size = Vector2(224 if compact_duel else 310, 0)
-	inspect.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var inspect_width := float(layout.get("inspect_width", 224.0)) if compact_duel else 310.0
+	var inspect_height := float(layout.get("inspect_height", 320.0)) if compact_duel else 0.0
+	inspect.custom_minimum_size = Vector2(inspect_width, inspect_height if compact_duel else 0.0)
+	if not compact_duel:
+		inspect.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inspect.mouse_filter = Control.MOUSE_FILTER_PASS
 	if compact_duel:
 		inspect.z_index = 180
+		var inspect_margin := float(layout.get("inspect_margin", 14.0))
 		inspect.anchor_left = 0.0
-		inspect.anchor_top = 0.0
+		inspect.anchor_top = 0.5
 		inspect.anchor_right = 0.0
-		inspect.anchor_bottom = 1.0
-		inspect.offset_left = 14.0
-		inspect.offset_top = 10.0
-		inspect.offset_right = 232.0
-		inspect.offset_bottom = -10.0
+		inspect.anchor_bottom = 0.5
+		inspect.offset_left = inspect_margin
+		inspect.offset_top = -inspect_height * 0.5
+		inspect.offset_right = inspect_margin + inspect_width
+		inspect.offset_bottom = inspect_height * 0.5
 	var style := StyleBoxFlat.new()
 	var inspect_bg := Color("#101722")
 	var inspect_border := Color("#52617a")
 	if compact_duel:
-		inspect_bg.a = 0.84
-		inspect_border.a = 0.72
+		inspect_bg.a = 0.94
+		inspect_border.a = 0.88
 	style.bg_color = inspect_bg
 	style.border_color = inspect_border
 	style.border_width_left = 1
@@ -2605,6 +2566,52 @@ func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
 	style.corner_radius_bottom_right = 8
 	inspect.add_theme_stylebox_override("panel", style)
 	parent.add_child(inspect)
+
+	if compact_duel:
+		var zoom_margin := MarginContainer.new()
+		zoom_margin.add_theme_constant_override("margin_left", 7)
+		zoom_margin.add_theme_constant_override("margin_right", 7)
+		zoom_margin.add_theme_constant_override("margin_top", 7)
+		zoom_margin.add_theme_constant_override("margin_bottom", 7)
+		inspect.add_child(zoom_margin)
+
+		var zoom_center := CenterContainer.new()
+		zoom_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		zoom_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		zoom_margin.add_child(zoom_center)
+
+		var zoom_inspect_data := _manual_inspect_data_for_state(state)
+		var zoom_card_id := String(zoom_inspect_data.get("card_id", ""))
+		if cards_by_id.has(zoom_card_id):
+			var zoom_card: Dictionary = cards_by_id[zoom_card_id]
+			var zoom_frame_data := _card_frame_data(zoom_card_id, {
+				"combat_stats": _manual_inspect_stats(zoom_card, String(zoom_inspect_data.get("current", ""))),
+				"effect_text": _combat_effect_summary(zoom_card),
+				"rules_text": String(zoom_card.get("text", "")),
+				"art_text": ""
+			})
+			var zoom_stats := _attack_health_from_text(String(zoom_inspect_data.get("current", "")))
+			if not zoom_stats.is_empty():
+				zoom_frame_data.attack = int(zoom_stats.attack)
+				zoom_frame_data.health = int(zoom_stats.health)
+				zoom_frame_data.show_attack_health = true
+			card_frame_factory.add_frame(
+				zoom_center,
+				zoom_frame_data,
+				{
+					"panel_name": "ManualInspectZoomCard",
+					"contents_name": "ManualInspectZoomCardContents",
+					"name_prefix": "ManualInspectZoom",
+					"compact": true,
+					"min_size": Vector2(inspect_width - 18.0, 0.0),
+					"size_flags_horizontal": Control.SIZE_SHRINK_CENTER,
+					"border_color": Color("#42d9ff"),
+					"border_width": 2,
+					"show_deck_stats": false,
+					"show_rules_text": false
+				}
+			)
+		return
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 9 if compact_duel else 10)
@@ -2625,7 +2632,7 @@ func _add_manual_inspect_panel(parent: Node, state: Dictionary) -> void:
 
 	manual_inspect_art_panel = PanelContainer.new()
 	manual_inspect_art_panel.name = "ManualInspectArt"
-	manual_inspect_art_panel.custom_minimum_size = Vector2(0, 100 if compact_duel else 168)
+	manual_inspect_art_panel.custom_minimum_size = Vector2(0, float(layout.get("inspect_art_height", 100.0)) if compact_duel else 168)
 	box.add_child(manual_inspect_art_panel)
 
 	var art_margin := MarginContainer.new()
@@ -2774,7 +2781,7 @@ func _manual_inspect_data_for_state(state: Dictionary) -> Dictionary:
 	return { "card_id": "", "zone": "Inspect", "current": "" }
 
 
-func _manual_set_inspect_card(card_id: String, zone: String, current_summary: String = "", pinned: bool = true) -> void:
+func _manual_set_inspect_card(card_id: String, zone: String, current_summary: String = "", pinned: bool = true, panel_side: String = "") -> void:
 	if run.is_empty():
 		return
 	if not cards_by_id.has(card_id):
@@ -2785,9 +2792,30 @@ func _manual_set_inspect_card(card_id: String, zone: String, current_summary: St
 		"card_id": card_id,
 		"zone": zone,
 		"current": current_summary,
-		"pinned": pinned
+		"pinned": pinned,
+		"panel_side": _manual_normalized_inspect_side(panel_side)
 	}
 	_refresh_manual_inspect_panel()
+
+
+func _manual_inspect_side_for_card_panel(card_panel: Control) -> String:
+	if card_panel == null or not is_instance_valid(card_panel):
+		return ""
+	return _manual_inspect_side_for_global_x(card_panel.get_global_rect().get_center().x)
+
+
+func _manual_inspect_side_for_global_x(global_x: float) -> String:
+	if current_screen != "ui_combat":
+		return ""
+	return "left"
+
+
+func _manual_normalized_inspect_side(panel_side: String) -> String:
+	if current_screen == "ui_combat":
+		return "left"
+	if panel_side == "right":
+		return "right"
+	return "left"
 
 
 func _manual_clear_hover_inspect(card_id: String, zone: String, current_summary: String = "") -> void:
@@ -2960,17 +2988,29 @@ func _add_manual_zone(parent: Node, title: String, zone_name: String, accent: St
 
 
 func _ui_combat_zone_height(zone_name: String) -> float:
-	return manual_combat_ui.ui_combat_zone_height(zone_name)
+	return manual_combat_ui.ui_combat_zone_height(self, zone_name)
+
+
+func _ui_combat_layout_profile() -> Dictionary:
+	return manual_combat_ui.ui_combat_layout_profile(self)
+
+
+func _ui_combat_card_size(hand_card: bool = false) -> Vector2:
+	var layout := _ui_combat_layout_profile()
+	if hand_card:
+		return layout.get("hand_card_size", Vector2(96, 164))
+	return layout.get("card_size", Vector2(96, 164))
 
 
 func _add_manual_summary_zone(parent: Node, title: String, entries: Array, zone_name: String, slot_count: int, accent: String) -> void:
+	var layout := _ui_combat_layout_profile() if current_screen == "ui_combat" else {}
 	var zone := _add_manual_zone(parent, title, zone_name, accent)
 	var columns: int = max(1, slot_count if slot_count > 0 else min(4, max(1, entries.size())))
 	var grid := GridContainer.new()
 	grid.columns = columns
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 4 if current_screen == "ui_combat" else 6)
-	grid.add_theme_constant_override("v_separation", 4 if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("h_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("v_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
 	zone.add_child(grid)
 
 	for entry in entries:
@@ -2992,13 +3032,14 @@ func _add_manual_summary_zone(parent: Node, title: String, entries: Array, zone_
 
 
 func _add_manual_engine_zone(parent: Node, engines: Array, is_player: bool) -> void:
+	var layout := _ui_combat_layout_profile() if current_screen == "ui_combat" else {}
 	var zone_name := "PlayerEngine" if is_player else "OpponentEngine"
 	var zone := _add_manual_zone(parent, "Engine Zone", zone_name, "#18232d")
 	var grid := GridContainer.new()
 	grid.columns = COMBAT_ENGINE_SLOTS
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 4 if current_screen == "ui_combat" else 6)
-	grid.add_theme_constant_override("v_separation", 4 if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("h_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("v_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
 	zone.add_child(grid)
 
 	var slotted_engines := _manual_engines_by_slot(engines)
@@ -3024,12 +3065,13 @@ func _add_manual_engine_slot(parent: Node, is_player: bool, slot_index: int) -> 
 
 
 func _add_manual_hidden_hand_zone(parent: Node, hand_count: int) -> void:
+	var layout := _ui_combat_layout_profile() if current_screen == "ui_combat" else {}
 	var zone := _add_manual_zone(parent, "Hand Zone", "OpponentHand", "#261f32")
 	var grid := GridContainer.new()
 	grid.columns = max(1, min(5, hand_count))
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 4 if current_screen == "ui_combat" else 6)
-	grid.add_theme_constant_override("v_separation", 4 if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("h_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
+	grid.add_theme_constant_override("v_separation", int(layout.get("engine_gap", 4)) if current_screen == "ui_combat" else 6)
 	zone.add_child(grid)
 	for i in range(hand_count):
 		_add_manual_card_back_slot(grid, "Hidden Card")
@@ -3039,9 +3081,10 @@ func _add_manual_hidden_hand_zone(parent: Node, hand_count: int) -> void:
 
 func _add_manual_zone_item(parent: Node, text: String, card_id: String = "", zone_label: String = "") -> void:
 	var compact_duel := current_screen == "ui_combat"
+	var layout := _ui_combat_layout_profile() if compact_duel else {}
 	var item := PanelContainer.new()
 	item.name = "ManualZoneItem"
-	item.custom_minimum_size = Vector2(96, 24) if compact_duel else Vector2(132, 44)
+	item.custom_minimum_size = layout.get("engine_slot_size", Vector2(96, 24)) if compact_duel else Vector2(132, 44)
 	item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	item.mouse_filter = Control.MOUSE_FILTER_PASS
 	var style := StyleBoxFlat.new()
@@ -3092,13 +3135,14 @@ func _add_manual_board_slot(parent: Node, is_player: bool, slot_index: int) -> V
 
 
 func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, state: Dictionary) -> void:
+	var layout := _ui_combat_layout_profile() if current_screen == "ui_combat" else {}
 	var zone := _add_manual_zone(parent, "Board Zone", "PlayerBoard" if is_player else "OpponentBoard", "#1c2a24" if is_player else "#2b2026")
 
 	var grid := GridContainer.new()
 	grid.columns = COMBAT_BOARD_SLOTS
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 4 if current_screen == "ui_combat" else 8)
-	grid.add_theme_constant_override("v_separation", 2 if current_screen == "ui_combat" else 8)
+	grid.add_theme_constant_override("h_separation", int(layout.get("board_gap", 4)) if current_screen == "ui_combat" else 8)
+	grid.add_theme_constant_override("v_separation", int(layout.get("zone_gap", 2)) if current_screen == "ui_combat" else 8)
 	zone.add_child(grid)
 
 	var slotted_units := _manual_units_by_board_slot(units)
@@ -3113,6 +3157,7 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 		var border_width := 1
 		var selected_attacker := is_player and _manual_selection_is_attacker(unit)
 		var legal_target := not is_player and _manual_selected_can_target_unit(state, unit)
+		var has_available_unit_action := current_screen == "ui_combat" and is_player and _manual_unit_has_action_bubbles(state, unit)
 		if selected_attacker:
 			border_color = Color("#ffe08a")
 			border_width = 3
@@ -3138,7 +3183,8 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 				_manual_unit_card_anchor(is_player, int(unit.get("instance_id", -1))),
 				_unit_card_type_line(unit),
 				_unit_animal_type(unit),
-				int(unit.get("max_health", unit.get("health", 0)))
+				int(unit.get("max_health", unit.get("health", 0))),
+				Color(0.95, 0.86, 0.34, 0.42) if has_available_unit_action else Color(0, 0, 0, 0)
 			)
 		var unit_card_panel := _manual_card_panel_from_contents(card_box)
 		if unit_card_panel != null and selected_attacker and current_screen == "ui_combat":
@@ -3155,7 +3201,8 @@ func _add_manual_board(parent: VBoxContainer, units: Array, is_player: bool, sta
 		if is_player and _manual_combat_accepts_input(state) and bool(unit.get("ready", false)):
 			var instance_id := int(unit.get("instance_id", -1))
 			if current_screen == "ui_combat":
-				_add_manual_selected_unit_action_bubbles(card_box, unit, state)
+				if selected_attacker:
+					_add_manual_selected_unit_action_bubbles(card_box, unit, state)
 			else:
 				var attack_button := _make_button("Selected" if _manual_selection_is_attacker(unit) else "Select Attack")
 				attack_button.name = "ManualAttackSelectButton"
@@ -3259,9 +3306,10 @@ func _add_manual_hand(parent: VBoxContainer, combatant: Dictionary, state: Dicti
 
 
 func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictionary) -> void:
+	var layout := _ui_combat_layout_profile()
 	var fan := Control.new()
 	fan.name = "ManualFanHand"
-	fan.custom_minimum_size = Vector2(0, 216)
+	fan.custom_minimum_size = Vector2(0, float(layout.get("player_hand_fan_height", 216.0)))
 	fan.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(fan)
 
@@ -3290,7 +3338,7 @@ func _add_manual_fanned_hand(parent: VBoxContainer, hand: Array, state: Dictiona
 		var card_panel := _manual_card_panel_from_contents(card_box)
 		if card_panel != null:
 			card_panel.size = card_panel.custom_minimum_size
-			card_panel.position = Vector2(16 + hand_index * 52, 12)
+			card_panel.position = Vector2(16 + hand_index * float(layout.get("fan_spread_min", 52.0)), 8)
 			card_panel.z_index = hand_index
 			if selected:
 				card_panel.z_index += 100
@@ -3347,7 +3395,7 @@ func _manual_show_target_hint() -> void:
 
 
 func _manual_show_attack_target_hint() -> void:
-	_set_footer("Double-click a highlighted target, double-click the opponent hand, or drag the attacker.")
+	_set_footer("Click a highlighted enemy threat or the opponent hand to attack.")
 
 
 func _position_manual_action_bubbles_for_card(card_panel: Control) -> void:
@@ -3579,7 +3627,7 @@ func _add_manual_card_badge(parent: Node, text: String, color: Color) -> void:
 	manual_combat_ui.add_card_badge(self, parent, text, color)
 
 
-func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "", printed_max_health: int = -1) -> VBoxContainer:
+func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String, body: String, accent: Color, border_color: Color = Color("#465060"), border_width: int = 1, inspect_card_id: String = "", inspect_zone: String = "", inspect_current: String = "", node_anchor: String = "", printed_type: String = "", printed_animal_type: String = "", printed_max_health: int = -1, glow_color: Color = Color(0, 0, 0, 0)) -> VBoxContainer:
 	var compact_duel := current_screen == "ui_combat"
 	var type_text := printed_type
 	var animal_type := printed_animal_type if printed_animal_type != "" else "neutral"
@@ -3598,6 +3646,7 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 		"border_color": border_color,
 		"border_width": border_width,
 		"combat_stats": inspect_current if inspect_current != "" else subtitle,
+		"keyword_text": body,
 		"effect_text": _combat_effect_summary(cards_by_id[inspect_card_id]) if inspect_card_id != "" and cards_by_id.has(inspect_card_id) else body,
 		"rules_text": String(cards_by_id[inspect_card_id].get("text", "")) if inspect_card_id != "" and cards_by_id.has(inspect_card_id) else body,
 		"art_text": "",
@@ -3618,10 +3667,12 @@ func _add_combat_placeholder_card(parent: Node, title: String, subtitle: String,
 			"contents_name": "CombatCardContents",
 			"name_prefix": "CombatCardFrame",
 			"compact": compact_duel,
-			"min_size": Vector2(96, 164) if compact_duel else Vector2(176, 236),
+			"min_size": _ui_combat_card_size(node_anchor.begins_with("CombatCardPanel_Hand")) if compact_duel else Vector2(176, 236),
 			"size_flags_horizontal": Control.SIZE_SHRINK_CENTER if compact_duel else Control.SIZE_EXPAND_FILL,
 			"border_color": border_color,
 			"border_width": border_width,
+			"glow_color": glow_color,
+			"glow_size": 9 if compact_duel else 13,
 			"show_deck_stats": false,
 			"show_rules_text": not compact_duel
 		}
@@ -4280,6 +4331,8 @@ func _show_tournament() -> void:
 		_add_body_text(panel, "Debug mode auto-resolves the full event for quick testing.")
 	_add_body_text(panel, "Entry fee: $%d | Current money: $%d" % [int(event.get("entryFee", 0)), int(run.get("money", 0))])
 	_add_body_text(panel, "Deck status: " + ("Ready" if legal.ok else legal.reason))
+	if _run_mode() == "season" and bool(legal.get("ok", false)) and _season_event_selectable(event_id) and _season_entry_fee_missing(event) > 0:
+		_add_body_text(panel, "Short on entry by $%d. Work one shop shift to cover the missing fee." % _season_entry_fee_missing(event))
 
 	var enter := _make_button("Enter %s" % String(event.get("name", event_id)))
 	enter.disabled = not legal.ok or int(run.get("money", 0)) < int(event.get("entryFee", 0)) or (_run_mode() == "season" and not _season_event_selectable(event_id))
@@ -4288,6 +4341,12 @@ func _show_tournament() -> void:
 	else:
 		_connect_pressed(enter, _run_tournament)
 	panel.add_child(enter)
+
+	if _run_mode() == "season" and enter.disabled and bool(legal.get("ok", false)) and _season_event_selectable(event_id) and _season_entry_fee_missing(event) > 0:
+		var work_button := _make_button("Work Shop Shift")
+		work_button.name = "TournamentWorkShiftButton"
+		_connect_pressed(work_button, _season_work_shop_shift)
+		panel.add_child(work_button)
 
 	if run.last_result.size() > 0:
 		var last := _add_panel(content, "Last Tournament")
@@ -4657,47 +4716,165 @@ func _show_tournament_result(logs: Array, survived: bool) -> void:
 
 
 func _add_season_result_action_buttons(parent: Node) -> void:
-	var actions := HBoxContainer.new()
+	var actions := VBoxContainer.new()
+	actions.name = "SeasonResultActions"
 	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_theme_constant_override("separation", 8)
 	parent.add_child(actions)
 
+	var primary_action := _season_result_primary_action()
+	if not primary_action.is_empty():
+		var primary_callback: Callable = primary_action.get("callback", _show_season_run)
+		_add_season_result_button(
+			actions,
+			String(primary_action.get("text", "Continue")),
+			primary_callback,
+			true,
+			bool(primary_action.get("disabled", false))
+		)
+
+	var secondary := HBoxContainer.new()
+	secondary.name = "SeasonResultSecondaryActions"
+	secondary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	secondary.add_theme_constant_override("separation", 8)
+	actions.add_child(secondary)
+
 	var summary: Dictionary = run.get("last_event_result", {})
 	var made_record := bool(summary.get("made_record", true))
-	if not made_record:
+	var seen_labels: Dictionary = {}
+	if not primary_action.is_empty():
+		seen_labels[String(primary_action.get("text", ""))] = true
+
+	if not made_record and not bool(summary.get("run_over", false)):
 		var event_id := String(summary.get("event_id", _selected_season_event_id()))
 		var event := _season_event_by_id(event_id)
-		var retry_button := _make_button("Retry %s" % String(event.get("name", event_id)))
-		retry_button.disabled = not _deck_is_legal().ok or int(run.get("money", 0)) < int(event.get("entryFee", 0))
-		_style_button(retry_button, "action")
-		_connect_pressed(retry_button, _show_tournament)
-		actions.add_child(retry_button)
+		_add_season_result_secondary_button(
+			secondary,
+			"Retry %s" % String(event.get("name", event_id)),
+			_show_tournament,
+			seen_labels,
+			not _deck_is_legal().ok or int(run.get("money", 0)) < int(event.get("entryFee", 0))
+		)
 
-	var current_pack: Array = run.get("current_pack", [])
-	if int(run.get("prize_packs", 0)) > 0 or not current_pack.is_empty():
-		var pack_button := _make_button("Open Prize Packs (%d)" % int(run.get("prize_packs", 0)))
-		_style_button(pack_button, "action")
-		_connect_pressed(pack_button, _open_reward_pack_flow)
-		actions.add_child(pack_button)
+	if int(run.get("prize_packs", 0)) > 0 or _current_pack_needs_attention():
+		_add_season_result_secondary_button(
+			secondary,
+			"Open Prize Packs (%d)" % int(run.get("prize_packs", 0)),
+			_open_reward_pack_flow,
+			seen_labels
+		)
 
-	var shop_button := _make_button("Visit Card Shop")
-	_connect_pressed(shop_button, _show_shop)
-	actions.add_child(shop_button)
+	_add_season_result_secondary_button(secondary, "Tune Deck", _show_deckbuilder, seen_labels)
+	_add_season_result_secondary_button(secondary, "Visit Card Shop", _show_shop, seen_labels)
+	_add_season_result_secondary_button(secondary, "View Calendar", _show_season_run, seen_labels)
 
-	var calendar_button := _make_button("View Calendar")
-	_connect_pressed(calendar_button, _show_season_run)
-	actions.add_child(calendar_button)
+
+func _season_result_primary_action() -> Dictionary:
+	var summary: Dictionary = run.get("last_event_result", {})
+	if summary.is_empty():
+		return { "text": "Visit Card Shop", "callback": _show_shop }
+	if _current_pack_needs_attention():
+		return { "text": "Continue Pack", "callback": _open_reward_pack_flow }
+	if int(run.get("prize_packs", 0)) > 0:
+		return { "text": "Open Prize Packs (%d)" % int(run.get("prize_packs", 0)), "callback": _open_reward_pack_flow }
+	if bool(summary.get("season_champion", false)):
+		return { "text": "Start New Season", "callback": _show_start }
+	if bool(summary.get("run_over", false)):
+		return { "text": "Start New Run", "callback": _show_start }
+	if not bool(summary.get("made_record", true)):
+		var event_id := String(summary.get("event_id", _selected_season_event_id()))
+		var event := _season_event_by_id(event_id)
+		if _season_entry_fee_missing(event) > 0:
+			return {
+				"text": "Work Shop Shift",
+				"callback": _season_work_shop_shift
+			}
+		return {
+			"text": "Retry %s" % String(event.get("name", event_id)),
+			"callback": _show_tournament,
+			"disabled": not _deck_is_legal().ok or int(run.get("money", 0)) < int(event.get("entryFee", 0))
+		}
+	return { "text": "Visit Card Shop", "callback": _show_shop }
+
+
+func _add_season_result_secondary_button(parent: Node, text: String, callback: Callable, seen_labels: Dictionary, disabled: bool = false) -> void:
+	if seen_labels.has(text):
+		return
+	seen_labels[text] = true
+	_add_season_result_button(parent, text, callback, false, disabled)
+
+
+func _add_season_result_button(parent: Node, text: String, callback: Callable, primary: bool, disabled: bool = false) -> Button:
+	var button := _make_button(text)
+	button.disabled = disabled
+	if primary:
+		button.name = "SeasonResultPrimaryAction"
+		_style_button(button, "action")
+	else:
+		button.name = "SeasonResultSecondaryAction"
+	_connect_pressed(button, callback)
+	parent.add_child(button)
+	return button
 
 
 func _open_reward_pack_flow() -> void:
 	var current_pack: Array = run.get("current_pack", [])
-	if not current_pack.is_empty():
+	if _current_pack_needs_attention():
 		_show_packs()
 		return
+	if not current_pack.is_empty():
+		_finish_pack_state()
 	if int(run.get("prize_packs", 0)) > 0:
 		_open_prize_pack()
 		return
 	_show_packs()
+
+
+func _finish_pack_opening() -> void:
+	_finish_pack_state()
+	_show_shop()
+
+
+func _finish_pack_state() -> void:
+	run.current_pack = []
+	run.revealed_pack = []
+	run.pack_index = 0
+	run.pack_opened = false
+
+
+func _current_pack_needs_attention() -> bool:
+	var current_pack: Array = run.get("current_pack", [])
+	if current_pack.is_empty():
+		return false
+	return int(run.get("pack_index", 0)) < current_pack.size()
+
+
+func _season_entry_fee_missing(event: Dictionary = {}) -> int:
+	if _run_mode() != "season":
+		return 0
+	var target_event := event if not event.is_empty() else _selected_season_event()
+	return max(0, int(target_event.get("entryFee", 0)) - int(run.get("money", 0)))
+
+
+func _season_work_shop_shift() -> void:
+	if _guard_run_over():
+		return
+	if _run_mode() != "season" or _season_tournament_active():
+		_set_footer("Shop shifts are only available between season events.")
+		return
+	var event := _selected_season_event()
+	var missing := _season_entry_fee_missing(event)
+	if missing <= 0:
+		_set_footer("You already have enough for the selected entry fee.")
+		_show_season_run()
+		return
+	run.money = int(run.get("money", 0)) + missing
+	run.season_notice = "You worked a shop shift for $%d, just enough to cover %s entry." % [
+		missing,
+		String(event.get("name", _selected_season_event_id()))
+	]
+	_set_footer("Worked a shop shift for $%d." % missing)
+	_show_season_run()
 
 
 func _add_event_result_summary(parent: Node) -> void:
@@ -4736,6 +4913,9 @@ func _add_event_result_summary(parent: Node) -> void:
 		])
 		if not run_over:
 			_add_body_text(parent, "Retry available: %s stays selected on the calendar." % String(summary.get("event_name", "This event")))
+	var primary_action := _season_result_primary_action()
+	if not primary_action.is_empty():
+		_add_body_text(parent, "Next step: %s" % String(primary_action.get("text", "Continue")))
 
 
 func _generate_opponent(round_number: int, deck_metrics: Dictionary, event: Dictionary = {}) -> Dictionary:

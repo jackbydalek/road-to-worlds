@@ -108,6 +108,27 @@ func _init() -> void:
 		quit(1)
 		return
 
+	var replay_result: Dictionary = combat_service.start_manual_game(player_deck, "flightless_birds", opponent_deck, "oxen", 112233)
+	replay_result["opponent"]["hand"] = ["red_spark_runner"]
+	replay_result["opponent"]["deck"] = []
+	replay_result["opponent"]["max_focus"] = 1
+	replay_result["opponent"]["focus"] = 1
+	replay_result = combat_service.manual_end_player_turn(replay_result)
+	var action_snapshots: Array = replay_result.get("_manual_action_snapshots", [])
+	if action_snapshots.is_empty():
+		push_error("Manual opponent turn did not record action snapshots for animation replay.")
+		quit(1)
+		return
+	var first_snapshot: Dictionary = action_snapshots[0].get("state", {})
+	if first_snapshot.is_empty() or first_snapshot.has("_manual_action_snapshots"):
+		push_error("Manual opponent action snapshot was missing or contained recursive replay data.")
+		quit(1)
+		return
+	if first_snapshot.get("opponent", {}).get("board", []).is_empty():
+		push_error("Manual opponent action snapshot did not include the consequence of the played threat.")
+		quit(1)
+		return
+
 	manual_result = combat_service.manual_end_player_turn(manual_result)
 	if not bool(manual_result.get("game_over", false)) and manual_result.get("phase", "") != "player_main":
 		push_error("Manual combat did not return to player_main after ending turn.")

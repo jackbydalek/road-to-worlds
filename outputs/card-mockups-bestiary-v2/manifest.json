@@ -1,0 +1,101 @@
+[
+  {
+    "display_name": "Cheap Beak Shot",
+    "source_card_name": "Cheap Beak Shot",
+    "file": "01-cheap-beak-shot.png",
+    "cost": 1,
+    "kind": "action",
+    "rarity": "common",
+    "rules": "Deal 3 damage to an enemy unit."
+  },
+  {
+    "display_name": "Emu War Cry",
+    "source_card_name": "Emu War Cry",
+    "file": "02-emu-war-cry.png",
+    "cost": 1,
+    "kind": "action",
+    "rarity": "common",
+    "rules": "Deal 2 damage to any enemy. Draw 1 card if this is relevant tech."
+  },
+  {
+    "display_name": "Kiwi",
+    "source_card_name": "Kiwi Initiate",
+    "file": "03-kiwi.png",
+    "cost": 1,
+    "kind": "unit",
+    "rarity": "common",
+    "rules": "Unit 1/1. Fast. Ready immediately."
+  },
+  {
+    "display_name": "Nest-Side Fix",
+    "source_card_name": "Nest-Side Fix",
+    "file": "04-nest-side-fix.png",
+    "cost": 1,
+    "kind": "action",
+    "rarity": "common",
+    "rules": "Draw 1 card."
+  },
+  {
+    "display_name": "Ostrich Spark Runner",
+    "source_card_name": "Ostrich Spark Runner",
+    "file": "05-ostrich-spark-runner.png",
+    "cost": 1,
+    "kind": "unit",
+    "rarity": "common",
+    "rules": "Unit 2/1. Fast. Ready immediately."
+  },
+  {
+    "display_name": "Quick Peck",
+    "source_card_name": "Quick Peck",
+    "file": "06-quick-peck.png",
+    "cost": 1,
+    "kind": "action",
+    "rarity": "common",
+    "rules": "Deal 2 damage to any enemy."
+  },
+  {
+    "display_name": "Cassowary",
+    "source_card_name": "Cassowary Brawler",
+    "file": "07-cassowary.png",
+    "cost": 2,
+    "kind": "unit",
+    "rarity": "common",
+    "rules": "Unit 3/2."
+  },
+  {
+    "display_name": "Last Peck",
+    "source_card_name": "Last Peck",
+    "file": "08-last-peck.png",
+    "cost": 2,
+    "kind": "action",
+    "rarity": "common",
+    "rules": "Deal 4 damage to opponent."
+  },
+  {
+    "display_name": "Flock Surge",
+    "source_card_name": "Flock Surge",
+    "file": "09-flock-surge.png",
+    "cost": 2,
+    "kind": "engine",
+    "rarity": "uncommon",
+    "rules": "Start of your turn: Summon Crowd Token (1/1, fast)."
+  },
+  {
+    "display_name": "Reckless Rhea",
+    "source_card_name": "Reckless Rhea Recruiter",
+    "file": "10-reckless-rhea.png",
+    "cost": 2,
+    "kind": "engine",
+    "rarity": "uncommon",
+    "rules": "Start of your turn: Draw 1 card."
+  },
+  {
+    "display_name": "Flock Chain Reaction",
+    "source_card_name": "Flock Chain Reaction",
+    "file": "11-flock-chain-reaction.png",
+    "cost": 3,
+    "kind": "action",
+    "rarity": "uncommon",
+    "rules": "Deal 5 damage to opponent. Draw 1 card."
+  }
+]

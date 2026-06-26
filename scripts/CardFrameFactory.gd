@@ -1,33 +1,36 @@
 extends RefCounted
 class_name CardFrameFactory
 
-const PRINTED_FRAME_ASPECT := 1545.0 / 1999.0
+const PRINTED_FRAME_ASPECT := 942.0 / 1355.0
+const CARD_FACE_FONT_PATH := "res://assets/fonts/PatrickHandSC-Regular.ttf"
+const GI_BLACK_FRAME_TEXTURE := "res://assets/card_frames/gi_black.png"
 const PRINTED_FRAME_TEXTURES := {
-	"threat": "res://assets/card_frames/threat_generic_silver.png",
-	"action_engine": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"action": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"engine": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"white": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"blue": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"yellow": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"silver": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"gold": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"black": "res://assets/card_frames/action_or_engine_generic_silver.png",
-	"threat_aggro": "res://assets/card_frames/threat_aggro_silver.png",
-	"action_engine_aggro": "res://assets/card_frames/action_or_engine_aggro_silver.png",
-	"threat_control": "res://assets/card_frames/threat_control_silver.png",
-	"action_engine_control": "res://assets/card_frames/action_or_engine_control_silver.png",
-	"threat_ramp": "res://assets/card_frames/threat_ramp_silver.png",
-	"action_engine_ramp": "res://assets/card_frames/action_or_engine_ramp_silver.png",
-	"threat_prop": "res://assets/card_frames/threat_prop_silver.png",
-	"action_engine_prop": "res://assets/card_frames/action_or_engine_prop_silver.png",
-	"threat_revive": "res://assets/card_frames/threat_revive_silver.png",
-	"action_engine_revive": "res://assets/card_frames/action_or_engine_revive_silver.png",
-	"threat_generic": "res://assets/card_frames/threat_generic_silver.png",
-	"action_engine_generic": "res://assets/card_frames/action_or_engine_generic_silver.png"
+	"threat": GI_BLACK_FRAME_TEXTURE,
+	"action_engine": GI_BLACK_FRAME_TEXTURE,
+	"action": GI_BLACK_FRAME_TEXTURE,
+	"engine": GI_BLACK_FRAME_TEXTURE,
+	"white": GI_BLACK_FRAME_TEXTURE,
+	"blue": GI_BLACK_FRAME_TEXTURE,
+	"yellow": GI_BLACK_FRAME_TEXTURE,
+	"silver": GI_BLACK_FRAME_TEXTURE,
+	"gold": GI_BLACK_FRAME_TEXTURE,
+	"black": GI_BLACK_FRAME_TEXTURE,
+	"threat_aggro": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_aggro": GI_BLACK_FRAME_TEXTURE,
+	"threat_control": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_control": GI_BLACK_FRAME_TEXTURE,
+	"threat_ramp": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_ramp": GI_BLACK_FRAME_TEXTURE,
+	"threat_prop": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_prop": GI_BLACK_FRAME_TEXTURE,
+	"threat_revive": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_revive": GI_BLACK_FRAME_TEXTURE,
+	"threat_generic": GI_BLACK_FRAME_TEXTURE,
+	"action_engine_generic": GI_BLACK_FRAME_TEXTURE
 }
 
 var printed_frame_texture_cache := {}
+var card_face_font: FontFile = null
 
 
 func add_frame(parent: Node, data: Dictionary, options: Dictionary = {}) -> VBoxContainer:
@@ -54,6 +57,11 @@ func add_frame(parent: Node, data: Dictionary, options: Dictionary = {}) -> VBox
 	style.border_width_right = border_width
 	style.border_width_top = border_width
 	style.border_width_bottom = border_width
+	var glow_color := _color(options.get("glow_color", Color(0, 0, 0, 0)), Color(0, 0, 0, 0))
+	if glow_color.a > 0.0:
+		style.shadow_color = glow_color
+		style.shadow_size = int(options.get("glow_size", 8 if compact else 12))
+		style.shadow_offset = Vector2.ZERO
 	style.corner_radius_top_left = 6
 	style.corner_radius_top_right = 6
 	style.corner_radius_bottom_left = 6
@@ -115,15 +123,12 @@ func _add_printed_card(parent: VBoxContainer, data: Dictionary, options: Diction
 	_anchor_rect(frame, Rect2(0.0, 0.0, 1.0, 1.0))
 	printed.add_child(frame)
 
-	_add_printed_art_box(printed, data, prefix, compact)
 	_add_printed_title(printed, data, prefix, compact)
 	_add_printed_focus_orb(printed, data, prefix, compact)
 	_add_printed_type_line(printed, data, prefix, compact)
-	_add_printed_meta_labels(printed, data, options, prefix, compact)
 	_add_printed_combat_stats(printed, data, options, prefix, compact)
 	_add_printed_effect_text(printed, data, options, prefix, compact)
-	_add_printed_stat_labels(printed, data, prefix, compact)
-	_add_printed_rarity(printed, data, prefix, compact)
+	_add_printed_keywords(printed, data, prefix, compact)
 
 
 func _add_printed_art_box(parent: Control, data: Dictionary, prefix: String, compact: bool) -> void:
@@ -152,8 +157,9 @@ func _add_printed_art_box(parent: Control, data: Dictionary, prefix: String, com
 	art_label.text = String(data.get("art_text", "Picture placeholder")) if not compact else ""
 	art_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	art_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	art_label.add_theme_font_size_override("font_size", 8 if compact else 18)
+	art_label.add_theme_font_size_override("font_size", 12 if compact else 18)
 	art_label.add_theme_color_override("font_color", Color("#f6efe0"))
+	_apply_card_font(art_label)
 	art.add_child(art_label)
 
 
@@ -162,12 +168,14 @@ func _add_printed_title(parent: Control, data: Dictionary, prefix: String, compa
 	title.name = prefix + "Name"
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.text = String(data.get("title", "Card"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.clip_text = true
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 7 if compact else 24)
+	title.add_theme_font_size_override("font_size", 12 if compact else 26)
 	title.add_theme_color_override("font_color", Color("#15120d"))
-	_anchor_rect(title, Rect2(0.065, 0.030, 0.650, 0.075))
+	_apply_card_font(title)
+	_anchor_rect(title, Rect2(0.285, 0.052, 0.410, 0.090))
 	parent.add_child(title)
 
 
@@ -175,37 +183,17 @@ func _add_printed_focus_orb(parent: Control, data: Dictionary, prefix: String, c
 	var cost := int(data.get("cost", -1))
 	if cost < 0:
 		return
-	var orb_rect := Rect2(0.828, 0.030, 0.106, 0.082)
-	_add_printed_focus_flair(parent, orb_rect, prefix, compact)
-
-	var orb := PanelContainer.new()
-	orb.name = prefix + "CostBadge"
-	orb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_anchor_rect(orb, orb_rect)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(1.0, 0.88, 0.48, 0.94)
-	style.border_color = Color("#5b4a18")
-	style.border_width_left = 2 if compact else 3
-	style.border_width_right = 2 if compact else 3
-	style.border_width_top = 2 if compact else 3
-	style.border_width_bottom = 2 if compact else 3
-	style.corner_radius_top_left = 96
-	style.corner_radius_top_right = 96
-	style.corner_radius_bottom_left = 96
-	style.corner_radius_bottom_right = 96
-	orb.add_theme_stylebox_override("panel", style)
-	parent.add_child(orb)
-	_add_control_pulse(orb, Vector2(1.08, 1.08), 0.9)
-
 	var label := Label.new()
 	label.name = prefix + "Cost"
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.text = str(cost)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 9 if compact else 22)
+	label.add_theme_font_size_override("font_size", 13 if compact else 26)
 	label.add_theme_color_override("font_color", Color("#15120d"))
-	orb.add_child(label)
+	_apply_card_font(label)
+	_anchor_rect(label, Rect2(0.075, 0.052, 0.155, 0.090))
+	parent.add_child(label)
 
 
 func _add_printed_focus_flair(parent: Control, orb_rect: Rect2, prefix: String, compact: bool) -> void:
@@ -250,13 +238,14 @@ func _add_printed_type_line(parent: Control, data: Dictionary, prefix: String, c
 	var label := Label.new()
 	label.name = prefix + "Type"
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = type_line.to_upper() if compact else type_line
+	label.text = _printed_short_type_line(type_line)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = true
-	label.add_theme_font_size_override("font_size", 5 if compact else 18)
+	label.add_theme_font_size_override("font_size", 11 if compact else 23)
 	label.add_theme_color_override("font_color", _color(data.get("animal_color", Color("#224e62")), Color("#224e62")).darkened(0.25))
-	_anchor_rect(label, Rect2(0.065, 0.510, 0.870, 0.045))
+	_apply_card_font(label)
+	_anchor_rect(label, Rect2(0.735, 0.052, 0.175, 0.090))
 	parent.add_child(label)
 
 
@@ -274,29 +263,25 @@ func _add_printed_meta_labels(parent: Control, data: Dictionary, options: Dictio
 	deck_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	deck_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	deck_label.clip_text = true
-	deck_label.add_theme_font_size_override("font_size", 5 if compact else 11)
+	deck_label.add_theme_font_size_override("font_size", 9 if compact else 11)
 	deck_label.add_theme_color_override("font_color", Color("#40382a"))
+	_apply_card_font(deck_label)
 	_anchor_rect(deck_label, Rect2(0.300, 0.875, 0.400, 0.045))
 	parent.add_child(deck_label)
 
 
-func _add_printed_combat_stats(parent: Control, data: Dictionary, options: Dictionary, prefix: String, compact: bool) -> void:
-	if not bool(options.get("show_combat_stats", false)):
-		return
-	var combat_stats := String(data.get("combat_stats", ""))
-	if combat_stats == "":
-		return
+func _add_printed_combat_stats(parent: Control, data: Dictionary, _options: Dictionary, prefix: String, compact: bool) -> void:
 	var label := Label.new()
 	label.name = prefix + "CombatStats"
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = combat_stats
+	label.text = _printed_attack_health_text(data)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.clip_text = true
-	label.add_theme_font_size_override("font_size", 5 if compact else 12)
+	label.add_theme_font_size_override("font_size", 11 if compact else 23)
 	label.add_theme_color_override("font_color", Color("#5b3d1d"))
-	_anchor_rect(label, Rect2(0.075, 0.545, 0.850, 0.035))
+	_apply_card_font(label)
+	_anchor_rect(label, Rect2(0.075, 0.585, 0.245, 0.060))
 	parent.add_child(label)
 
 
@@ -314,9 +299,32 @@ func _add_printed_effect_text(parent: Control, data: Dictionary, options: Dictio
 	label.text = "\n".join(PackedStringArray(lines))
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.clip_text = true
-	label.add_theme_font_size_override("font_size", 6 if compact else 16)
+	label.add_theme_font_size_override("font_size", 10 if compact else 22)
 	label.add_theme_color_override("font_color", Color("#241d15"))
-	_anchor_rect(label, Rect2(0.075, 0.575, 0.850, 0.285))
+	_apply_card_font(label)
+	_anchor_rect(label, Rect2(0.100, 0.710, 0.800, 0.205))
+	parent.add_child(label)
+
+
+func _add_printed_keywords(parent: Control, data: Dictionary, prefix: String, compact: bool) -> void:
+	var keywords := String(data.get("keyword_text", ""))
+	if keywords == "":
+		keywords = String(data.get("combat_stats", ""))
+	if keywords == "" or keywords.find("/") >= 0:
+		keywords = String(data.get("area_text", ""))
+	if keywords == "":
+		return
+	var label := Label.new()
+	label.name = prefix + "Keywords"
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.text = keywords
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.add_theme_font_size_override("font_size", 10 if compact else 22)
+	label.add_theme_color_override("font_color", Color("#5b3d1d"))
+	_apply_card_font(label)
+	_anchor_rect(label, Rect2(0.350, 0.585, 0.550, 0.060))
 	parent.add_child(label)
 
 
@@ -332,8 +340,9 @@ func _add_printed_stat_labels(parent: Control, data: Dictionary, prefix: String,
 	attack_label.text = str(attack)
 	attack_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	attack_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	attack_label.add_theme_font_size_override("font_size", 14 if compact else 30)
+	attack_label.add_theme_font_size_override("font_size", 18 if compact else 30)
 	attack_label.add_theme_color_override("font_color", Color("#1f160c"))
+	_apply_card_font(attack_label)
 	_anchor_rect(attack_label, Rect2(0.045, 0.895, 0.220, 0.070))
 	parent.add_child(attack_label)
 
@@ -343,8 +352,9 @@ func _add_printed_stat_labels(parent: Control, data: Dictionary, prefix: String,
 	health_label.text = str(health)
 	health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	health_label.add_theme_font_size_override("font_size", 14 if compact else 30)
+	health_label.add_theme_font_size_override("font_size", 18 if compact else 30)
 	health_label.add_theme_color_override("font_color", Color("#7e1515") if health < max_health else Color("#1f100e"))
+	_apply_card_font(health_label)
 	_anchor_rect(health_label, Rect2(0.735, 0.895, 0.220, 0.070))
 	parent.add_child(health_label)
 
@@ -360,10 +370,32 @@ func _add_printed_rarity(parent: Control, data: Dictionary, prefix: String, comp
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = true
-	label.add_theme_font_size_override("font_size", 9 if compact else 22)
+	label.add_theme_font_size_override("font_size", 13 if compact else 22)
 	label.add_theme_color_override("font_color", Color("#2a241c"))
+	_apply_card_font(label)
 	_anchor_rect(label, Rect2(0.385, 0.920, 0.230, 0.035))
 	parent.add_child(label)
+
+
+func _printed_attack_health_text(data: Dictionary) -> String:
+	if bool(data.get("show_attack_health", false)):
+		return "%d/%d" % [int(data.get("attack", 0)), int(data.get("health", 0))]
+	var combat_stats := String(data.get("combat_stats", ""))
+	if combat_stats.find("/") >= 0:
+		return combat_stats
+	return ""
+
+
+func _printed_short_type_line(type_line: String) -> String:
+	var normalized := type_line.strip_edges()
+	if normalized == "":
+		return ""
+	if normalized.find("|") >= 0:
+		return String(normalized.split("|", false)[0]).strip_edges()
+	var pieces := normalized.split(" ", false)
+	if pieces.size() > 0:
+		return String(pieces[0]).capitalize()
+	return normalized.capitalize()
 
 
 func _rarity_symbol(rarity: String) -> String:
@@ -378,6 +410,24 @@ func _rarity_symbol(rarity: String) -> String:
 			return "♛"
 		_:
 			return "•"
+
+
+func _apply_card_font(label: Label) -> void:
+	var font := _card_face_font()
+	if font != null:
+		label.add_theme_font_override("font", font)
+
+
+func _card_face_font() -> FontFile:
+	if card_face_font != null:
+		return card_face_font
+	var font := FontFile.new()
+	var error := font.load_dynamic_font(CARD_FACE_FONT_PATH)
+	if error != OK:
+		push_warning("Could not load card face font: " + CARD_FACE_FONT_PATH)
+		return null
+	card_face_font = font
+	return card_face_font
 
 
 func _add_control_pulse(control: Control, target_scale: Vector2, duration: float, min_alpha: float = 1.0) -> void:
@@ -445,6 +495,7 @@ func _add_title_row(parent: VBoxContainer, data: Dictionary, prefix: String, com
 	title.text = String(data.get("title", "Card"))
 	title.add_theme_font_size_override("font_size", 9 if compact else 18)
 	title.add_theme_color_override("font_color", Color("#f3efe4"))
+	_apply_card_font(title)
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF if compact else TextServer.AUTOWRAP_WORD_SMART
 	title.clip_text = compact
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -478,6 +529,7 @@ func _add_title_row(parent: VBoxContainer, data: Dictionary, prefix: String, com
 	cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cost_label.add_theme_font_size_override("font_size", 9 if compact else 14)
 	cost_label.add_theme_color_override("font_color", Color("#07131d"))
+	_apply_card_font(cost_label)
 	badge.add_child(cost_label)
 
 
@@ -507,6 +559,7 @@ func _add_art_box(parent: VBoxContainer, data: Dictionary, prefix: String, compa
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 9 if compact else 12)
 	label.add_theme_color_override("font_color", Color("#d8dfec"))
+	_apply_card_font(label)
 	art.add_child(label)
 
 
@@ -547,6 +600,7 @@ func _add_type_strip(parent: VBoxContainer, data: Dictionary, prefix: String, co
 	label.clip_text = true
 	label.add_theme_font_size_override("font_size", 7 if compact else 12)
 	label.add_theme_color_override("font_color", animal_color.lightened(0.68))
+	_apply_card_font(label)
 	margin.add_child(label)
 
 
@@ -586,6 +640,7 @@ func _add_bottom_row(parent: VBoxContainer, data: Dictionary, prefix: String, co
 		area.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		area.add_theme_font_size_override("font_size", 7 if compact else 11)
 		area.add_theme_color_override("font_color", Color("#c7d0df"))
+		_apply_card_font(area)
 		row.add_child(area)
 
 	if show_stats:
@@ -616,6 +671,7 @@ func _add_stat_chip(parent: HBoxContainer, node_name: String, label_text: String
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 7 if compact else 11)
 	label.add_theme_color_override("font_color", Color("#11141a"))
+	_apply_card_font(label)
 	chip.add_child(label)
 
 
@@ -627,6 +683,7 @@ func _add_optional_line(parent: VBoxContainer, node_name: String, text: String, 
 	label.text = text
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	_apply_card_font(label)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.clip_text = compact
 	if compact:

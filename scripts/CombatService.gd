@@ -197,7 +197,8 @@ func manual_end_player_turn(state: Dictionary) -> Dictionary:
 		state["phase"] = "game_over"
 		return state
 
-	_take_turn(state, "opponent")
+	state["_manual_action_snapshots"] = []
+	_take_turn(state, "opponent", true)
 	if bool(state["game_over"]):
 		state["phase"] = "game_over"
 		return state
@@ -254,16 +255,16 @@ func _shuffle_deck(deck: Array) -> void:
 		deck[swap_index] = held_card
 
 
-func _take_turn(state: Dictionary, side: String) -> void:
+func _take_turn(state: Dictionary, side: String, record_action_snapshots: bool = false) -> void:
 	var active: Dictionary = state[side]
 	var enemy_side := "opponent" if side == "player" else "player"
 	var enemy: Dictionary = state[enemy_side]
 
 	_prepare_turn(state, active)
-	_play_main_phase(state, active, enemy)
-	_activate_abilities_phase(state, active, enemy)
-	_play_main_phase(state, active, enemy)
-	_attack_phase(state, active, enemy)
+	_play_main_phase(state, active, enemy, record_action_snapshots)
+	_activate_abilities_phase(state, active, enemy, record_action_snapshots)
+	_play_main_phase(state, active, enemy, record_action_snapshots)
+	_attack_phase(state, active, enemy, record_action_snapshots)
 	_end_turn(state, active)
 	_discard_to_hand_size(state, active)
 	_check_game_over(state)
@@ -419,7 +420,7 @@ func _trigger_condition_met(trigger: Dictionary, source_card: Dictionary, active
 	return _effect_condition_met(trigger, source_card, active, enemy, source_unit, context)
 
 
-func _play_main_phase(state: Dictionary, active: Dictionary, enemy: Dictionary) -> void:
+func _play_main_phase(state: Dictionary, active: Dictionary, enemy: Dictionary, record_action_snapshots: bool = false) -> void:
 	var played_any := true
 	var safety := 0
 	while played_any and safety < 20:
@@ -428,11 +429,14 @@ func _play_main_phase(state: Dictionary, active: Dictionary, enemy: Dictionary) 
 		var card_id := _choose_card_to_play(active, enemy)
 		if card_id == "":
 			break
+		var log_start: int = state.get("log", []).size()
 		if _play_card(state, active, enemy, card_id):
 			played_any = true
+			if record_action_snapshots:
+				_record_manual_action_snapshot(state, log_start)
 
 
-func _activate_abilities_phase(state: Dictionary, active: Dictionary, enemy: Dictionary) -> void:
+func _activate_abilities_phase(state: Dictionary, active: Dictionary, enemy: Dictionary, record_action_snapshots: bool = false) -> void:
 	var safety := 0
 	var activated_any := true
 	while activated_any and safety < 20:
@@ -457,7 +461,10 @@ func _activate_abilities_phase(state: Dictionary, active: Dictionary, enemy: Dic
 					best_unit = unit
 					best_index = index
 		if best_index >= 0 and not best_unit.is_empty():
+			var log_start: int = state.get("log", []).size()
 			activated_any = _activate_unit_ability(state, active, enemy, best_unit, best_index)
+			if activated_any and record_action_snapshots:
+				_record_manual_action_snapshot(state, log_start)
 
 
 func _choose_card_to_play(active: Dictionary, enemy: Dictionary) -> String:
@@ -1365,7 +1372,7 @@ func _choose_weakest_unit(combatant: Dictionary) -> Dictionary:
 	return weakest
 
 
-func _attack_phase(state: Dictionary, active: Dictionary, enemy: Dictionary) -> void:
+func _attack_phase(state: Dictionary, active: Dictionary, enemy: Dictionary, record_action_snapshots: bool = false) -> void:
 	var attackers: Array = active["board"].duplicate()
 	for attacker in attackers:
 		if bool(state["game_over"]):
@@ -1376,7 +1383,10 @@ func _attack_phase(state: Dictionary, active: Dictionary, enemy: Dictionary) -> 
 			continue
 
 		var target := _choose_attack_target(active, enemy, attacker)
+		var log_start: int = state.get("log", []).size()
 		_resolve_single_attack(state, active, enemy, attacker, target)
+		if record_action_snapshots:
+			_record_manual_action_snapshot(state, log_start)
 
 
 func _choose_attack_target(active: Dictionary, enemy: Dictionary, attacker: Dictionary) -> Dictionary:
@@ -1575,3 +1585,18 @@ func _archetype_name(archetype_id: String) -> String:
 
 func _log(state: Dictionary, message: String) -> void:
 	state["log"].append(message)
+
+
+func _record_manual_action_snapshot(state: Dictionary, log_start: int) -> void:
+	var log_lines: Array = state.get("log", [])
+	if log_lines.size() <= log_start:
+		return
+	var snapshot := state.duplicate(true)
+	snapshot.erase("_manual_action_snapshots")
+	var snapshots: Array = state.get("_manual_action_snapshots", [])
+	for i in range(log_start, log_lines.size()):
+		snapshots.append({
+			"log_index": i,
+			"state": snapshot.duplicate(true)
+		})
+	state["_manual_action_snapshots"] = snapshots
