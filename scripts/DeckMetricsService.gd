@@ -54,9 +54,9 @@ func calculate(deck: Dictionary, _sideboard: Dictionary) -> Dictionary:
 		for key in stat_totals.keys():
 			stat_totals[key] = float(stat_totals[key]) + float(stats.get(key, 0)) * count
 
-		if int(card.get("cost", 0)) <= 2:
+		if int(card.get("cost", 0)) <= 1:
 			low_cost += count
-		if int(card.get("cost", 0)) >= 4:
+		if int(card.get("cost", 0)) >= 3:
 			high_cost += count
 
 		card_quality += sqrt(float(card.get("value", 1))) * count
@@ -91,51 +91,15 @@ func calculate(deck: Dictionary, _sideboard: Dictionary) -> Dictionary:
 
 	var curve_warning := "Curve looks playable."
 	var curve_bonus := 0.0
-	if primary == "flightless_birds":
-		if low_cost < 20:
-			curve_warning = "Aggro deck is light on cheap cards."
-			curve_bonus -= 3.0
-		if high_cost > 4:
-			curve_warning = "Aggro deck may be too clunky."
-			curve_bonus -= 3.0
-	elif primary == "snake":
-		if low_cost < 14:
-			curve_warning = "Control deck may not survive early turns."
-			curve_bonus -= 3.0
-		if high_cost > 8:
-			curve_warning = "Control deck has a heavy top end."
-			curve_bonus -= 1.5
-	elif primary == "oxen":
-		if low_cost < 14:
-			curve_warning = "Oxen Ramp needs early setup before its top end."
-			curve_bonus -= 2.5
-		if high_cost < 6:
-			curve_warning = "Oxen Ramp needs more big payoffs."
-			curve_bonus -= 2.0
-		if high_cost > 14:
-			curve_warning = "Oxen Ramp is overloaded with expensive cards."
-			curve_bonus -= 1.5
-	elif primary == "glires":
-		if low_cost < 18:
-			curve_warning = "Glires deck wants more cheap bodies to propagate."
-			curve_bonus -= 2.0
-		if high_cost > 6:
-			curve_warning = "Glires deck may be too top-heavy for a wide plan."
-			curve_bonus -= 1.5
-	elif primary == "insect":
-		if low_cost < 15:
-			curve_warning = "Insect deck needs early bodies to fuel revive lines."
-			curve_bonus -= 2.0
-		if high_cost > 8:
-			curve_warning = "Insect deck has a heavy revive top end."
-			curve_bonus -= 1.5
-	else:
-		if low_cost < 16:
-			curve_warning = "Midrange deck may stumble before stabilizing."
-			curve_bonus -= 2.0
-		if high_cost > 7:
-			curve_warning = "Midrange deck is leaning too top-heavy."
-			curve_bonus -= 2.0
+	if low_cost < 18:
+		curve_warning = "Add more Ingredients or one-Ingredient Meals for reliable recipes."
+		curve_bonus -= 2.0
+	elif high_cost < 1:
+		curve_warning = "The deck has no three-Ingredient Meal payoff."
+		curve_bonus -= 1.5
+	elif high_cost > 6:
+		curve_warning = "Too many three-Ingredient Meals may clog the opening hand."
+		curve_bonus -= 2.0
 
 	var consistency_score: float = float(averages.consistency) + fit * 3.0 + role_score * 2.0
 	var score: float = 28.0 + fit * 16.0 + role_score * 8.0 + weighted_stats * 5.8 + consistency_score * 1.6 + card_quality * 0.16 + curve_bonus

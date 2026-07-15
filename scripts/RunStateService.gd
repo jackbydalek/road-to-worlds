@@ -30,7 +30,7 @@ func setup(
 	save_path = run_save_path
 
 
-func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_opponent: String, run_mode: String = "debug", difficulty_id: String = "white") -> Dictionary:
+func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent: String, run_mode: String = "debug", difficulty_id: String = "white") -> Dictionary:
 	var starter_collection := {}
 	for card_id in starter_deck.keys():
 		starter_collection[card_id] = starter_deck[card_id]
@@ -48,16 +48,14 @@ func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_oppon
 		"deck": starter_deck.duplicate(true),
 		"sideboard": {},
 		"meta": {
-			"flightless_birds": 0.24,
-			"snake": 0.22,
-			"oxen": 0.22,
-			"glires": 0.17,
-			"insect": 0.15
+			"spicy": 0.34,
+			"hearty": 0.33,
+			"sweet": 0.33
 		},
 		"reports": [
-			"Opening week: Flightless Birds Aggro is cheap and everywhere.",
-			"Oxen Ramp is picking up because players want to go over fair boards.",
-			"Snake Control players are happy to coil around fair creature decks."
+			"Opening week: Spicy decks are setting the pace with early Plated pressure.",
+			"Hearty chefs are leaning on durable Ingredients and life gain.",
+			"Sweet lists are trading speed for draw and flexible Prep support."
 		],
 		"shop": [],
 		"current_pack": [],
@@ -74,16 +72,9 @@ func create_run(archetype_id: String, starter_deck: Dictionary, combat_lab_oppon
 		"season_notice": "Weekly Locals is open. Tune your starter deck, check the shop, then register when ready.",
 		"last_result": [],
 		"last_event_result": {},
-		"combat_lab_opponent": combat_lab_opponent,
-		"manual_selection": {},
-		"manual_inspect": {},
-		"manual_battle_log_open": false,
-		"manual_animation": {},
-		"manual_animation_queue": [],
-		"manual_pending_action": {},
-		"manual_opponent_pending_state": {},
-		"manual_combat": {},
-		"last_combat": {},
+		"kitchen_opponent": kitchen_opponent,
+		"kitchen_match": {},
+		"kitchen_match_result": {},
 		"active_tournament": {}
 	}
 
@@ -230,22 +221,10 @@ func load_run() -> Dictionary:
 
 
 func normalize_loaded_run(target_run: Dictionary) -> void:
-	if not target_run.has("last_combat"):
-		target_run.last_combat = {}
-	if not target_run.has("manual_combat"):
-		target_run.manual_combat = {}
-	if not target_run.has("manual_selection"):
-		target_run.manual_selection = {}
-	if not target_run.has("manual_inspect"):
-		target_run.manual_inspect = {}
-	if not target_run.has("manual_battle_log_open"):
-		target_run.manual_battle_log_open = false
-	if not target_run.has("manual_animation"):
-		target_run.manual_animation = {}
-	if not target_run.has("manual_animation_queue"):
-		target_run.manual_animation_queue = []
-	if not target_run.has("manual_opponent_pending_state"):
-		target_run.manual_opponent_pending_state = {}
+	if not target_run.has("kitchen_match"):
+		target_run.kitchen_match = {}
+	if not target_run.has("kitchen_match_result"):
+		target_run.kitchen_match_result = {}
 	if not target_run.has("run_mode"):
 		target_run.run_mode = "debug"
 	if not target_run.has("difficulty"):
@@ -271,8 +250,6 @@ func normalize_loaded_run(target_run: Dictionary) -> void:
 		target_run.season_notice = ""
 	if not target_run.has("last_event_result"):
 		target_run.last_event_result = {}
-	target_run.manual_pending_action = {}
-	target_run.manual_opponent_pending_state = {}
 	migrate_legacy_run_archetypes(target_run)
 
 
@@ -329,27 +306,28 @@ func _first_available_calendar_event(target_run: Dictionary) -> String:
 
 
 func migrate_legacy_run_archetypes(target_run: Dictionary) -> void:
-	var legacy_map := {
-		"redline_aggro": "flightless_birds",
-		"lantern_control": "snake",
-		"verdant_midrange": "oxen",
-		"canine": "oxen"
-	}
-	if legacy_map.has(String(target_run.get("starter", ""))):
-		target_run.starter = legacy_map[String(target_run.starter)]
-	if legacy_map.has(String(target_run.get("combat_lab_opponent", ""))):
-		target_run.combat_lab_opponent = legacy_map[String(target_run.combat_lab_opponent)]
-	if target_run.has("meta"):
-		var migrated_meta := {}
-		for archetype_id in target_run.meta.keys():
-			var id := String(archetype_id)
-			id = String(legacy_map.get(id, id))
-			migrated_meta[id] = float(migrated_meta.get(id, 0.0)) + float(target_run.meta[archetype_id])
-		for archetype_id in archetype_order:
-			if not migrated_meta.has(archetype_id):
-				migrated_meta[archetype_id] = 0.12
-		target_run.meta = migrated_meta
-		normalize_meta(target_run)
+	var starter := String(target_run.get("starter", ""))
+	if not archetypes_by_id.has(starter):
+		starter = String(archetype_order[0])
+		target_run.starter = starter
+		var starter_deck := {}
+		for entry in archetypes_by_id[starter].get("starterDeck", []):
+			starter_deck[String(entry.get("cardId", ""))] = int(entry.get("count", 0))
+		target_run.deck = starter_deck.duplicate(true)
+		target_run.collection = starter_deck.duplicate(true)
+		target_run.sideboard = {}
+	for field in ["collection", "deck", "sideboard"]:
+		var cleaned := {}
+		for card_id in target_run.get(field, {}).keys():
+			if cards_by_id.has(card_id):
+				cleaned[card_id] = int(target_run[field][card_id])
+		target_run[field] = cleaned
+	var migrated_meta := {}
+	for archetype_id in archetype_order:
+		migrated_meta[archetype_id] = float(target_run.get("meta", {}).get(archetype_id, 1.0))
+	target_run.meta = migrated_meta
+	normalize_meta(target_run)
+	target_run.kitchen_opponent = predator_archetype(starter)
 
 
 func normalize_meta(target_run: Dictionary) -> void:
@@ -383,18 +361,14 @@ func dominant_archetype(target_run: Dictionary) -> String:
 
 func predator_archetype(archetype_id: String) -> String:
 	match archetype_id:
-		"flightless_birds":
-			return "snake"
-		"snake":
-			return "oxen"
-		"oxen":
-			return "flightless_birds"
-		"glires":
-			return "insect"
-		"insect":
-			return "flightless_birds"
+		"spicy":
+			return "hearty"
+		"hearty":
+			return "sweet"
+		"sweet":
+			return "spicy"
 		_:
-			return "flightless_birds"
+			return String(archetype_order[0])
 
 
 func _card_name(card_id: String) -> String:

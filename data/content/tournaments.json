@@ -19,7 +19,7 @@
         "3": 1
       },
       "bossName": "Local Rival Tess",
-      "bossArchetype": "snake"
+      "bossArchetype": "hearty"
     },
     {
       "id": "monthly_regionals",
@@ -40,7 +40,7 @@
         "5": 2
       },
       "bossName": "Regional Grinder Jules",
-      "bossArchetype": "oxen"
+      "bossArchetype": "sweet"
     },
     {
       "id": "state_championship",
@@ -61,7 +61,7 @@
         "5": 3
       },
       "bossName": "State Champion Rowan",
-      "bossArchetype": "insect"
+      "bossArchetype": "spicy"
     },
     {
       "id": "nationals",
@@ -82,7 +82,7 @@
         "6": 4
       },
       "bossName": "National Champion Vale",
-      "bossArchetype": "glires"
+      "bossArchetype": "hearty"
     },
     {
       "id": "worlds",
@@ -103,7 +103,7 @@
         "7": 6
       },
       "bossName": "Worlds Finalist Mira",
-      "bossArchetype": "snake"
+      "bossArchetype": "sweet"
     }
   ]
 }

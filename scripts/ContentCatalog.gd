@@ -1,10 +1,39 @@
 extends RefCounted
 class_name ContentCatalog
 
-const CARDS_PATH := "res://data/content/cards.json"
-const ARCHETYPES_PATH := "res://data/content/archetypes.json"
+const CARDS_PATH := "res://data/cards.json"
 const BOOSTERS_PATH := "res://data/content/boosters.json"
 const TOURNAMENTS_PATH := "res://data/content/tournaments.json"
+
+const ARCHETYPE_DATA := {
+	"spicy": {
+		"name": "Spicy Starter",
+		"strategy": "pressure",
+		"summary": "Fast damage, direct pressure, and explosive plated attackers.",
+		"tags": ["spicy", "pressure", "damage"],
+		"color": "#d95735",
+		"phaseWeights": {"speed": 0.34, "power": 0.26, "interaction": 0.20, "resilience": 0.08, "advantage": 0.12},
+		"matchups": {"hearty": -0.06, "sweet": 0.06}
+	},
+	"hearty": {
+		"name": "Hearty Starter",
+		"strategy": "resilience",
+		"summary": "Durable boards, healing, and Meals that grow into sturdy threats.",
+		"tags": ["hearty", "resilience", "healing"],
+		"color": "#8a6b32",
+		"phaseWeights": {"speed": 0.08, "power": 0.25, "interaction": 0.12, "resilience": 0.35, "advantage": 0.20},
+		"matchups": {"spicy": 0.06, "sweet": -0.06}
+	},
+	"sweet": {
+		"name": "Sweet Starter",
+		"strategy": "advantage",
+		"summary": "Card draw, flexible disruption, and Prep-based support effects.",
+		"tags": ["sweet", "advantage", "tempo"],
+		"color": "#c75ba3",
+		"phaseWeights": {"speed": 0.15, "power": 0.12, "interaction": 0.23, "resilience": 0.15, "advantage": 0.35},
+		"matchups": {"spicy": -0.06, "hearty": 0.06}
+	}
+}
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -21,31 +50,108 @@ func load_all() -> bool:
 	tournaments_by_id = {}
 
 	var card_data := _load_json(CARDS_PATH)
-	var archetype_data := _load_json(ARCHETYPES_PATH)
 	var booster_data := _load_json(BOOSTERS_PATH)
 	var tournament_data := _load_json(TOURNAMENTS_PATH)
+	if card_data.is_empty() or booster_data.is_empty() or tournament_data.is_empty():
+		return false
 
-	cards = card_data.get("cards", [])
-	for card in cards:
-		cards_by_id[card.get("id", "")] = card
+	for source_card in card_data.get("cards", []):
+		var card: Dictionary = source_card.duplicate(true)
+		_decorate_card(card)
+		cards.append(card)
+		cards_by_id[String(card.get("id", ""))] = card
 
-	for archetype in archetype_data.get("archetypes", []):
-		archetypes_by_id[archetype.get("id", "")] = archetype
+	_build_archetypes(card_data.get("decks", {}))
 
 	for booster in booster_data.get("boosters", []):
-		boosters_by_id[booster.get("id", "")] = booster
-
+		boosters_by_id[String(booster.get("id", ""))] = booster
 	for tournament in tournament_data.get("tournaments", []):
-		tournaments_by_id[tournament.get("id", "")] = tournament
+		tournaments_by_id[String(tournament.get("id", ""))] = tournament
 
-	return not (card_data.is_empty() or archetype_data.is_empty() or booster_data.is_empty() or tournament_data.is_empty())
+	return cards.size() > 0 and archetypes_by_id.size() == 3
 
 
 func deck_entries_to_dict(entries: Array) -> Dictionary:
 	var deck := {}
 	for entry in entries:
-		deck[entry.get("cardId", "")] = int(entry.get("count", 0))
+		deck[String(entry.get("cardId", ""))] = int(entry.get("count", 0))
 	return deck
+
+
+func _build_archetypes(deck_data: Dictionary) -> void:
+	for deck_id in deck_data:
+		var source: Dictionary = deck_data[deck_id]
+		var archetype_id := String(source.get("archetype", ""))
+		if not ARCHETYPE_DATA.has(archetype_id):
+			continue
+		var archetype: Dictionary = ARCHETYPE_DATA[archetype_id].duplicate(true)
+		archetype["id"] = archetype_id
+		archetype["animalType"] = archetype_id
+		archetype["desiredRoles"] = {"threat": 8, "finisher": 5, "answer": 10, "engine": 2, "filter": 4}
+		var starter: Array = []
+		for card_id in source.get("cards", {}):
+			starter.append({"cardId": String(card_id), "count": int(source.cards[card_id])})
+		archetype["starterDeck"] = starter
+		archetypes_by_id[archetype_id] = archetype
+
+
+func _decorate_card(card: Dictionary) -> void:
+	var card_type := String(card.get("card_type", "tool"))
+	var rarity := "common"
+	if card_type == "chef":
+		rarity = "mythic"
+	elif bool(card.get("rare", false)):
+		rarity = "rare"
+	elif card_type in ["meal", "spice", "environment"]:
+		rarity = "uncommon"
+	card["rarity"] = rarity
+	card["deckLimit"] = 3
+	card["cost"] = card.get("recipe", []).size() if card_type == "meal" else int(card.get("discard_cost", 0))
+	card["value"] = {"common": 2, "uncommon": 4, "rare": 7, "mythic": 10}.get(rarity, 2)
+	card["animalType"] = String(card.get("archetype", "neutral"))
+	card["role"] = _role_for_type(card_type)
+	card["stats"] = _season_stats(card)
+	card["tags"] = _card_tags(card)
+
+
+func _role_for_type(card_type: String) -> String:
+	match card_type:
+		"ingredient":
+			return "threat"
+		"meal":
+			return "finisher"
+		"spice", "environment":
+			return "engine"
+		"chef":
+			return "filter"
+		_:
+			return "answer"
+
+
+func _season_stats(card: Dictionary) -> Dictionary:
+	var card_type := String(card.get("card_type", "tool"))
+	var archetype := String(card.get("archetype", "neutral"))
+	var text := String(card.get("text", "")).to_lower()
+	var attack := int(card.get("attack", 0))
+	var health := int(card.get("health", 0))
+	return {
+		"speed": 3 if archetype == "spicy" else (2 if card_type == "ingredient" else 1),
+		"power": clamp(attack / 2, 1, 5) if attack > 0 else (2 if "damage" in text or "destroy" in text else 1),
+		"interaction": 4 if card_type == "tool" else (3 if "return" in text or "cannot" in text else 1),
+		"resilience": clamp(health / 2, 1, 5) if health > 0 else (3 if "heal" in text else 1),
+		"advantage": 4 if "draw" in text or "search" in text else (2 if card_type in ["chef", "environment"] else 1),
+		"consistency": 3 if "draw" in text or "search" in text else 1
+	}
+
+
+func _card_tags(card: Dictionary) -> Array:
+	var tags: Array = [String(card.get("card_type", "card"))]
+	var archetype := String(card.get("archetype", "neutral"))
+	if archetype != "neutral":
+		tags.append(archetype)
+	for keyword in card.get("keywords", []):
+		tags.append(String(keyword))
+	return tags
 
 
 func _load_json(path: String) -> Dictionary:
@@ -53,10 +159,8 @@ func _load_json(path: String) -> Dictionary:
 	if file == null:
 		push_error("Could not load " + path)
 		return {}
-
 	var parsed = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_error("Invalid JSON at " + path)
 		return {}
-
 	return parsed

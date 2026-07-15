@@ -157,7 +157,7 @@ func _opponent_upgrade_candidates(host, opponent_archetype: String) -> Array:
 		var card_id := String(card.get("id", ""))
 		if card_id == "":
 			continue
-		if host._card_animal_type(card) != opponent_archetype:
+		if host._card_archetype(card) != opponent_archetype:
 			continue
 		candidates.append(card_id)
 	candidates.sort_custom(func(a, b) -> bool: return _opponent_card_upgrade_score(host, String(a)) > _opponent_card_upgrade_score(host, String(b)))
@@ -172,26 +172,23 @@ func _opponent_card_upgrade_score(host, card_id: String) -> float:
 
 
 func simulate_combat_match(host, opponent: Dictionary, deck_metrics: Dictionary) -> Dictionary:
-	var opponent_deck: Dictionary = opponent_deck_for_round(host, String(opponent.archetype), int(opponent.get("round", 1)))
 	var player_game_wins := 0
 	var opponent_game_wins := 0
 	var game_number := 1
 	var game_summaries: Array = []
+	var probability := estimate_match_probability(host, opponent, deck_metrics)
 
 	while player_game_wins < 2 and opponent_game_wins < 2:
 		var seed_value: int = host.rng.randi()
-		var result: Dictionary = host.combat_service.auto_play_game(host.run.deck, String(deck_metrics.primary), opponent_deck, String(opponent.archetype), seed_value)
-		if String(result.get("winner", "")) == "player":
+		var player_won: bool = host.rng.randf() <= probability
+		if player_won:
 			player_game_wins += 1
 		else:
 			opponent_game_wins += 1
 
-		game_summaries.append("Game %d: %s on turn %d. Life %d-%d. Seed %d." % [
+		game_summaries.append("Kitchen game %d: %s. Seed %d." % [
 			game_number,
-			"Won" if String(result.get("winner", "")) == "player" else "Lost",
-			int(result.get("turn", 0)),
-			int(result.get("player", {}).get("life", 0)),
-			int(result.get("opponent", {}).get("life", 0)),
+			"Won" if player_won else "Lost",
 			seed_value
 		])
 		game_number += 1
@@ -200,7 +197,7 @@ func simulate_combat_match(host, opponent: Dictionary, deck_metrics: Dictionary)
 		"won": player_game_wins > opponent_game_wins,
 		"player_game_wins": player_game_wins,
 		"opponent_game_wins": opponent_game_wins,
-		"display_probability": estimate_match_probability(host, opponent, deck_metrics),
+		"display_probability": probability,
 		"game_summaries": game_summaries
 	}
 

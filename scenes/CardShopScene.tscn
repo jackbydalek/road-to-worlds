@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bkx6j54p1cefv"]
 
-[ext_resource type="Texture2D" uid="uid://b1elubp33i6pw" path="res://assets/card_shop/tournament_clerk.png" id="1_4wetu"]
+[ext_resource type="Texture2D" path="res://assets/card_shop/tournament_clerk.png" id="1_4wetu"]
 
 [node name="CardShopScene" type="Node2D" unique_id=2087607324]
 

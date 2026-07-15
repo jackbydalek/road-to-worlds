@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cpk43dopsnng8"]
 
-[ext_resource type="Texture2D" uid="uid://bb663as1w3kyk" path="res://assets/card pack/Untitled.png" id="1_25ae7"]
+[ext_resource type="Texture2D" path="res://assets/card pack/Untitled.png" id="1_25ae7"]
 
 [node name="Control" type="Node2D" unique_id=375189134]
 

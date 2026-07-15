@@ -42,8 +42,8 @@ func show(host) -> void:
 
 		var dot := Label.new()
 		dot.text = "●"
-		dot.tooltip_text = host._affinity_label(host._card_animal_type(card))
-		dot.add_theme_color_override("font_color", host._affinity_color(host._card_animal_type(card)))
+		dot.tooltip_text = host._affinity_label(host._card_archetype(card))
+		dot.add_theme_color_override("font_color", host._affinity_color(host._card_archetype(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
@@ -53,7 +53,7 @@ func show(host) -> void:
 			String(card.rarity).capitalize(),
 			String(card.role).capitalize(),
 			int(card.cost),
-			host._affinity_label(host._card_animal_type(card))
+			host._affinity_label(host._card_archetype(card))
 		]
 		label.tooltip_text = card.text
 		label.add_theme_color_override("font_color", host._rarity_text_color(card.get("rarity", "common")))
@@ -108,8 +108,8 @@ func _add_deck_list(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 
 		var dot := Label.new()
 		dot.text = "●"
-		dot.tooltip_text = host._affinity_label(host._card_animal_type(card))
-		dot.add_theme_color_override("font_color", host._affinity_color(host._card_animal_type(card)))
+		dot.tooltip_text = host._affinity_label(host._card_archetype(card))
+		dot.add_theme_color_override("font_color", host._affinity_color(host._card_archetype(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
@@ -184,21 +184,24 @@ func _show_card_preview(host, preview_body: VBoxContainer, card_id: String) -> v
 	if not host.cards_by_id.has(card_id):
 		return
 
-	host.card_frame_factory.add_frame(
+	var card: Dictionary = host.cards_by_id[card_id]
+	var panel: VBoxContainer = host._add_bordered_panel(
 		preview_body,
-		host._card_frame_data(card_id),
-		{
-			"panel_name": "DeckbuilderPreviewFrame",
-			"contents_name": "DeckbuilderPreviewContents",
-			"name_prefix": "DeckbuilderPreview",
-			"compact": false,
-			"min_size": Vector2(248, 0),
-			"show_combat_stats": true,
-			"show_deck_stats": true,
-			"show_rules_text": true,
-			"border_width": 2
-		}
+		String(card.get("name", card_id)),
+		"#202734",
+		"#" + host._affinity_color(host._card_archetype(card)).to_html(false),
+		2
 	)
+	host._add_body_text(panel, "%s %s | %s" % [
+		String(card.get("archetype", "neutral")).capitalize(),
+		String(card.get("card_type", "card")).capitalize(),
+		String(card.get("rarity", "common")).capitalize()
+	])
+	if card.has("attack") and card.has("health"):
+		host._add_body_text(panel, "%d Attack | %d Health" % [int(card.attack), int(card.health)])
+	if String(card.get("card_type", "")) == "meal":
+		host._add_body_text(panel, "Recipe: %s" % " + ".join(card.get("recipe", [])))
+	host._add_body_text(panel, String(card.get("text", "No rules text.")))
 
 
 func _add_sort_controls(host, parent: VBoxContainer) -> void:

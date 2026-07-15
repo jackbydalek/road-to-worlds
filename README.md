@@ -1,84 +1,61 @@
-# Road to Worlds
+# Kitchen Table: Road to Worlds
 
-Road to Worlds is a roguelike deckbuilding game about climbing a competitive trading card game season from locals to Worlds.
+Kitchen Table: Road to Worlds combines a competitive-season campaign with the Kitchen Table TCG match system. Build a Spicy, Hearty, or Sweet deck, buy cards and boosters, tune the list, and play live Kitchen Matches through a calendar that runs from Weekly Locals to Worlds.
 
-## Prototype
+## Play
 
-This repo now includes a Godot 4 vertical slice.
-
-To run it:
-
-1. Open Godot 4.x.
-2. Click **Import**.
-3. Select this folder: `/Users/jack.bydalek/Documents/Road to Worlds`.
-4. Open the imported project.
-5. Press **Play**.
-
-Playable loop:
-
-- Choose Flightless Birds Aggro, Snake Control, Oxen Ramp, Glires Propagate, or Insect Revive.
-- Visit the card shop.
-- Buy and reveal booster packs.
-- Buy singles.
-- Tune a 30-card main deck and 6-card sideboard.
-- Run a seeded auto-duel in the Combat Lab.
-- Choose a Combat Lab opponent and inspect final board, hand, engines, discard, and combat log.
-- Start a manual Combat Lab battle, select cards or attackers, use highlighted legal targets, and end turn into the opponent AI.
-- Enter a three-round Weekly Locals event backed by auto-resolved best-of-three combat matches.
-- Survive with a 2-1 or better record, or the run ends.
-- Watch the local metagame shift after tournaments.
-
-The prototype now uses the combat engine for Weekly Locals matches. Deck metrics still help explain deck quality, archetype fit, curve, role balance, and sideboard tech.
-
-Start here:
-
-- [Game Design](docs/game-design.md): core loop, collection, tournaments, metagame, boosters, archetypes, bosses, and MVP scope.
-- [Technical Architecture](docs/technical-architecture.md): Unity/Godot-friendly data structures, services, match simulation, metagame simulation, and milestones.
-- [Godot script](scripts/Main.gd): current single-file prototype implementation.
-- [Combat engine](scripts/CombatService.gd): simplified TCG duel foundation.
-- [Combat progress](docs/combat-implementation-progress.md): current combat roadmap and handoff notes.
-- [Combat card schema](docs/combat-card-schema.md): explicit `combat` fields and placeholder UI customization notes.
-- [Prototype card data](data/content/cards.json): current implemented card set.
-- [Prototype archetypes](data/content/archetypes.json): current starter decks and matchup data.
-- [Example Card Data](data/cards.example.json): sample card schema and starter cards.
-- [Example Archetype Data](data/archetypes.example.json): sample archetype schema and matchup data.
-- [Example Booster Data](data/boosters.example.json): sample pack slot definitions.
-- [Example Season Data](data/season.example.json): sample tournament tier definitions.
-
-## Current Product Direction
-
-The project should be structured demo-first, then expanded into the full season. The target Steam demo is a complete short arc: two Weekly Locals events leading into a League Cup climax, followed by a clear tease that the road continues into Regionals, States, Nationals, and Worlds in the full game.
-
-The demo does not need every planned card, starter deck, archetype, boss, or tournament tier. It should prioritize a polished and replayable slice: a curated card pool, a small set of strong starter archetypes, satisfying pack/shop/deckbuilder decisions, readable tournament results, visible metagame movement between weeks, and a memorable League Cup endpoint.
-
-After the demo loop is stable, the full game should expand outward from the same structure by adding later tournament tiers, more archetypes, more cards, deeper rival/boss content, stronger metagame simulation, and longer-run polish.
-
-The recommended MVP path is to build a data-driven prototype first: collection, deckbuilder, abstract match simulator, tournament ladder, boosters, shop, and then dynamic metagame updates.
-
-## Validation Commands
-
-When Godot is installed in `/Applications`, or when `GODOT_BIN` points at another Godot executable:
+Open the project in Godot 4.6:
 
 ```sh
 GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
-env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --quit-after 2
-for test in \
-  RunStateSmokeTest.gd \
-  ShopEconomySmokeTest.gd \
-  CardShopScreenSmokeTest.gd \
-  PackOpeningSmokeTest.gd \
-  SeasonLoopSmokeTest.gd \
-  CardFrameSmokeTest.gd \
-  SeasonHubSmokeTest.gd \
-  DeckbuilderHoverSmokeTest.gd \
-  CombatSmokeTest.gd \
-  UISmokeTest.gd \
-  TournamentSmokeTest.gd \
-  Wave1SmokeTest.gd \
-  Wave2SmokeTest.gd
-do
-  env HOME=/private/tmp/rtw-godot-home "$GODOT_BIN" --headless --path "/Users/jack.bydalek/Documents/Road to Worlds" --script "res://scripts/$test"
-done
+"$GODOT_BIN" --editor --path .
 ```
 
-Deferred next pass: make event completion feel like a new week by explicitly presenting week advancement, shop restock, meta report changes, money, and prize rewards as a transition.
+The opening screen has two routes:
+
+- **Season Run** — choose a starter kitchen and difficulty border, then progress through the calendar, shop, packs, deckbuilder, and tournaments.
+- **Debug Sandbox** — immediately access the shop, authored shop scene, packs, deckbuilder, Kitchen Match, tournament simulator, and metagame screens.
+
+## Season Loop
+
+1. Choose the Spicy, Hearty, or Sweet 30-card starter.
+2. Select a difficulty border that changes money, lives, opponent strength, or opening-player rules.
+3. Prepare for the selected calendar event in the shop and deckbuilder.
+4. Buy six-card boosters or exact singles and manage the collection.
+5. Register for the tournament and play each round as a live Kitchen Table match.
+6. Record the result, earn money and prize packs, and unlock the next event—or lose a season life and retry.
+7. Clear Worlds to complete the run.
+
+See [Season Loop](docs/season-loop.md) and [Kitchen Match Rules](docs/game-rules.md) for the full rules.
+
+## Project Layout
+
+- `scenes/Main.tscn` and `scripts/Main.gd` — season shell and debug menu
+- `scenes/KitchenGame.tscn` and `scripts/cooking/KitchenGame.gd` — live match UI
+- `scripts/cooking/CookingCombatService.gd` — Kitchen Table rules and AI
+- `scripts/ContentCatalog.gd` — kitchen-card-to-season metadata adapter
+- `scripts/RunStateService.gd`, `SeasonFlowService.gd`, and `TournamentService.gd` — campaign progression
+- `scripts/ShopEconomyService.gd` — packs, singles, prices, and collection rewards
+- `scripts/CardShopScreen.gd`, `PackOpeningScreen.gd`, `DeckbuilderScreen.gd`, and `SeasonHubScreen.gd` — campaign screens
+- `data/cards.json` — 61 Kitchen Table cards and three starter decks
+- `data/content/boosters.json` and `tournaments.json` — campaign content
+
+The old fish combat, fish card catalog, mana/threat renderer, and animal artwork are not part of the runtime.
+
+## Validate
+
+```sh
+GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
+"$GODOT_BIN" --headless --path . --import
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/cooking/KitchenGameSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/SeasonShellSmokeTest.gd
+"$GODOT_BIN" --headless --path . --quit-after 3
+```
+
+Additional references:
+
+- [Technical Architecture](docs/technical-architecture.md)
+- [Card Data](docs/card-data.md)
+- [Development Status](docs/development-status.md)

@@ -93,13 +93,13 @@ func _add_next_step(host, parent: Node, event: Dictionary, event_id: String, leg
 		callback = host._open_reward_pack_flow
 	elif not active.is_empty():
 		message = "%s is in progress. Finish or record the current round." % String(active.get("event_name", "Tournament"))
-		var current_combat: Dictionary = host.run.get("manual_combat", {})
-		if not current_combat.is_empty() and bool(current_combat.get("game_over", false)):
+		var match_result: Dictionary = host.run.get("kitchen_match_result", {})
+		if not match_result.is_empty() and bool(match_result.get("game_over", false)):
 			button_text = "Record Round Result"
 			callback = host._season_record_current_round_result
-		elif not current_combat.is_empty():
-			button_text = "Return to Current Duel"
-			callback = host._show_ui_combat
+		elif not match_result.is_empty():
+			button_text = "Restart Current Kitchen Match"
+			callback = host._resume_kitchen_match
 		else:
 			button_text = "Start Round %d" % int(active.get("round", 1))
 			callback = host._start_season_tournament_round
