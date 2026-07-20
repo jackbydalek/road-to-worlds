@@ -17,7 +17,7 @@ func show(host, debug_scene_test: bool = false) -> void:
 	host._clear(host.content)
 	host._update_status()
 
-	if not host.run.has("shop") or not (host.run.shop is Array) or host.run.shop.is_empty():
+	if not host.run.has("shop") or not (host.run.shop is Array):
 		host._generate_shop_inventory()
 
 	var event: Dictionary = host._selected_tournament_event()
@@ -43,6 +43,27 @@ func show(host, debug_scene_test: bool = false) -> void:
 func show_scene_test(host) -> void:
 	show(host, true)
 	host._set_footer("Scene shop test loaded. Hover the authored shop nodes, click packs/singles, or click the tournament clerk.")
+
+
+func show_singles(host) -> void:
+	if host._guard_run_over():
+		return
+	host.current_screen = "singles"
+	host._render_nav()
+	host._clear(host.content)
+	host._update_status()
+	if not host.run.has("shop") or not (host.run.shop is Array):
+		host._generate_shop_inventory()
+
+	var intro: VBoxContainer = host._add_panel(host.content, "Shopkeeper — Singles Case", "#1d2933")
+	host._add_body_text(intro, "Buy exact cards from the current case. Sold cards stay gone until the case restocks after a tournament round.")
+	var hover_label := Label.new()
+	hover_label.name = "SinglesHoverText"
+	hover_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hover_label.add_theme_color_override("font_color", Color("#eef3ff"))
+	intro.add_child(hover_label)
+	_add_singles_counter(host, hover_label)
+	host._add_exit_to_store_button(host.content)
 
 
 func _add_status_strip(host, event: Dictionary, metrics: Dictionary, legal: Dictionary, debug_scene_test: bool) -> void:
@@ -257,7 +278,7 @@ func _add_singles_counter(host, hover_label: Label) -> void:
 
 	var inventory: Array = host.run.get("shop", [])
 	if inventory.is_empty():
-		host._add_body_text(counter, "The singles case is being restocked.")
+		host._add_body_text(counter, "The singles case is sold out. New cards arrive after the next tournament round.")
 		return
 
 	for card_id_value in inventory:
@@ -285,14 +306,14 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 	tile.add_child(box)
 
 	var name_label := Label.new()
-	name_label.text = String(card.get("name", card_id))
+	name_label.text = host._card_display_name(card)
 	name_label.clip_text = true
 	name_label.add_theme_font_size_override("font_size", 13)
 	name_label.add_theme_color_override("font_color", host._rarity_text_color(rarity))
 	box.add_child(name_label)
 	host._add_body_text(box, "%s | %s | cost %d" % [
 		rarity.capitalize(),
-		String(card.get("role", "card")).capitalize(),
+		host._card_descriptor(card),
 		int(card.get("cost", 0))
 	])
 	host._add_body_text(box, "Owned %d | Deck %d/%d" % [

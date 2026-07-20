@@ -1,0 +1,299 @@
+[gd_scene format=3 uid="uid://do2t7xdwrtd1p"]
+
+[ext_resource type="Script" uid="uid://bbhpc2gsvxt7o" path="res://scripts/GreyboxCameraDemo.gd" id="1_demo"]
+[ext_resource type="PackedScene" uid="uid://cdsbgy55rfwha" path="res://assets/card_shop/table.tscn" id="2_4ullt"]
+[ext_resource type="PackedScene" uid="uid://d0ryjerg3wgy8" path="res://assets/card_shop/counter.tscn" id="2_h0733"]
+[ext_resource type="PackedScene" uid="uid://cugdmnv4qe53f" path="res://clerkidle.tscn" id="2_u3c5j"]
+[ext_resource type="Texture2D" uid="uid://c8qneutrhlwmc" path="res://assets/ui/shop_hud/deck_edit.png" id="3_deck"]
+[ext_resource type="Texture2D" uid="uid://bhdp7vmwrlaaj" path="res://assets/ui/shop_hud/save.png" id="4_save"]
+[ext_resource type="Texture2D" uid="uid://cmgdqpvegxsm3" path="res://assets/ui/shop_hud/settings.png" id="5_settings"]
+[ext_resource type="Texture2D" path="res://assets/card_shop/textures/grey_low_poly_carpet.png" id="6_carpet"]
+
+[sub_resource type="Environment" id="Environment_demo"]
+background_mode = 1
+background_color = Color(0.690196, 0.807843, 0.807843, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.64, 0.7, 0.78, 1)
+ambient_light_energy = 0.72
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_texture = ExtResource("6_carpet")
+roughness = 0.96
+texture_repeat = 1
+uv1_scale = Vector3(3.6, 3, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_floor"]
+material = SubResource("Material_floor")
+size = Vector3(12, 0.2, 10)
+
+[sub_resource type="StandardMaterial3D" id="Material_wall"]
+albedo_color = Color(0.4, 0.45, 0.5, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="Mesh_back_wall"]
+material = SubResource("Material_wall")
+size = Vector3(12, 3.2, 0.2)
+
+[sub_resource type="BoxMesh" id="Mesh_side_wall"]
+material = SubResource("Material_wall")
+size = Vector3(0.2, 3.2, 10)
+
+[node name="GreyboxCameraDemo" type="Control" unique_id=217431883]
+custom_minimum_size = Vector2(0, 780)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_demo")
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="." unique_id=931520494]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="ViewportContainer" unique_id=84959907]
+handle_input_locally = false
+size = Vector2i(1440, 900)
+render_target_update_mode = 4
+
+[node name="World" type="Node3D" parent="ViewportContainer/SubViewport" unique_id=2145035587]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="ViewportContainer/SubViewport/World" unique_id=117263658]
+environment = SubResource("Environment_demo")
+
+[node name="Sun" type="DirectionalLight3D" parent="ViewportContainer/SubViewport/World" unique_id=282688953]
+transform = Transform3D(0.8480481, 0.41758206, -0.32625088, 0, 0.6156615, 0.7880107, 0.52991927, -0.668271, 0.5221106, 0, 0, 0)
+light_color = Color(1, 0.93, 0.82, 1)
+light_energy = 1.35
+shadow_enabled = true
+
+[node name="Floor" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World" unique_id=657668403]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0011831596, -0.09938345, -0.007610321)
+mesh = SubResource("Mesh_floor")
+
+[node name="BackWall" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World" unique_id=1036337127]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -5)
+mesh = SubResource("Mesh_back_wall")
+
+[node name="SideWall" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World" unique_id=736893730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.5, 0)
+cast_shadow = 0
+gi_mode = 0
+mesh = SubResource("Mesh_side_wall")
+
+[node name="Table" parent="ViewportContainer/SubViewport/World" unique_id=279500675 instance=ExtResource("2_4ullt")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 2.383029, 0, 2.8475385)
+
+[node name="Table" parent="ViewportContainer/SubViewport/World/Table" unique_id=1054563949 instance=ExtResource("2_4ullt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002090454, 0, -2.459207)
+
+[node name="Table" parent="ViewportContainer/SubViewport/World/Table/Table" unique_id=726844413 instance=ExtResource("2_4ullt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0020906925, 0, -2.6147962)
+
+[node name="counter2" parent="ViewportContainer/SubViewport/World" unique_id=1291513717 instance=ExtResource("2_h0733")]
+transform = Transform3D(1.1999999, 0, 0, 0, 1.1999999, 0, 0, 0, 1.1999999, 1.1284013, -0.75414395, -2.5779176)
+
+[node name="counter" parent="ViewportContainer/SubViewport/World" unique_id=2092542911 instance=ExtResource("2_h0733")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -1.0701256, -0.7480371, -2.5826142)
+
+[node name="NPC" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=1495633306]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, -4.5013885)
+
+[node name="ShopkeeperModel" parent="ViewportContainer/SubViewport/World/NPC" unique_id=1033687673 instance=ExtResource("2_u3c5j")]
+transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 0, 0, 0)
+
+[node name="CameraTargets" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=599473288]
+
+[node name="OverviewTarget" type="Marker3D" parent="ViewportContainer/SubViewport/World/CameraTargets" unique_id=356888618]
+transform = Transform3D(0.70710677, -0.4055798, 0.579228, 0, 0.81915206, 0.57357645, -0.70710677, -0.4055798, 0.579228, 8, 9, 8)
+
+[node name="MenuTarget" type="Marker3D" parent="ViewportContainer/SubViewport/World/CameraTargets" unique_id=607787078]
+transform = Transform3D(0.70710677, -0.2360371, 0.6665482, 0, 0.9426415, 0.33380687, -0.70710677, -0.2360371, 0.6665482, 3, 3.4, 1)
+
+[node name="CombatTarget" type="Marker3D" parent="ViewportContainer/SubViewport/World/CameraTargets" unique_id=671059635]
+transform = Transform3D(1, 0, 0, 0, 0.58070296, 0.8141155, 0, -0.8141155, 0.58070296, 0, 7, 5)
+
+[node name="CameraRig" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=1190428519]
+
+[node name="Camera3D" type="Camera3D" parent="ViewportContainer/SubViewport/World/CameraRig" unique_id=1926163163]
+projection = 1
+current = true
+size = 11.5
+far = 100.0
+
+[node name="Interface" type="Control" parent="." unique_id=2028373684]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="PanelContainer" parent="Interface" unique_id=529283100]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 58.0
+grow_horizontal = 2
+mouse_filter = 1
+
+[node name="TopMargin" type="MarginContainer" parent="Interface/TopBar" unique_id=1428227029]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="TopContent" type="VBoxContainer" parent="Interface/TopBar/TopMargin" unique_id=1911233100]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="ShotLabel" type="Label" parent="Interface/TopBar/TopMargin/TopContent" unique_id=622463414]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "OVERVIEW — isometric overworld framing"
+
+[node name="ShopHud" type="HBoxContainer" parent="Interface" unique_id=358167826]
+z_index = 20
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -336.0
+offset_top = 7.0
+offset_right = -12.0
+offset_bottom = 57.0
+grow_horizontal = 0
+theme_override_constants/separation = 8
+
+[node name="CashButton" type="Button" parent="Interface/ShopHud" unique_id=945402050]
+custom_minimum_size = Vector2(126, 50)
+layout_mode = 2
+tooltip_text = "Sell all safe extra card copies"
+theme_override_font_sizes/font_size = 20
+text = "$0"
+
+[node name="DeckButton" type="Button" parent="Interface/ShopHud" unique_id=906578419]
+custom_minimum_size = Vector2(58, 50)
+layout_mode = 2
+tooltip_text = "Deck Edit"
+icon = ExtResource("3_deck")
+expand_icon = true
+
+[node name="SaveButton" type="Button" parent="Interface/ShopHud" unique_id=930632481]
+custom_minimum_size = Vector2(58, 50)
+layout_mode = 2
+tooltip_text = "Save Game"
+icon = ExtResource("4_save")
+expand_icon = true
+
+[node name="SettingsButton" type="Button" parent="Interface/ShopHud" unique_id=1603612990]
+custom_minimum_size = Vector2(58, 50)
+layout_mode = 2
+tooltip_text = "Settings"
+icon = ExtResource("5_settings")
+expand_icon = true
+
+[node name="MenuPanel" type="PanelContainer" parent="Interface" unique_id=1650585668]
+visible = false
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -430.0
+offset_top = -270.0
+offset_right = -22.0
+offset_bottom = 270.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Margin" type="MarginContainer" parent="Interface/MenuPanel" unique_id=989626262]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="Content" type="VBoxContainer" parent="Interface/MenuPanel/Margin" unique_id=1229125249]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Heading" type="Label" parent="Interface/MenuPanel/Margin/Content" unique_id=752940367]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Shopkeeper"
+
+[node name="Description" type="Label" parent="Interface/MenuPanel/Margin/Content" unique_id=784595704]
+layout_mode = 2
+text = "Cash, prizes, event, and difficulty"
+autowrap_mode = 2
+
+[node name="BuySingles" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1433760427]
+layout_mode = 2
+text = "Browse Singles"
+
+[node name="BuyPack" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1445308757]
+layout_mode = 2
+text = "Buy a Booster"
+
+[node name="Meta" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1872741020]
+layout_mode = 2
+text = "View Meta Analysis"
+
+[node name="Calendar" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1769035314]
+layout_mode = 2
+text = "View Calendar"
+
+[node name="Tournament" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1369059932]
+layout_mode = 2
+text = "Register for Tournament"
+
+[node name="Leave" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=551306247]
+layout_mode = 2
+text = "Leave Shop"
+
+[node name="CombatPanel" type="PanelContainer" parent="Interface" unique_id=1514704069]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 26.0
+offset_top = -148.0
+offset_right = -26.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 1
+
+[node name="Margin" type="MarginContainer" parent="Interface/CombatPanel" unique_id=1532404270]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="Content" type="VBoxContainer" parent="Interface/CombatPanel/Margin" unique_id=1499516578]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="Interface/CombatPanel/Margin/Content" unique_id=1163751354]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Kitchen Match — Turn 1"
+
+[node name="Explanation" type="Label" parent="Interface/CombatPanel/Margin/Content" unique_id=1771984140]
+layout_mode = 2
+text = "The 3D table supplies the setting; readable cards, actions, and inspection can remain in this 2D overlay."
+autowrap_mode = 2

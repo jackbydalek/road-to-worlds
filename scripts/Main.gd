@@ -7,10 +7,12 @@ const SAVE_PATH := "user://kitchen_table_season_run.json"
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
-const ARCHETYPE_ORDER := ["spicy", "hearty", "sweet"]
+const ARCHETYPE_ORDER := ["spicy", "hearty", "sweet", "fresh", "funky"]
+const DEMO_STARTER_ORDER := ["spicy", "hearty", "sweet"]
 const DIFFICULTY_ORDER := ["white", "blue", "yellow", "silver", "gold"]
 const BASE_BOOSTER_ID := "base_standard_pack"
 const PRIZE_BOOSTER_ID := "season_prize_pack"
+const AUTOSAVE_POLL_SECONDS := 0.4
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
 const RUN_STATE_SERVICE_SCRIPT := preload("res://scripts/RunStateService.gd")
@@ -21,7 +23,12 @@ const DECKBUILDER_SCREEN_SCRIPT := preload("res://scripts/DeckbuilderScreen.gd")
 const SEASON_HUB_SCREEN_SCRIPT := preload("res://scripts/SeasonHubScreen.gd")
 const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
 const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
+const CARD_EFFECT_LAB_SCRIPT := preload("res://scripts/CardEffectLab.gd")
+const TUTORIAL_SCREEN_SCRIPT := preload("res://scripts/TutorialScreen.gd")
+const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const KITCHEN_GAME_SCENE := preload("res://scenes/KitchenGame.tscn")
+const KITCHEN_GAME_3D_SCENE := preload("res://scenes/KitchenGame3D.tscn")
+const GREYBOX_CAMERA_DEMO_SCENE := preload("res://scenes/GreyboxCameraDemo.tscn")
 
 var rng := RandomNumberGenerator.new()
 var content_catalog: RefCounted
@@ -34,6 +41,8 @@ var deckbuilder_screen: RefCounted
 var season_hub_screen: RefCounted
 var season_flow_service: RefCounted
 var tournament_service: RefCounted
+var card_effect_lab: RefCounted
+var tutorial_screen: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -56,9 +65,22 @@ var nav: HBoxContainer
 var scroll: ScrollContainer
 var content: VBoxContainer
 var footer_label: RichTextLabel
+var round_result_popup: Control
+var autosave_label: Label
+var autosave_tween: Tween
+var autosave_enabled := true
+var autosave_suspended := false
+var autosave_poll_elapsed := 0.0
+var last_autosave_fingerprint := ""
+var last_autosave_screen := ""
 
 
 func _ready() -> void:
+	var app_theme := Theme.new()
+	app_theme.default_font = AFFINITY_VISUALS.default_ui_font_with_symbols()
+	theme = app_theme
+	autosave_enabled = not _running_automated_test()
+	get_tree().auto_accept_quit = false
 	rng.randomize()
 	_load_content()
 	deck_metrics_service = DECK_METRICS_SERVICE_SCRIPT.new()
@@ -74,13 +96,100 @@ func _ready() -> void:
 	season_flow_service = SEASON_FLOW_SERVICE_SCRIPT.new()
 	season_flow_service.setup(run_state_service, tournaments_by_id)
 	tournament_service = TOURNAMENT_SERVICE_SCRIPT.new()
+	card_effect_lab = CARD_EFFECT_LAB_SCRIPT.new()
+	tutorial_screen = TUTORIAL_SCREEN_SCRIPT.new()
 	_build_shell()
 	_show_start()
+	last_autosave_screen = current_screen
+
+
+func _process(delta: float) -> void:
+	if not autosave_enabled or autosave_suspended or run.is_empty():
+		return
+	autosave_poll_elapsed += delta
+	if current_screen != last_autosave_screen:
+		_autosave_now(current_screen)
+		return
+	if autosave_poll_elapsed < AUTOSAVE_POLL_SECONDS:
+		return
+	autosave_poll_elapsed = 0.0
+	if _run_fingerprint() != last_autosave_fingerprint:
+		_autosave_now(current_screen)
+
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_CLOSE_REQUEST:
+		return
+	if autosave_enabled and not run.is_empty():
+		_autosave_now(current_screen)
+	get_tree().quit()
 
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE and current_screen == "kitchen_match":
+		if is_instance_valid(round_result_popup):
+			return
 		call_deferred("_on_kitchen_exit_requested")
+
+
+func _running_automated_test() -> bool:
+	for argument in OS.get_cmdline_args():
+		if "SmokeTest.gd" in String(argument):
+			return true
+	return false
+
+
+func _run_fingerprint() -> String:
+	return str(JSON.stringify(run).hash())
+
+
+func _autosave_now(resume_screen: String = "") -> Dictionary:
+	if not autosave_enabled or autosave_suspended or run.is_empty():
+		return {"ok": false, "message": "Autosave skipped."}
+	var target_screen := resume_screen if resume_screen != "" else current_screen
+	_show_autosave_indicator()
+	var result: Dictionary = run_state_service.save_run(run, target_screen)
+	if bool(result.get("ok", false)):
+		last_autosave_fingerprint = _run_fingerprint()
+		last_autosave_screen = target_screen
+		autosave_poll_elapsed = 0.0
+	else:
+		_show_autosave_failure()
+	return result
+
+
+func _show_autosave_indicator() -> void:
+	if autosave_label == null:
+		return
+	if autosave_tween != null and autosave_tween.is_valid():
+		autosave_tween.kill()
+	autosave_label.visible = true
+	autosave_label.text = "Autosaving..."
+	autosave_label.modulate = Color(1, 1, 1, 0.45)
+	autosave_label.add_theme_color_override("font_color", Color("#8ed9ff"))
+	autosave_tween = create_tween()
+	autosave_tween.tween_property(autosave_label, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_SINE)
+	autosave_tween.tween_property(autosave_label, "modulate:a", 0.5, 0.16).set_trans(Tween.TRANS_SINE)
+	autosave_tween.tween_property(autosave_label, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_SINE)
+	autosave_tween.tween_callback(func() -> void: autosave_label.text = "Saved")
+	autosave_tween.tween_interval(0.45)
+	autosave_tween.tween_property(autosave_label, "modulate:a", 0.0, 0.35)
+	autosave_tween.tween_callback(func() -> void: autosave_label.visible = false)
+
+
+func _show_autosave_failure() -> void:
+	if autosave_label == null:
+		return
+	if autosave_tween != null and autosave_tween.is_valid():
+		autosave_tween.kill()
+	autosave_label.visible = true
+	autosave_label.text = "Autosave failed"
+	autosave_label.modulate = Color.WHITE
+	autosave_label.add_theme_color_override("font_color", Color("#ff9b92"))
+	autosave_tween = create_tween()
+	autosave_tween.tween_interval(1.4)
+	autosave_tween.tween_property(autosave_label, "modulate:a", 0.0, 0.4)
+	autosave_tween.tween_callback(func() -> void: autosave_label.visible = false)
 
 
 func _build_shell() -> void:
@@ -117,6 +226,23 @@ func _build_shell() -> void:
 	status_label.add_theme_color_override("font_color", Color("#c7d0df"))
 	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_bar.add_child(status_label)
+
+	autosave_label = Label.new()
+	autosave_label.name = "AutosaveIndicator"
+	autosave_label.text = "Autosaving..."
+	autosave_label.visible = false
+	autosave_label.custom_minimum_size = Vector2(112, 0)
+	autosave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	autosave_label.add_theme_font_size_override("font_size", 14)
+	autosave_label.add_theme_color_override("font_color", Color("#8ed9ff"))
+	autosave_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	autosave_label.offset_left = -158
+	autosave_label.offset_top = 16
+	autosave_label.offset_right = -18
+	autosave_label.offset_bottom = 44
+	autosave_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	autosave_label.z_index = 2000
+	add_child(autosave_label)
 
 	nav = HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 8)
@@ -165,6 +291,8 @@ func _connect_pressed(button: Button, callback: Callable) -> void:
 
 
 func _show_start() -> void:
+	if not run.is_empty():
+		_autosave_now(current_screen)
 	current_screen = "start"
 	run = {}
 	season_setup_archetype_index = 0
@@ -173,7 +301,7 @@ func _show_start() -> void:
 	_clear(nav)
 	_clear(content)
 	_update_status()
-	_set_footer("Choose how you want to start: the clean Season Run path or the full debug sandbox.")
+	_set_footer("Continue your autosaved run, start a new game, or learn the basics.")
 
 	var intro := _add_panel(content, "Kitchen Table: Road to Worlds")
 	_add_body_text(
@@ -186,26 +314,84 @@ func _show_start() -> void:
 	mode_row.add_theme_constant_override("separation", 10)
 	content.add_child(mode_row)
 
+	var continue_panel := _add_panel(mode_row, "Continue", "#1f3329")
+	continue_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(continue_panel, "Return to the latest autosave. Interrupted tournament matches restart at the same round and opponent.")
+	var continue_button := _make_button("Continue")
+	continue_button.name = "ContinueRunButton"
+	continue_button.disabled = not run_state_service.has_saved_run()
+	_style_button(continue_button, "target")
+	_connect_pressed(continue_button, _load_run_from_disk)
+	continue_panel.add_child(continue_button)
+
+	var new_game_panel := _add_panel(mode_row, "New Run", "#2b2f44")
+	new_game_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(new_game_panel, "Choose a difficulty card frame and one of three starter decks. Your previous autosave remains until the new run begins.")
+	var new_game_button := _make_button("New Run")
+	new_game_button.name = "NewGameButton"
+	_style_button(new_game_button, "action")
+	_connect_pressed(new_game_button, _show_season_run_setup)
+	new_game_panel.add_child(new_game_button)
+
+	var tutorial_panel := _add_panel(mode_row, "How to Play", "#173447")
+	tutorial_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_body_text(tutorial_panel, "A guided walkthrough of cards, recipes, Prep and Plated zones, combat, and the basic turn sequence.")
+	var tutorial_button := _make_button("How to Play")
+	tutorial_button.name = "StartTutorialButton"
+	_style_button(tutorial_button, "action")
+	_connect_pressed(tutorial_button, _show_tutorial)
+	tutorial_panel.add_child(tutorial_button)
+
+	var debug_link := _make_button("Open Debug Menu")
+	debug_link.name = "OpenDebugMenuButton"
+	_connect_pressed(debug_link, _show_debug_starter_selection)
+	content.add_child(debug_link)
+
+	_set_footer("Continue your autosaved run, start a new run, or learn how to play.")
+
+
+func _show_new_game_menu() -> void:
+	current_screen = "new_game"
+	run = {}
+	_apply_screen_chrome()
+	_clear(nav)
+	_clear(content)
+	_update_status()
+	_set_footer("Choose the Season Run for the demo path or the Debug Sandbox for development tools.")
+
+	var intro := _add_panel(content, "New Game")
+	_add_body_text(intro, "Starting a deck creates a new autosave. You can return now without replacing the previous run.")
+
+	var mode_row := HBoxContainer.new()
+	mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_row.add_theme_constant_override("separation", 10)
+	content.add_child(mode_row)
+
 	var season_panel := _add_panel(mode_row, "Season Run", "#1f3329")
 	season_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(season_panel, "The actual game path: choose a starter deck, choose a season border, then enter the shop-to-tournament loop.")
+	_add_body_text(season_panel, "Choose a starter deck and season border, then play the shop-to-tournament progression loop.")
 	var season_button := _make_button("Start Season Run")
+	season_button.name = "NewSeasonRunButton"
 	_style_button(season_button, "action")
 	_connect_pressed(season_button, _show_season_run_setup)
 	season_panel.add_child(season_button)
 
 	var debug_panel := _add_panel(mode_row, "Debug Sandbox", "#2b2f44")
 	debug_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(debug_panel, "The development menu: choose a kitchen, then open Shop, Packs, Deckbuilder, Kitchen Match, Tournament, and Metagame.")
+	_add_body_text(debug_panel, "Choose a kitchen and open every Shop, Pack, Deckbuilder, Match, Tournament, and testing surface.")
 	var debug_button := _make_button("Open Debug Sandbox")
+	debug_button.name = "NewDebugRunButton"
 	_connect_pressed(debug_button, _show_debug_starter_selection)
 	debug_panel.add_child(debug_button)
 
-	var load_panel := _add_panel(content, "Continue")
-	_add_body_text(load_panel, "Load your saved run if you already have one.")
-	var load_button := _make_button("Load Run")
-	_connect_pressed(load_button, _load_run_from_disk)
-	load_panel.add_child(load_button)
+	var back_button := _make_button("Back")
+	_connect_pressed(back_button, _show_start)
+	content.add_child(back_button)
+
+
+func _show_tutorial() -> void:
+	run = {}
+	tutorial_screen.open(self)
 
 
 func _show_debug_starter_selection() -> void:
@@ -227,12 +413,12 @@ func _show_debug_starter_selection() -> void:
 
 	for archetype_id in ARCHETYPE_ORDER:
 		var archetype: Dictionary = archetypes_by_id[archetype_id]
-		var box := _add_panel(starter_grid, archetype.get("name", archetype_id), archetype.get("color", "#2d3442"))
+		var box := _add_panel(starter_grid, _starter_label(archetype_id), archetype.get("color", "#2d3442"))
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_add_body_text(box, archetype.get("summary", ""))
 		var metrics := _calculate_deck_metrics(_deck_entries_to_dict(archetype.get("starterDeck", [])), {})
 		_add_body_text(box, _format_metrics_short(metrics))
-		var button := _make_button("Start With " + archetype.get("name", archetype_id))
+		var button := _make_button("Start With " + _starter_label(archetype_id))
 		var selected_id: String = archetype_id
 		_connect_pressed(button, func() -> void: _start_new_run_with_mode(selected_id, "debug", "white"))
 		box.add_child(button)
@@ -251,7 +437,7 @@ func _show_season_run_setup() -> void:
 	_update_status()
 	_set_footer("Choose a starter deck and season border. Borders are difficulty modifiers for the run.")
 
-	var selected_archetype_id := String(ARCHETYPE_ORDER[season_setup_archetype_index])
+	var selected_archetype_id := String(DEMO_STARTER_ORDER[season_setup_archetype_index])
 	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
 	var archetype: Dictionary = archetypes_by_id[selected_archetype_id]
 	var difficulty := _difficulty_data(selected_difficulty_id)
@@ -273,7 +459,7 @@ func _show_season_run_setup() -> void:
 
 	var deck_card := _add_bordered_panel(
 		deck_row,
-		String(archetype.get("name", selected_archetype_id)),
+		_starter_label(selected_archetype_id),
 		String(archetype.get("color", "#2d3442")),
 		String(difficulty.get("border_color", "#f3efe4")),
 		3
@@ -284,7 +470,7 @@ func _show_season_run_setup() -> void:
 	_add_body_text(deck_card, _format_metrics_short(metrics))
 	_add_body_text(deck_card, "Starter deck: %d cards | Predator matchup: %s" % [
 		_deck_total(starter_deck),
-		_archetype_label(_predator_archetype(selected_archetype_id))
+		_affinity_label(_predator_archetype(selected_archetype_id))
 	])
 
 	var next_deck := _make_button(">")
@@ -313,9 +499,8 @@ func _show_season_run_setup() -> void:
 	difficulty_card.custom_minimum_size = Vector2(420, 118)
 	_add_body_text(difficulty_card, String(difficulty.get("summary", "")))
 	_add_body_text(difficulty_card, String(difficulty.get("rules_text", "")))
-	_add_body_text(difficulty_card, "Start: $%d | Lives: %d" % [
-		run_state_service.starting_money_for_difficulty(selected_difficulty_id),
-		run_state_service.starting_lives_for_difficulty(selected_difficulty_id)
+	_add_body_text(difficulty_card, "Start: $%d | Sudden death: one match loss ends the run" % [
+		run_state_service.starting_money_for_difficulty(selected_difficulty_id)
 	])
 
 	var next_difficulty := _make_button(">")
@@ -339,7 +524,7 @@ func _show_season_run_setup() -> void:
 
 
 func _shift_season_setup_archetype(delta: int) -> void:
-	season_setup_archetype_index = posmod(season_setup_archetype_index + delta, ARCHETYPE_ORDER.size())
+	season_setup_archetype_index = posmod(season_setup_archetype_index + delta, DEMO_STARTER_ORDER.size())
 	_show_season_run_setup()
 
 
@@ -349,7 +534,7 @@ func _shift_season_setup_difficulty(delta: int) -> void:
 
 
 func _confirm_season_run_setup() -> void:
-	var selected_archetype_id := String(ARCHETYPE_ORDER[season_setup_archetype_index])
+	var selected_archetype_id := String(DEMO_STARTER_ORDER[season_setup_archetype_index])
 	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
 	_start_new_run_with_mode(selected_archetype_id, "season", selected_difficulty_id)
 
@@ -373,12 +558,12 @@ func _start_new_run_with_mode(archetype_id: String, mode: String, difficulty_id:
 	match mode:
 		"season":
 			_set_footer("Season started with %s on %s Border." % [
-				String(archetype.get("name", archetype_id)),
+				_starter_label(archetype_id),
 				String(_difficulty_data(difficulty_id).get("name", "White"))
 			])
-			_show_season_run()
+			_show_shop()
 		_:
-			_set_footer("Debug Sandbox started with " + String(archetype.get("name", archetype_id)) + ".")
+			_set_footer("Debug Sandbox started with " + _starter_label(archetype_id) + ".")
 			_show_shop()
 
 
@@ -392,8 +577,7 @@ func _show_run_path_choice() -> void:
 	_update_status()
 
 	var starter_id := String(run.get("starter", ""))
-	var starter: Dictionary = archetypes_by_id.get(starter_id, {})
-	var starter_name := String(starter.get("name", starter_id))
+	var starter_name := _starter_label(starter_id)
 	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 
 	var intro := _add_panel(content, "Choose Your Path", "#222936")
@@ -463,20 +647,9 @@ func _render_nav() -> void:
 		return
 
 	if mode == "season":
-		_add_nav_button("Season", _show_season_run)
-		_add_nav_button("Shop", _show_shop)
-		_add_nav_button("Packs", _show_packs)
-		_add_nav_button("Deckbuilder", _show_deckbuilder)
-		_add_nav_button("Tournament", _show_tournament)
-		_add_nav_button("Metagame", _show_meta)
-
-		var season_spacer := Control.new()
-		season_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nav.add_child(season_spacer)
-
-		_add_nav_button("Save", _save_run)
-		_add_nav_button("Load", _load_run_from_disk)
-		_add_nav_button("New Run", _show_start)
+		# The public demo is navigated from clickable objects in the 3D store.
+		# Keeping this strip empty guarantees that every required route is mouse-led
+		# and returns through an explicit Exit button.
 		return
 
 	_add_nav_button("Shop", _show_shop)
@@ -484,6 +657,9 @@ func _render_nav() -> void:
 	_add_nav_button("Packs", _show_packs)
 	_add_nav_button("Deckbuilder", _show_deckbuilder)
 	_add_nav_button("Kitchen Match", _start_debug_kitchen_match)
+	_add_nav_button("3D Arena", _start_debug_3d_arena)
+	_add_nav_button("Camera Demo", _show_greybox_camera_demo)
+	_add_nav_button("Card Lab", _show_card_effect_lab)
 	_add_nav_button("Tournament", _show_tournament)
 	_add_nav_button("Metagame", _show_meta)
 
@@ -516,8 +692,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Blue",
 				"accent": "#20334a",
 				"border_color": "#6aa8ff",
-				"summary": "Opponents upgrade into stronger cards earlier.",
-				"rules_text": "Rivals get a quality bump and swap weak starter cards for better same-faction cards sooner."
+				"summary": "Opponents upgrade their decks and decisions earlier.",
+				"rules_text": "Rivals get a quality bump, swap weak starter cards sooner, and advance one AI skill tier earlier."
 			}
 		"yellow":
 			return {
@@ -534,8 +710,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Silver",
 				"accent": "#30343a",
 				"border_color": "#cfd6df",
-				"summary": "You have fewer season lives.",
-				"rules_text": "Missing a required event record costs a life. Silver starts with only one."
+				"summary": "Tournament fields bring more refined decks.",
+				"rules_text": "Rivals receive a modest deck-quality boost, but their AI tier does not advance as early as Blue."
 			}
 		"gold":
 			return {
@@ -561,18 +737,24 @@ func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
 	var compact_duel := current_screen == "kitchen_match"
+	var compact_deck := current_screen == "deck" and _run_mode() == "season"
+	var hide_footer := compact_duel or compact_deck or (current_screen == "shop" and _run_mode() == "season")
 	if header_bar != null:
 		header_bar.visible = not compact_duel
 	if nav != null:
 		nav.visible = not compact_duel
-	footer_label.visible = not compact_duel
-	footer_label.custom_minimum_size = Vector2(0, 0 if compact_duel else 78)
-	root_margin.add_theme_constant_override("margin_left", 6 if compact_duel else 18)
-	root_margin.add_theme_constant_override("margin_right", 6 if compact_duel else 18)
-	root_margin.add_theme_constant_override("margin_top", 4 if compact_duel else 14)
-	root_margin.add_theme_constant_override("margin_bottom", 4 if compact_duel else 14)
-	shell.add_theme_constant_override("separation", 3 if compact_duel else 10)
-	content.add_theme_constant_override("separation", 4 if compact_duel else 10)
+	footer_label.visible = not hide_footer
+	footer_label.custom_minimum_size = Vector2(0, 0 if hide_footer else 78)
+	var compact_margin := compact_duel or compact_deck
+	root_margin.add_theme_constant_override("margin_left", 6 if compact_margin else 18)
+	root_margin.add_theme_constant_override("margin_right", 6 if compact_margin else 18)
+	root_margin.add_theme_constant_override("margin_top", 4 if compact_margin else 14)
+	root_margin.add_theme_constant_override("margin_bottom", 4 if compact_margin else 14)
+	shell.add_theme_constant_override("separation", 3 if compact_margin else 10)
+	content.add_theme_constant_override("separation", 4 if compact_margin else 10)
+	if scroll != null:
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck else ScrollContainer.SCROLL_MODE_AUTO
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck else ScrollContainer.SCROLL_MODE_AUTO
 
 
 func _add_nav_button(label: String, callback: Callable) -> void:
@@ -638,7 +820,6 @@ func _select_season_event(event_id: String) -> void:
 		_set_footer("Clear the earlier calendar events before registering for %s." % String(_season_event_by_id(event_id).get("name", event_id)))
 		return
 	run.selected_event_id = event_id
-	_generate_shop_inventory()
 	_set_footer("Preparing for %s. Buy packs, check singles, tune your deck, then register." % String(_season_event_by_id(event_id).get("name", event_id)))
 	_show_shop()
 
@@ -664,11 +845,175 @@ func _show_season_run() -> void:
 
 
 func _show_shop() -> void:
-	card_shop_screen.show(self)
+	if _run_mode() == "season":
+		_show_shop_overworld()
+	else:
+		card_shop_screen.show(self)
+
+
+func _show_shop_overworld() -> void:
+	if _guard_run_over():
+		return
+	current_screen = "shop"
+	_render_nav()
+	_clear(content)
+	_update_status()
+	_set_footer("Click the shopkeeper, trading table, metagame board, or deck box. Every menu has an Exit to Card Store button.")
+
+	var shop_world := GREYBOX_CAMERA_DEMO_SCENE.instantiate() as Control
+	shop_world.name = "CardShopOverworld"
+	shop_world.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_world.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shop_world.connect("single_purchase_requested", _buy_single_from_overworld)
+	shop_world.connect("trade_extras_requested", _trade_extra_copies_from_overworld)
+	shop_world.connect("packs_requested", _show_packs)
+	shop_world.connect("tournament_requested", _on_shop_tournament_requested)
+	shop_world.connect("deck_requested", _show_deckbuilder)
+	shop_world.connect("calendar_requested", _show_season_run)
+	shop_world.connect("save_requested", _save_run)
+	shop_world.connect("exit_requested", _show_start)
+	content.add_child(shop_world)
+	shop_world.call("configure_shop", _shop_overworld_context())
+
+
+func _shop_overworld_context() -> Dictionary:
+	var active: Dictionary = run.get("active_tournament", {})
+	return {
+		"money": int(run.get("money", 0)),
+		"prize_packs": int(run.get("prize_packs", 0)),
+		"event_name": String(_selected_season_event().get("name", "Weekly Locals")),
+		"difficulty_name": String(_difficulty_data(_run_difficulty_id()).get("name", "White")),
+		"tournament_active": _season_tournament_active(),
+		"tournament_round": int(active.get("round", 1)),
+		"singles": _shop_overworld_single_entries(),
+		"trade_entries": _shop_overworld_trade_entries(),
+		"meta_entries": _shop_overworld_meta_entries(),
+		"reports": run.get("reports", []).duplicate(true)
+	}
+
+
+func _on_shop_tournament_requested() -> void:
+	if _season_tournament_active() and run.get("kitchen_match_result", {}).is_empty():
+		_start_season_tournament_round()
+		return
+	_show_tournament()
+
+
+func _shop_overworld_single_entries() -> Array:
+	var entries: Array = []
+	for card_id_value in run.get("shop", []):
+		var card_id := String(card_id_value)
+		if not cards_by_id.has(card_id):
+			continue
+		var card: Dictionary = cards_by_id[card_id]
+		entries.append({
+			"id": card_id,
+			"name": _card_display_name(card),
+			"descriptor": _card_descriptor(card),
+			"rarity": String(card.get("rarity", "common")),
+			"text": String(card.get("text", "")),
+			"price": _card_price(card_id),
+			"owned": _owned_count(card_id),
+			"deck": _deck_count(card_id)
+		})
+	return entries
+
+
+func _buy_single_from_overworld(card_id: String) -> void:
+	var result: Dictionary = shop_economy_service.buy_single(run, card_id)
+	var message := String(result.get("message", "Could not buy that card."))
+	_set_footer(message)
+	_update_status()
+	var shop_world := content.find_child("CardShopOverworld", true, false)
+	if shop_world != null:
+		shop_world.call("update_shop_context", _shop_overworld_context(), message)
+
+
+func _shop_overworld_trade_entries() -> Array:
+	var entries: Array = []
+	for card_id_value in run.get("collection", {}).keys():
+		var card_id := String(card_id_value)
+		if not cards_by_id.has(card_id):
+			continue
+		var owned := _owned_count(card_id)
+		var in_use := _deck_count(card_id) + _sideboard_count(card_id)
+		var keep: int = max(_deck_limit(card_id), in_use)
+		var copies: int = owned - keep
+		if copies <= 0:
+			continue
+		var per_copy: int = max(1, int(floor(float(cards_by_id[card_id].get("value", 1)) * 0.45)))
+		entries.append({
+			"id": card_id,
+			"name": _card_display_name(cards_by_id[card_id]),
+			"copies": copies,
+			"total_value": copies * per_copy
+		})
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a.get("name", "")) < String(b.get("name", "")))
+	return entries
+
+
+func _shop_overworld_meta_entries() -> Array:
+	var entries: Array = []
+	for archetype_id in ARCHETYPE_ORDER:
+		var archetype: Dictionary = archetypes_by_id[archetype_id]
+		entries.append({
+			"id": archetype_id,
+			"name": String(archetype.get("name", archetype_id)),
+			"share": int(round(float(run.get("meta", {}).get(archetype_id, 0.0)) * 100.0)),
+			"summary": String(archetype.get("summary", ""))
+		})
+	return entries
+
+
+func _trade_extra_copies_from_overworld() -> void:
+	var total: int = run_state_service.sell_extra_copies(run)
+	var message := "Traded extra copies for $%d." % total if total > 0 else "No safe extra copies to trade."
+	_set_footer(message)
+	_update_status()
+	var shop_world := content.find_child("CardShopOverworld", true, false)
+	if shop_world != null:
+		shop_world.call("update_shop_context", _shop_overworld_context(), message, "trade")
+
+
+func _show_singles_shop() -> void:
+	card_shop_screen.show_singles(self)
+
+
+func _show_trading_station() -> void:
+	if _guard_run_over():
+		return
+	current_screen = "trading"
+	_render_nav()
+	_clear(content)
+	_update_status()
+	_set_footer("Trade safe extra copies for cash, then exit back to the card store.")
+
+	var panel := _add_panel(content, "Trading Table", "#2b263b")
+	_add_body_text(panel, "Two local players are comparing binders. They will buy copies beyond the safe deck limit without removing cards used by your deck or sideboard.")
+	var sell_button := _make_button("Trade Extra Copies")
+	sell_button.name = "TradeExtraCopiesButton"
+	_style_button(sell_button, "action")
+	_connect_pressed(sell_button, _sell_extra_copies)
+	panel.add_child(sell_button)
+	_add_exit_to_store_button(panel)
+
+
+func _add_exit_to_store_button(parent: Node) -> Button:
+	var exit_button := _make_button("Exit to Card Store")
+	exit_button.name = "ExitToCardStoreButton"
+	_connect_pressed(exit_button, _show_shop)
+	parent.add_child(exit_button)
+	return exit_button
 
 
 func _show_card_shop_scene_test() -> void:
 	card_shop_screen.show_scene_test(self)
+
+
+func _show_card_effect_lab() -> void:
+	if _guard_run_over():
+		return
+	card_effect_lab.show(self)
 
 
 func _show_packs() -> void:
@@ -734,8 +1079,7 @@ func _buy_single(card_id: String) -> void:
 		_set_footer(result.message)
 		return
 	_set_footer(result.message)
-	_generate_shop_inventory()
-	_show_shop()
+	_show_singles_shop()
 
 
 func _sell_extra_copies() -> void:
@@ -744,7 +1088,10 @@ func _sell_extra_copies() -> void:
 		_set_footer("Sold extra copies for $%d." % total)
 	else:
 		_set_footer("No safe extra copies to sell.")
-	_show_shop()
+	if _run_mode() == "season":
+		_show_trading_station()
+	else:
+		_show_shop()
 
 
 func _generate_shop_inventory() -> void:
@@ -767,6 +1114,21 @@ func _current_primary_archetype() -> String:
 
 func _show_deckbuilder() -> void:
 	deckbuilder_screen.show(self)
+
+
+func _show_greybox_camera_demo() -> void:
+	if _guard_run_over():
+		return
+	current_screen = "camera_demo"
+	_render_nav()
+	_clear(content)
+	_update_status()
+	_set_footer("Graybox camera proof of concept: use the shot buttons or press 1, 2, and 3.")
+	var demo := GREYBOX_CAMERA_DEMO_SCENE.instantiate() as Control
+	demo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	demo.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	demo.connect("exit_requested", _show_shop)
+	content.add_child(demo)
 
 
 func _add_to_deck(card_id: String) -> void:
@@ -811,14 +1173,34 @@ func _start_debug_kitchen_match() -> void:
 	)
 
 
-func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player") -> void:
+func _start_debug_3d_arena() -> void:
+	if _guard_run_over():
+		return
+	_set_footer("Opened the isolated 3D Arena prototype. The normal Kitchen Match remains on the stable board.")
+	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
+	var opponent_archetype := _predator_archetype(String(metrics.get("primary", ARCHETYPE_ORDER[0])))
+	var opponent_deck := _opponent_deck_for_round(opponent_archetype, 1)
+	_begin_kitchen_match(
+		run.get("deck", {}),
+		opponent_deck,
+		"3D Practice %s Chef" % _archetype_label(opponent_archetype),
+		false,
+		rng.randi(),
+		"player",
+		"easy",
+		true
+	)
+
+
+func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player", ai_difficulty: String = "easy", use_3d_arena: bool = false) -> void:
+	_dismiss_round_result_popup()
 	current_screen = "kitchen_match"
 	_render_nav()
 	_clear(content)
 	_update_status()
 	var metrics := _calculate_deck_metrics(player_deck, {})
 	var player_name := String(archetypes_by_id.get(String(metrics.get("primary", ARCHETYPE_ORDER[0])), {}).get("name", "Your Kitchen"))
-	var kitchen_game = KITCHEN_GAME_SCENE.instantiate()
+	var kitchen_game = (KITCHEN_GAME_3D_SCENE if use_3d_arena else KITCHEN_GAME_SCENE).instantiate()
 	kitchen_game.configure_match(
 		player_deck,
 		opponent_deck,
@@ -826,7 +1208,8 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		opponent_name,
 		seed_value,
 		first_side,
-		"Forfeit / Return to Tournament" if tournament_round else "Exit Practice Match"
+		"Forfeit / Return to Tournament" if tournament_round else "Exit Practice Match",
+		ai_difficulty
 	)
 	kitchen_game.custom_minimum_size = Vector2(0, 820)
 	kitchen_game.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -838,7 +1221,8 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		"complete": false,
 		"tournament_round": tournament_round,
 		"seed": seed_value,
-		"opponent_name": opponent_name
+		"opponent_name": opponent_name,
+		"ai_difficulty": ai_difficulty
 	}
 	run.kitchen_match_result = {"game_over": false}
 	content.add_child(kitchen_game)
@@ -864,7 +1248,133 @@ func _on_kitchen_match_finished(result: Dictionary) -> void:
 		"player": {"life": int(result.get("player_life", 0))},
 		"opponent": {"life": int(result.get("opponent_life", 0))}
 	}
-	_set_footer("Kitchen match complete. Return to the tournament desk to record the result.")
+	if _season_tournament_active():
+		_set_footer("Kitchen match complete. Choose how to continue.")
+		call_deferred("_show_season_round_result_popup", String(result.get("winner", "opponent")) == "player")
+	else:
+		_set_footer("Kitchen match complete. Return to the shop when ready.")
+
+
+func _show_season_round_result_popup(won: bool) -> void:
+	if not _season_tournament_active() or current_screen != "kitchen_match":
+		return
+	_dismiss_round_result_popup()
+
+	var active: Dictionary = run.get("active_tournament", {})
+	var round_number := int(active.get("round", 1))
+	var final_round := round_number >= int(active.get("rounds", round_number))
+	var accent := Color("#80d98b") if won else Color("#ef8e86")
+
+	var overlay := Control.new()
+	overlay.name = "SeasonRoundResultPopup"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = 1000
+	add_child(overlay)
+	round_result_popup = overlay
+
+	var dimmer := ColorRect.new()
+	dimmer.color = Color(0.02, 0.025, 0.035, 0.82)
+	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dimmer)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(420, 0)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color("#1d2430")
+	panel_style.border_color = accent
+	panel_style.set_border_width_all(3)
+	panel_style.set_corner_radius_all(14)
+	panel.add_theme_stylebox_override("panel", panel_style)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 34)
+	margin.add_theme_constant_override("margin_right", 34)
+	margin.add_theme_constant_override("margin_top", 28)
+	margin.add_theme_constant_override("margin_bottom", 28)
+	panel.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	margin.add_child(box)
+
+	var heading := Label.new()
+	heading.name = "SeasonRoundResultHeading"
+	heading.text = "YOU WON!" if won else "YOU LOST"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 34)
+	heading.add_theme_color_override("font_color", accent)
+	box.add_child(heading)
+
+	var detail := Label.new()
+	detail.text = (
+		"Round %d is complete. Lock in the win and view your tournament results." % round_number
+		if won and final_round
+		else "Round %d is complete. Continue now, or return to the shop to buy cards and edit your deck." % round_number
+		if won
+		else "Round %d was lost. This sudden-death demo run ends here." % round_number
+	)
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_color_override("font_color", Color("#d8dfec"))
+	box.add_child(detail)
+
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	box.add_child(actions)
+
+	var action := _make_button("View Results" if won and final_round else "Next Round" if won else "View Game Over")
+	action.name = "SeasonRoundResultAction"
+	action.custom_minimum_size = Vector2(0, 48)
+	action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action.focus_mode = Control.FOCUS_ALL
+	_style_button(action, "target" if won else "action")
+	_connect_pressed(action, _on_season_round_win_continue if won else _on_season_round_loss_continue)
+	actions.add_child(action)
+	if won and not final_round:
+		var shop_action := _make_button("Back to Shop")
+		shop_action.name = "SeasonRoundResultShopAction"
+		shop_action.custom_minimum_size = Vector2(0, 48)
+		shop_action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_connect_pressed(shop_action, _on_season_round_win_return_to_shop)
+		actions.add_child(shop_action)
+	action.grab_focus.call_deferred()
+
+
+func _dismiss_round_result_popup() -> void:
+	if is_instance_valid(round_result_popup):
+		round_result_popup.queue_free()
+	round_result_popup = null
+
+
+func _on_season_round_win_continue() -> void:
+	var state: Dictionary = run.get("kitchen_match_result", {})
+	if String(state.get("winner", "")) != "player":
+		return
+	_dismiss_round_result_popup()
+	_season_record_current_round_result(true)
+
+
+func _on_season_round_win_return_to_shop() -> void:
+	var state: Dictionary = run.get("kitchen_match_result", {})
+	if String(state.get("winner", "")) != "player":
+		return
+	_dismiss_round_result_popup()
+	_season_record_current_round_result(false, true)
+
+
+func _on_season_round_loss_continue() -> void:
+	var state: Dictionary = run.get("kitchen_match_result", {})
+	if not _season_tournament_active() or String(state.get("winner", "player")) == "player":
+		return
+	_dismiss_round_result_popup()
+	_season_record_current_round_result()
 
 
 func _on_kitchen_exit_requested() -> void:
@@ -907,6 +1417,7 @@ func _show_tournament() -> void:
 
 	if _run_mode() == "season" and _season_tournament_active():
 		_add_season_tournament_progress(content)
+		_add_exit_to_store_button(content)
 		return
 
 	var event: Dictionary = _selected_tournament_event()
@@ -951,6 +1462,8 @@ func _show_tournament() -> void:
 		var last := _add_panel(content, "Last Tournament")
 		for line in run.last_result:
 			_add_body_text(last, line)
+	if _run_mode() == "season":
+		_add_exit_to_store_button(content)
 
 
 func _add_season_tournament_progress(parent: Node) -> void:
@@ -1012,40 +1525,110 @@ func _start_season_tournament() -> void:
 	_start_season_tournament_round()
 
 
-func _start_season_tournament_round() -> void:
+func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_saved_setup: bool = false) -> void:
 	if not _season_tournament_active():
 		_show_tournament()
 		return
+	if not reuse_current_opponent and not reuse_saved_setup:
+		var legal := _deck_is_legal()
+		if not bool(legal.get("ok", false)):
+			_set_footer("Fix your deck before starting the next round: %s" % String(legal.get("reason", "Deck is not legal.")))
+			_show_deckbuilder()
+			return
 	var active: Dictionary = run.get("active_tournament", {})
 	var round_number := int(active.get("round", 1))
 	var event := _season_event_by_id(String(active.get("event_id", "weekly_locals")))
 	var deck_metrics := _calculate_deck_metrics(run.deck, run.sideboard)
-	var opponent := _generate_opponent(round_number, deck_metrics, event)
+	var opponent: Dictionary = active.get("current_opponent", {}) if reuse_current_opponent else {}
+	if opponent.is_empty():
+		opponent = _generate_opponent(round_number, deck_metrics, event)
 	var opponent_archetype := String(opponent.get("archetype", _predator_archetype(String(deck_metrics.primary))))
 	var opponent_deck := _opponent_deck_for_round(opponent_archetype, round_number, event)
-	var seed_value := rng.randi()
-	var first_side := _season_round_first_side()
+	var saved_seed := int(active.get("current_seed", 0))
+	var seed_value := saved_seed if reuse_saved_setup and saved_seed != 0 else rng.randi()
+	var first_side := String(active.get("current_first_side", "player")) if reuse_saved_setup else _season_round_first_side()
+	var saved_ai := String(active.get("current_ai_difficulty", ""))
+	var ai_difficulty: String = saved_ai if reuse_saved_setup and saved_ai != "" else tournament_service.ai_difficulty_for_round(self, event, round_number)
 
 	active["current_opponent"] = opponent
 	active["current_seed"] = seed_value
 	active["current_first_side"] = first_side
+	active["current_ai_difficulty"] = ai_difficulty
 	active["round_result_recorded"] = false
 	run.active_tournament = active
 	_set_footer("%s round %d started. Win the Kitchen Table match to add a win to your record." % [
 		String(active.get("event_name", "Tournament")),
 		round_number
 	])
+	if not reuse_saved_setup:
+		await _play_round_circle_wipe(String(active.get("event_name", "Tournament")), round_number)
+		if not _season_tournament_active():
+			return
 	_begin_kitchen_match(
 		run.deck,
 		opponent_deck,
 		"%s — %s" % [String(opponent.get("name", "Opponent")), _archetype_label(opponent_archetype)],
 		true,
 		seed_value,
-		first_side
+		first_side,
+		ai_difficulty,
+		true
 	)
 
 
-func _season_record_current_round_result() -> void:
+func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
+	if _running_automated_test():
+		return
+	var overlay := Control.new()
+	overlay.name = "RoundCircleWipe"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = 3000
+	add_child(overlay)
+
+	var wipe := ColorRect.new()
+	wipe.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var shader := Shader.new()
+	shader.code = """
+		shader_type canvas_item;
+		uniform float radius = 0.0;
+		void fragment() {
+			vec2 point = (UV - vec2(0.5)) * vec2(1.78, 1.0);
+			float edge = 1.0 - smoothstep(radius, radius + 0.035, length(point));
+			COLOR = vec4(0.035, 0.045, 0.065, edge);
+		}
+	"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("radius", 0.0)
+	wipe.material = material
+	overlay.add_child(wipe)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(center)
+	var label := Label.new()
+	label.text = "%s\nROUND %d" % [event_name.to_upper(), round_number]
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 46)
+	label.add_theme_color_override("font_color", Color("#f3efe4"))
+	label.modulate.a = 0.0
+	center.add_child(label)
+
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(material, "shader_parameter/radius", 1.2, 0.38)
+	tween.parallel().tween_property(label, "modulate:a", 1.0, 0.2).set_delay(0.18)
+	tween.tween_interval(0.5)
+	tween.tween_property(label, "modulate:a", 0.0, 0.14)
+	tween.parallel().tween_property(material, "shader_parameter/radius", 0.0, 0.38)
+	await tween.finished
+	overlay.queue_free()
+
+
+func _season_record_current_round_result(auto_start_next_round: bool = false, return_to_shop: bool = false) -> void:
 	if not _season_tournament_active():
 		return
 	var state: Dictionary = run.get("kitchen_match_result", {})
@@ -1081,6 +1664,7 @@ func _season_record_current_round_result() -> void:
 	active["logs"] = logs
 	active["round_result_recorded"] = true
 	run.active_tournament = active
+	_generate_shop_inventory()
 
 	if _season_tournament_should_finish(active):
 		_finish_season_tournament()
@@ -1092,8 +1676,15 @@ func _season_record_current_round_result() -> void:
 	active["round_result_recorded"] = false
 	run.active_tournament = active
 	_clear_kitchen_match_state()
-	_set_footer("Round recorded. Prepare for round %d." % int(active.get("round", 1)))
-	_show_tournament()
+	if return_to_shop:
+		_set_footer("Round recorded. Visit the clerk when you are ready to start round %d." % int(active.get("round", 1)))
+		_show_shop()
+	elif auto_start_next_round:
+		_set_footer("Round recorded. Starting round %d." % int(active.get("round", 1)))
+		call_deferred("_start_season_tournament_round")
+	else:
+		_set_footer("Round recorded. Prepare for round %d." % int(active.get("round", 1)))
+		_show_tournament()
 
 
 func _season_tournament_should_finish(active: Dictionary) -> bool:
@@ -1122,32 +1713,20 @@ func _finish_season_tournament() -> void:
 		_season_mark_event_completed(event_id)
 		if _season_event_is_final(event_id):
 			run.season_champion = true
-			run.run_over = true
-			run_continues = false
-			logs.append("Record: %d-%d. Win condition achieved: you won Worlds. Prize: $%d and %d pack(s)." % [wins, losses, reward_money, reward_packs])
+			run.demo_complete = true
+			run_continues = true
+			logs.append("Record: %d-%d. League Cup cleared. Prize: $%d and %d pack(s)." % [wins, losses, reward_money, reward_packs])
 		else:
 			logs.append("Record: %d-%d. Calendar advanced. Prize: $%d and %d pack(s)." % [wins, losses, reward_money, reward_packs])
 	else:
 		lives_lost = 1
-		run.season_lives = max(0, int(run.get("season_lives", 1)) - 1)
-		if int(run.get("season_lives", 0)) > 0:
-			run_continues = true
-			run.week = int(run.week) + 1
-			run.selected_event_id = event_id
-			run.season_notice = "%s missed. You lost a season life, but the run is still alive. Tune your deck, then retry the same calendar event." % String(event.get("name", event_id))
-			logs.append("Record: %d-%d. Required record missed. You lose a season life (%d/%d remaining) and continue with no prize." % [
-				wins,
-				losses,
-				int(run.get("season_lives", 0)),
-				int(run.get("max_season_lives", 0))
-			])
-		else:
-			run.run_over = true
-			run.season_notice = "%s missed. No season lives remain." % String(event.get("name", event_id))
-			logs.append("Record: %d-%d. Required record missed and no season lives remain. The season ends here." % [wins, losses])
+		run.season_lives = 0
+		run.run_over = true
+		run_continues = false
+		run.season_notice = "%s ended after the first match loss." % String(event.get("name", event_id))
+		logs.append("Record: %d-%d. One loss ends the demo run." % [wins, losses])
 
 	_update_meta_after_event(String(active.get("deck_primary", _current_primary_archetype())), wins, max(1, wins + losses))
-	_generate_shop_inventory()
 	run.last_result = logs
 	run.last_event_result = _build_event_result_summary(
 		event,
@@ -1284,19 +1863,20 @@ func _show_tournament_result(logs: Array, survived: bool) -> void:
 	var champion := bool(run.get("season_champion", false))
 	var result_summary: Dictionary = run.get("last_event_result", {})
 	var made_record := bool(result_summary.get("made_record", survived))
-	var panel_title := "Season Champion" if champion else "Tournament Result"
+	var panel_title := "League Cup Champion" if champion else ("Game Over" if bool(run.get("run_over", false)) else "Tournament Result")
 	var panel_accent := "#2c3a25" if champion else ("#253044" if survived and made_record else ("#3f3222" if survived else "#442525"))
 	var panel := _add_panel(content, panel_title, panel_accent)
 	if champion:
-		_add_body_text(panel, "Win condition achieved: Worlds cleared. This run is complete.")
+		_add_body_text(panel, "You survived every round and cleared the League Cup. Open your prize packs to finish the demo.")
 	_add_event_result_summary(panel)
 	for line in logs:
 		_add_body_text(panel, line)
 
 	if champion:
-		var restart_button := _make_button("Start New Season")
-		_connect_pressed(restart_button, _show_start)
-		panel.add_child(restart_button)
+		var champion_button := _make_button("Open Prize Packs (%d)" % int(run.get("prize_packs", 0)) if int(run.get("prize_packs", 0)) > 0 else "Continue")
+		_style_button(champion_button, "action")
+		_connect_pressed(champion_button, _open_reward_pack_flow if int(run.get("prize_packs", 0)) > 0 else _show_thanks_for_playing)
+		panel.add_child(champion_button)
 	elif survived:
 		if _run_mode() == "season":
 			_add_season_result_action_buttons(panel)
@@ -1373,7 +1953,7 @@ func _season_result_primary_action() -> Dictionary:
 	if int(run.get("prize_packs", 0)) > 0:
 		return { "text": "Open Prize Packs (%d)" % int(run.get("prize_packs", 0)), "callback": _open_reward_pack_flow }
 	if bool(summary.get("season_champion", false)):
-		return { "text": "Start New Season", "callback": _show_start }
+		return { "text": "Thanks for Playing", "callback": _show_thanks_for_playing }
 	if bool(summary.get("run_over", false)):
 		return { "text": "Start New Run", "callback": _show_start }
 	if not bool(summary.get("made_record", true)):
@@ -1427,7 +2007,29 @@ func _open_reward_pack_flow() -> void:
 
 func _finish_pack_opening() -> void:
 	_finish_pack_state()
-	_show_shop()
+	if int(run.get("prize_packs", 0)) > 0:
+		_open_reward_pack_flow()
+	elif bool(run.get("demo_complete", false)):
+		_show_thanks_for_playing()
+	else:
+		_show_shop()
+
+
+func _show_thanks_for_playing() -> void:
+	current_screen = "thanks"
+	_render_nav()
+	_clear(content)
+	_update_status()
+	_set_footer("Thank you for playing Kitchen Table: Road to Worlds.")
+	var panel := _add_bordered_panel(content, "THANKS FOR PLAYING", "#172a38", "#e2b84c", 4)
+	panel.custom_minimum_size = Vector2(0, 360)
+	_add_body_text(panel, "You cleared Weekly Locals, won the League Cup, and completed the Road to Worlds demo.")
+	_add_body_text(panel, "The full journey continues through State Championships, Nationals, and Worlds.")
+	var title_button := _make_button("Return to Main Menu")
+	title_button.name = "ThanksMainMenuButton"
+	_style_button(title_button, "target")
+	_connect_pressed(title_button, _show_start)
+	panel.add_child(title_button)
 
 
 func _finish_pack_state() -> void:
@@ -1587,6 +2189,10 @@ func _update_meta_after_event(primary: String, wins: int, rounds: int) -> void:
 			reports.append("Sweet chefs are using draw and Prep support to out-value durable boards.")
 		"sweet":
 			reports.append("Spicy chefs are trying to end games before Sweet engines take over.")
+		"fresh":
+			reports.append("Spicy chefs are packing sweepers to clear Fresh token boards before the big serve.")
+		"funky":
+			reports.append("Fresh chefs are going wider to make Funky's one-for-one tricks less efficient.")
 
 	if wins == rounds:
 		reports.append("Your undefeated run is getting noticed. Expect sharper sideboards next week.")
@@ -1626,6 +2232,8 @@ func _show_meta() -> void:
 	var report_panel := _add_panel(content, "Reports")
 	for line in run.reports:
 		_add_body_text(report_panel, "• " + line)
+	if _run_mode() == "season":
+		_add_exit_to_store_button(content)
 
 
 func _calculate_deck_metrics(deck: Dictionary, sideboard: Dictionary) -> Dictionary:
@@ -1780,13 +2388,12 @@ func _add_card_panel(parent: Node, card_id: String, note: String = "") -> VBoxCo
 		"mythic":
 			accent = "#472637"
 
-	var box := _add_panel(parent, card.name, accent)
+	var box := _add_panel(parent, _card_display_name(card), accent)
 	box.custom_minimum_size = Vector2(240, 0)
 
-	var meta := "%s | %s | %s | cost %d | $%d" % [
+	var meta := "%s | %s | cost %d | $%d" % [
 		card.rarity.capitalize(),
-		_affinity_label(_card_archetype(card)),
-		card.role.capitalize(),
+		_card_descriptor(card),
 		int(card.cost),
 		_card_price(card_id) if not run.is_empty() else int(card.value)
 	]
@@ -1805,22 +2412,52 @@ func _archetype_label(archetype_id: String) -> String:
 	return "Neutral"
 
 
+func _starter_label(archetype_id: String) -> String:
+	var starter_name := _archetype_label(archetype_id)
+	var affinity_symbol := _affinity_symbol(archetype_id)
+	if affinity_symbol == "":
+		return starter_name
+	return "%s %s" % [affinity_symbol, starter_name]
+
+
 func _card_archetype(card: Dictionary) -> String:
 	return String(card.get("animalType", card.get("archetype", "neutral")))
 
 
 func _affinity_label(archetype_id: String) -> String:
-	match archetype_id:
-		"spicy":
-			return "Spicy"
-		"hearty":
-			return "Hearty"
-		"sweet":
-			return "Sweet"
-		"neutral":
-			return "Universal"
-		_:
-			return _archetype_label(archetype_id)
+	return AFFINITY_VISUALS.label(archetype_id, _archetype_label(archetype_id))
+
+
+func _affinity_symbol(archetype_id: String) -> String:
+	return AFFINITY_VISUALS.symbol(archetype_id)
+
+
+func _format_affinity_requirements(requirements: Array) -> String:
+	return AFFINITY_VISUALS.format_requirements(requirements)
+
+
+func _card_type_symbol(card_type: String) -> String:
+	return AFFINITY_VISUALS.card_type_symbol(card_type)
+
+
+func _card_type_label(card_type: String) -> String:
+	return AFFINITY_VISUALS.card_type_label(card_type)
+
+
+func _card_display_name(card: Dictionary) -> String:
+	return AFFINITY_VISUALS.card_display_name(card)
+
+
+func _card_classification_symbol(card: Dictionary) -> String:
+	return AFFINITY_VISUALS.card_classification_symbol(card)
+
+
+func _card_classification_label(card: Dictionary) -> String:
+	return AFFINITY_VISUALS.card_classification_label(card)
+
+
+func _card_descriptor(card: Dictionary) -> String:
+	return AFFINITY_VISUALS.card_descriptor(card)
 
 
 func _affinity_color(archetype_id: String) -> Color:
@@ -1950,22 +2587,29 @@ func _button_stylebox(background: Color, border: Color) -> StyleBoxFlat:
 
 func _update_status() -> void:
 	if run.is_empty():
-		status_label.text = "Season + Debug"
+		status_label.text = "Learn to Play" if current_screen == "tutorial" else "Season + Debug"
 		return
 	var main_count := _deck_total(run.deck)
-	var side_count := _deck_total(run.sideboard)
 	var difficulty := _difficulty_data(_run_difficulty_id())
-	var life_text := ""
 	if _run_mode() == "season":
-		life_text = " | Lives %d/%d" % [
+		var life_text := " | Lives %d/%d" % [
 			int(run.get("season_lives", 0)),
 			int(run.get("max_season_lives", 0))
 		]
-	status_label.text = "Week %d | $%d | %s Border%s | Main %d/%d | Side %d/%d" % [
+		status_label.text = "Week %d | $%d | %s Border%s | Main %d/%d" % [
+			int(run.week),
+			int(run.money),
+			String(difficulty.get("name", "White")),
+			life_text,
+			main_count,
+			MAIN_DECK_SIZE
+		]
+		return
+	var side_count := _deck_total(run.sideboard)
+	status_label.text = "Week %d | $%d | %s Border | Main %d/%d | Side %d/%d" % [
 		int(run.week),
 		int(run.money),
 		String(difficulty.get("name", "White")),
-		life_text,
 		main_count,
 		MAIN_DECK_SIZE,
 		side_count,
@@ -1990,28 +2634,84 @@ func _guard_run_over() -> bool:
 
 
 func _save_run() -> void:
-	var result: Dictionary = run_state_service.save_run(run)
+	var result: Dictionary = _autosave_now(current_screen) if autosave_enabled else run_state_service.save_run(run, current_screen)
 	_set_footer(result.message)
 
 
 func _load_run_from_disk() -> void:
+	autosave_suspended = true
 	var result: Dictionary = run_state_service.load_run()
 	if not result.ok:
+		autosave_suspended = false
 		_set_footer(result.message)
 		return
 	run = result.run
 	if not run.has("kitchen_opponent"):
 		var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 		run.kitchen_opponent = _predator_archetype(String(metrics.primary))
-	_generate_shop_inventory()
+	if not run.has("shop") or not (run.shop is Array):
+		_generate_shop_inventory()
+	_resume_loaded_screen(String(result.get("resume_screen", "")))
 	_set_footer(result.message)
-	match _run_mode():
+	call_deferred("_finish_autosave_resume")
+
+
+func _resume_loaded_screen(saved_screen: String) -> void:
+	if bool(run.get("run_over", false)):
+		_show_tournament_result(run.get("last_result", ["The run is over."]), false)
+		return
+	match saved_screen:
+		"shop":
+			_show_shop()
+		"packs":
+			_show_packs()
+		"deck":
+			_show_deckbuilder()
 		"season":
 			_show_season_run()
-		"unselected":
+		"tournament":
+			_show_tournament()
+		"meta":
+			_show_meta()
+		"result":
+			var summary: Dictionary = run.get("last_event_result", {})
+			_show_tournament_result(run.get("last_result", []), bool(summary.get("run_continues", true)))
+		"kitchen_match":
+			_resume_autosaved_kitchen_match()
+		"path_choice":
 			_show_run_path_choice()
+		"card_lab":
+			_show_card_effect_lab()
 		_:
-			_show_shop()
+			match _run_mode():
+				"season":
+					_show_season_run()
+				"unselected":
+					_show_run_path_choice()
+				_:
+					_show_shop()
+
+
+func _resume_autosaved_kitchen_match() -> void:
+	if not _season_tournament_active():
+		_start_debug_kitchen_match()
+		return
+	var saved_match: Dictionary = run.get("kitchen_match", {}).duplicate(true)
+	var saved_result: Dictionary = run.get("kitchen_match_result", {}).duplicate(true)
+	_start_season_tournament_round(true, true)
+	if bool(saved_result.get("game_over", false)):
+		run.kitchen_match = saved_match
+		run.kitchen_match_result = saved_result
+		call_deferred("_show_season_round_result_popup", String(saved_result.get("winner", "opponent")) == "player")
+	else:
+		_set_footer("Autosave restored. Restarted the current round against the same opponent.")
+
+
+func _finish_autosave_resume() -> void:
+	last_autosave_fingerprint = _run_fingerprint()
+	last_autosave_screen = current_screen
+	autosave_poll_elapsed = 0.0
+	autosave_suspended = false
 
 
 func _migrate_legacy_run_archetypes() -> void:

@@ -6,9 +6,9 @@
       "stage": "Locals",
       "calendarWeek": 1,
       "summary": "A three-round shop night. Prove your starter deck can survive real games.",
-      "winConditionText": "Go 2-1 or better to stay on the Road to Worlds.",
+      "winConditionText": "Win all three rounds. One loss ends the demo run.",
       "rounds": 3,
-      "requiredWins": 2,
+      "requiredWins": 3,
       "entryFee": 3,
       "rewardMoney": {
         "2": 7,
@@ -23,21 +23,20 @@
     },
     {
       "id": "monthly_regionals",
-      "name": "Monthly Regionals",
-      "stage": "Regionals",
+      "name": "League Cup",
+      "stage": "League Cup",
+      "demoEndpoint": true,
       "calendarWeek": 4,
-      "summary": "The first serious metagame check. Stronger decks show up earlier.",
-      "winConditionText": "Go 4-1 or better to qualify for State Championships.",
-      "rounds": 5,
-      "requiredWins": 4,
+      "summary": "The three-round demo finale and first serious metagame check. Stronger decks show up earlier.",
+      "winConditionText": "Win all three rounds. One loss ends the demo run.",
+      "rounds": 3,
+      "requiredWins": 3,
       "entryFee": 8,
       "rewardMoney": {
-        "4": 20,
-        "5": 35
+        "3": 35
       },
       "rewardPacks": {
-        "4": 1,
-        "5": 2
+        "3": 2
       },
       "bossName": "Regional Grinder Jules",
       "bossArchetype": "sweet"

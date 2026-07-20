@@ -61,6 +61,10 @@ Meals replace `ingredient_types` with a recipe:
 }
 ```
 
+A Meal may also define `required_meal_archetype`. Serving it sacrifices one matching Meal in addition to the listed Ingredients. `can_attack_from_prep` permits the unit to attack from Prep.
+
+Optional responses use `hand_trap` with an opposing-action trigger or `hand_trigger` with a friendly-event trigger. The combat service opens a response window and enforces the once-per-turn Hand Trap limit.
+
 ## Other Card Types
 
 Tools and Chefs resolve their `effects` and then go to the discard pile. Spices attach to friendly units and commonly define `attack_bonus` and `health_bonus`. Environments remain in their zone and define persistent or turn-based behavior.

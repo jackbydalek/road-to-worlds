@@ -26,6 +26,7 @@ func show(host) -> void:
 	_add_header(host, hub, event, event_id, metrics, legal, difficulty)
 	_add_event_calendar(host, hub, event_id)
 	_add_notice_and_results(host, hub)
+	host._add_exit_to_store_button(hub)
 
 
 func _add_header(host, parent: Node, event: Dictionary, event_id: String, metrics: Dictionary, legal: Dictionary, difficulty: Dictionary) -> void:
@@ -217,7 +218,7 @@ func _add_singles_case(host, parent: Node) -> void:
 		tile.add_child(label)
 
 	if preview_count == 0:
-		host._add_body_text(panel, "The singles case is being restocked.")
+		host._add_body_text(panel, "The singles case is sold out. New cards arrive after the next tournament round.")
 	var button: Button = host._make_button("Browse Singles")
 	button.name = "SeasonHubSinglesButton"
 	host._connect_pressed(button, host._show_shop)

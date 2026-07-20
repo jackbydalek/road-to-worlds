@@ -1,0 +1,237 @@
+[gd_scene format=3 uid="uid://cuehgsk0jidla"]
+
+[node name="CombatArena" type="Control" unique_id=994352268]
+custom_minimum_size = Vector2(1440, 900)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1440.0
+offset_bottom = 900.0
+mouse_filter = 1
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=2045423473]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.93, 0.902, 0.835, 1)
+
+[node name="TableSurface" type="Polygon2D" parent="." unique_id=21633865]
+unique_name_in_owner = true
+color = Color(0.976, 0.957, 0.91, 1)
+polygon = PackedVector2Array(171, 45, 1269, 45, 1426.5, 885, 13.5, 885)
+
+[node name="PerspectiveRig" type="Control" parent="." unique_id=1254253455]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="OpponentArea" type="Control" parent="PerspectiveRig" unique_id=544819713]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_top = 42.0
+offset_right = 1440.0
+offset_bottom = 382.0
+scale = Vector2(0.86, 0.82)
+pivot_offset = Vector2(720, 0)
+mouse_filter = 1
+
+[node name="OpponentHandAnchor" type="Control" parent="PerspectiveRig/OpponentArea" unique_id=410944241]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 504.0
+offset_right = 936.0
+offset_bottom = 78.0
+mouse_filter = 1
+
+[node name="OpponentLifeAnchor" type="Control" parent="PerspectiveRig/OpponentArea" unique_id=685748091]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 36.0
+offset_top = 92.0
+offset_right = 148.5
+offset_bottom = 300.0
+
+[node name="OpponentEnvironmentAnchor" type="Control" parent="PerspectiveRig/OpponentArea" unique_id=1865761445]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 171.0
+offset_top = 100.0
+offset_right = 315.0
+offset_bottom = 290.0
+
+[node name="OpponentPrepZone" type="HBoxContainer" parent="PerspectiveRig/OpponentArea" unique_id=454149050]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 468.0
+offset_top = 88.0
+offset_right = 972.0
+offset_bottom = 174.0
+theme_override_constants/separation = 7
+alignment = 1
+
+[node name="OpponentPlatedZone" type="HBoxContainer" parent="PerspectiveRig/OpponentArea" unique_id=137170223]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 540.0
+offset_top = 210.0
+offset_right = 900.0
+offset_bottom = 302.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="OpponentDeckAnchor" type="Control" parent="PerspectiveRig/OpponentArea" unique_id=760321691]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 1251.0
+offset_top = 96.0
+offset_right = 1372.5
+offset_bottom = 174.0
+
+[node name="OpponentDiscardAnchor" type="Control" parent="PerspectiveRig/OpponentArea" unique_id=1017841728]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 1251.0
+offset_top = 190.0
+offset_right = 1372.5
+offset_bottom = 268.0
+
+[node name="PlayerArea" type="Control" parent="PerspectiveRig" unique_id=337684507]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_top = 400.0
+offset_right = 1440.0
+offset_bottom = 825.0
+pivot_offset = Vector2(720, 425)
+mouse_filter = 1
+
+[node name="PlayerLifeAnchor" type="Control" parent="PerspectiveRig/PlayerArea" unique_id=978905003]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 27.0
+offset_top = 25.0
+offset_right = 148.5
+offset_bottom = 255.0
+
+[node name="PlayerEnvironmentAnchor" type="Control" parent="PerspectiveRig/PlayerArea" unique_id=1633922935]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 166.5
+offset_top = 38.0
+offset_right = 319.5
+offset_bottom = 250.0
+
+[node name="PlayerPlatedZone" type="HBoxContainer" parent="PerspectiveRig/PlayerArea" unique_id=1145688656]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 531.0
+offset_top = 30.0
+offset_right = 909.0
+offset_bottom = 128.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PlayerPrepZone" type="HBoxContainer" parent="PerspectiveRig/PlayerArea" unique_id=1515057563]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 450.0
+offset_top = 154.0
+offset_right = 990.0
+offset_bottom = 254.0
+theme_override_constants/separation = 7
+alignment = 1
+
+[node name="PlayerDeckAnchor" type="Control" parent="PerspectiveRig/PlayerArea" unique_id=600675135]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 1246.5
+offset_top = 142.0
+offset_right = 1372.5
+offset_bottom = 224.0
+
+[node name="PlayerDiscardAnchor" type="Control" parent="PerspectiveRig/PlayerArea" unique_id=1731067668]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 1246.5
+offset_top = 42.0
+offset_right = 1372.5
+offset_bottom = 124.0
+
+[node name="PlayerHandAnchor" type="Control" parent="PerspectiveRig/PlayerArea" unique_id=644208550]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 270.0
+offset_top = 270.0
+offset_right = 1170.0
+offset_bottom = 414.0
+mouse_filter = 1
+
+[node name="CenterMessageAnchor" type="Control" parent="." unique_id=1297750395]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 111.0
+offset_top = 354.0
+offset_right = 1332.0
+offset_bottom = 400.0
+
+[node name="InterfaceOverlay" type="Control" parent="." unique_id=1620279783]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HeaderAnchor" type="Control" parent="InterfaceOverlay" unique_id=1518387680]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 18.0
+offset_top = 8.0
+offset_right = 1422.0
+offset_bottom = 48.0
+
+[node name="ActionBarAnchor" type="Control" parent="InterfaceOverlay" unique_id=2101761734]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 18.0
+offset_top = 838.0
+offset_right = 1422.0
+offset_bottom = 890.0
+
+[node name="FloatingEffectsLayer" type="Control" parent="InterfaceOverlay" unique_id=1253729798]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="InspectionAnchor" type="Control" parent="InterfaceOverlay" unique_id=180938196]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 1098.0
+offset_top = 78.0
+offset_right = 1422.0
+offset_bottom = 820.0
+mouse_filter = 2
+
+[node name="ResultPopupAnchor" type="Control" parent="InterfaceOverlay" unique_id=1598992411]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

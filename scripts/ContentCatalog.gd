@@ -31,7 +31,25 @@ const ARCHETYPE_DATA := {
 		"tags": ["sweet", "advantage", "tempo"],
 		"color": "#c75ba3",
 		"phaseWeights": {"speed": 0.15, "power": 0.12, "interaction": 0.23, "resilience": 0.15, "advantage": 0.35},
-		"matchups": {"spicy": -0.06, "hearty": 0.06}
+		"matchups": {"spicy": -0.04, "hearty": 0.04, "fresh": -0.04}
+	},
+	"fresh": {
+		"name": "Fresh Starter",
+		"strategy": "swarm",
+		"summary": "Flood Prep with Ingredients and tokens, then consolidate them into explosive Meals.",
+		"tags": ["fresh", "swarm", "sacrifice"],
+		"color": "#52a86b",
+		"phaseWeights": {"speed": 0.22, "power": 0.24, "interaction": 0.10, "resilience": 0.20, "advantage": 0.24},
+		"matchups": {"spicy": -0.08, "sweet": 0.04}
+	},
+	"funky": {
+		"name": "Funky Starter",
+		"strategy": "trickery",
+		"summary": "Turn discards into setup, copy abilities, and answer opposing actions from hand.",
+		"tags": ["funky", "discard", "trickery"],
+		"color": "#7458b8",
+		"phaseWeights": {"speed": 0.12, "power": 0.15, "interaction": 0.35, "resilience": 0.13, "advantage": 0.25},
+		"matchups": {"fresh": 0.02}
 	}
 }
 
@@ -68,7 +86,7 @@ func load_all() -> bool:
 	for tournament in tournament_data.get("tournaments", []):
 		tournaments_by_id[String(tournament.get("id", ""))] = tournament
 
-	return cards.size() > 0 and archetypes_by_id.size() == 3
+	return cards.size() > 0 and archetypes_by_id.size() == ARCHETYPE_DATA.size()
 
 
 func deck_entries_to_dict(entries: Array) -> Dictionary:

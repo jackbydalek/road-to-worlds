@@ -152,11 +152,16 @@ func card_matches_current_deck(card_id: String, current_primary: String) -> bool
 
 
 func buy_single(target_run: Dictionary, card_id: String) -> Dictionary:
+	var shop: Array = target_run.get("shop", [])
+	if not shop.has(card_id):
+		return { "ok": false, "message": "%s is no longer in the singles case." % _card_name(card_id) }
 	var price := card_price(target_run, card_id)
 	if int(target_run.get("money", 0)) < price:
 		return { "ok": false, "message": "Not enough money for " + _card_name(card_id) + "." }
 	target_run.money = int(target_run.money) - price
 	_add_to_collection(target_run, card_id, 1)
+	shop.erase(card_id)
+	target_run.shop = shop
 	return { "ok": true, "message": "Bought %s for $%d." % [_card_name(card_id), price] }
 
 

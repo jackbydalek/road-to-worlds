@@ -33,6 +33,8 @@ func should_finish(active: Dictionary) -> bool:
 	var losses := int(active.get("losses", 0))
 	var rounds := int(active.get("rounds", 1))
 	var required := int(active.get("required_wins", 1))
+	if losses > 0:
+		return true
 	if wins + losses >= rounds:
 		return true
 	return losses > rounds - required
@@ -102,13 +104,34 @@ func generate_opponent(host, round_number: int, deck_metrics: Dictionary, event:
 
 
 func difficulty_opponent_quality_bonus(host) -> float:
-	return 7.0 if host._run_difficulty_id() == "blue" else 0.0
+	match host._run_difficulty_id():
+		"blue":
+			return 7.0
+		"silver":
+			return 4.0
+		_:
+			return 0.0
 
 
 func season_round_first_side(host) -> String:
 	if host._run_difficulty_id() != "gold":
 		return "player"
 	return "opponent" if host.rng.randf() < 0.5 else "player"
+
+
+func ai_difficulty_for_round(host, event: Dictionary, round_number: int) -> String:
+	var event_index: int = max(0, host._season_event_index(String(event.get("id", "weekly_locals"))))
+	var tier := "hard"
+	if event_index == 0:
+		tier = "easy" if round_number <= 1 else "medium"
+	elif event_index == 1:
+		tier = "medium" if round_number <= 2 else "hard"
+	if host._run_difficulty_id() == "blue":
+		if tier == "easy":
+			tier = "medium"
+		elif tier == "medium":
+			tier = "hard"
+	return tier
 
 
 func opponent_deck_for_round(host, opponent_archetype: String, round_number: int, event: Dictionary = {}) -> Dictionary:

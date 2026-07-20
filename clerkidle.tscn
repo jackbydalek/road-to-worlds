@@ -1,0 +1,104 @@
+[gd_scene format=3 uid="uid://cugdmnv4qe53f"]
+
+[ext_resource type="PackedScene" uid="uid://8twlxvfpcws" path="res://assets/characters/shopkeeper/clerkidle.glb" id="1_l32w8"]
+[ext_resource type="Texture2D" uid="uid://bxn84x5q33ujt" path="res://assets/characters/shopkeeper/shopkeeper.png" id="2_teb0b"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fq3p5"]
+shading_mode = 0
+albedo_texture = ExtResource("2_teb0b")
+
+[node name="clerkidle" unique_id=1033687673 instance=ExtResource("1_l32w8")]
+
+[node name="Armature" parent="." index="0" unique_id=1115258541]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+
+[node name="Skeleton3D" parent="Armature" index="0" unique_id=1726085985]
+bones/0/position = Vector3(-0.001670666, 0.014666207, -1.1619663)
+bones/0/rotation = Quaternion(-0.7113387, -0.023504028, -0.03956979, 0.70134085)
+bones/1/rotation = Quaternion(-0.036471404, -0.012618686, 0.021528773, 0.9990231)
+bones/2/rotation = Quaternion(-0.0007587345, -0.0037034797, 0.05170498, 0.9986553)
+bones/3/rotation = Quaternion(-0.00076610077, 0.0016367501, 0.051336825, 0.99867976)
+bones/4/rotation = Quaternion(0.05304932, -0.0013455758, -0.019218352, 0.9984061)
+bones/5/rotation = Quaternion(0.018316276, 0.0065185144, -0.06929738, 0.9974066)
+bones/7/rotation = Quaternion(-0.5983281, -0.44028884, 0.43430394, -0.5094403)
+bones/8/rotation = Quaternion(0.6754884, 0.03477293, -0.08509504, 0.7316181)
+bones/9/rotation = Quaternion(0.0018979368, -0.0002934504, 0.12624305, 0.99199754)
+bones/10/rotation = Quaternion(0.08552717, -0.23859827, -0.014622478, 0.9672343)
+bones/11/rotation = Quaternion(0.077579826, -7.254142e-05, -0.043194775, 0.99605)
+bones/12/rotation = Quaternion(0.20374092, 0.007042527, -0.074191235, 0.97618425)
+bones/13/rotation = Quaternion(0.16957404, 0.0020494878, 0.17489657, 0.96987206)
+bones/15/rotation = Quaternion(0.55069935, -0.4981731, 0.4846102, 0.46228424)
+bones/16/rotation = Quaternion(0.565967, -0.051862314, 0.0022626033, 0.82279193)
+bones/17/rotation = Quaternion(-0.0037946235, -0.00041778252, -0.15411907, 0.988045)
+bones/18/rotation = Quaternion(0.098117016, 0.100997485, 0.06707017, 0.9877622)
+bones/19/rotation = Quaternion(0.0793657, 0.00020758629, 0.039819166, 0.99605)
+bones/20/rotation = Quaternion(0.24743113, 0.009265423, -0.014900383, 0.9687466)
+bones/21/rotation = Quaternion(-0.03567448, -0.0016175765, 0.09806385, 0.9945392)
+bones/23/rotation = Quaternion(0.11454644, 0.15202585, 0.9739275, -0.12342016)
+bones/24/rotation = Quaternion(-0.2409259, -0.075350285, 0.0437083, 0.96662647)
+bones/25/rotation = Quaternion(0.43518406, -0.038573634, -0.078215405, 0.8961079)
+bones/26/rotation = Quaternion(0.39889088, -0.028297994, 0.012330785, 0.9164787)
+bones/28/rotation = Quaternion(-0.036973644, -0.02755941, 0.9934229, -0.10480632)
+bones/29/rotation = Quaternion(-0.062982015, 0.044255346, 0.017429493, 0.9968807)
+bones/30/rotation = Quaternion(0.43628463, -0.05876623, -0.084200345, 0.89393103)
+bones/31/rotation = Quaternion(0.41274086, 0.030357545, -0.013785154, 0.91023815)
+
+[node name="Cube" parent="Armature/Skeleton3D" index="0" unique_id=1842550613]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_001" parent="Armature/Skeleton3D" index="1" unique_id=480680799]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_002" parent="Armature/Skeleton3D" index="2" unique_id=1736595672]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_003" parent="Armature/Skeleton3D" index="3" unique_id=928581202]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_004" parent="Armature/Skeleton3D" index="4" unique_id=1815925948]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_005" parent="Armature/Skeleton3D" index="5" unique_id=2092238829]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_006" parent="Armature/Skeleton3D" index="6" unique_id=2122768353]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_007" parent="Armature/Skeleton3D" index="7" unique_id=372117856]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_008" parent="Armature/Skeleton3D" index="8" unique_id=1652357595]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cube_009" parent="Armature/Skeleton3D" index="9" unique_id=28592842]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Cylinder" parent="Armature/Skeleton3D" index="10" unique_id=875108101]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0
+
+[node name="Plane" parent="Armature/Skeleton3D" index="11" unique_id=1619623487]
+material_override = SubResource("StandardMaterial3D_fq3p5")
+cast_shadow = 0
+gi_mode = 0

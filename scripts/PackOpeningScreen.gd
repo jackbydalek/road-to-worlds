@@ -17,6 +17,7 @@ var pack_button: TextureButton
 var reveal_all_button: Button
 var done_button: Button
 var card_fan: Control
+var exit_button: Button
 var card_slots: Array[TextureButton] = []
 
 
@@ -34,6 +35,17 @@ func show(host) -> void:
 	_layout_slots()
 	_connect_controls(host)
 	_render(host)
+	_add_store_exit(host)
+
+
+func _add_store_exit(host) -> void:
+	exit_button = host._make_button("Exit to Card Store")
+	exit_button.name = "PackExitToStoreButton"
+	exit_button.position = Vector2(1180, 26)
+	exit_button.size = Vector2(220, 44)
+	exit_button.z_index = 200
+	host._connect_pressed(exit_button, host._show_shop)
+	scene_root.add_child(exit_button)
 
 
 func _add_scene(host) -> Node:
@@ -288,11 +300,11 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 		_add_slot_label(box, "WORLDS", 19, Color("#f3efe4"), HORIZONTAL_ALIGNMENT_CENTER)
 		return
 
-	_add_slot_label(box, String(card.get("name", card_id)), 13, host._rarity_text_color(rarity), HORIZONTAL_ALIGNMENT_CENTER)
+	_add_slot_label(box, host._card_display_name(card), 13, host._rarity_text_color(rarity), HORIZONTAL_ALIGNMENT_CENTER)
 	_add_slot_label(box, rarity.capitalize(), 12, Color("#c7d0df"), HORIZONTAL_ALIGNMENT_CENTER)
 	_add_slot_spacer(box)
 	_add_slot_label(box, "%s | cost %d" % [
-		String(card.get("role", "card")).capitalize(),
+		host._card_descriptor(card),
 		int(card.get("cost", 0))
 	], 11, Color("#d8dfec"), HORIZONTAL_ALIGNMENT_CENTER)
 	var note := _note_for_pack_index(host.run.get("revealed_pack", []), index)

@@ -1,15 +1,24 @@
 extends Control
 
+const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
+
 signal match_finished(result: Dictionary)
 signal exit_requested
 
 const SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
+const COMBAT_ARENA_SCENE := preload("res://scenes/CombatArena.tscn")
+const CHEF_LIFE_HEART := preload("res://assets/ui/chef_life_heart.svg")
 const FONT_PATH := "res://assets/fonts/ArchivoNarrow-Regular.ttf"
+const OPPONENT_ACTION_DELAY := 1.05
+
+@export var use_authored_arena := false
 
 var service: RefCounted
 var state: Dictionary = {}
-var root_box: VBoxContainer
-var card_font: FontFile
+var root_box: Control
+var arena_anchors: Dictionary = {}
+var floating_effects_layer: Control
+var card_font: Font
 var player_deck_id := ""
 var inspected_card: Dictionary = {}
 var inspect_overlay: PanelContainer
@@ -21,6 +30,7 @@ var configured_opponent_name := "Opponent Kitchen"
 var configured_seed := 1
 var configured_first_side := "player"
 var configured_exit_label := "Return"
+var configured_ai_difficulty := "easy"
 var result_emitted := false
 var rendered_visual_snapshot: Dictionary = {}
 var unit_visual_nodes: Dictionary = {}
@@ -33,9 +43,12 @@ var active_drag_payload: Dictionary = {}
 var active_drag_source: Control
 var drag_drop_accepted := false
 var floating_feedback: PanelContainer
+var opponent_hand_visual: Control
+var opponent_sequence_running := false
+var opponent_sequence_generation := 0
 
 
-func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_name: String, opponent_name: String, seed: int, first_side: String = "player", exit_label: String = "Return") -> void:
+func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_name: String, opponent_name: String, seed: int, first_side: String = "player", exit_label: String = "Return", ai_difficulty: String = "easy") -> void:
 	season_match = true
 	configured_player_deck = player_deck.duplicate(true)
 	configured_opponent_deck = opponent_deck.duplicate(true)
@@ -44,10 +57,11 @@ func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_
 	configured_seed = seed
 	configured_first_side = first_side
 	configured_exit_label = exit_label
+	configured_ai_difficulty = ai_difficulty
 
 
 func _ready() -> void:
-	card_font = load(FONT_PATH)
+	card_font = AFFINITY_VISUALS.font_with_symbols(load(FONT_PATH) as Font)
 	service = SERVICE_SCRIPT.new()
 	if not service.load_content():
 		push_error("Could not load the cooking card catalog.")
@@ -66,24 +80,41 @@ func _notification(what: int) -> void:
 
 
 func _build_shell() -> void:
-	var background := ColorRect.new()
-	background.color = Color("#f3efe5")
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
-	add_child(margin)
-	root_box = VBoxContainer.new()
+	if not use_authored_arena:
+		var background := ColorRect.new()
+		background.color = Color("#f3efe5")
+		background.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(background)
+		var margin := MarginContainer.new()
+		margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+		margin.add_theme_constant_override("margin_left", 14)
+		margin.add_theme_constant_override("margin_right", 14)
+		margin.add_theme_constant_override("margin_top", 10)
+		margin.add_theme_constant_override("margin_bottom", 10)
+		add_child(margin)
+		var legacy_root := VBoxContainer.new()
+		legacy_root.name = "KitchenGameRoot"
+		legacy_root.add_theme_constant_override("separation", 5)
+		margin.add_child(legacy_root)
+		root_box = legacy_root
+		return
+	root_box = COMBAT_ARENA_SCENE.instantiate() as Control
 	root_box.name = "KitchenGameRoot"
-	root_box.add_theme_constant_override("separation", 5)
-	margin.add_child(root_box)
+	add_child(root_box)
+	for anchor_name in [
+		"HeaderAnchor", "OpponentHandAnchor", "OpponentLifeAnchor", "OpponentEnvironmentAnchor",
+		"OpponentPrepZone", "OpponentPlatedZone", "OpponentDeckAnchor", "OpponentDiscardAnchor",
+		"PlayerLifeAnchor", "PlayerEnvironmentAnchor", "PlayerPlatedZone", "PlayerPrepZone",
+		"PlayerDeckAnchor", "PlayerDiscardAnchor", "PlayerHandAnchor", "CenterMessageAnchor",
+		"ActionBarAnchor", "InspectionAnchor", "ResultPopupAnchor"
+	]:
+		arena_anchors[anchor_name] = root_box.get_node("%%%s" % anchor_name)
+	floating_effects_layer = root_box.get_node("%FloatingEffectsLayer") as Control
 
 
 func _new_game(requested_deck_id: String = "") -> void:
+	opponent_sequence_generation += 1
+	opponent_sequence_running = false
 	inspected_card = {}
 	var deck_ids: Array[String] = service.available_deck_ids()
 	if requested_deck_id != "":
@@ -94,8 +125,46 @@ func _new_game(requested_deck_id: String = "") -> void:
 	var player_index := deck_ids.find(player_deck)
 	var opponent_deck := "season_opponent" if season_match else (deck_ids[(player_index + 1) % deck_ids.size()] if deck_ids.size() > 1 else player_deck)
 	result_emitted = false
-	state = service.start_game(player_deck, opponent_deck, configured_seed if season_match else Time.get_ticks_msec(), configured_first_side if season_match else "player")
+	state = service.start_game(player_deck, opponent_deck, configured_seed if season_match else Time.get_ticks_msec(), configured_first_side if season_match else "player", true, configured_ai_difficulty if season_match else "easy")
 	_refresh()
+	if String(state.get("phase", "")) == "opponent_turn":
+		call_deferred("_start_opponent_turn_sequence")
+
+
+func _start_opponent_turn_sequence() -> void:
+	if opponent_sequence_running or bool(state.get("game_over", false)):
+		return
+	if String(state.get("phase", "")) != "opponent_turn" or not state.get("pending_reaction", {}).is_empty():
+		return
+	opponent_sequence_running = true
+	_run_opponent_turn_sequence(opponent_sequence_generation)
+
+
+func _run_opponent_turn_sequence(generation: int) -> void:
+	while generation == opponent_sequence_generation and String(state.get("phase", "")) == "opponent_turn" and not bool(state.get("game_over", false)):
+		if not state.get("pending_reaction", {}).is_empty():
+			break
+		await get_tree().create_timer(OPPONENT_ACTION_DELAY).timeout
+		if generation != opponent_sequence_generation:
+			return
+		if not state.get("pending_reaction", {}).is_empty() or String(state.get("phase", "")) != "opponent_turn":
+			break
+		service.advance_opponent_turn(state)
+		_refresh()
+	if generation == opponent_sequence_generation:
+		opponent_sequence_running = false
+
+
+func _end_player_turn_with_sequence() -> void:
+	service.end_player_turn(state, true)
+	_refresh()
+	_start_opponent_turn_sequence()
+
+
+func _resolve_player_reaction(hand_index: int) -> void:
+	service.resolve_reaction(state, hand_index, false)
+	_refresh()
+	_start_opponent_turn_sequence()
 
 
 func _refresh() -> void:
@@ -111,20 +180,35 @@ func _refresh() -> void:
 	hand_visual_nodes.clear()
 	environment_visual_nodes.clear()
 	board_visual_nodes.clear()
+	opponent_hand_visual = null
 	drag_drop_targets.clear()
 	drag_highlight_restore.clear()
-	for child in root_box.get_children():
-		child.queue_free()
-	_build_header()
-	_build_side("opponent")
-	_build_message_strip()
-	_build_side("player")
-	_build_hand()
-	_build_action_bar()
-	_build_inspect_overlay()
+	if use_authored_arena:
+		for anchor in arena_anchors.values():
+			_clear_arena_anchor(anchor as Control)
+		_build_header(arena_anchors.HeaderAnchor)
+		_build_opponent_hand_fan(arena_anchors.OpponentHandAnchor)
+		_build_arena_side("opponent")
+		_build_message_strip(arena_anchors.CenterMessageAnchor)
+		_build_arena_side("player")
+		_build_hand(arena_anchors.PlayerHandAnchor)
+		_build_action_bar(arena_anchors.ActionBarAnchor)
+		_build_inspect_overlay(arena_anchors.InspectionAnchor, true)
+	else:
+		for child in root_box.get_children():
+			root_box.remove_child(child)
+			child.queue_free()
+		_build_header(root_box)
+		_build_opponent_hand_fan(root_box)
+		_build_side("opponent")
+		_build_message_strip(root_box)
+		_build_side("player")
+		_build_hand(root_box)
+		_build_action_bar(root_box)
+		_build_inspect_overlay(self, false)
 	rendered_visual_snapshot = _capture_visual_snapshot()
 	if not visual_events.is_empty():
-		call_deferred("_play_visual_events", visual_events)
+		call_deferred("_play_visual_events_after_layout", visual_events)
 	call_deferred("_animate_status_attention")
 	if bool(state.get("game_over", false)) and not result_emitted:
 		result_emitted = true
@@ -136,15 +220,32 @@ func _refresh() -> void:
 		})
 
 
-func _build_header() -> void:
+func _clear_arena_anchor(anchor: Control) -> void:
+	if not is_instance_valid(anchor):
+		return
+	for child in anchor.get_children():
+		anchor.remove_child(child)
+		child.queue_free()
+
+
+func _fill_authored_anchor(control: Control) -> void:
+	control.set_anchors_preset(Control.PRESET_FULL_RECT)
+	control.offset_left = 0.0
+	control.offset_top = 0.0
+	control.offset_right = 0.0
+	control.offset_bottom = 0.0
+
+
+func _build_header(parent: Control) -> void:
 	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 42)
+	row.custom_minimum_size = Vector2(0, 38)
 	row.add_theme_constant_override("separation", 8)
-	root_box.add_child(row)
-	var title := _label("KITCHEN TABLE — PREP & PLATED", 25, Color("#173e52"))
+	parent.add_child(row)
+	_fill_authored_anchor(row)
+	var title := _label("KITCHEN TABLE — PREP & PLATED", 22, Color("#173e52"))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(title)
-	var matchup := _label("%s  vs  %s" % [service.deck_name(String(state.player.deck_id)), service.deck_name(String(state.opponent.deck_id))], 16, Color("#4b5e66"))
+	var matchup := _label("%s  vs  %s" % [service.deck_name(String(state.player.deck_id)), service.deck_name(String(state.opponent.deck_id))], 14, Color("#4b5e66"))
 	row.add_child(matchup)
 	var turn_badge := _label("YOUR TURN • %d" % int(state.get("turn", 1)) if String(state.get("phase", "")) == "player_main" else "OPPONENT TURN • %d" % int(state.get("turn", 1)), 16, Color("#fff4df"))
 	turn_badge.name = "CookingTurnOwnerBadge"
@@ -157,7 +258,8 @@ func _build_header() -> void:
 		row.add_child(leave)
 	else:
 		for deck_id in service.available_deck_ids():
-			var deck_button := _button(String(service.decks[deck_id].get("archetype", deck_id)).capitalize())
+			var deck_archetype := String(service.decks[deck_id].get("archetype", deck_id))
+			var deck_button := _button(AFFINITY_VISUALS.label(deck_archetype))
 			var selected_deck_id := String(deck_id)
 			deck_button.pressed.connect(func() -> void: _new_game(selected_deck_id), CONNECT_DEFERRED)
 			row.add_child(deck_button)
@@ -167,19 +269,109 @@ func _build_header() -> void:
 		row.add_child(restart)
 
 
+func _build_opponent_hand_fan(parent: Control) -> void:
+	var hand_size := int(state.opponent.hand.size())
+	var hand_back := PanelContainer.new()
+	hand_back.name = "CookingOpponentHandOrigin"
+	hand_back.custom_minimum_size = Vector2(0, 58)
+	hand_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hand_back.add_theme_stylebox_override("panel", _panel_style(Color("#e8e0d1"), Color("#9b8e72"), 1, 5))
+	parent.add_child(hand_back)
+	_fill_authored_anchor(hand_back)
+	opponent_hand_visual = hand_back
+
+	var center := CenterContainer.new()
+	hand_back.add_child(center)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", -24)
+	center.add_child(row)
+	if hand_size <= 0:
+		row.add_child(_label("OPPONENT HAND — EMPTY", 12, Color("#65737a")))
+		return
+	for hand_index in range(hand_size):
+		var card_back := PanelContainer.new()
+		card_back.name = "CookingOpponentHandCard_%d" % hand_index
+		card_back.custom_minimum_size = Vector2(78, 52)
+		card_back.pivot_offset = Vector2(39, 48)
+		var fan_offset := float(hand_index) - float(hand_size - 1) * 0.5
+		card_back.rotation = fan_offset * 0.035
+		card_back.add_theme_stylebox_override("panel", _raised_panel_style(Color("#253f54"), Color("#f3c65f"), 2, 5, 4))
+		row.add_child(card_back)
+		var back_label := _center_label("KITCHEN\nTABLE", 11, Color("#fff4df"))
+		back_label.add_theme_constant_override("outline_size", 2)
+		back_label.add_theme_color_override("font_outline_color", Color("#102c3d"))
+		card_back.add_child(back_label)
+	var count := _label("×%d" % hand_size, 13, Color("#173e52"))
+	count.add_theme_constant_override("outline_size", 3)
+	count.add_theme_color_override("font_outline_color", Color("#f3efe5"))
+	row.add_child(count)
+
+
+func _build_arena_side(side: String) -> void:
+	var combatant: Dictionary = state[side]
+	var is_player := side == "player"
+	var prefix := "Player" if is_player else "Opponent"
+	var life_anchor: Control = arena_anchors["%sLifeAnchor" % prefix]
+	var life_badge := _build_life_badge(side, combatant, is_player)
+	life_anchor.add_child(life_badge)
+	_fill_authored_anchor(life_badge)
+	board_visual_nodes[side] = life_badge
+	if not is_player:
+		_wire_opponent_face_drop(life_badge)
+		drag_drop_targets.append({"control": life_badge, "highlight_control": life_badge, "kind": "opponent_face"})
+
+	_build_environment(arena_anchors["%sEnvironmentAnchor" % prefix], combatant, is_player)
+	_build_zone_at_anchor(arena_anchors["%sPrepZone" % prefix], combatant, "prep", is_player)
+	_build_zone_at_anchor(arena_anchors["%sPlatedZone" % prefix], combatant, "plated", is_player)
+	_build_pile_at_anchor(arena_anchors["%sDeckAnchor" % prefix], combatant, "deck", is_player)
+	_build_pile_at_anchor(arena_anchors["%sDiscardAnchor" % prefix], combatant, "discard", is_player)
+
+
+func _build_zone_at_anchor(anchor: HBoxContainer, combatant: Dictionary, zone_name: String, is_player: bool) -> void:
+	var capacity: int = service.PLATED_SLOTS if zone_name == "plated" else service.PREP_SLOTS
+	anchor.tooltip_text = "%s — %s (%d/%d)" % [
+		zone_name.capitalize(),
+		"can attack and be attacked" if zone_name == "plated" else "protected, normally cannot attack",
+		combatant[zone_name].size(),
+		capacity
+	]
+	if is_player:
+		_wire_unit_zone_drop(anchor, zone_name)
+	for slot_index in range(capacity):
+		var unit: Dictionary = combatant[zone_name][slot_index] if slot_index < combatant[zone_name].size() else {}
+		_add_unit_slot(anchor, unit, zone_name, is_player, slot_index)
+
+
+func _build_pile_at_anchor(anchor: Control, combatant: Dictionary, pile_name: String, is_player: bool) -> void:
+	var pile := _zone_container(anchor, pile_name.to_upper(), anchor.size, Color("#ec7130"))
+	pile.name = "Cooking%s%sPile" % [("Player" if is_player else "Opponent"), pile_name.capitalize()]
+	_fill_authored_anchor(pile.get_meta("zone_panel") as Control)
+	pile.add_child(_center_label(str(combatant[pile_name].size()), 22, Color.WHITE))
+
+
 func _build_side(side: String) -> void:
 	var combatant: Dictionary = state[side]
 	var is_player := side == "player"
+	var side_row := HBoxContainer.new()
+	side_row.name = "Cooking%sTableHalf" % ("Player" if is_player else "Opponent")
+	side_row.custom_minimum_size = Vector2(0, 198)
+	side_row.add_theme_constant_override("separation", 8)
+	root_box.add_child(side_row)
+
+	var life_badge := _build_life_badge(side, combatant, is_player)
+	side_row.add_child(life_badge)
+	board_visual_nodes[side] = life_badge
+	if not is_player:
+		_wire_opponent_face_drop(life_badge)
+		drag_drop_targets.append({"control": life_badge, "highlight_control": life_badge, "kind": "opponent_face"})
+
 	var outer := PanelContainer.new()
 	outer.name = "Cooking%sBoard" % ("Player" if is_player else "Opponent")
-	outer.custom_minimum_size = Vector2(0, 220)
+	outer.custom_minimum_size = Vector2(0, 198)
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var side_is_active := (is_player and String(state.get("phase", "")) == "player_main") or (not is_player and String(state.get("phase", "")) == "opponent_turn")
-	outer.add_theme_stylebox_override("panel", _panel_style(Color("#fffaf0") if side_is_active else Color("#ebe8df"), Color("#ffd45c") if side_is_active else Color("#76909c"), 4 if side_is_active else 1, 6))
-	root_box.add_child(outer)
-	board_visual_nodes[side] = outer
-	if not is_player:
-		_wire_opponent_face_drop(outer)
-		drag_drop_targets.append({"control": outer, "highlight_control": outer, "kind": "opponent_face"})
+	outer.add_theme_stylebox_override("panel", _raised_panel_style(Color("#fffaf0") if side_is_active else Color("#eee9df"), Color("#f1b93f") if side_is_active else Color("#8aa0aa"), 4 if side_is_active else 1, 7, 3))
+	side_row.add_child(outer)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 8)
 	margin.add_theme_constant_override("margin_right", 8)
@@ -192,23 +384,67 @@ func _build_side(side: String) -> void:
 	var heading := HBoxContainer.new()
 	column.add_child(heading)
 	var heading_text := ("YOUR BOARD • YOUR TURN" if side_is_active else "YOUR BOARD • WAITING") if is_player else ("OPPONENT BOARD • THEIR TURN" if side_is_active else "OPPONENT BOARD")
-	var heading_label := _label("%s  •  %d LIFE" % [heading_text, int(combatant.life)], 17, Color("#183a49"))
+	var heading_label := _label(heading_text, 17, Color("#183a49"))
 	heading_label.name = "Cooking%sTurnStatus" % ("Player" if is_player else "Opponent")
 	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(heading_label)
-	heading.add_child(_label("Hand %d   Turn %d" % [combatant.hand.size(), combatant.turns_started], 14, Color("#617078")))
+	if is_player:
+		heading.add_child(_label("Hand %d   Turn %d" % [combatant.hand.size(), combatant.turns_started], 14, Color("#617078")))
+	else:
+		heading.add_child(_label("Turn %d  •  %s AI" % [combatant.turns_started, String(state.get("ai_difficulty", "easy")).capitalize()], 14, Color("#617078")))
 
 	var board_row := HBoxContainer.new()
 	board_row.add_theme_constant_override("separation", 10)
 	column.add_child(board_row)
 	_build_environment(board_row, combatant, is_player)
 	_build_combat_zones(board_row, combatant, is_player)
-	_build_piles(board_row, combatant)
+	_build_piles(board_row, combatant, is_player)
+
+
+func _build_life_badge(side: String, combatant: Dictionary, is_player: bool) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.name = "Cooking%sLifeBadge" % ("Player" if is_player else "Opponent")
+	badge.custom_minimum_size = Vector2(112, 0)
+	badge.add_theme_stylebox_override("panel", _raised_panel_style(Color("#fffaf0"), Color("#d95b50") if is_player else Color("#94433e"), 3, 10, 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	badge.add_child(margin)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(box)
+	var owner := _label("YOU" if is_player else "RIVAL", 12, Color("#617078"))
+	owner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(owner)
+	var heart_center := CenterContainer.new()
+	heart_center.custom_minimum_size = Vector2(0, 44)
+	box.add_child(heart_center)
+	var heart := TextureRect.new()
+	heart.name = "Cooking%sLifeIcon" % ("Player" if is_player else "Opponent")
+	heart.texture = CHEF_LIFE_HEART
+	heart.custom_minimum_size = Vector2(38, 38)
+	heart.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	heart.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	heart.modulate = Color("#db4d43") if is_player else Color("#9e3e39")
+	heart.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	heart_center.add_child(heart)
+	var life := _label(str(int(combatant.life)), 34, Color("#173e52"))
+	life.name = "Cooking%sLifeValue" % ("Player" if is_player else "Opponent")
+	life.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(life)
+	var caption := _label("CHEF LIFE", 11, Color("#617078"))
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(caption)
+	return badge
 
 
 func _build_environment(parent: Node, combatant: Dictionary, is_player: bool) -> void:
-	var panel := _zone_container(parent, "ENVIRONMENT", Vector2(160, 160), Color("#ec7130"))
+	var panel := _zone_container(parent, "ENVIRONMENT", Vector2(142, 145), Color("#ec7130"))
 	panel.name = "Cooking%sEnvironment" % ("Player" if is_player else "Opponent")
+	if parent is Control and not parent is Container:
+		_fill_authored_anchor(panel.get_meta("zone_panel") as Control)
 	if is_player:
 		_wire_environment_drop(panel)
 		drag_drop_targets.append({"control": panel, "highlight_control": panel.get_meta("zone_panel", panel), "kind": "environment"})
@@ -229,33 +465,32 @@ func _build_combat_zones(parent: Node, combatant: Dictionary, is_player: bool) -
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 3)
 	parent.add_child(column)
-	var plated_heading := _label("PLATED — can attack and be attacked  (%d/%d)" % [combatant.plated.size(), service.PLATED_SLOTS], 13, Color("#174c63"))
-	plated_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(plated_heading)
-	var plated_row := HBoxContainer.new()
-	plated_row.name = "Cooking%sPlatedZone" % ("Player" if is_player else "Opponent")
-	plated_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	plated_row.add_theme_constant_override("separation", 6)
-	column.add_child(plated_row)
+	# Both Plated lanes face the center of the table: the opponent's Prep is
+	# above their Plated lane, while the player's Prep sits below theirs.
 	if is_player:
-		_wire_unit_zone_drop(plated_row, "plated")
-	for slot_index in range(service.PLATED_SLOTS):
-		var unit: Dictionary = combatant.plated[slot_index] if slot_index < combatant.plated.size() else {}
-		_add_unit_slot(plated_row, unit, "plated", is_player, slot_index)
+		_build_zone_lane(column, combatant, "plated", is_player)
+		_build_zone_lane(column, combatant, "prep", is_player)
+	else:
+		_build_zone_lane(column, combatant, "prep", is_player)
+		_build_zone_lane(column, combatant, "plated", is_player)
 
-	var prep_heading := _label("PREP — protected, cannot attack  (%d/%d)" % [combatant.prep.size(), service.PREP_SLOTS], 13, Color("#174c63"))
-	prep_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(prep_heading)
-	var prep_row := HBoxContainer.new()
-	prep_row.name = "Cooking%sPrepZone" % ("Player" if is_player else "Opponent")
-	prep_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	prep_row.add_theme_constant_override("separation", 5)
-	column.add_child(prep_row)
+
+func _build_zone_lane(parent: Node, combatant: Dictionary, zone_name: String, is_player: bool) -> void:
+	var capacity: int = service.PLATED_SLOTS if zone_name == "plated" else service.PREP_SLOTS
+	var description := "can attack and be attacked" if zone_name == "plated" else "protected, normally cannot attack"
+	var heading := _label("%s — %s  (%d/%d)" % [zone_name.to_upper(), description, combatant[zone_name].size(), capacity], 12, Color("#174c63"))
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	parent.add_child(heading)
+	var row := HBoxContainer.new()
+	row.name = "Cooking%s%sZone" % [("Player" if is_player else "Opponent"), zone_name.capitalize()]
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6 if zone_name == "plated" else 5)
+	parent.add_child(row)
 	if is_player:
-		_wire_unit_zone_drop(prep_row, "prep")
-	for slot_index in range(service.PREP_SLOTS):
-		var unit: Dictionary = combatant.prep[slot_index] if slot_index < combatant.prep.size() else {}
-		_add_unit_slot(prep_row, unit, "prep", is_player, slot_index)
+		_wire_unit_zone_drop(row, zone_name)
+	for slot_index in range(capacity):
+		var unit: Dictionary = combatant[zone_name][slot_index] if slot_index < combatant[zone_name].size() else {}
+		_add_unit_slot(row, unit, zone_name, is_player, slot_index)
 
 
 func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player: bool, slot_index: int) -> void:
@@ -276,7 +511,7 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 	var ready_to_attack := _unit_is_visibly_ready(unit, zone_name, is_player)
 	var border_color := Color("#ffe477") if selected or legal_target else (Color("#58e08b") if ready_to_attack else Color("#113e52"))
 	var border_width := 4 if legal_target else (3 if selected or ready_to_attack else 1)
-	panel.add_theme_stylebox_override("panel", _panel_style(zone_color if unit.is_empty() else _card_type_color(String(unit.card_type)), border_color, border_width, 3))
+	panel.add_theme_stylebox_override("panel", _raised_panel_style(zone_color if unit.is_empty() else _card_type_color(String(unit.card_type)), border_color, border_width, 3, 3))
 	parent.add_child(panel)
 	_wire_unit_slot_drag_and_drop(panel, unit, zone_name, is_player)
 	drag_drop_targets.append({"control": panel, "highlight_control": panel, "kind": "unit_slot", "unit": unit, "zone": zone_name, "is_player": is_player})
@@ -335,20 +570,23 @@ func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_p
 			parent.add_child(choose_effect_target)
 		return
 	var pending_ability: Dictionary = state.get("pending_ability", {})
+	if not pending_ability.is_empty():
+		var target_side := String(pending_ability.get("target_side", "enemy"))
+		var correct_side := (target_side == "friendly" and is_player) or (target_side != "friendly" and not is_player)
+		if correct_side:
+			var source: Dictionary = service._find_unit(state.player, int(pending_ability.get("source_instance_id", -1)))
+			var target_spec: Dictionary = pending_ability.get("target_spec", {})
+			if service._ability_target_is_valid(state, "player", source, int(unit.instance_id), target_spec):
+				var choose_target := _button("Choose Target", true)
+				choose_target.name = "CookingAbilityTarget_%d" % int(unit.instance_id)
+				var ability_target_id := int(unit.instance_id)
+				choose_target.pressed.connect(func() -> void:
+					service.choose_ability_target(state, ability_target_id)
+					call_deferred("_refresh")
+				, CONNECT_DEFERRED)
+				parent.add_child(choose_target)
+		return
 	if not is_player:
-		if not pending_ability.is_empty():
-			var required_target_zone := String(pending_ability.get("target_zone", ""))
-			if required_target_zone != "" and zone_name != required_target_zone:
-				return
-			var choose_target := _button("Choose Target", true)
-			choose_target.name = "CookingAbilityTarget_%d" % int(unit.instance_id)
-			var ability_target_id := int(unit.instance_id)
-			choose_target.pressed.connect(func() -> void:
-				service.choose_ability_target(state, ability_target_id)
-				call_deferred("_refresh")
-			, CONNECT_DEFERRED)
-			parent.add_child(choose_target)
-			return
 		if zone_name == "plated" and int(state.get("selected_attacker", -1)) >= 0:
 			var battle := _button("Battle", true)
 			var target_id := int(unit.instance_id)
@@ -357,8 +595,6 @@ func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_p
 				call_deferred("_refresh")
 			, CONNECT_DEFERRED)
 			parent.add_child(battle)
-		return
-	if not pending_ability.is_empty():
 		return
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 2)
@@ -390,7 +626,7 @@ func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_p
 			call_deferred("_refresh")
 		, CONNECT_DEFERRED)
 		row.add_child(recipe)
-	if zone_name == "plated":
+	if zone_name == "plated" or bool(service.card(String(unit.card_id)).get("can_attack_from_prep", false)):
 		var attack := _button("Attack" if bool(unit.ready) else "Spent", true)
 		attack.disabled = not bool(unit.ready) or String(state.phase) != "player_main"
 		var attacker_id := int(unit.instance_id)
@@ -419,23 +655,25 @@ func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_p
 	row.add_child(move)
 
 
-func _build_piles(parent: Node, combatant: Dictionary) -> void:
+func _build_piles(parent: Node, combatant: Dictionary, is_player: bool) -> void:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(145, 0)
+	column.custom_minimum_size = Vector2(132, 0)
 	column.add_theme_constant_override("separation", 7)
 	parent.add_child(column)
-	var discard := _zone_container(column, "DISCARD", Vector2(145, 72), Color("#ec7130"))
-	discard.add_child(_center_label(str(combatant.discard.size()), 22, Color.WHITE))
-	var deck := _zone_container(column, "DECK", Vector2(145, 72), Color("#ec7130"))
-	deck.add_child(_center_label(str(combatant.deck.size()), 22, Color.WHITE))
+	var pile_order := ["discard", "deck"] if is_player else ["deck", "discard"]
+	for pile_name in pile_order:
+		var pile := _zone_container(column, String(pile_name).to_upper(), Vector2(132, 68), Color("#ec7130"))
+		pile.name = "Cooking%s%sPile" % [("Player" if is_player else "Opponent"), String(pile_name).capitalize()]
+		pile.add_child(_center_label(str(combatant[pile_name].size()), 22, Color.WHITE))
 
 
-func _build_message_strip() -> void:
+func _build_message_strip(parent: Control) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "CookingMessagePanel"
-	panel.custom_minimum_size = Vector2(0, 55)
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("#173e52"), Color("#0c2d3b"), 1, 4))
-	root_box.add_child(panel)
+	panel.custom_minimum_size = Vector2(0, 52)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#173e52"), Color("#ec7130"), 2, 5))
+	parent.add_child(panel)
+	_fill_authored_anchor(panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
 	margin.add_theme_constant_override("margin_right", 10)
@@ -449,18 +687,22 @@ func _build_message_strip() -> void:
 	message.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	row.add_child(message)
-	var recent := _label("  •  ".join(state.log.slice(maxi(0, state.log.size() - 2))), 11, Color("#bbd4df"))
+	var recent_text := "  •  ".join(state.log.slice(maxi(0, state.log.size() - 2)))
+	if recent_text == String(state.message):
+		recent_text = "TURN %d  •  %s" % [int(state.get("turn", 1)), "YOUR ACTION" if String(state.get("phase", "")) == "player_main" else "OPPONENT ACTING"]
+	var recent := _label(recent_text, 11, Color("#bbd4df"))
 	recent.custom_minimum_size.x = 420
 	recent.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	row.add_child(recent)
 
 
-func _build_hand() -> void:
+func _build_hand(parent: Control) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "CookingPlayerHand"
-	panel.custom_minimum_size = Vector2(0, 135)
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("#e7e0cf"), Color("#9b8e72"), 1, 4))
-	root_box.add_child(panel)
+	panel.custom_minimum_size = Vector2(0, 142)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#e8e0d1"), Color("#d8a546"), 2, 6))
+	parent.add_child(panel)
+	_fill_authored_anchor(panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 7)
 	margin.add_theme_constant_override("margin_right", 7)
@@ -481,7 +723,9 @@ func _build_hand() -> void:
 		hand_heading = "OPPONENT'S REVEALED HAND — choose a unit"
 	elif not pending_search.is_empty():
 		hand_heading = ("REVEALED FROM THE TOP OF YOUR DECK — " if pending_search.has("revealed_cards") else "SEARCH YOUR DECK — ") + String(pending_search.get("prompt", "Choose a card."))
-	column.add_child(_label(hand_heading, 14, Color("#30454d")))
+	var hand_label := _label(hand_heading, 13, Color("#30454d"))
+	hand_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(hand_label)
 	if String(pending_choice.get("choice_kind", "")) == "discard":
 		_build_discard_choice_cards(column)
 		return
@@ -499,10 +743,16 @@ func _build_hand() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
+	var hand_center := CenterContainer.new()
+	hand_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hand_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(hand_center)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
-	scroll.add_child(row)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", -12)
+	hand_center.add_child(row)
 	for hand_index in range(state.player.hand.size()):
 		_add_hand_card(row, hand_index, String(state.player.hand[hand_index]))
 
@@ -536,7 +786,7 @@ func _build_discard_choice_cards(parent: Node) -> void:
 		var box := VBoxContainer.new()
 		margin.add_child(box)
 		_add_inspect_header(box, data, "player", "discard")
-		box.add_child(_label(String(data.get("card_type", "card")).capitalize(), 10, Color("#fff0d4")))
+		box.add_child(_label(AFFINITY_VISUALS.card_type_label(String(data.get("card_type", "card"))), 10, Color("#fff0d4")))
 		var select := _button("Selected" if selected.has(discard_index) else "Select", true)
 		select.name = "CookingSelectDiscardPile_%d" % discard_index
 		var selected_discard_index := discard_index
@@ -575,7 +825,7 @@ func _build_opponent_hand_choices(parent: Node) -> void:
 		var box := VBoxContainer.new()
 		margin.add_child(box)
 		_add_inspect_header(box, data, "opponent", "revealed_hand")
-		box.add_child(_label(String(data.get("card_type", "card")).capitalize(), 10, Color("#fff0d4")))
+		box.add_child(_label(AFFINITY_VISUALS.card_type_label(String(data.get("card_type", "card"))), 10, Color("#fff0d4")))
 		var choose := _button("Put on Field" if can_choose else "Not a Unit", true)
 		choose.name = "CookingChooseOpponentHand_%d" % hand_index
 		choose.disabled = not can_choose
@@ -625,11 +875,11 @@ func _add_search_choice(parent: Node, card_id: String, can_take: bool = true, re
 	margin.add_child(box)
 	_add_inspect_header(box, data, "player", "search")
 	var copies: int = state.player.deck.count(card_id)
-	var meta := "%s • %s • %d cop%s" % [String(data.get("archetype", "neutral")).capitalize(), String(data.card_type).capitalize(), copies, "y" if copies == 1 else "ies"]
+	var meta := "%s • %d cop%s" % [AFFINITY_VISUALS.card_descriptor(data), copies, "y" if copies == 1 else "ies"]
 	if reveal_index >= 0:
-		meta = "Top card %d of %d • %s" % [reveal_index + 1, reveal_count, String(data.card_type).capitalize()]
+		meta = "Top card %d of %d • %s" % [reveal_index + 1, reveal_count, AFFINITY_VISUALS.card_type_label(String(data.card_type))]
 	box.add_child(_label(meta, 10, Color("#fff0d4")))
-	var take := _button("Add to Hand" if can_take else "Not a Tool", true)
+	var take := _button("Add to Hand" if can_take else "Not an Item", true)
 	take.name = "CookingTakeSearchCard_%s" % card_id
 	take.disabled = not can_take
 	var selected_card_id := card_id
@@ -646,12 +896,18 @@ func _add_hand_card(parent: Node, hand_index: int, card_id: String) -> void:
 	var selected_for_discard: bool = not pending.is_empty() and pending.get("selected_indices", []).has(hand_index)
 	var panel := PanelContainer.new()
 	panel.name = "CookingHandCard_%d" % hand_index
-	panel.custom_minimum_size = Vector2(175, 92)
-	panel.add_theme_stylebox_override("panel", _panel_style(
+	panel.custom_minimum_size = Vector2(180, 100)
+	panel.pivot_offset = Vector2(90, 96)
+	var fan_offset := float(hand_index) - float(state.player.hand.size() - 1) * 0.5
+	var fan_rotation := clampf(fan_offset * 0.02, -0.08, 0.08)
+	panel.rotation = fan_rotation
+	panel.set_meta("fan_rotation", fan_rotation)
+	panel.add_theme_stylebox_override("panel", _raised_panel_style(
 		_card_type_color(String(data.card_type)),
 		Color("#ffe477") if selected_for_discard else Color("#173e52"),
 		3 if selected_for_discard else 1,
-		3
+		3,
+		4
 	))
 	parent.add_child(panel)
 	hand_visual_nodes[hand_index] = panel
@@ -721,11 +977,43 @@ func _add_hand_card(parent: Node, hand_index: int, card_id: String) -> void:
 		row.add_child(play)
 
 
-func _build_action_bar() -> void:
+func _build_action_bar(parent: Control) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "CookingActionBar"
+	panel.custom_minimum_size = Vector2(0, 38)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#efe8d9"), Color("#8aa0aa"), 1, 5))
+	parent.add_child(panel)
+	_fill_authored_anchor(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 7)
+	margin.add_theme_constant_override("margin_right", 7)
+	margin.add_theme_constant_override("margin_top", 3)
+	margin.add_theme_constant_override("margin_bottom", 3)
+	panel.add_child(margin)
 	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 34)
 	row.add_theme_constant_override("separation", 7)
-	root_box.add_child(row)
+	margin.add_child(row)
+	var pending_reaction: Dictionary = state.get("pending_reaction", {})
+	if not pending_reaction.is_empty():
+		var reaction_status := _label("Opponent action: respond from hand or pass", 14, Color("#7a3028"))
+		reaction_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(reaction_status)
+		for hand_index in service.reaction_hand_indices(state):
+			var reaction_index := int(hand_index)
+			var reaction_id := String(state.player.hand[reaction_index])
+			var react := _button("Use %s" % String(service.card(reaction_id).get("name", reaction_id)))
+			react.name = "CookingReactionButton_%d" % reaction_index
+			react.pressed.connect(func() -> void:
+				_resolve_player_reaction(reaction_index)
+			, CONNECT_DEFERRED)
+			row.add_child(react)
+		var pass_reaction := _button("Pass")
+		pass_reaction.name = "CookingPassReactionButton"
+		pass_reaction.pressed.connect(func() -> void:
+			_resolve_player_reaction(-1)
+		, CONNECT_DEFERRED)
+		row.add_child(pass_reaction)
+		return
 	var pending: Dictionary = state.get("pending_discard", {})
 	if not pending.is_empty():
 		var selected_count: int = pending.get("selected_indices", []).size()
@@ -781,7 +1069,8 @@ func _build_action_bar() -> void:
 		var source_name := String(source.get("name", "Card"))
 		var target_zone := String(pending_ability.get("target_zone", ""))
 		var target_description := target_zone.capitalize() if target_zone != "" else "Prep or Plated"
-		var ability_status := _label("Choose an opposing %s target for %s" % [target_description, source_name], 14, Color("#30454d"))
+		var target_side := "friendly" if String(pending_ability.get("target_side", "enemy")) == "friendly" else "opposing"
+		var ability_status := _label("Choose a %s %s target for %s" % [target_side, target_description, source_name], 14, Color("#30454d"))
 		ability_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(ability_status)
 		var cancel_ability := _button("Cancel Ability")
@@ -801,7 +1090,7 @@ func _build_action_bar() -> void:
 		var search_status := _label(search_status_text, 14, Color("#30454d"))
 		search_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(search_status)
-		var skip_label := "Take No Tool" if pending_search.has("revealed_cards") and not service.search_candidates(state).is_empty() else ("Continue" if pending_search.has("revealed_cards") else "Skip Search")
+		var skip_label := "Take No Item" if pending_search.has("revealed_cards") and not service.search_candidates(state).is_empty() else ("Continue" if pending_search.has("revealed_cards") else "Skip Search")
 		var skip := _button(skip_label)
 		skip.name = "CookingSkipSearchButton"
 		skip.pressed.connect(func() -> void:
@@ -810,12 +1099,12 @@ func _build_action_bar() -> void:
 		, CONNECT_DEFERRED)
 		row.add_child(skip)
 		return
-	var status_text := "Awaiting your card list" if String(state.phase) == "awaiting_cards" else "Selected ingredients: %d" % state.selected_ingredients.size()
+	var status_text := "Awaiting your card list" if String(state.phase) == "awaiting_cards" else ("Opponent is considering their next play…" if String(state.phase) == "opponent_turn" else "Selected ingredients: %d" % state.selected_ingredients.size())
 	var status := _label(status_text, 14, Color("#30454d"))
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(status)
 	if int(state.get("selected_attacker", -1)) >= 0:
-		var attacker: Dictionary = service._find_unit_in_zone(state.player, "plated", int(state.selected_attacker))
+		var attacker: Dictionary = service._find_unit(state.player, int(state.selected_attacker))
 		var has_stalwart: bool = not attacker.is_empty() and service.card(String(attacker.card_id)).get("keywords", []).has("stalwart")
 		var blocked: bool = not service.can_attack_opposing_chef(state)
 		var face_label := "Clear Plated Cards First" if blocked else ("Attack Opposing Chef — Stalwart" if has_stalwart and not state.opponent.plated.is_empty() else "Attack Opposing Chef")
@@ -829,10 +1118,11 @@ func _build_action_bar() -> void:
 		row.add_child(face)
 	var end_turn := _button("End Turn")
 	end_turn.name = "CookingEndTurnButton"
+	end_turn.add_theme_stylebox_override("normal", _panel_style(Color("#c85d2d"), Color("#8f3c1f"), 2, 4))
+	end_turn.add_theme_stylebox_override("hover", _panel_style(Color("#ef7131"), Color("#f3c765"), 2, 4))
 	end_turn.disabled = String(state.phase) != "player_main"
 	end_turn.pressed.connect(func() -> void:
-		service.end_player_turn(state)
-		call_deferred("_refresh")
+		_end_player_turn_with_sequence()
 	, CONNECT_DEFERRED)
 	row.add_child(end_turn)
 
@@ -1029,11 +1319,12 @@ func _resolve_drag_hand_index(data: Dictionary) -> int:
 
 
 func _dragging_allowed() -> bool:
-	return String(state.get("phase", "")) == "player_main" and not bool(state.get("game_over", false)) and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty()
+	return String(state.get("phase", "")) == "player_main" and not bool(state.get("game_over", false)) and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
 
 
 func _unit_is_visibly_ready(unit: Dictionary, zone_name: String, is_player: bool) -> bool:
-	return is_player and not unit.is_empty() and zone_name == "plated" and bool(unit.get("ready", false)) and String(state.get("phase", "")) == "player_main" and not service._opening_attack_lock(state, "player") and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty()
+	var can_attack_here := zone_name == "plated" or bool(service.card(String(unit.get("card_id", ""))).get("can_attack_from_prep", false))
+	return is_player and not unit.is_empty() and can_attack_here and bool(unit.get("ready", false)) and String(state.get("phase", "")) == "player_main" and not service._opening_attack_lock(state, "player") and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
 
 
 func _is_obvious_legal_target(unit: Dictionary, zone_name: String, is_player: bool) -> bool:
@@ -1043,13 +1334,16 @@ func _is_obvious_legal_target(unit: Dictionary, zone_name: String, is_player: bo
 	if service.choice_target_ids(state).has(instance_id):
 		return true
 	var pending_ability: Dictionary = state.get("pending_ability", {})
-	if not is_player and not pending_ability.is_empty():
-		var target_zone := String(pending_ability.get("target_zone", ""))
-		return target_zone == "" or target_zone == zone_name
+	if not pending_ability.is_empty():
+		var target_side := String(pending_ability.get("target_side", "enemy"))
+		var correct_side := (target_side == "friendly" and is_player) or (target_side != "friendly" and not is_player)
+		if correct_side:
+			var source: Dictionary = service._find_unit(state.player, int(pending_ability.get("source_instance_id", -1)))
+			return service._ability_target_is_valid(state, "player", source, instance_id, pending_ability.get("target_spec", {}))
 	if is_player or zone_name != "plated" or int(state.get("selected_attacker", -1)) < 0:
 		return false
 	var attacker_id := int(state.get("selected_attacker", -1))
-	var attacker: Dictionary = service._find_unit_in_zone(state.player, "plated", attacker_id)
+	var attacker: Dictionary = service._find_unit(state.player, attacker_id)
 	if attacker.is_empty() or not bool(attacker.get("ready", false)):
 		return false
 	var taunt_unit: Dictionary = service._first_plated_with_keyword(state.opponent, "taunt")
@@ -1062,6 +1356,8 @@ func _capture_visual_snapshot() -> Dictionary:
 	var snapshot := {
 		"turn": int(state.get("turn", 0)),
 		"phase": String(state.get("phase", "")),
+		"visual_action_serial": int(state.get("visual_action_serial", 0)),
+		"last_visual_action": state.get("last_visual_action", {}).duplicate(true),
 		"selected_ingredients": state.get("selected_ingredients", []).duplicate(),
 		"player": _capture_side_visual_snapshot("player"),
 		"opponent": _capture_side_visual_snapshot("opponent")
@@ -1096,6 +1392,13 @@ func _collect_visual_events(previous: Dictionary, current: Dictionary) -> Array[
 	var events: Array[Dictionary] = []
 	if previous.is_empty() or current.is_empty():
 		return events
+	var opponent_hand_play: Dictionary = {}
+	if int(previous.get("visual_action_serial", 0)) != int(current.get("visual_action_serial", 0)):
+		var latest_action: Dictionary = current.get("last_visual_action", {})
+		if String(latest_action.get("side", "")) == "opponent":
+			opponent_hand_play = latest_action.duplicate(true)
+			opponent_hand_play.type = "opponent_hand_play"
+			events.append(opponent_hand_play)
 	if int(previous.get("turn", 0)) != int(current.get("turn", 0)) or String(previous.get("phase", "")) != String(current.get("phase", "")):
 		events.append({"type": "turn", "phase": String(current.get("phase", "")), "turn": int(current.get("turn", 0))})
 	for side in ["player", "opponent"]:
@@ -1107,15 +1410,26 @@ func _collect_visual_events(previous: Dictionary, current: Dictionary) -> Array[
 		for instance_id in new_units.keys():
 			if not old_units.has(instance_id):
 				var entered: Dictionary = new_units[instance_id]
-				events.append({"type": "enter", "side": side, "instance_id": instance_id, "unit": entered})
+				var is_opponent_hand_play: bool = side == "opponent" and int(opponent_hand_play.get("target_instance_id", -1)) == int(instance_id)
+				events.append({"type": "enter", "side": side, "instance_id": instance_id, "unit": entered, "opponent_hand_play": is_opponent_hand_play})
 				meal_entered = meal_entered or String(entered.get("card_type", "")) == "meal"
-			elif int(new_units[instance_id].get("health", 0)) < int(old_units[instance_id].get("health", 0)):
-				events.append({
-					"type": "damage",
-					"side": side,
-					"instance_id": instance_id,
-					"amount": int(old_units[instance_id].get("health", 0)) - int(new_units[instance_id].get("health", 0))
-				})
+			else:
+				if String(new_units[instance_id].get("zone", "")) != String(old_units[instance_id].get("zone", "")):
+					events.append({
+						"type": "move",
+						"side": side,
+						"instance_id": instance_id,
+						"from_zone": String(old_units[instance_id].get("zone", "")),
+						"to_zone": String(new_units[instance_id].get("zone", "")),
+						"unit": new_units[instance_id]
+					})
+				if int(new_units[instance_id].get("health", 0)) < int(old_units[instance_id].get("health", 0)):
+					events.append({
+						"type": "damage",
+						"side": side,
+						"instance_id": instance_id,
+						"amount": int(old_units[instance_id].get("health", 0)) - int(new_units[instance_id].get("health", 0))
+					})
 		for instance_id in old_units.keys():
 			if new_units.has(instance_id):
 				continue
@@ -1131,7 +1445,8 @@ func _collect_visual_events(previous: Dictionary, current: Dictionary) -> Array[
 		if new_life < old_life:
 			events.append({"type": "life_damage", "side": side, "amount": old_life - new_life})
 		if String(old_side.get("environment", "")) != String(new_side.get("environment", "")) and String(new_side.get("environment", "")) != "":
-			events.append({"type": "environment", "side": side})
+			var is_opponent_environment_play: bool = side == "opponent" and String(opponent_hand_play.get("action_kind", "")) == "environment"
+			events.append({"type": "environment", "side": side, "opponent_hand_play": is_opponent_environment_play})
 	var old_hand: Array = previous.get("player", {}).get("hand", [])
 	var new_hand: Array = current.get("player", {}).get("hand", [])
 	var unmatched_old_hand := old_hand.duplicate()
@@ -1150,20 +1465,67 @@ func _collect_visual_events(previous: Dictionary, current: Dictionary) -> Array[
 
 func _capture_removed_event_geometry(events: Array[Dictionary]) -> void:
 	for event in events:
-		if String(event.get("type", "")) not in ["destroy", "sacrifice"]:
+		if String(event.get("type", "")) not in ["destroy", "sacrifice", "move"]:
 			continue
 		var control: Control = unit_visual_nodes.get(int(event.get("instance_id", -1)))
 		if is_instance_valid(control):
-			event.rect = Rect2(control.global_position, control.size)
+			event.rect = _control_global_rect(control)
+
+
+func _control_global_rect(control: Control) -> Rect2:
+	var transform := control.get_global_transform_with_canvas()
+	var corners := PackedVector2Array([
+		transform * Vector2.ZERO,
+		transform * Vector2(control.size.x, 0.0),
+		transform * control.size,
+		transform * Vector2(0.0, control.size.y)
+	])
+	var minimum := corners[0]
+	var maximum := corners[0]
+	for corner in corners:
+		minimum = minimum.min(corner)
+		maximum = maximum.max(corner)
+	return Rect2(minimum, maximum - minimum)
+
+
+func _global_rect_in_control(rect: Rect2, parent: Control) -> Rect2:
+	var inverse := parent.get_global_transform_with_canvas().affine_inverse()
+	var corners := PackedVector2Array([
+		inverse * rect.position,
+		inverse * Vector2(rect.end.x, rect.position.y),
+		inverse * rect.end,
+		inverse * Vector2(rect.position.x, rect.end.y)
+	])
+	var minimum := corners[0]
+	var maximum := corners[0]
+	for corner in corners:
+		minimum = minimum.min(corner)
+		maximum = maximum.max(corner)
+	return Rect2(minimum, maximum - minimum)
+
+
+func _effects_parent() -> Control:
+	return floating_effects_layer if is_instance_valid(floating_effects_layer) else self
+
+
+func _play_visual_events_after_layout(events: Array[Dictionary]) -> void:
+	await get_tree().process_frame
+	if is_inside_tree():
+		_play_visual_events(events)
 
 
 func _play_visual_events(events: Array[Dictionary]) -> void:
 	for event in events:
 		match String(event.get("type", "")):
+			"opponent_hand_play":
+				_animate_opponent_hand_play(event)
 			"enter":
-				_animate_card_entry(unit_visual_nodes.get(int(event.get("instance_id", -1))))
+				if not bool(event.get("opponent_hand_play", false)):
+					_animate_card_entry(unit_visual_nodes.get(int(event.get("instance_id", -1))))
 			"draw":
 				_animate_card_draw(hand_visual_nodes.get(int(event.get("hand_index", -1))))
+			"move":
+				_animate_card_zone_move(event)
 			"damage":
 				_animate_damage(unit_visual_nodes.get(int(event.get("instance_id", -1))), int(event.get("amount", 0)))
 			"life_damage":
@@ -1171,10 +1533,147 @@ func _play_visual_events(events: Array[Dictionary]) -> void:
 			"destroy", "sacrifice":
 				_animate_removed_card(event)
 			"environment":
-				_animate_card_entry(environment_visual_nodes.get(String(event.get("side", ""))))
+				if not bool(event.get("opponent_hand_play", false)):
+					_animate_card_entry(environment_visual_nodes.get(String(event.get("side", ""))))
 			"turn":
 				var player_turn := String(event.get("phase", "")) == "player_main"
 				_show_floating_feedback("YOUR TURN • TURN %d" % int(event.get("turn", 0)) if player_turn else "OPPONENT'S TURN", Color("#238052") if player_turn else Color("#8c4338"), 1.2)
+
+
+func _animate_card_zone_move(event: Dictionary) -> void:
+	if not event.has("rect"):
+		return
+	var target: Control = unit_visual_nodes.get(int(event.get("instance_id", -1)))
+	if not is_instance_valid(target):
+		return
+	target.modulate.a = 0.0
+	var source_rect: Rect2 = event.rect
+	var effects := _effects_parent()
+	var source_local_rect := _global_rect_in_control(source_rect, effects)
+	var target_local_rect := _global_rect_in_control(_control_global_rect(target), effects)
+	var unit: Dictionary = event.get("unit", {})
+	var ghost := PanelContainer.new()
+	ghost.name = "CookingZoneMoveGhost"
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.z_index = 340
+	ghost.position = source_local_rect.position
+	ghost.size = source_local_rect.size
+	ghost.pivot_offset = ghost.size * 0.5
+	ghost.add_theme_stylebox_override("panel", _panel_style(_card_type_color(String(unit.get("card_type", ""))), Color("#fff09a"), 3, 5))
+	var destination_label := String(event.get("to_zone", "zone")).to_upper()
+	ghost.add_child(_center_label("%s\nTO %s" % [String(unit.get("name", "Card")), destination_label], 13, Color("#fff4df")))
+	effects.add_child(ghost)
+	var source_center := ghost.position + ghost.size * 0.5
+	var target_center := target_local_rect.get_center()
+	var middle_center := source_center.lerp(target_center, 0.48) + Vector2(0, -20)
+	var middle_position := middle_center - ghost.size * 0.5
+	var landing_position := target_local_rect.position
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ghost, "position", middle_position, 0.2)
+	tween.parallel().tween_property(ghost, "scale", Vector2(1.06, 1.06), 0.2)
+	tween.parallel().tween_property(ghost, "rotation", -0.035 if String(event.get("to_zone", "")) == "prep" else 0.035, 0.2)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(ghost, "position", landing_position, 0.32)
+	tween.parallel().tween_property(ghost, "size", target_local_rect.size, 0.32)
+	tween.parallel().tween_property(ghost, "scale", Vector2.ONE, 0.32)
+	tween.parallel().tween_property(ghost, "rotation", 0.0, 0.32)
+	tween.tween_callback(Callable(self, "_land_opponent_hand_play").bind(target, "meal"))
+	tween.tween_property(ghost, "modulate:a", 0.0, 0.08)
+	tween.tween_callback(Callable(ghost, "queue_free"))
+
+
+func _animate_opponent_hand_play(event: Dictionary) -> void:
+	var source := opponent_hand_visual
+	var action_kind := String(event.get("action_kind", ""))
+	var target: Control
+	if action_kind in ["ingredient", "meal", "spice"]:
+		target = unit_visual_nodes.get(int(event.get("target_instance_id", -1)))
+	elif action_kind == "environment":
+		target = environment_visual_nodes.get("opponent")
+	else:
+		target = find_child("CookingMessagePanel", true, false) as Control
+	if not is_instance_valid(source) or not is_instance_valid(target):
+		if is_instance_valid(target) and action_kind in ["ingredient", "meal", "environment"]:
+			_animate_card_entry(target)
+		return
+	var hides_landing_card := action_kind in ["ingredient", "meal", "environment"]
+	if hides_landing_card:
+		target.modulate.a = 0.0
+	var card_id := String(event.get("card_id", ""))
+	var data: Dictionary = service.card(card_id)
+	var effects := _effects_parent()
+	var source_rect := _global_rect_in_control(_control_global_rect(source), effects)
+	var target_rect := _global_rect_in_control(_control_global_rect(target), effects)
+	var ghost := PanelContainer.new()
+	ghost.name = "CookingOpponentPlayedCardGhost"
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.z_index = 350
+	ghost.size = Vector2(102, 58)
+	ghost.pivot_offset = ghost.size * 0.5
+	ghost.add_theme_stylebox_override("panel", _panel_style(Color("#234f70"), Color("#ffe477"), 3, 5))
+	var ghost_label := _center_label("OPPONENT\nCARD", 13, Color("#fff4df"))
+	ghost_label.name = "CookingOpponentPlayedCardLabel"
+	ghost_label.add_theme_constant_override("outline_size", 3)
+	ghost_label.add_theme_color_override("font_outline_color", Color("#102c3d"))
+	ghost.add_child(ghost_label)
+	effects.add_child(ghost)
+	var source_center := source_rect.get_center()
+	var target_center := target_rect.get_center()
+	var landing_size := target_rect.size if hides_landing_card else Vector2(170, 76)
+	var start_position := source_center - ghost.size * 0.5
+	var middle_size := Vector2(116, 66)
+	var middle_center := source_center.lerp(target_center, 0.46) + Vector2(0, -28)
+	var middle_position := middle_center - middle_size * 0.5
+	var landing_position := target_center - landing_size * 0.5
+	ghost.position = start_position
+	ghost.rotation = -0.08
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ghost, "position", middle_position, 0.26)
+	tween.parallel().tween_property(ghost, "size", middle_size, 0.26)
+	tween.parallel().tween_property(ghost, "rotation", 0.045, 0.26)
+	tween.tween_callback(Callable(self, "_reveal_opponent_play_ghost").bind(ghost, ghost_label, data))
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(ghost, "position", landing_position, 0.36)
+	tween.parallel().tween_property(ghost, "size", landing_size, 0.36)
+	tween.parallel().tween_property(ghost, "rotation", 0.0, 0.36)
+	tween.tween_callback(Callable(self, "_land_opponent_hand_play").bind(target, action_kind))
+	tween.tween_property(ghost, "modulate:a", 0.0, 0.08)
+	tween.tween_callback(Callable(ghost, "queue_free"))
+
+
+func _reveal_opponent_play_ghost(ghost: PanelContainer, ghost_label: Label, data: Dictionary) -> void:
+	if not is_instance_valid(ghost) or not is_instance_valid(ghost_label):
+		return
+	ghost.add_theme_stylebox_override("panel", _panel_style(_card_type_color(String(data.get("card_type", ""))), Color("#fff09a"), 3, 5))
+	ghost_label.text = "%s\n%s" % [AFFINITY_VISUALS.card_display_name(data), AFFINITY_VISUALS.card_type_label(String(data.get("card_type", "card")))]
+
+
+func _land_opponent_hand_play(target: Control, action_kind: String) -> void:
+	if not is_instance_valid(target):
+		return
+	if action_kind in ["ingredient", "meal", "environment"]:
+		target.modulate = Color(1.2, 1.14, 0.78, 1.0)
+		target.pivot_offset = target.size * 0.5
+		target.scale = Vector2(0.94, 0.94)
+		var landing_tween := create_tween().set_parallel(true)
+		landing_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		landing_tween.tween_property(target, "scale", Vector2.ONE, 0.28)
+		landing_tween.tween_property(target, "modulate", Color.WHITE, 0.22)
+	else:
+		_animate_opponent_action_landing(target)
+
+
+func _animate_opponent_action_landing(control: Control) -> void:
+	if not is_instance_valid(control):
+		return
+	control.pivot_offset = control.size * 0.5
+	var tween := create_tween()
+	tween.tween_property(control, "scale", Vector2(1.035, 1.035), 0.08)
+	tween.parallel().tween_property(control, "modulate", Color(1.22, 1.15, 0.72, 1.0), 0.08)
+	tween.tween_property(control, "scale", Vector2.ONE, 0.18)
+	tween.parallel().tween_property(control, "modulate", Color.WHITE, 0.18)
 
 
 func _animate_card_entry(control: Control) -> void:
@@ -1211,7 +1710,7 @@ func _animate_damage(control: Control, amount: int) -> void:
 	tween.tween_property(control, "rotation", 0.045, 0.06)
 	tween.tween_property(control, "rotation", 0.0, 0.08)
 	tween.parallel().tween_property(control, "modulate", Color.WHITE, 0.16)
-	_spawn_floating_number(control.global_position + control.size * 0.5, "-%d" % amount, Color("#ff5a47"))
+	_spawn_floating_number(_control_global_rect(control).get_center(), "-%d" % amount, Color("#ff5a47"))
 
 
 func _animate_life_damage(control: Control, amount: int) -> void:
@@ -1221,25 +1720,27 @@ func _animate_life_damage(control: Control, amount: int) -> void:
 	var tween := create_tween()
 	tween.tween_property(control, "modulate", Color(1.35, 0.45, 0.4, 1.0), 0.08)
 	tween.tween_property(control, "modulate", original_modulate, 0.28)
-	_spawn_floating_number(control.global_position + Vector2(control.size.x * 0.5, 28), "-%d LIFE" % amount, Color("#d92f27"))
+	_spawn_floating_number(_control_global_rect(control).get_center(), "-%d LIFE" % amount, Color("#d92f27"))
 
 
 func _animate_removed_card(event: Dictionary) -> void:
 	if not event.has("rect"):
 		return
 	var rect: Rect2 = event.rect
+	var effects := _effects_parent()
+	var local_rect := _global_rect_in_control(rect, effects)
 	var unit: Dictionary = event.get("unit", {})
 	var ghost := PanelContainer.new()
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost.z_index = 260
-	ghost.position = rect.position - global_position
-	ghost.size = rect.size
+	ghost.position = local_rect.position
+	ghost.size = local_rect.size
 	ghost.pivot_offset = ghost.size * 0.5
 	ghost.add_theme_stylebox_override("panel", _panel_style(_card_type_color(String(unit.get("card_type", ""))), Color("#ffec82"), 3, 4))
 	var text := "%s\n%s" % [String(unit.get("name", "Card")), "SACRIFICED" if String(event.get("type", "")) == "sacrifice" else "DESTROYED"]
 	var label := _center_label(text, 14, Color.WHITE)
 	ghost.add_child(label)
-	add_child(ghost)
+	effects.add_child(ghost)
 	var tween := create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.tween_property(ghost, "scale", Vector2(0.45, 0.45), 0.45)
@@ -1250,15 +1751,16 @@ func _animate_removed_card(event: Dictionary) -> void:
 
 
 func _spawn_floating_number(global_at: Vector2, text: String, color: Color) -> void:
+	var effects := _effects_parent()
 	var number := _label(text, 24, color)
 	number.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	number.z_index = 310
-	number.position = global_at - global_position - Vector2(45, 14)
+	number.position = effects.get_global_transform_with_canvas().affine_inverse() * global_at - Vector2(45, 14)
 	number.custom_minimum_size = Vector2(90, 30)
 	number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	number.add_theme_constant_override("outline_size", 5)
 	number.add_theme_color_override("font_outline_color", Color("#27120f"))
-	add_child(number)
+	effects.add_child(number)
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(number, "position:y", number.position.y - 52.0, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(number, "modulate:a", 0.0, 0.65).set_delay(0.2)
@@ -1369,12 +1871,13 @@ func _animate_snap_back(control: Control) -> void:
 	if not is_instance_valid(control):
 		return
 	control.pivot_offset = control.size * 0.5
+	var base_rotation := float(control.get_meta("fan_rotation", 0.0))
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(control, "scale", Vector2(0.9, 0.9), 0.06)
-	tween.parallel().tween_property(control, "rotation", -0.045, 0.06)
+	tween.parallel().tween_property(control, "rotation", base_rotation - 0.045, 0.06)
 	tween.tween_property(control, "scale", Vector2.ONE, 0.2)
-	tween.parallel().tween_property(control, "rotation", 0.0, 0.2)
+	tween.parallel().tween_property(control, "rotation", base_rotation, 0.2)
 
 
 func _show_floating_feedback(text: String, color: Color, lifetime: float = 1.6) -> void:
@@ -1393,17 +1896,21 @@ func _show_floating_feedback(text: String, color: Color, lifetime: float = 1.6) 
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback.add_child(label)
-	add_child(feedback)
+	_effects_parent().add_child(feedback)
 	floating_feedback = feedback
+	var feedback_instance_id := feedback.get_instance_id()
 	var tween := create_tween()
 	tween.tween_interval(lifetime)
 	tween.tween_property(feedback, "modulate:a", 0.0, 0.25)
-	tween.tween_callback(func() -> void:
-		if is_instance_valid(feedback):
-			feedback.queue_free()
-		if floating_feedback == feedback:
-			floating_feedback = null
-	)
+	tween.tween_callback(Callable(self, "_finish_floating_feedback").bind(feedback_instance_id))
+
+
+func _finish_floating_feedback(feedback_instance_id: int) -> void:
+	var feedback := instance_from_id(feedback_instance_id) as PanelContainer
+	if is_instance_valid(feedback):
+		feedback.queue_free()
+	if floating_feedback == feedback:
+		floating_feedback = null
 
 
 func _make_drag_preview(card_id: String, location: String) -> Control:
@@ -1420,8 +1927,8 @@ func _make_drag_preview(card_id: String, location: String) -> Control:
 	preview.add_child(margin)
 	var box := VBoxContainer.new()
 	margin.add_child(box)
-	box.add_child(_label(String(data.get("name", card_id)), 16, Color.WHITE))
-	box.add_child(_label("%s • %s" % [String(data.get("card_type", "card")).capitalize(), location], 11, Color("#fff0d4")))
+	box.add_child(_label(AFFINITY_VISUALS.card_display_name(data), 16, Color.WHITE))
+	box.add_child(_label("%s • %s" % [AFFINITY_VISUALS.card_type_label(String(data.get("card_type", "card"))), location], 11, Color("#fff0d4")))
 	return preview
 
 
@@ -1429,7 +1936,7 @@ func _add_inspect_header(parent: Node, data: Dictionary, side: String, zone_name
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 3)
 	parent.add_child(row)
-	var name_label := _label(String(data.get("name", "Unknown Card")), 14, Color.WHITE)
+	var name_label := _label(AFFINITY_VISUALS.card_display_name(data), 14, Color.WHITE)
 	name_label.clip_text = true
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1475,7 +1982,7 @@ func _open_card_inspector(card_id: String, side: String, zone_name: String, inst
 	call_deferred("_refresh")
 
 
-func _build_inspect_overlay() -> void:
+func _build_inspect_overlay(parent: Control, authored_layout: bool) -> void:
 	if inspected_card.is_empty():
 		return
 	var context := _resolve_inspected_context()
@@ -1489,16 +1996,19 @@ func _build_inspect_overlay() -> void:
 
 	inspect_overlay = PanelContainer.new()
 	inspect_overlay.name = "CookingInspectPanel"
-	inspect_overlay.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	inspect_overlay.position = Vector2.ZERO
-	inspect_overlay.offset_left = -348
-	inspect_overlay.offset_right = -14
-	inspect_overlay.offset_top = -310
-	inspect_overlay.offset_bottom = 310
 	inspect_overlay.z_index = 180
 	inspect_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	inspect_overlay.add_theme_stylebox_override("panel", _inspect_panel_style())
-	add_child(inspect_overlay)
+	parent.add_child(inspect_overlay)
+	if authored_layout:
+		_fill_authored_anchor(inspect_overlay)
+	else:
+		inspect_overlay.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+		inspect_overlay.position = Vector2.ZERO
+		inspect_overlay.offset_left = -348
+		inspect_overlay.offset_right = -14
+		inspect_overlay.offset_top = -310
+		inspect_overlay.offset_bottom = 310
 
 	var outer_margin := MarginContainer.new()
 	outer_margin.add_theme_constant_override("margin_left", 14)
@@ -1524,7 +2034,7 @@ func _build_inspect_overlay() -> void:
 	, CONNECT_DEFERRED)
 	top_row.add_child(close)
 
-	var name_label := _label(String(data.get("name", "Unknown Card")), 25, Color("#fff4df"))
+	var name_label := _label(AFFINITY_VISUALS.card_display_name(data), 25, Color("#fff4df"))
 	name_label.name = "CookingInspectName"
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(name_label)
@@ -1532,10 +2042,9 @@ func _build_inspect_overlay() -> void:
 	if subtitle != "":
 		column.add_child(_label(subtitle, 14, Color("#bac8ce")))
 
-	var type_text := String(data.get("card_type", "card")).capitalize()
-	var archetype := String(data.get("archetype", "neutral")).capitalize()
+	var descriptor := AFFINITY_VISUALS.card_descriptor(data)
 	var rarity := "Rare" if bool(data.get("rare", false)) else "Common"
-	var type_strip := _label("%s  •  %s  •  %s" % [type_text, archetype, rarity], 14, Color("#ffe29a"))
+	var type_strip := _label("%s  •  %s" % [descriptor, rarity], 14, Color("#ffe29a"))
 	type_strip.name = "CookingInspectType"
 	column.add_child(type_strip)
 
@@ -1716,12 +2225,7 @@ func _add_inspect_section(parent: Node, title: String, body: String, node_name: 
 
 
 func _format_recipe(requirements: Array) -> String:
-	if requirements.is_empty():
-		return "No ingredients required"
-	var formatted: Array[String] = []
-	for requirement in requirements:
-		formatted.append(String(requirement).capitalize())
-	return " + ".join(formatted)
+	return AFFINITY_VISUALS.format_requirements(requirements)
 
 
 func _inspect_panel_style() -> StyleBoxFlat:
@@ -1735,7 +2239,7 @@ func _inspect_panel_style() -> StyleBoxFlat:
 func _zone_container(parent: Node, title: String, minimum_size: Vector2, color: Color) -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = minimum_size
-	panel.add_theme_stylebox_override("panel", _panel_style(color, Color("#173e52"), 2, 3))
+	panel.add_theme_stylebox_override("panel", _raised_panel_style(color, Color("#173e52"), 2, 3, 4))
 	parent.add_child(panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 5)
@@ -1800,6 +2304,14 @@ func _panel_style(background: Color, border: Color, width: int, radius: int) -> 
 	return style
 
 
+func _raised_panel_style(background: Color, border: Color, width: int, radius: int, shadow_size: int = 4) -> StyleBoxFlat:
+	var style := _panel_style(background, border, width, radius)
+	style.shadow_color = Color("#173e5238")
+	style.shadow_size = shadow_size
+	style.shadow_offset = Vector2(3, 4)
+	return style
+
+
 func _card_type_color(card_type: String) -> Color:
 	match card_type:
 		"ingredient":
@@ -1820,11 +2332,11 @@ func _hand_action_label(card_type: String) -> String:
 		"meal":
 			return "Plate Meal"
 		"tool":
-			return "Use Tool"
+			return AFFINITY_VISUALS.card_type_symbol("tool") + " Use Item"
 		"spice":
-			return "Attach Spice"
+			return AFFINITY_VISUALS.card_type_symbol("spice") + " Attach Spice"
 		"environment":
-			return "Set Environment"
+			return AFFINITY_VISUALS.card_type_symbol("environment") + " Set Environment"
 		"chef":
-			return "Use Chef"
+			return AFFINITY_VISUALS.card_type_symbol("chef") + " Use Chef"
 	return "Play"

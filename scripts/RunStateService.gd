@@ -1,6 +1,8 @@
 extends RefCounted
 class_name RunStateService
 
+const SAVE_VERSION := 1
+
 var cards_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var archetype_order: Array = []
@@ -9,6 +11,7 @@ var sideboard_size := 6
 var starting_money := 20
 var save_path := ""
 const DEFAULT_SEASON_CALENDAR := ["weekly_locals", "monthly_regionals", "state_championship", "nationals", "worlds"]
+const DEMO_SEASON_CALENDAR := ["weekly_locals", "monthly_regionals"]
 const DEFAULT_SEASON_GOAL := "Win Worlds before your season lives run out."
 
 
@@ -34,7 +37,8 @@ func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent
 	var starter_collection := {}
 	for card_id in starter_deck.keys():
 		starter_collection[card_id] = starter_deck[card_id]
-	var lives := starting_lives_for_difficulty(difficulty_id)
+	var lives := 1 if run_mode == "season" else starting_lives_for_difficulty(difficulty_id)
+	var calendar := DEMO_SEASON_CALENDAR.duplicate() if run_mode == "season" else default_season_calendar()
 
 	return {
 		"week": 1,
@@ -47,15 +51,12 @@ func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent
 		"collection": starter_collection,
 		"deck": starter_deck.duplicate(true),
 		"sideboard": {},
-		"meta": {
-			"spicy": 0.34,
-			"hearty": 0.33,
-			"sweet": 0.33
-		},
+		"meta": _initial_meta(),
 		"reports": [
 			"Opening week: Spicy decks are setting the pace with early Plated pressure.",
 			"Hearty chefs are leaning on durable Ingredients and life gain.",
-			"Sweet lists are trading speed for draw and flexible Prep support."
+			"Sweet lists are trading speed for draw and flexible Prep support.",
+			"Fresh and Funky pilots are testing token swarms, discard engines, and Hand Traps."
 		],
 		"shop": [],
 		"current_pack": [],
@@ -63,12 +64,13 @@ func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent
 		"pack_index": 0,
 		"prize_packs": 0,
 		"run_over": false,
-		"season_goal": DEFAULT_SEASON_GOAL,
-		"season_calendar": default_season_calendar(),
+		"season_goal": "Win Weekly Locals and the League Cup without losing a match." if run_mode == "season" else DEFAULT_SEASON_GOAL,
+		"season_calendar": calendar,
 		"calendar_unlocked_index": 0,
 		"calendar_completed": [],
 		"selected_event_id": "weekly_locals",
 		"season_champion": false,
+		"demo_complete": false,
 		"season_notice": "Weekly Locals is open. Tune your starter deck, check the shop, then register when ready.",
 		"last_result": [],
 		"last_event_result": {},
@@ -81,6 +83,14 @@ func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent
 
 func default_season_calendar() -> Array:
 	return DEFAULT_SEASON_CALENDAR.duplicate()
+
+
+func _initial_meta() -> Dictionary:
+	var result := {}
+	var share := 1.0 / float(maxi(1, archetype_order.size()))
+	for archetype_id in archetype_order:
+		result[String(archetype_id)] = share
+	return result
 
 
 func starting_money_for_difficulty(difficulty_id: String) -> int:
@@ -197,27 +207,104 @@ func sell_extra_copies(target_run: Dictionary) -> int:
 	return total
 
 
-func save_run(target_run: Dictionary) -> Dictionary:
+func has_saved_run() -> bool:
+	return FileAccess.file_exists(save_path) or FileAccess.file_exists(_backup_path())
+
+
+func save_run(target_run: Dictionary, resume_screen: String = "") -> Dictionary:
 	if target_run.is_empty():
 		return { "ok": false, "message": "No run to save." }
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
+	var envelope := {
+		"save_version": SAVE_VERSION,
+		"saved_at_unix": int(Time.get_unix_time_from_system()),
+		"resume_screen": resume_screen,
+		"run": target_run
+	}
+	var serialized := JSON.stringify(envelope, "\t")
+	var temporary_path := _temporary_path()
+	if not _write_save_text(temporary_path, serialized):
 		return { "ok": false, "message": "Could not save run." }
-	file.store_string(JSON.stringify(target_run, "\t"))
+
+	# Only replace the backup with a primary save that we can still decode. This
+	# preserves the last known-good checkpoint if the primary was corrupted.
+	if FileAccess.file_exists(save_path):
+		var primary_payload := _read_save_payload(save_path)
+		if bool(primary_payload.get("ok", false)):
+			_write_save_text(_backup_path(), FileAccess.get_file_as_string(save_path))
+
+	var absolute_primary := ProjectSettings.globalize_path(save_path)
+	var absolute_temporary := ProjectSettings.globalize_path(temporary_path)
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(absolute_primary)
+	var rename_error := DirAccess.rename_absolute(absolute_temporary, absolute_primary)
+	if rename_error != OK:
+		# Some export targets cannot rename user files atomically. Fall back to a
+		# direct write while retaining the backup made above.
+		if not _write_save_text(save_path, serialized):
+			return { "ok": false, "message": "Could not finalize the run save." }
+		if FileAccess.file_exists(temporary_path):
+			DirAccess.remove_absolute(absolute_temporary)
 	return { "ok": true, "message": "Run saved." }
 
 
 func load_run() -> Dictionary:
-	var file := FileAccess.open(save_path, FileAccess.READ)
-	if file == null:
-		return { "ok": false, "message": "No saved run found.", "run": {} }
-	var parsed = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return { "ok": false, "message": "Saved run is invalid.", "run": {} }
+	var payload := _read_save_payload(save_path)
+	var recovered_backup := false
+	if not bool(payload.get("ok", false)):
+		payload = _read_save_payload(_backup_path())
+		recovered_backup = bool(payload.get("ok", false))
+	if not bool(payload.get("ok", false)):
+		return { "ok": false, "message": "No valid saved run found.", "run": {}, "resume_screen": "" }
 
-	var loaded_run: Dictionary = parsed
+	var loaded_run: Dictionary = payload.get("run", {})
 	normalize_loaded_run(loaded_run)
-	return { "ok": true, "message": "Run loaded.", "run": loaded_run }
+	return {
+		"ok": true,
+		"message": "Recovered the backup autosave." if recovered_backup else "Autosave loaded.",
+		"run": loaded_run,
+		"resume_screen": String(payload.get("resume_screen", "")),
+		"save_version": int(payload.get("save_version", 0))
+	}
+
+
+func _read_save_payload(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"ok": false}
+	var json := JSON.new()
+	if json.parse(FileAccess.get_file_as_string(path)) != OK:
+		return {"ok": false}
+	var parsed = json.data
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {"ok": false}
+	var dictionary: Dictionary = parsed
+	if dictionary.has("run"):
+		if typeof(dictionary.get("run")) != TYPE_DICTIONARY:
+			return {"ok": false}
+		return {
+			"ok": true,
+			"run": dictionary.get("run", {}),
+			"resume_screen": String(dictionary.get("resume_screen", "")),
+			"save_version": int(dictionary.get("save_version", 0))
+		}
+	# Saves from before autosave used the run dictionary as the root object.
+	return {"ok": true, "run": dictionary, "resume_screen": "", "save_version": 0}
+
+
+func _write_save_text(path: String, contents: String) -> bool:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(contents)
+	file.flush()
+	return true
+
+
+func _backup_path() -> String:
+	return save_path + ".bak"
+
+
+func _temporary_path() -> String:
+	return save_path + ".tmp"
 
 
 func normalize_loaded_run(target_run: Dictionary) -> void:
@@ -246,6 +333,8 @@ func normalize_loaded_run(target_run: Dictionary) -> void:
 		target_run.selected_event_id = _first_available_calendar_event(target_run)
 	if not target_run.has("season_champion"):
 		target_run.season_champion = false
+	if not target_run.has("demo_complete"):
+		target_run.demo_complete = false
 	if not target_run.has("season_notice"):
 		target_run.season_notice = ""
 	if not target_run.has("last_event_result"):
@@ -367,6 +456,10 @@ func predator_archetype(archetype_id: String) -> String:
 			return "sweet"
 		"sweet":
 			return "spicy"
+		"fresh":
+			return "spicy"
+		"funky":
+			return "fresh"
 		_:
 			return String(archetype_order[0])
 

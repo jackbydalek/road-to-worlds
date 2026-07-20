@@ -2,6 +2,7 @@ extends SceneTree
 
 const SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
 const GAME_SCENE := preload("res://scenes/KitchenGame.tscn")
+const ARENA_GAME_SCENE := preload("res://scenes/KitchenGame3D.tscn")
 
 
 func _init() -> void:
@@ -271,7 +272,7 @@ func _run() -> void:
 		_fail("Firecracker Shrimp did not pause combat for its Prep target.")
 		return
 	production_service.choose_effect_target(firecracker_target_state, 903)
-	if int(firecracker_target_state.opponent.prep[0].health) != 2 or int(firecracker_target_state.opponent.prep[1].health) != 2 or int(firecracker_target_state.opponent.plated[0].health) != 3 or bool(firecracker_target_state.player.plated[0].ready):
+	if int(firecracker_target_state.opponent.prep[0].health) != 2 or int(firecracker_target_state.opponent.prep[1].health) != 1 or int(firecracker_target_state.opponent.plated[0].health) != 3 or bool(firecracker_target_state.player.plated[0].ready):
 		_fail("Firecracker Shrimp did not damage the chosen Prep card and resume combat.")
 		return
 
@@ -418,9 +419,10 @@ func _run() -> void:
 	if production_service.search_candidates(shopping_state) != ["spicy_hot_honey_bee"]:
 		_fail("Spicy Shopping List did not offer only Spicy Ingredients after payment.")
 		return
+	var shopping_search_rng_state: int = production_service.rng.state
 	production_service.select_search_card(shopping_state, "spicy_hot_honey_bee")
-	if shopping_state.player.hand != ["spicy_hot_honey_bee"] or not shopping_state.pending_search.is_empty():
-		_fail("Spicy Shopping List did not add the selected Ingredient to the hand.")
+	if shopping_state.player.hand != ["spicy_hot_honey_bee"] or not shopping_state.pending_search.is_empty() or production_service.rng.state == shopping_search_rng_state or "shuffle your deck" not in String(shopping_state.message).to_lower():
+		_fail("Spicy Shopping List did not add the selected Ingredient and shuffle the deck.")
 		return
 
 	# Tool Drawer reveals exactly the top four cards and can take only a Tool among them.
@@ -435,9 +437,14 @@ func _run() -> void:
 	if production_service.search_candidates(tool_drawer_state) != ["item_strainer", "item_recipe_prep"]:
 		_fail("Tool Drawer offered a non-Tool or a Tool below the top four cards.")
 		return
+	var drawer_search_rng_state: int = production_service.rng.state
 	production_service.select_search_card(tool_drawer_state, "item_recipe_prep")
-	if tool_drawer_state.player.hand != ["item_recipe_prep"] or tool_drawer_state.player.deck != ["item_wooden_spoon", "hearty_bagver", "sweet_pup_tart", "item_strainer"]:
-		_fail("Tool Drawer did not take the chosen Tool while preserving the other cards' deck order.")
+	var expected_drawer_deck := ["item_wooden_spoon", "hearty_bagver", "sweet_pup_tart", "item_strainer"]
+	var actual_drawer_deck: Array = tool_drawer_state.player.deck.duplicate()
+	expected_drawer_deck.sort()
+	actual_drawer_deck.sort()
+	if tool_drawer_state.player.hand != ["item_recipe_prep"] or actual_drawer_deck != expected_drawer_deck or production_service.rng.state == drawer_search_rng_state or "shuffle your deck" not in String(tool_drawer_state.message).to_lower():
+		_fail("Tool Drawer did not take the chosen Tool and shuffle the remaining deck.")
 		return
 	var empty_drawer_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6992)
 	empty_drawer_state.player.hand = ["item_tool_drawer"]
@@ -446,9 +453,14 @@ func _run() -> void:
 	if empty_drawer_state.pending_search.is_empty() or not production_service.search_candidates(empty_drawer_state).is_empty():
 		_fail("Tool Drawer did not show its four revealed cards when none was a Tool.")
 		return
+	var empty_drawer_rng_state: int = production_service.rng.state
 	production_service.skip_search(empty_drawer_state)
-	if not empty_drawer_state.pending_search.is_empty() or empty_drawer_state.player.deck != ["hearty_bagver", "sweet_pup_tart", "spicy_hot_honey_bee", "sweet_sugar_glider"]:
-		_fail("Closing a Tool Drawer reveal with no Tool changed the deck.")
+	var expected_empty_drawer_deck := ["hearty_bagver", "sweet_pup_tart", "spicy_hot_honey_bee", "sweet_sugar_glider"]
+	var actual_empty_drawer_deck: Array = empty_drawer_state.player.deck.duplicate()
+	expected_empty_drawer_deck.sort()
+	actual_empty_drawer_deck.sort()
+	if not empty_drawer_state.pending_search.is_empty() or actual_empty_drawer_deck != expected_empty_drawer_deck or production_service.rng.state == empty_drawer_rng_state or "shuffle your deck" not in String(empty_drawer_state.message).to_lower():
+		_fail("Closing a Tool Drawer reveal without taking a card did not shuffle the deck.")
 		return
 
 	# Production activated abilities support sacrifice, targeting, and once-per-turn use.
@@ -494,13 +506,13 @@ func _run() -> void:
 	if int(vanilla_data.attack) != 1 or int(vanilla_data.health) != 2 or int(strawberry_data.attack) != 5 or int(strawberry_data.health) != 6:
 		_fail("Vanilla Extract Gorilla or Strawberry Sharkcake did not load its revised stats.")
 		return
-	if int(pandacake_data.health) != 6 or int(cinnamon_data.attack) != 5 or int(cinnamon_data.health) != 6 or int(pup_tart_data.attack) != 4:
+	if int(pandacake_data.health) != 6 or int(cinnamon_data.attack) != 4 or int(cinnamon_data.health) != 6 or int(pup_tart_data.attack) != 4:
 		_fail("Pandacake, Cinnamon Snail, or Pup Tart did not load its revised stats.")
 		return
-	if int(stewoose_data.attack) != 5 or int(stewoose_data.health) != 8:
-		_fail("Stewoose did not load its revised 5/8 stats.")
+	if int(stewoose_data.attack) != 4 or int(stewoose_data.health) != 8:
+		_fail("Stewoose did not load its revised 4/8 stats.")
 		return
-	if int(production_service.card("sweet_sugar_glider").on_sacrifice[0].amount) != 1 or int(production_service.card("spicy_firecracker_shrimp").on_attack[0].amount) != 1 or int(production_service.card("hearty_baked_potato_pangolin").on_play[0].attack) != 2 or int(production_service.card("hearty_bagver").on_sacrifice[0].amount) != 1:
+	if int(production_service.card("sweet_sugar_glider").on_sacrifice[0].amount) != 1 or int(production_service.card("spicy_firecracker_shrimp").on_attack[0].amount) != 2 or int(production_service.card("hearty_baked_potato_pangolin").on_play[0].attack) != 2 or int(production_service.card("hearty_bagver").on_sacrifice[0].amount) != 1:
 		_fail("Sugar Glider, Firecracker Shrimp, Baked Potangolin, or Bagver kept an old effect amount.")
 		return
 
@@ -700,7 +712,8 @@ func _run() -> void:
 	root.add_child(prototype)
 	await process_frame
 	await process_frame
-	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 61:
+	# The service also registers one non-collectible Fresh token at runtime.
+	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 89:
 		_fail("Production card catalog did not load into a playable game.")
 		return
 	if _count_prefix(prototype, "CookingPlayerPrepSlot_") != 3 or _count_prefix(prototype, "CookingPlayerPlatedSlot_") != 2:
@@ -709,9 +722,118 @@ func _run() -> void:
 	if _count_prefix(prototype, "CookingOpponentPrepSlot_") != 3 or _count_prefix(prototype, "CookingOpponentPlatedSlot_") != 2:
 		_fail("Opponent board did not render three Prep and two Plated slots.")
 		return
+	var player_life_badge := prototype.find_child("CookingPlayerLifeBadge", true, false) as Control
+	var opponent_life_badge := prototype.find_child("CookingOpponentLifeBadge", true, false) as Control
+	if player_life_badge == null or opponent_life_badge == null:
+		_fail("The tabletop presentation did not render standalone Chef life badges.")
+		return
+	if prototype.find_child("CookingPlayerLifeIcon", true, false) == null or prototype.find_child("CookingOpponentLifeIcon", true, false) == null:
+		_fail("The tabletop presentation did not render the font-independent Chef life icons.")
+		return
+	var combat_font_line := TextLine.new()
+	combat_font_line.add_string("1🌶️2🧊3🍋‍🟩4", prototype.card_font, 32)
+	var combat_glyphs := TextServerManager.get_primary_interface().shaped_text_get_glyphs(combat_font_line.get_rid())
+	if combat_glyphs.size() != 7 or int(combat_glyphs[0].index) <= 16 or int(combat_glyphs[1].index) > 16 or int(combat_glyphs[3].index) > 16 or int(combat_glyphs[5].index) > 16:
+		_fail("The combat card font did not preserve normal numbers while routing type symbols through the Noto subset.")
+		return
+	var player_plated_lane := prototype.find_child("CookingPlayerPlatedZone", true, false) as Control
+	var player_prep_lane := prototype.find_child("CookingPlayerPrepZone", true, false) as Control
+	var opponent_plated_lane := prototype.find_child("CookingOpponentPlatedZone", true, false) as Control
+	var opponent_prep_lane := prototype.find_child("CookingOpponentPrepZone", true, false) as Control
+	if player_plated_lane == null or player_prep_lane == null or opponent_plated_lane == null or opponent_prep_lane == null or player_plated_lane.get_index() >= player_prep_lane.get_index() or opponent_prep_lane.get_index() >= opponent_plated_lane.get_index():
+		_fail("The mirrored tabletop did not place both Plated lanes toward the center.")
+		return
+	if _count_prefix(prototype, "CookingOpponentHandCard_") != prototype.state.opponent.hand.size():
+		_fail("The opponent hand fan did not show one card back per hidden card.")
+		return
+	var opponent_half := prototype.find_child("CookingOpponentTableHalf", true, false) as Control
+	var message_strip := prototype.find_child("CookingMessagePanel", true, false) as Control
+	var player_half := prototype.find_child("CookingPlayerTableHalf", true, false) as Control
+	if opponent_half == null or message_strip == null or player_half == null or not (opponent_half.get_index() < message_strip.get_index() and message_strip.get_index() < player_half.get_index()):
+		_fail("The message strip was not centered between the mirrored table halves.")
+		return
 	var end_turn := prototype.find_child("CookingEndTurnButton", true, false) as Button
 	if end_turn == null or end_turn.disabled:
 		_fail("Loaded game board did not enable gameplay.")
+		return
+
+	# The experimental authored board remains isolated in its own scene and keeps
+	# the stable Kitchen Match procedural layout untouched.
+	var arena_prototype := ARENA_GAME_SCENE.instantiate()
+	root.add_child(arena_prototype)
+	await process_frame
+	await process_frame
+	var arena_player_plated := arena_prototype.find_child("PlayerPlatedZone", true, false) as Control
+	var arena_player_prep := arena_prototype.find_child("PlayerPrepZone", true, false) as Control
+	var arena_opponent_plated := arena_prototype.find_child("OpponentPlatedZone", true, false) as Control
+	var arena_opponent_prep := arena_prototype.find_child("OpponentPrepZone", true, false) as Control
+	var arena_message := arena_prototype.find_child("CenterMessageAnchor", true, false) as Control
+	var arena_opponent_area := arena_prototype.find_child("OpponentArea", true, false) as Control
+	var arena_player_area := arena_prototype.find_child("PlayerArea", true, false) as Control
+	if arena_player_plated == null or arena_player_prep == null or arena_opponent_plated == null or arena_opponent_prep == null or arena_message == null or arena_opponent_area == null or arena_player_area == null:
+		_fail("The isolated 3D Arena scene did not populate all authored board anchors.")
+		return
+	if not (arena_opponent_prep.global_position.y < arena_opponent_plated.global_position.y and arena_opponent_plated.global_position.y < arena_message.global_position.y and arena_message.global_position.y < arena_player_plated.global_position.y and arena_player_plated.global_position.y < arena_player_prep.global_position.y) or arena_opponent_area.scale.x >= arena_player_area.scale.x:
+		_fail("The isolated 3D Arena lost its mirrored perspective layout.")
+		return
+	var interface_overlay := arena_prototype.find_child("InterfaceOverlay", true, false) as Control
+	var result_anchor := arena_prototype.find_child("ResultPopupAnchor", true, false) as Control
+	if interface_overlay == null or result_anchor == null or interface_overlay.mouse_filter != Control.MOUSE_FILTER_IGNORE or result_anchor.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		_fail("An inactive 3D Arena overlay can still intercept board clicks.")
+		return
+	arena_prototype.state.player.hand = ["spicy_hot_honey_bee"]
+	arena_prototype._refresh()
+	await process_frame
+	await process_frame
+	var arena_card := arena_prototype.find_child("CookingHandCard_0", true, false) as Control
+	var arena_press := InputEventMouseButton.new()
+	arena_press.button_index = MOUSE_BUTTON_LEFT
+	arena_press.position = Vector2(20, 20)
+	arena_press.pressed = true
+	arena_card.gui_input.emit(arena_press)
+	var arena_release := InputEventMouseButton.new()
+	arena_release.button_index = MOUSE_BUTTON_LEFT
+	arena_release.position = Vector2(20, 20)
+	arena_release.pressed = false
+	arena_card.gui_input.emit(arena_release)
+	await process_frame
+	await process_frame
+	if String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
+		_fail("Cards in the isolated 3D Arena did not receive click interactions.")
+		return
+	arena_prototype.queue_free()
+	await process_frame
+
+	# Live matches reveal one opponent action per beat instead of resolving the full turn synchronously.
+	prototype.state.opponent.hand = ["hearty_bagver", "hearty_macaroni_manatee"]
+	prototype.state.opponent.deck = []
+	prototype.state.opponent.prep = []
+	prototype.state.opponent.plated = []
+	prototype._end_player_turn_with_sequence()
+	if String(prototype.state.phase) != "opponent_turn" or not prototype.state.opponent.prep.is_empty():
+		_fail("The live board resolved opponent actions immediately after End Turn.")
+		return
+	await create_timer(1.15).timeout
+	if not prototype.state.opponent.prep.is_empty():
+		_fail("The opponent draw beat also played a card instead of pausing for presentation.")
+		return
+	await create_timer(1.15).timeout
+	if prototype.state.opponent.prep.size() != 1 or prototype.state.opponent.hand.size() != 1:
+		_fail("The live opponent sequence did not reveal exactly one card play on its next beat.")
+		return
+	await process_frame
+	await process_frame
+	var opponent_hand_origin := prototype.find_child("CookingOpponentHandOrigin", true, false) as Control
+	var played_card_ghost := prototype.find_child("CookingOpponentPlayedCardGhost", true, false) as Control
+	if opponent_hand_origin == null or played_card_ghost == null:
+		_fail("The live opponent play did not animate a card from the visible hand origin (origin=%s, ghost=%s)." % [opponent_hand_origin != null, played_card_ghost != null])
+		return
+	var opponent_wait_safety := 8
+	while String(prototype.state.phase) == "opponent_turn" and opponent_wait_safety > 0:
+		opponent_wait_safety -= 1
+		await create_timer(0.75).timeout
+	if String(prototype.state.phase) != "player_main":
+		_fail("The paced live opponent sequence did not return control to the player.")
 		return
 
 	# Pressing a card must leave it alive long enough for Godot to begin a drag.
@@ -766,10 +888,11 @@ func _run() -> void:
 	# The visual-state diff recognizes draws, damage, destruction, entry, and recipe sacrifices.
 	var before_visual := {
 		"turn": 1, "phase": "player_main", "selected_ingredients": [501],
+		"visual_action_serial": 3, "last_visual_action": {},
 		"player": {"life": 25, "hand": ["spicy_hot_honey_bee"], "environment": "", "units": {
 			501: {"instance_id": 501, "card_id": "spicy_hot_honey_bee", "name": "Hot Honey Bee", "card_type": "ingredient", "zone": "prep", "health": 2, "attack": 1}
 		}},
-		"opponent": {"life": 25, "hand": [], "environment": "", "units": {
+		"opponent": {"life": 25, "hand": ["hearty_bagver"], "environment": "", "units": {
 			601: {"instance_id": 601, "card_id": "hearty_bagver", "name": "Bagver", "card_type": "ingredient", "zone": "plated", "health": 2, "attack": 1}
 		}}
 	}
@@ -778,10 +901,15 @@ func _run() -> void:
 	after_visual.player.hand.append("spice_cayenne_crunch")
 	after_visual.player.units.erase(501)
 	after_visual.player.units[502] = {"instance_id": 502, "card_id": "spicy_sriracharrow", "name": "Sriracharrow", "card_type": "meal", "zone": "plated", "health": 4, "attack": 5}
+	after_visual.visual_action_serial = 4
+	after_visual.last_visual_action = {"side": "opponent", "card_id": "hearty_bagver", "action_kind": "ingredient", "target_instance_id": 602}
+	after_visual.opponent.hand = []
+	after_visual.opponent.units[602] = {"instance_id": 602, "card_id": "hearty_bagver", "name": "Bagver", "card_type": "ingredient", "zone": "prep", "health": 2, "attack": 1}
+	after_visual.opponent.units[601].zone = "prep"
 	after_visual.opponent.units[601].health = 1
 	after_visual.opponent.life = 23
 	var visual_events: Array[Dictionary] = prototype._collect_visual_events(before_visual, after_visual)
-	if not _has_visual_event(visual_events, "draw") or not _has_visual_event(visual_events, "enter", 502) or not _has_visual_event(visual_events, "sacrifice", 501) or not _has_visual_event(visual_events, "damage", 601) or not _has_visual_event(visual_events, "life_damage") or not _has_visual_event(visual_events, "turn"):
+	if not _has_visual_event(visual_events, "opponent_hand_play") or not _has_visual_event(visual_events, "enter", 602) or not _has_visual_event(visual_events, "move", 601) or not _has_visual_event(visual_events, "draw") or not _has_visual_event(visual_events, "enter", 502) or not _has_visual_event(visual_events, "sacrifice", 501) or not _has_visual_event(visual_events, "damage", 601) or not _has_visual_event(visual_events, "life_damage") or not _has_visual_event(visual_events, "turn"):
 		_fail("The presentation layer did not recognize every required combat animation event.")
 		return
 
@@ -814,6 +942,10 @@ func _run() -> void:
 	if not prototype.state.player.prep.is_empty() or prototype.state.player.plated.size() != 1:
 		_fail("Dragging a field card did not move it from Prep to Plated.")
 		return
+	if prototype.find_child("CookingZoneMoveGhost", true, false) == null:
+		_fail("A Prep/Plated move did not create its visible traveling-card animation.")
+		return
+	await create_timer(0.7).timeout
 	prototype.state.player.hand = ["spice_cayenne_crunch"]
 	var spice_drag := {"kind": "hand_card", "hand_index": 0, "card_id": "spice_cayenne_crunch"}
 	if not prototype._can_drop_on_unit_slot(spice_drag, prototype.state.player.plated[0], "plated", true):
@@ -971,7 +1103,7 @@ func _run() -> void:
 	var inspect_name := prototype.find_child("CookingInspectName", true, false) as Label
 	var inspect_zone := prototype.find_child("CookingInspectZoneStatus", true, false) as Label
 	var inspect_effects := prototype.find_child("CookingInspectZoneEffects", true, false) as Label
-	if inspect_panel == null or inspect_name == null or inspect_name.text != "Pandacake":
+	if inspect_panel == null or inspect_name == null or inspect_name.text != "🍬 Pandacake":
 		_fail("The kitchen card inspect popout did not open with the selected card.")
 		return
 	if inspect_zone == null or not inspect_zone.text.contains("Prep zone") or inspect_effects == null or not inspect_effects.text.contains("ACTIVE"):

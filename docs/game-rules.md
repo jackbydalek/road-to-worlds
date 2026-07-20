@@ -35,6 +35,8 @@ Only one Meal may be served each turn. There is no general limit on Ingredients 
 
 When a card asks for a choice, the game pauses that effect and presents only legal choices. This applies to discard costs, deck searches, discard-pile recovery, board targets, opponent-hand choices, and multi-step effects.
 
+After an effect searches a deck or looks at cards in a deck, that deck is shuffled when the effect finishes. It is shuffled even if no matching card is found or the player chooses not to take a card.
+
 ## Combat
 
 Each ready Plated unit may attack once.
@@ -69,16 +71,16 @@ Bodyguard prevents piercing damage through that defender. Stalwart lets its atta
 
 ## Current Card Pool
 
-The data catalog contains 61 cards:
+The data catalog contains 88 collectible cards:
 
-- 24 Ingredients
-- 15 Meals
-- 12 Tools
+- 36 Ingredients
+- 28 Meals
+- 14 Tools
 - 3 Spices
 - 3 Environments
 - 4 Chefs
 
-Spicy, Hearty, and Sweet each have a deliberate 30-card starter deck built around their core game plan.
+Spicy, Hearty, Sweet, Fresh, and Funky each have a deliberate 30-card starter deck built around their core game plan. Fresh fills Prep with future recipe material and recycles the discard pile; Funky mills cards, copies abilities, and disrupts opposing actions.
 
 ## Controls
 

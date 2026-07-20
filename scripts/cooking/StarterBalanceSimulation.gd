@@ -1,7 +1,13 @@
 extends SceneTree
 
 const SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
-const DECK_IDS := ["spicy_test_kitchen", "hearty_test_kitchen", "sweet_test_kitchen"]
+const DECK_IDS := [
+	"spicy_test_kitchen",
+	"hearty_test_kitchen",
+	"sweet_test_kitchen",
+	"fresh_test_kitchen",
+	"funky_test_kitchen"
+]
 const DEFAULT_GAMES_PER_ORDER := 500
 const DEFAULT_TURN_CAP := 100
 
@@ -13,11 +19,16 @@ func _init() -> void:
 func _run() -> void:
 	var games_per_order := DEFAULT_GAMES_PER_ORDER
 	var turn_cap := DEFAULT_TURN_CAP
+	var ai_difficulty := "easy"
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--games="):
 			games_per_order = maxi(1, int(argument.trim_prefix("--games=")))
 		elif argument.begins_with("--turn-cap="):
 			turn_cap = maxi(1, int(argument.trim_prefix("--turn-cap=")))
+		elif argument.begins_with("--ai="):
+			var requested_ai := String(argument.trim_prefix("--ai="))
+			if requested_ai in ["easy", "medium", "hard"]:
+				ai_difficulty = requested_ai
 
 	var service: RefCounted = SERVICE_SCRIPT.new()
 	if not service.load_content():
@@ -43,9 +54,9 @@ func _run() -> void:
 		for right_index in range(left_index + 1, DECK_IDS.size()):
 			var left_id: String = DECK_IDS[left_index]
 			var right_id: String = DECK_IDS[right_index]
-			ordered_results.append(_simulate_order(service, left_id, right_id, games_per_order, turn_cap, seed_block, deck_totals))
+			ordered_results.append(_simulate_order(service, left_id, right_id, games_per_order, turn_cap, seed_block, deck_totals, ai_difficulty))
 			seed_block += 1
-			ordered_results.append(_simulate_order(service, right_id, left_id, games_per_order, turn_cap, seed_block, deck_totals))
+			ordered_results.append(_simulate_order(service, right_id, left_id, games_per_order, turn_cap, seed_block, deck_totals, ai_difficulty))
 			seed_block += 1
 
 	var total_games := 0
@@ -57,16 +68,27 @@ func _run() -> void:
 		first_wins += int(result.first_wins)
 		second_wins += int(result.second_wins)
 		capped_games += int(result.capped_games)
+	var combined_matchups := _combined_matchup_results(ordered_results)
 
-	print("Starter balance simulation: %d games per seating order, %d total games" % [games_per_order, total_games])
+	print("Starter balance simulation: %d games per seating order, %d total games, %s AI" % [games_per_order, total_games, ai_difficulty.capitalize()])
 	for result in ordered_results:
-		print("%s first vs %s: %.1f%% / %.1f%%, capped %d, average turns %.2f" % [
+		print("%s first vs %s: %.1f%% / %.1f%%, capped %d, average turns %.2f, responses/game %.2f" % [
 			_deck_label(String(result.first_deck)),
 			_deck_label(String(result.second_deck)),
 			_rate(int(result.first_wins), int(result.games)),
 			_rate(int(result.second_wins), int(result.games)),
 			int(result.capped_games),
-			float(result.turns) / float(maxi(1, int(result.games)))
+			float(result.turns) / float(maxi(1, int(result.games))),
+			float(result.reactions) / float(maxi(1, int(result.games)))
+		])
+	print("Seat-neutral matchup totals:")
+	for matchup in combined_matchups:
+		print("%s vs %s: %.1f%% / %.1f%% over %d games" % [
+			_deck_label(String(matchup.left_deck)),
+			_deck_label(String(matchup.right_deck)),
+			_rate(int(matchup.left_wins), int(matchup.games)),
+			_rate(int(matchup.right_wins), int(matchup.games)),
+			int(matchup.games)
 		])
 	print("Overall first-seat win rate: %.1f%%; second-seat win rate: %.1f%%; capped: %d" % [
 		_rate(first_wins, total_games),
@@ -84,14 +106,24 @@ func _run() -> void:
 			_rate(int(totals.second_wins), int(totals.second_games)),
 			float(totals.turns) / float(maxi(1, int(totals.games)))
 		])
+	var balance_flags := _balance_flags(first_wins, total_games, deck_totals, combined_matchups)
+	if balance_flags.is_empty():
+		print("Balance flags: none")
+	else:
+		print("Balance flags:")
+		for flag in balance_flags:
+			print("- " + flag)
 	print("BALANCE_RESULT=" + JSON.stringify({
 		"games_per_order": games_per_order,
+		"ai_difficulty": ai_difficulty,
 		"turn_cap": turn_cap,
 		"ordered_matchups": ordered_results,
+		"combined_matchups": combined_matchups,
 		"deck_totals": deck_totals,
 		"first_seat_wins": first_wins,
 		"second_seat_wins": second_wins,
-		"capped_games": capped_games
+		"capped_games": capped_games,
+		"balance_flags": balance_flags
 	}))
 	quit(0)
 
@@ -103,7 +135,8 @@ func _simulate_order(
 	games: int,
 	turn_cap: int,
 	seed_block: int,
-	deck_totals: Dictionary
+	deck_totals: Dictionary,
+	ai_difficulty: String
 ) -> Dictionary:
 	var result := {
 		"first_deck": first_deck,
@@ -112,17 +145,20 @@ func _simulate_order(
 		"first_wins": 0,
 		"second_wins": 0,
 		"capped_games": 0,
-		"turns": 0
+		"turns": 0,
+		"reactions": 0
 	}
 	for game_index in range(games):
 		var seed_value := 1000003 + seed_block * 100000 + game_index
-		var state: Dictionary = service.start_game(first_deck, second_deck, seed_value, "player")
+		var state: Dictionary = service.start_game(first_deck, second_deck, seed_value, "player", false, ai_difficulty)
 		while not bool(state.game_over) and int(state.turn) <= turn_cap:
-			_take_current_player_ai_turn(service, state)
+			result.reactions += _run_production_ai_turn(service, state, "player")
 			if bool(state.game_over):
 				break
-			state.phase = "opponent_turn"
-			service._ai_turn(state)
+			service._start_turn(state, "opponent")
+			if bool(state.game_over):
+				break
+			result.reactions += _run_production_ai_turn(service, state, "opponent")
 			if bool(state.game_over):
 				break
 			state.turn = int(state.turn) + 1
@@ -149,73 +185,37 @@ func _simulate_order(
 	return result
 
 
-func _take_current_player_ai_turn(service: RefCounted, state: Dictionary) -> void:
-	_swap_perspective(state)
-	_take_opponent_actions(service, state)
-	_swap_perspective(state)
+func _run_production_ai_turn(service: RefCounted, state: Dictionary, acting_side: String) -> int:
+	var swapped := acting_side == "player"
+	if swapped:
+		_swap_perspective(state)
+	state.phase = "opponent_turn"
+	var reactions := _run_oriented_opponent_turn(service, state)
+	if swapped:
+		_swap_perspective(state)
+	return reactions
 
 
-# Mirrors CookingCombatService._ai_turn after its start-of-turn step. Swapping the
-# two combatants lets both decks use the same decisions and automatic targeting.
-func _take_opponent_actions(service: RefCounted, state: Dictionary) -> void:
-	var safety := 30
-	var progress := true
-	while progress and safety > 0:
-		safety -= 1
-		progress = false
-		for hand_index in range(state.opponent.hand.size() - 1, -1, -1):
-			var data: Dictionary = service.card(String(state.opponent.hand[hand_index]))
-			var card_type := String(data.get("card_type", ""))
-			if card_type == "environment":
-				progress = service._play_environment(state, "opponent", hand_index)
-				break
-			if card_type == "meal" and not bool(state.opponent.meal_served):
-				var recipe_units: Array = service._find_recipe_ingredients(state.opponent, service._effective_recipe(state, "opponent", data))
-				if not recipe_units.is_empty():
-					var meal_destination := "plated" if state.opponent.plated.size() < 2 else "prep"
-					progress = service._serve_meal(state, "opponent", hand_index, recipe_units, meal_destination)
-					break
-			if card_type == "ingredient":
-				var destination := "prep" if state.opponent.prep.size() < 3 else "plated"
-				var capacity := 3 if destination == "prep" else 2
-				if state.opponent[destination].size() < capacity:
-					progress = service._play_ingredient(state, "opponent", hand_index, destination)
-					break
-			if card_type == "spice":
-				var spice_target: Dictionary = service._first_unspiced_unit(state.opponent)
-				if not spice_target.is_empty():
-					progress = service._play_spice(state, "opponent", hand_index, int(spice_target.instance_id))
-					break
-			if card_type == "tool":
-				progress = service._play_tool(state, "opponent", hand_index)
-				break
-			if card_type == "chef":
-				progress = service._play_chef(state, "opponent", hand_index)
-				break
-	if not bool(state.opponent.zone_move_used) and state.opponent.plated.size() < 2 and not state.opponent.prep.is_empty():
-		var moved: Dictionary = state.opponent.prep.pop_front()
-		moved.ready = true
-		state.opponent.plated.append(moved)
-		state.opponent.zone_move_used = true
-		service._resolve_effects(state, "opponent", service.card(String(moved.card_id)).get("on_move_to_plated", []), moved)
-		service._refresh_stat_auras(state)
-	for unit in state.opponent.plated.duplicate():
-		if not bool(unit.ready) or bool(state.game_over):
-			continue
-		unit.ready = false
-		var target: Dictionary = {} if service._unit_has_keyword(unit, "stalwart") else service._weakest_plated_unit(state.player)
-		if target.is_empty():
-			service._resolve_effects(state, "opponent", service.card(String(unit.card_id)).get("on_attack", []), unit)
-			state.player.life -= int(unit.attack)
-			if int(unit.attack) > 0:
-				service._resolve_effects(state, "opponent", service.card(String(unit.card_id)).get("on_combat_damage_to_chef", []), unit)
-		else:
-			service._resolve_effects(state, "opponent", service.card(String(unit.card_id)).get("on_attack", []), unit)
-			service._resolve_unit_battle(state, "opponent", unit, target)
-		service._check_game_over(state)
-	state.opponent.chefs_disabled = false
-	state.opponent.items_disabled = false
-	service._clear_temporary_buffs(state.opponent)
+# CookingCombatService's production AI is written for the opponent. Perspective
+# swapping lets both starters use that exact implementation. Response windows are
+# resolved here without invoking the live UI's automatic turn handoff.
+func _run_oriented_opponent_turn(service: RefCounted, state: Dictionary) -> int:
+	var reaction_safety := 64
+	var reactions := 0
+	service._ai_turn(state, false)
+	while not bool(state.game_over) and not state.get("pending_reaction", {}).is_empty() and reaction_safety > 0:
+		reaction_safety -= 1
+		var eligible: Array[int] = service.reaction_hand_indices(state)
+		var reaction_index := int(eligible[0]) if not eligible.is_empty() else -1
+		if reaction_index >= 0:
+			reactions += 1
+		service.resolve_reaction(state, reaction_index, false)
+		if not bool(state.game_over) and state.get("pending_reaction", {}).is_empty():
+			service._ai_turn(state, false)
+	if reaction_safety <= 0 and not state.get("pending_reaction", {}).is_empty():
+		push_error("Automated reaction safety limit reached.")
+		state.pending_reaction = {}
+	return reactions
 
 
 func _swap_perspective(state: Dictionary) -> void:
@@ -228,6 +228,45 @@ func _swap_perspective(state: Dictionary) -> void:
 			state.winner = "opponent"
 		elif String(state.winner) == "opponent":
 			state.winner = "player"
+
+
+func _combined_matchup_results(ordered_results: Array) -> Array:
+	var combined: Array = []
+	for index in range(0, ordered_results.size(), 2):
+		if index + 1 >= ordered_results.size():
+			break
+		var forward: Dictionary = ordered_results[index]
+		var reverse: Dictionary = ordered_results[index + 1]
+		combined.append({
+			"left_deck": String(forward.first_deck),
+			"right_deck": String(forward.second_deck),
+			"games": int(forward.games) + int(reverse.games),
+			"left_wins": int(forward.first_wins) + int(reverse.second_wins),
+			"right_wins": int(forward.second_wins) + int(reverse.first_wins)
+		})
+	return combined
+
+
+func _balance_flags(first_wins: int, total_games: int, deck_totals: Dictionary, combined_matchups: Array) -> Array[String]:
+	var flags: Array[String] = []
+	var first_rate := _rate(first_wins, total_games)
+	if first_rate < 47.0 or first_rate > 53.0:
+		flags.append("First-seat win rate %.1f%% is outside the 47-53%% target." % first_rate)
+	for deck_id in DECK_IDS:
+		var totals: Dictionary = deck_totals[deck_id]
+		var deck_rate := _rate(int(totals.wins), int(totals.games))
+		if deck_rate < 45.0 or deck_rate > 55.0:
+			flags.append("%s overall win rate %.1f%% is outside the 45-55%% target." % [_deck_label(deck_id), deck_rate])
+	for matchup in combined_matchups:
+		var left_rate := _rate(int(matchup.left_wins), int(matchup.games))
+		if left_rate < 35.0 or left_rate > 65.0:
+			flags.append("%s vs %s is an extreme %.1f%% / %.1f%% matchup." % [
+				_deck_label(String(matchup.left_deck)),
+				_deck_label(String(matchup.right_deck)),
+				left_rate,
+				100.0 - left_rate
+			])
+	return flags
 
 
 func _deck_label(deck_id: String) -> String:

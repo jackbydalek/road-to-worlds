@@ -20,44 +20,56 @@ func show(host) -> void:
 	var preview_card_id := ""
 	if not collection_ids.is_empty():
 		preview_card_id = String(collection_ids[0])
+	var compact_workspace: bool = host._run_mode() == "season"
 
 	var summary: VBoxContainer = host._add_panel(host.content, "Deckbuilder")
-	host._add_body_text(summary, host._format_metrics(metrics))
+	host._add_body_text(summary, host._format_metrics_short(metrics) if compact_workspace else host._format_metrics(metrics))
 	host._add_body_text(summary, "Legality: " + ("Legal for selected event" if legal.ok else legal.reason))
 	_add_sort_controls(host, summary)
 
 	var columns := HBoxContainer.new()
+	columns.name = "DeckbuilderWorkspace"
 	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.custom_minimum_size = Vector2(0, 540 if compact_workspace else 0)
 	columns.add_theme_constant_override("separation", 10)
 	host.content.add_child(columns)
 
 	var collection_panel: VBoxContainer = host._add_panel(columns, "Collection")
 	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	collection_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	collection_panel.custom_minimum_size = Vector2(450 if compact_workspace else 0, 0)
+	var collection_list: VBoxContainer = collection_panel
+	if compact_workspace:
+		collection_list = _add_scroll_list(collection_panel, "DeckbuilderCollectionScroll", 475)
 	for card_id in collection_ids:
 		var owned: int = host._owned_count(card_id)
 		var available: int = host._available_count(card_id)
 		var card: Dictionary = host.cards_by_id[card_id]
-		var row_panel := _add_card_row_panel(host, collection_panel, card_id, card)
+		var row_panel := _add_card_row_panel(host, collection_list, card_id, card)
 		var row := _add_card_row_contents(row_panel)
 
 		var dot := Label.new()
-		dot.text = "●"
-		dot.tooltip_text = host._affinity_label(host._card_archetype(card))
+		dot.text = host._card_classification_symbol(card)
+		if dot.text == "":
+			dot.text = "●"
+		dot.tooltip_text = host._card_classification_label(card)
 		dot.add_theme_color_override("font_color", host._affinity_color(host._card_archetype(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
 		label.text = "%s x%d | %s %s | cost %d | %s" % [
-			card.name,
+			host._card_display_name(card),
 			owned,
 			String(card.rarity).capitalize(),
 			String(card.role).capitalize(),
 			int(card.cost),
-			host._affinity_label(host._card_archetype(card))
+			host._card_classification_label(card)
 		]
 		label.tooltip_text = card.text
 		label.add_theme_color_override("font_color", host._rarity_text_color(card.get("rarity", "common")))
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.clip_text = true
 		row.add_child(label)
 
 		var add_main: Button = host._make_button("+ Main")
@@ -66,32 +78,62 @@ func show(host) -> void:
 		host._connect_pressed(add_main, func() -> void: host._add_to_deck(main_id))
 		row.add_child(add_main)
 
-		var add_side: Button = host._make_button("+ Side")
-		add_side.disabled = available <= 0 or host._deck_total(host.run.sideboard) >= host.run_state_service.sideboard_size or host._sideboard_count(card_id) >= host._deck_limit(card_id)
-		var side_id := String(card_id)
-		host._connect_pressed(add_side, func() -> void: host._add_to_sideboard(side_id))
-		row.add_child(add_side)
+		if not compact_workspace:
+			var add_side: Button = host._make_button("+ Side")
+			add_side.name = "DeckbuilderAddSideButton"
+			add_side.disabled = available <= 0 or host._deck_total(host.run.sideboard) >= host.run_state_service.sideboard_size or host._sideboard_count(card_id) >= host._deck_limit(card_id)
+			var side_id := String(card_id)
+			host._connect_pressed(add_side, func() -> void: host._add_to_sideboard(side_id))
+			row.add_child(add_side)
 
 	var preview_panel: VBoxContainer = host._add_panel(columns, "Card Preview")
 	preview_panel.name = "DeckbuilderCardPreview"
-	preview_panel.custom_minimum_size = Vector2(260, 0)
+	preview_panel.custom_minimum_size = Vector2(270, 0)
+	preview_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var preview_body := VBoxContainer.new()
 	preview_body.name = "DeckbuilderCardPreviewBody"
 	preview_body.add_theme_constant_override("separation", 6)
 	preview_panel.add_child(preview_body)
 	_show_card_preview(host, preview_body, preview_card_id)
 
-	for row_panel in collection_panel.get_children():
+	for row_panel in collection_list.get_children():
 		if row_panel is Control and row_panel.has_meta("card_id"):
 			_bind_card_hover(host, row_panel, String(row_panel.get_meta("card_id")), preview_body)
 
 	var deck_panel: VBoxContainer = host._add_panel(columns, "Main Deck %d/%d" % [host._deck_total(host.run.deck), host.run_state_service.main_deck_size])
+	deck_panel.name = "DeckbuilderMainDeckPanel"
+	deck_panel.custom_minimum_size = Vector2(420 if compact_workspace else 0, 0)
 	deck_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(host, deck_panel, host.run.deck, true, preview_body)
+	deck_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var deck_list: VBoxContainer = deck_panel
+	if compact_workspace:
+		deck_list = _add_scroll_list(deck_panel, "DeckbuilderMainDeckScroll", 475)
+	_add_deck_list(host, deck_list, host.run.deck, true, preview_body)
 
-	var side_panel: VBoxContainer = host._add_panel(columns, "Sideboard %d/%d" % [host._deck_total(host.run.sideboard), host.run_state_service.sideboard_size])
-	side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_deck_list(host, side_panel, host.run.sideboard, false, preview_body)
+	if not compact_workspace:
+		var side_panel: VBoxContainer = host._add_panel(columns, "Sideboard %d/%d" % [host._deck_total(host.run.sideboard), host.run_state_service.sideboard_size])
+		side_panel.name = "DeckbuilderSideboardPanel"
+		side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		side_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_add_deck_list(host, side_panel, host.run.sideboard, false, preview_body)
+	if host._run_mode() == "season":
+		host._add_exit_to_store_button(host.content)
+
+
+func _add_scroll_list(parent: VBoxContainer, node_name: String, minimum_height: float) -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.name = node_name
+	scroll.custom_minimum_size = Vector2(0, minimum_height)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	parent.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.name = node_name + "List"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 3)
+	scroll.add_child(list)
+	return list
 
 
 func _add_deck_list(host, parent: VBoxContainer, deck: Dictionary, is_main: bool, preview_body: VBoxContainer = null) -> void:
@@ -107,14 +149,16 @@ func _add_deck_list(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 		var row := _add_card_row_contents(row_panel)
 
 		var dot := Label.new()
-		dot.text = "●"
-		dot.tooltip_text = host._affinity_label(host._card_archetype(card))
+		dot.text = host._card_classification_symbol(card)
+		if dot.text == "":
+			dot.text = "●"
+		dot.tooltip_text = host._card_classification_label(card)
 		dot.add_theme_color_override("font_color", host._affinity_color(host._card_archetype(card)))
 		row.add_child(dot)
 
 		var label := Label.new()
 		label.text = "%s x%d | %s | cost %d" % [
-			card.name,
+			host._card_display_name(card),
 			int(deck[card_id]),
 			String(card.rarity).capitalize(),
 			int(card.cost)
@@ -122,6 +166,7 @@ func _add_deck_list(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 		label.tooltip_text = card.text
 		label.add_theme_color_override("font_color", host._rarity_text_color(card.get("rarity", "common")))
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.clip_text = true
 		row.add_child(label)
 
 		var button: Button = host._make_button("−")
@@ -187,20 +232,19 @@ func _show_card_preview(host, preview_body: VBoxContainer, card_id: String) -> v
 	var card: Dictionary = host.cards_by_id[card_id]
 	var panel: VBoxContainer = host._add_bordered_panel(
 		preview_body,
-		String(card.get("name", card_id)),
+		host._card_display_name(card),
 		"#202734",
 		"#" + host._affinity_color(host._card_archetype(card)).to_html(false),
 		2
 	)
-	host._add_body_text(panel, "%s %s | %s" % [
-		String(card.get("archetype", "neutral")).capitalize(),
-		String(card.get("card_type", "card")).capitalize(),
+	host._add_body_text(panel, "%s | %s" % [
+		host._card_descriptor(card),
 		String(card.get("rarity", "common")).capitalize()
 	])
 	if card.has("attack") and card.has("health"):
 		host._add_body_text(panel, "%d Attack | %d Health" % [int(card.attack), int(card.health)])
 	if String(card.get("card_type", "")) == "meal":
-		host._add_body_text(panel, "Recipe: %s" % " + ".join(card.get("recipe", [])))
+		host._add_body_text(panel, "Recipe: %s" % host._format_affinity_requirements(card.get("recipe", [])))
 	host._add_body_text(panel, String(card.get("text", "No rules text.")))
 
 
