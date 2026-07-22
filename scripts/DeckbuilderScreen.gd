@@ -230,6 +230,13 @@ func _show_card_preview(host, preview_body: VBoxContainer, card_id: String) -> v
 		return
 
 	var card: Dictionary = host.cards_by_id[card_id]
+	if host._card_uses_authored_face(card):
+		var face_center := CenterContainer.new()
+		face_center.name = "DeckbuilderAuthoredCardFace"
+		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		preview_body.add_child(face_center)
+		face_center.add_child(host._make_card_face(card, Vector2(250, 355), true))
+		return
 	var panel: VBoxContainer = host._add_bordered_panel(
 		preview_body,
 		host._card_display_name(card),

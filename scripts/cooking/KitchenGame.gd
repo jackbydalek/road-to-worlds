@@ -1,6 +1,7 @@
 extends Control
 
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
+const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 
 signal match_finished(result: Dictionary)
 signal exit_requested
@@ -31,6 +32,8 @@ var configured_seed := 1
 var configured_first_side := "player"
 var configured_exit_label := "Return"
 var configured_ai_difficulty := "easy"
+var configured_card_border_id := "white"
+var configured_match_context: Dictionary = {}
 var result_emitted := false
 var rendered_visual_snapshot: Dictionary = {}
 var unit_visual_nodes: Dictionary = {}
@@ -42,13 +45,16 @@ var drag_highlight_restore: Array[Dictionary] = []
 var active_drag_payload: Dictionary = {}
 var active_drag_source: Control
 var drag_drop_accepted := false
+var hand_action_overlay: PanelContainer
+var hand_action_index := -1
+var hand_action_card_id := ""
 var floating_feedback: PanelContainer
 var opponent_hand_visual: Control
 var opponent_sequence_running := false
 var opponent_sequence_generation := 0
 
 
-func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_name: String, opponent_name: String, seed: int, first_side: String = "player", exit_label: String = "Return", ai_difficulty: String = "easy") -> void:
+func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_name: String, opponent_name: String, seed: int, first_side: String = "player", exit_label: String = "Return", ai_difficulty: String = "easy", card_border_id: String = "white", match_context: Dictionary = {}) -> void:
 	season_match = true
 	configured_player_deck = player_deck.duplicate(true)
 	configured_opponent_deck = opponent_deck.duplicate(true)
@@ -58,6 +64,8 @@ func configure_match(player_deck: Dictionary, opponent_deck: Dictionary, player_
 	configured_first_side = first_side
 	configured_exit_label = exit_label
 	configured_ai_difficulty = ai_difficulty
+	configured_card_border_id = card_border_id
+	configured_match_context = match_context.duplicate(true)
 
 
 func _ready() -> void:
@@ -116,6 +124,7 @@ func _new_game(requested_deck_id: String = "") -> void:
 	opponent_sequence_generation += 1
 	opponent_sequence_running = false
 	inspected_card = {}
+	_close_hand_action_overlay()
 	var deck_ids: Array[String] = service.available_deck_ids()
 	if requested_deck_id != "":
 		player_deck_id = requested_deck_id
@@ -170,7 +179,12 @@ func _resolve_player_reaction(hand_index: int) -> void:
 func _refresh() -> void:
 	if root_box == null:
 		return
+	_close_hand_action_overlay()
 	var visual_events := _collect_visual_events(rendered_visual_snapshot, _capture_visual_snapshot())
+	# The classic debug presentation keeps its legacy 2D transitions, but it must
+	# acknowledge the production rules event stream so queued events never leak
+	# into a later Living Table consumer or persisted match.
+	service.clear_animation_events(state)
 	_capture_removed_event_geometry(visual_events)
 	if is_instance_valid(inspect_overlay):
 		inspect_overlay.get_parent().remove_child(inspect_overlay)
@@ -497,8 +511,10 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 	var panel := PanelContainer.new()
 	var side_label := "Player" if is_player else "Opponent"
 	var zone_label := "Plated" if zone_name == "plated" else "Prep"
+	var data: Dictionary = {} if unit.is_empty() else service.card(String(unit.card_id))
+	var authored_face: bool = not data.is_empty() and CARD_FACE_SCRIPT.supports_card(data)
 	panel.name = "Cooking%s%sSlot_%d" % [side_label, zone_label, slot_index]
-	panel.custom_minimum_size = Vector2(154 if zone_name == "plated" else 142, 72)
+	panel.custom_minimum_size = Vector2(180 if zone_name == "plated" else 176, 86) if authored_face else Vector2(154 if zone_name == "plated" else 142, 72)
 	var zone_color := Color("#ec7130")
 	var choice_targets: Array[int] = service.choice_target_ids(state)
 	var selected: bool = not unit.is_empty() and (
@@ -528,12 +544,24 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 1)
-	margin.add_child(box)
-	var data: Dictionary = service.card(String(unit.card_id))
+	if authored_face:
+		var card_layout := HBoxContainer.new()
+		card_layout.add_theme_constant_override("separation", 4)
+		margin.add_child(card_layout)
+		var card_face := CARD_FACE_SCRIPT.new()
+		card_face.name = "Cooking%s%sAuthoredFace_%d" % [side_label, zone_label, slot_index]
+		card_face.configure(data, configured_card_border_id, true, true)
+		card_face.custom_minimum_size = Vector2(54, 77)
+		card_layout.add_child(card_face)
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card_layout.add_child(box)
+	else:
+		margin.add_child(box)
 	_add_inspect_header(box, data, "player" if is_player else "opponent", zone_name, int(unit.instance_id))
-	var meta := "%s  •  %d/%d" % [String(unit.card_type).to_upper(), int(unit.attack), int(unit.health)]
+	var meta := "%d/%d" % [int(unit.attack), int(unit.health)] if authored_face else "%s  •  %d/%d" % [String(unit.card_type).to_upper(), int(unit.attack), int(unit.health)]
 	if String(unit.card_type) == "ingredient":
-		meta += "  •  " + service.ingredient_recipe_status(state.player if is_player else state.opponent, unit)
+		var recipe_status: String = service.ingredient_recipe_status(state.player if is_player else state.opponent, unit)
+		meta += "  •  " + ("READY" if authored_face and recipe_status == "RECIPE READY" else recipe_status)
 	box.add_child(_label(meta, 10, Color("#fff2cf")))
 	if not unit.get("spices", []).is_empty():
 		box.add_child(_label("Spice: " + String(service.card(String(unit.spices[0])).get("name", unit.spices[0])), 10, Color("#ffe58a")))
@@ -549,10 +577,23 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 		box.add_child(ready_badge)
 	elif is_player and zone_name == "plated":
 		box.add_child(_label("○ SPENT / NOT READY", 10, Color("#d7c7b5")))
-	_build_unit_actions(box, unit, zone_name, is_player)
+	_build_unit_actions(box, unit, zone_name, is_player, authored_face)
 
 
-func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_player: bool) -> void:
+func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_player: bool, compact_layout: bool = false) -> void:
+	var pending_meal: Dictionary = state.get("pending_meal", {})
+	if not pending_meal.is_empty():
+		if is_player and service.meal_selectable_ingredient_ids(state).has(int(unit.instance_id)):
+			var selected_for_meal: bool = state.get("selected_ingredients", []).has(int(unit.instance_id))
+			var recipe_choice := _button("Selected" if selected_for_meal else "Use Ingredient", true)
+			recipe_choice.name = "CookingMealIngredient_%d" % int(unit.instance_id)
+			var recipe_ingredient_id := int(unit.instance_id)
+			recipe_choice.pressed.connect(func() -> void:
+				service.toggle_ingredient_selection(state, recipe_ingredient_id)
+				call_deferred("_refresh")
+			, CONNECT_DEFERRED)
+			parent.add_child(recipe_choice)
+		return
 	if not state.get("pending_discard", {}).is_empty():
 		return
 	if not state.get("pending_search", {}).is_empty():
@@ -596,8 +637,17 @@ func _build_unit_actions(parent: Node, unit: Dictionary, zone_name: String, is_p
 			, CONNECT_DEFERRED)
 			parent.add_child(battle)
 		return
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 2)
+	var row: Container
+	if compact_layout:
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 2)
+		grid.add_theme_constant_override("v_separation", 1)
+		row = grid
+	else:
+		var horizontal_row := HBoxContainer.new()
+		horizontal_row.add_theme_constant_override("separation", 2)
+		row = horizontal_row
 	parent.add_child(row)
 	for ability in service.card(String(unit.card_id)).get("abilities", []):
 		if String(ability.get("timing", "")) != "activated":
@@ -714,7 +764,7 @@ func _build_hand(parent: Control) -> void:
 	var pending: Dictionary = state.get("pending_discard", {})
 	var pending_search: Dictionary = state.get("pending_search", {})
 	var pending_choice: Dictionary = state.get("pending_choice", {})
-	var hand_heading := "YOUR HAND — drag units to Prep/Plated • drag Spices onto cards • drag Environments to their zone"
+	var hand_heading := "YOUR HAND — drag cards to play • click a card for actions"
 	if not pending.is_empty():
 		hand_heading = "SELECT DISCARD COST — %d/%d selected" % [pending.get("selected_indices", []).size(), int(pending.get("required", 0))]
 	elif String(pending_choice.get("choice_kind", "")) == "discard":
@@ -892,12 +942,13 @@ func _add_search_choice(parent: Node, card_id: String, can_take: bool = true, re
 
 func _add_hand_card(parent: Node, hand_index: int, card_id: String) -> void:
 	var data: Dictionary = service.card(card_id)
+	var authored_face: bool = CARD_FACE_SCRIPT.supports_card(data)
 	var pending: Dictionary = state.get("pending_discard", {})
 	var selected_for_discard: bool = not pending.is_empty() and pending.get("selected_indices", []).has(hand_index)
 	var panel := PanelContainer.new()
 	panel.name = "CookingHandCard_%d" % hand_index
-	panel.custom_minimum_size = Vector2(180, 100)
-	panel.pivot_offset = Vector2(90, 96)
+	panel.custom_minimum_size = Vector2(116, 163) if authored_face else Vector2(150, 118)
+	panel.pivot_offset = Vector2(58, 159) if authored_face else Vector2(75, 114)
 	var fan_offset := float(hand_index) - float(state.player.hand.size() - 1) * 0.5
 	var fan_rotation := clampf(fan_offset * 0.02, -0.08, 0.08)
 	panel.rotation = fan_rotation
@@ -912,69 +963,166 @@ func _add_hand_card(parent: Node, hand_index: int, card_id: String) -> void:
 	parent.add_child(panel)
 	hand_visual_nodes[hand_index] = panel
 	_wire_hand_card_drag(panel, hand_index, card_id)
-	_bind_card_panel_inspection(panel, card_id, "player", "hand")
+	_bind_hand_card_action_toggle(panel, hand_index, card_id)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 5)
-	margin.add_theme_constant_override("margin_right", 5)
-	margin.add_theme_constant_override("margin_top", 3)
-	margin.add_theme_constant_override("margin_bottom", 3)
+	margin.add_theme_constant_override("margin_left", 2 if authored_face else 5)
+	margin.add_theme_constant_override("margin_right", 2 if authored_face else 5)
+	margin.add_theme_constant_override("margin_top", 2 if authored_face else 3)
+	margin.add_theme_constant_override("margin_bottom", 2 if authored_face else 3)
 	panel.add_child(margin)
+	if authored_face:
+		var card_face := CARD_FACE_SCRIPT.new()
+		card_face.name = "CookingHandAuthoredFace_%d" % hand_index
+		card_face.configure(data, configured_card_border_id, true, false)
+		card_face.custom_minimum_size = Vector2(112, 159)
+		margin.add_child(card_face)
+		return
 	var box := VBoxContainer.new()
 	margin.add_child(box)
-	_add_inspect_header(box, data, "player", "hand")
+	var name_label := _label(AFFINITY_VISUALS.card_display_name(data), 14, Color.WHITE)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(name_label)
 	if bool(data.get("rare", false)):
 		box.add_child(_label("RARE", 9, Color("#ffe477")))
 	var rules := String(data.get("text", ""))
 	if String(data.card_type) == "meal":
 		rules = service.recipe_status(state, card_id)
-	box.add_child(_label(rules, 10, Color("#fff0d4")))
+	var rules_label := _label(rules, 10, Color("#fff0d4"))
+	rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(rules_label)
+
+
+func _bind_hand_card_action_toggle(panel: Control, hand_index: int, card_id: String) -> void:
+	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	panel.tooltip_text = "Drag to play • click for card actions"
+	var click_state := {"tracking": false, "origin": Vector2.ZERO}
+	panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				click_state.tracking = true
+				click_state.origin = event.position
+			elif bool(click_state.tracking):
+				click_state.tracking = false
+				if event.position.distance_to(Vector2(click_state.origin)) <= 8.0:
+					_toggle_hand_card_actions(panel, hand_index, card_id)
+					_show_card_inspector_immediately(card_id, "player", "hand")
+					panel.accept_event()
+		elif event is InputEventMouseMotion and bool(click_state.tracking) and event.position.distance_to(Vector2(click_state.origin)) > 8.0:
+			click_state.tracking = false
+	)
+
+
+func _toggle_hand_card_actions(panel: Control, hand_index: int, card_id: String) -> void:
+	if is_instance_valid(hand_action_overlay) and hand_action_index == hand_index and hand_action_card_id == card_id:
+		_close_hand_action_overlay()
+		return
+	_close_hand_action_overlay()
+	if not is_instance_valid(panel) or hand_index < 0 or hand_index >= state.player.hand.size():
+		return
+	if String(state.player.hand[hand_index]) != card_id:
+		return
+	var data: Dictionary = service.card(card_id)
+	var overlay := PanelContainer.new()
+	overlay.name = "CookingHandActions_%d" % hand_index
+	overlay.z_index = 220
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_theme_stylebox_override("panel", _raised_panel_style(Color("#f4ead7f2"), Color("#173e52"), 2, 9, 5))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 6)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_top", 5)
+	margin.add_theme_constant_override("margin_bottom", 5)
+	overlay.add_child(margin)
 	var row := HBoxContainer.new()
-	box.add_child(row)
+	row.add_theme_constant_override("separation", 5)
+	margin.add_child(row)
+	_add_hand_action_buttons(row, hand_index, card_id, data)
+	if row.get_child_count() == 0:
+		overlay.free()
+		return
+	var effects_parent := _effects_parent()
+	effects_parent.add_child(overlay)
+	overlay.size = overlay.get_combined_minimum_size()
+	var source_rect := panel.get_global_rect()
+	var desired_global := Vector2(source_rect.get_center().x - overlay.size.x * 0.5, source_rect.position.y - overlay.size.y - 7.0)
+	var viewport_size := Vector2(get_viewport_rect().size)
+	desired_global.x = clampf(desired_global.x, 8.0, maxf(8.0, viewport_size.x - overlay.size.x - 8.0))
+	desired_global.y = maxf(54.0, desired_global.y)
+	overlay.global_position = desired_global
+	hand_action_overlay = overlay
+	hand_action_index = hand_index
+	hand_action_card_id = card_id
+
+
+func _add_hand_action_buttons(parent: HBoxContainer, hand_index: int, card_id: String, data: Dictionary) -> void:
 	if not state.get("pending_choice", {}).is_empty():
 		return
+	var pending: Dictionary = state.get("pending_discard", {})
 	if not pending.is_empty():
 		if hand_index == int(pending.get("hand_index", -1)):
-			var pending_item := _button("Item Pending", true)
+			var pending_item := _hand_card_action_button("Item Pending")
 			pending_item.name = "CookingPendingDiscardItem"
 			pending_item.disabled = true
-			row.add_child(pending_item)
+			parent.add_child(pending_item)
 		else:
-			var discard_choice := _button("Selected" if selected_for_discard else "Select Discard", true)
+			var selected_for_discard: bool = pending.get("selected_indices", []).has(hand_index)
+			var discard_choice := _hand_card_action_button("Selected" if selected_for_discard else "Select Discard")
 			discard_choice.name = "CookingDiscardChoice_%d" % hand_index
 			var selected_hand_index := hand_index
 			discard_choice.pressed.connect(func() -> void:
 				service.toggle_discard_card(state, selected_hand_index)
 				call_deferred("_refresh")
 			, CONNECT_DEFERRED)
-			row.add_child(discard_choice)
+			parent.add_child(discard_choice)
 		return
-	if String(data.card_type) == "ingredient":
-		for destination in ["prep", "plated"]:
-			var play := _button("Play " + destination.capitalize(), true)
-			var selected_destination := String(destination)
+	match String(data.get("card_type", "")):
+		"ingredient":
+			for destination in ["prep", "plated"]:
+				var play := _hand_card_action_button(destination.capitalize())
+				play.tooltip_text = "Play %s to %s" % [String(data.get("name", card_id)), destination.capitalize()]
+				var selected_destination := String(destination)
+				play.pressed.connect(func() -> void:
+					service.play_card(state, hand_index, selected_destination)
+					call_deferred("_refresh")
+				, CONNECT_DEFERRED)
+				parent.add_child(play)
+		"meal":
+			for destination in ["prep", "plated"]:
+				var serve := _hand_card_action_button("Serve " + destination.capitalize())
+				serve.disabled = bool(state.player.get("meal_served", false))
+				var selected_destination := String(destination)
+				serve.pressed.connect(func() -> void:
+					service.play_card(state, hand_index, selected_destination)
+					call_deferred("_refresh")
+				, CONNECT_DEFERRED)
+				parent.add_child(serve)
+		_:
+			var play := _hand_card_action_button(_hand_action_label(String(data.get("card_type", ""))))
+			play.name = "CookingPlayHandCard_%d_%s" % [hand_index, card_id]
 			play.pressed.connect(func() -> void:
-				service.play_card(state, hand_index, selected_destination)
+				service.play_card(state, hand_index)
 				call_deferred("_refresh")
 			, CONNECT_DEFERRED)
-			row.add_child(play)
-	elif String(data.card_type) == "meal":
-		for destination in ["prep", "plated"]:
-			var serve := _button("Serve " + destination.capitalize(), true)
-			serve.disabled = bool(state.player.get("meal_served", false))
-			var selected_destination := String(destination)
-			serve.pressed.connect(func() -> void:
-				service.play_card(state, hand_index, selected_destination)
-				call_deferred("_refresh")
-			, CONNECT_DEFERRED)
-			row.add_child(serve)
-	else:
-		var play := _button(_hand_action_label(String(data.card_type)), true)
-		play.name = "CookingPlayHandCard_%d_%s" % [hand_index, card_id]
-		play.pressed.connect(func() -> void:
-			service.play_card(state, hand_index)
-			call_deferred("_refresh")
-		, CONNECT_DEFERRED)
-		row.add_child(play)
+			parent.add_child(play)
+
+
+func _hand_card_action_button(text: String) -> Button:
+	var button := _button(text, true)
+	button.custom_minimum_size = Vector2(62, 28)
+	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_stylebox_override("normal", _panel_style(Color("#255c70"), Color("#123b4b"), 1, 8))
+	button.add_theme_stylebox_override("hover", _panel_style(Color("#3181a1"), Color("#f3c765"), 1, 8))
+	button.add_theme_stylebox_override("pressed", _panel_style(Color("#173e52"), Color("#f3c765"), 1, 8))
+	return button
+
+
+func _close_hand_action_overlay() -> void:
+	if is_instance_valid(hand_action_overlay):
+		hand_action_overlay.get_parent().remove_child(hand_action_overlay)
+		hand_action_overlay.queue_free()
+	hand_action_overlay = null
+	hand_action_index = -1
+	hand_action_card_id = ""
 
 
 func _build_action_bar(parent: Control) -> void:
@@ -1013,6 +1161,27 @@ func _build_action_bar(parent: Control) -> void:
 			_resolve_player_reaction(-1)
 		, CONNECT_DEFERRED)
 		row.add_child(pass_reaction)
+		return
+	var pending_meal: Dictionary = state.get("pending_meal", {})
+	if not pending_meal.is_empty():
+		var meal_status := _label(String(state.message), 14, Color("#30454d"))
+		meal_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(meal_status)
+		var cancel_meal := _button("Cancel")
+		cancel_meal.name = "CookingCancelMealButton"
+		cancel_meal.pressed.connect(func() -> void:
+			service.cancel_meal_play(state)
+			call_deferred("_refresh")
+		, CONNECT_DEFERRED)
+		row.add_child(cancel_meal)
+		var confirm_meal := _button("Serve Meal")
+		confirm_meal.name = "CookingConfirmMealButton"
+		confirm_meal.disabled = not service.meal_selection_is_ready(state)
+		confirm_meal.pressed.connect(func() -> void:
+			service.confirm_meal_play(state)
+			call_deferred("_refresh")
+		, CONNECT_DEFERRED)
+		row.add_child(confirm_meal)
 		return
 	var pending: Dictionary = state.get("pending_discard", {})
 	if not pending.is_empty():
@@ -1135,6 +1304,7 @@ func _wire_hand_card_drag(control: Control, hand_index: int, card_id: String) ->
 			var data: Dictionary = service.card(card_id)
 			if String(data.get("card_type", "")) not in ["ingredient", "meal", "spice", "environment"]:
 				return null
+			_close_hand_action_overlay()
 			var payload: Dictionary = {"kind": "hand_card", "hand_index": hand_index, "card_id": card_id}
 			_begin_drag_feedback(payload, control)
 			control.set_drag_preview(_make_drag_preview(card_id, "From your hand"))
@@ -1319,18 +1489,20 @@ func _resolve_drag_hand_index(data: Dictionary) -> int:
 
 
 func _dragging_allowed() -> bool:
-	return String(state.get("phase", "")) == "player_main" and not bool(state.get("game_over", false)) and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
+	return String(state.get("phase", "")) == "player_main" and not bool(state.get("game_over", false)) and state.get("pending_meal", {}).is_empty() and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
 
 
 func _unit_is_visibly_ready(unit: Dictionary, zone_name: String, is_player: bool) -> bool:
 	var can_attack_here := zone_name == "plated" or bool(service.card(String(unit.get("card_id", ""))).get("can_attack_from_prep", false))
-	return is_player and not unit.is_empty() and can_attack_here and bool(unit.get("ready", false)) and String(state.get("phase", "")) == "player_main" and not service._opening_attack_lock(state, "player") and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
+	return is_player and not unit.is_empty() and can_attack_here and bool(unit.get("ready", false)) and String(state.get("phase", "")) == "player_main" and not service._opening_attack_lock(state, "player") and state.get("pending_meal", {}).is_empty() and state.get("pending_discard", {}).is_empty() and state.get("pending_ability", {}).is_empty() and state.get("pending_search", {}).is_empty() and state.get("pending_choice", {}).is_empty() and state.get("pending_reaction", {}).is_empty()
 
 
 func _is_obvious_legal_target(unit: Dictionary, zone_name: String, is_player: bool) -> bool:
 	if unit.is_empty():
 		return false
 	var instance_id := int(unit.get("instance_id", -1))
+	if is_player and service.meal_selectable_ingredient_ids(state).has(instance_id):
+		return true
 	if service.choice_target_ids(state).has(instance_id):
 		return true
 	var pending_ability: Dictionary = state.get("pending_ability", {})
@@ -1915,6 +2087,14 @@ func _finish_floating_feedback(feedback_instance_id: int) -> void:
 
 func _make_drag_preview(card_id: String, location: String) -> Control:
 	var data: Dictionary = service.card(card_id)
+	if CARD_FACE_SCRIPT.supports_card(data):
+		var full_card := CARD_FACE_SCRIPT.new()
+		full_card.name = "CookingFullCardDragPreview"
+		full_card.configure(data, configured_card_border_id, true, false)
+		full_card.custom_minimum_size = Vector2(120, 170)
+		full_card.size = Vector2(120, 170)
+		full_card.modulate = Color(1, 1, 1, 0.96)
+		return full_card
 	var preview := PanelContainer.new()
 	preview.custom_minimum_size = Vector2(175, 78)
 	preview.modulate = Color(1, 1, 1, 0.94)
@@ -1982,6 +2162,23 @@ func _open_card_inspector(card_id: String, side: String, zone_name: String, inst
 	call_deferred("_refresh")
 
 
+func _show_card_inspector_immediately(card_id: String, side: String, zone_name: String, instance_id: int = -1) -> void:
+	inspected_card = {
+		"card_id": card_id,
+		"side": side,
+		"zone": zone_name,
+		"instance_id": instance_id
+	}
+	if is_instance_valid(inspect_overlay):
+		inspect_overlay.get_parent().remove_child(inspect_overlay)
+		inspect_overlay.queue_free()
+	inspect_overlay = null
+	if use_authored_arena:
+		_build_inspect_overlay(arena_anchors.InspectionAnchor, true)
+	else:
+		_build_inspect_overlay(self, false)
+
+
 func _build_inspect_overlay(parent: Control, authored_layout: bool) -> void:
 	if inspected_card.is_empty():
 		return
@@ -2033,6 +2230,17 @@ func _build_inspect_overlay(parent: Control, authored_layout: bool) -> void:
 		call_deferred("_refresh")
 	, CONNECT_DEFERRED)
 	top_row.add_child(close)
+
+	if CARD_FACE_SCRIPT.supports_card(data):
+		var face_center := CenterContainer.new()
+		face_center.name = "CookingInspectCardFace"
+		face_center.custom_minimum_size = Vector2(0, 270)
+		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_child(face_center)
+		var card_face := CARD_FACE_SCRIPT.new()
+		card_face.configure(data, configured_card_border_id, true)
+		card_face.custom_minimum_size = Vector2(184, 262)
+		face_center.add_child(card_face)
 
 	var name_label := _label(AFFINITY_VISUALS.card_display_name(data), 25, Color("#fff4df"))
 	name_label.name = "CookingInspectName"

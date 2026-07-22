@@ -279,6 +279,12 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 	face.set_anchors_preset(Control.PRESET_FULL_RECT)
 	face.add_theme_stylebox_override("panel", _card_style(host, rarity, revealed))
 	slot.add_child(face)
+	if revealed and host._card_uses_authored_face(card):
+		var authored_face: Control = host._make_card_face(card, CARD_SLOT_SIZE, true)
+		authored_face.name = "PackAuthoredCardFace%d" % index
+		authored_face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face.add_child(authored_face)
+		return
 
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE

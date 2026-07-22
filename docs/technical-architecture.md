@@ -23,18 +23,24 @@ Season Deck Edit is a fixed-height workspace rather than a scrolling page. Colle
 
 ## Kitchen Match
 
-`scenes/KitchenGame.tscn` loads `KitchenGame.gd`, which owns board presentation, drag-and-drop, selection panels, and card inspection. `CookingCombatService.gd` owns match state, legal actions, effects, combat, and AI.
+`scenes/Tabletop3DPrototype.tscn` loads `Tabletop3DPrototype.gd` as the sole runtime match presentation for tournaments, resumed rounds, and Debug Sandbox practice. It owns the angled board, physical card interaction, animated artwork, selection panels, full-card deck-search and discard trays, card inspection, and the collapsible battle log. Item discard costs are paid directly from the physical hand: hand-card clicks toggle highlighted selections while Confirm and Cancel remain in the bottom status bar. Decks, discard piles, Environments, and attached Spices are rendered from live combat state as physical table objects. Chef and Item cards use the shared discard pile after resolving instead of occupying dedicated table bays. The retired classic scene is no longer referenced by the campaign controller. `CookingCombatService.gd` remains the sole owner of match state, legal actions, effects, combat, and AI.
 
 For a tournament round, the shell:
 
 1. Builds the player deck from the active run.
-2. Builds an opponent deck from the selected archetype and event difficulty.
-3. Configures the authored 3D Kitchen Game instance before adding it to the scene tree.
-4. Passes the seed, opening side, and event-scaled Easy/Medium/Hard AI tier.
+2. Builds an opponent deck from the selected archetype, then applies Medium/Hard/Expert card upgrades while preserving size, copy limits, and card-type ratios.
+3. Configures the Living Table instance before adding it to the scene tree, including the two exact deck dictionaries.
+4. Passes the seed, opening side, event name, round number, run border, and event-scaled Easy/Medium/Hard/Expert AI tier.
 5. Receives a `match_finished` result containing winner, turn, and remaining life.
-6. Records that result into the active tournament and advances or finishes the event.
+6. Records that result into the active tournament, then advances the round or finishes the event and awards its money and packs.
 
-The same bridge launches practice matches from the Debug Sandbox.
+The same bridge launches practice matches from the Debug Sandbox; it has no renderer-selection flag or classic fallback.
+
+### Combat animation events
+
+`CookingCombatService.gd` writes presentation-neutral events to `state.animation_events` as rules mutations occur. Draws, plays, moves, sacrifices, searches, healing, buffs, damage, attacks, and destruction carry stable card or instance IDs plus their source, target, amount, and destination. Related events share a positive `group_id`; this lets area damage, simultaneous combat damage, recipe sacrifices, and play-triggered effects animate together without reconstructing changes from old and new state snapshots. The Living Table drains and presents these events in order.
+
+Physical card faces are cached once per unique card in a match. Their SubViewports use `UPDATE_ONCE`; static cards stop rendering after their first frame, while animated artwork emits a change signal at its authored frame rate to request one additional redraw. Multiple physical copies share the same material and viewport texture.
 
 ## Content Boundary
 
@@ -45,6 +51,6 @@ The same bridge launches practice matches from the Debug Sandbox.
 - `KitchenGameSmokeTest.gd` covers match rules, effects, selection workflows, inspection, and drag-and-drop.
 - `SeasonShellSmokeTest.gd` covers content adaptation, debug navigation, shop generation, booster collection updates, deckbuilder, metagame, calendar, live Kitchen Match launch, tournament records, and event unlocking.
 - `AutosaveSmokeTest.gd` covers versioned checkpoints, the animated indicator, backup recovery, resume-screen metadata, and interrupted-match reconstruction.
-- `StarterBalanceSimulation.gd` runs every ordered pairing of the five starters through the production AI, including response windows and expansion mechanics, and reports seat-neutral matchups plus balance flags. Pass `--ai=easy`, `--ai=medium`, or `--ai=hard` to validate a particular policy. Automated defenders use the first eligible response whenever a Hand Trap or damage-response window opens; results are a consistent tuning baseline, not a substitute for skilled human play.
+- `StarterBalanceSimulation.gd` runs every ordered pairing of the five starters through the production AI, including response windows and expansion mechanics, and reports seat-neutral matchups plus balance flags. Pass `--ai=easy`, `--ai=medium`, `--ai=hard`, or `--ai=expert` to validate a particular policy. Expert AI searches two plays ahead, evaluates passing, uses known opposing hand and upcoming-deck information, preserves low-value reactions, and chooses higher-value search and discard options. Automated player-side defenders in the simulator still use the first eligible response whenever a Hand Trap or damage-response window opens; results are a consistent tuning baseline, not a substitute for skilled human play.
 
 The retired fish combat service, old manual-combat UI, and mana/threat card renderer are intentionally absent.

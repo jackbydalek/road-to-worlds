@@ -121,57 +121,83 @@ func season_round_first_side(host) -> String:
 
 func ai_difficulty_for_round(host, event: Dictionary, round_number: int) -> String:
 	var event_index: int = max(0, host._season_event_index(String(event.get("id", "weekly_locals"))))
-	var tier := "hard"
+	var tier := "expert"
 	if event_index == 0:
 		tier = "easy" if round_number <= 1 else "medium"
 	elif event_index == 1:
-		tier = "medium" if round_number <= 2 else "hard"
+		tier = "hard" if round_number <= 2 else "expert"
 	if host._run_difficulty_id() == "blue":
 		if tier == "easy":
 			tier = "medium"
 		elif tier == "medium":
 			tier = "hard"
+		elif tier == "hard":
+			tier = "expert"
 	return tier
 
 
-func opponent_deck_for_round(host, opponent_archetype: String, round_number: int, event: Dictionary = {}) -> Dictionary:
+func opponent_deck_for_round(
+	host,
+	opponent_archetype: String,
+	round_number: int,
+	event: Dictionary = {},
+	ai_difficulty: String = "easy"
+) -> Dictionary:
 	var opponent_deck: Dictionary = host._deck_entries_to_dict(host.archetypes_by_id[opponent_archetype].get("starterDeck", []))
-	var event_index: int = max(0, host._season_event_index(String(event.get("id", "weekly_locals"))))
-	if host._run_mode() == "season" and event_index > 0:
-		_upgrade_opponent_deck_for_difficulty(host, opponent_deck, opponent_archetype, round_number + event_index)
-	if host._run_difficulty_id() == "blue":
-		_upgrade_opponent_deck_for_difficulty(host, opponent_deck, opponent_archetype, round_number)
+	var upgrade_count := _deck_upgrade_count_for_ai(ai_difficulty)
+	if upgrade_count > 0:
+		_upgrade_opponent_deck_for_difficulty(host, opponent_deck, opponent_archetype, upgrade_count)
 	return opponent_deck
 
 
-func _upgrade_opponent_deck_for_difficulty(host, opponent_deck: Dictionary, opponent_archetype: String, round_number: int) -> void:
-	var upgrade_count: int = clamp(1 + round_number, 2, 4)
+func _deck_upgrade_count_for_ai(ai_difficulty: String) -> int:
+	match ai_difficulty:
+		"expert":
+			return 8
+		"hard":
+			return 6
+		"medium":
+			return 3
+	return 0
+
+
+func _upgrade_opponent_deck_for_difficulty(host, opponent_deck: Dictionary, opponent_archetype: String, upgrade_count: int) -> void:
 	var candidates: Array = _opponent_upgrade_candidates(host, opponent_archetype)
-	var remove_ids: Array = opponent_deck.keys()
-	remove_ids.sort_custom(func(a, b) -> bool: return _opponent_card_upgrade_score(host, String(a)) < _opponent_card_upgrade_score(host, String(b)))
-	var remove_cursor := 0
-	var upgrades_added := 0
-	for candidate_id_value in candidates:
-		if upgrades_added >= upgrade_count:
+	for unused_upgrade in range(upgrade_count):
+		var best_swap := _best_opponent_deck_upgrade(host, opponent_deck, candidates)
+		if best_swap.is_empty():
 			return
-		var candidate_id := String(candidate_id_value)
-		var limit: int = host._deck_limit(candidate_id)
-		if int(opponent_deck.get(candidate_id, 0)) >= limit:
+		var remove_id := String(best_swap.remove_id)
+		var add_id := String(best_swap.add_id)
+		opponent_deck[remove_id] = int(opponent_deck[remove_id]) - 1
+		if int(opponent_deck[remove_id]) <= 0:
+			opponent_deck.erase(remove_id)
+		opponent_deck[add_id] = int(opponent_deck.get(add_id, 0)) + 1
+
+
+func _best_opponent_deck_upgrade(host, opponent_deck: Dictionary, candidates: Array) -> Dictionary:
+	var best_swap: Dictionary = {}
+	var best_improvement := 0.0
+	for remove_id_value in opponent_deck.keys():
+		var remove_id := String(remove_id_value)
+		if int(opponent_deck.get(remove_id, 0)) <= 0 or not host.cards_by_id.has(remove_id):
 			continue
-		var removed := false
-		while remove_cursor < remove_ids.size():
-			var remove_id := String(remove_ids[remove_cursor])
-			if int(opponent_deck.get(remove_id, 0)) > 0 and remove_id != candidate_id:
-				opponent_deck[remove_id] = int(opponent_deck[remove_id]) - 1
-				if int(opponent_deck[remove_id]) <= 0:
-					opponent_deck.erase(remove_id)
-				removed = true
-				break
-			remove_cursor += 1
-		if not removed:
-			return
-		opponent_deck[candidate_id] = int(opponent_deck.get(candidate_id, 0)) + 1
-		upgrades_added += 1
+		var remove_card: Dictionary = host.cards_by_id[remove_id]
+		var remove_type := String(remove_card.get("card_type", ""))
+		var remove_score := _opponent_card_upgrade_score(host, remove_id)
+		for candidate_id_value in candidates:
+			var candidate_id := String(candidate_id_value)
+			if candidate_id == remove_id or not host.cards_by_id.has(candidate_id):
+				continue
+			if String(host.cards_by_id[candidate_id].get("card_type", "")) != remove_type:
+				continue
+			if int(opponent_deck.get(candidate_id, 0)) >= host._deck_limit(candidate_id):
+				continue
+			var improvement := _opponent_card_upgrade_score(host, candidate_id) - remove_score
+			if improvement > best_improvement:
+				best_improvement = improvement
+				best_swap = {"remove_id": remove_id, "add_id": candidate_id}
+	return best_swap
 
 
 func _opponent_upgrade_candidates(host, opponent_archetype: String) -> Array:
@@ -180,7 +206,8 @@ func _opponent_upgrade_candidates(host, opponent_archetype: String) -> Array:
 		var card_id := String(card.get("id", ""))
 		if card_id == "":
 			continue
-		if host._card_archetype(card) != opponent_archetype:
+		var card_archetype: String = host._card_archetype(card)
+		if card_archetype != opponent_archetype and card_archetype != "neutral":
 			continue
 		candidates.append(card_id)
 	candidates.sort_custom(func(a, b) -> bool: return _opponent_card_upgrade_score(host, String(a)) > _opponent_card_upgrade_score(host, String(b)))
@@ -191,7 +218,15 @@ func _opponent_card_upgrade_score(host, card_id: String) -> float:
 	if not host.cards_by_id.has(card_id):
 		return 0.0
 	var card: Dictionary = host.cards_by_id[card_id]
-	return float(int(card.get("value", 0))) + float(host._rarity_rank(String(card.get("rarity", "common")))) * 6.0 + float(int(card.get("cost", 0))) * 0.35
+	var stats: Dictionary = card.get("stats", {})
+	return (
+		float(int(card.get("value", 0)))
+		+ float(host._rarity_rank(String(card.get("rarity", "common")))) * 6.0
+		+ float(int(card.get("attack", 0))) * 0.8
+		+ float(int(card.get("health", 0))) * 0.55
+		+ float(int(stats.get("interaction", 0)) + int(stats.get("advantage", 0))) * 0.4
+		- float(int(card.get("cost", 0))) * 0.2
+	)
 
 
 func simulate_combat_match(host, opponent: Dictionary, deck_metrics: Dictionary) -> Dictionary:

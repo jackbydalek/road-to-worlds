@@ -4,10 +4,14 @@
 [ext_resource type="PackedScene" uid="uid://cdsbgy55rfwha" path="res://assets/card_shop/table.tscn" id="2_4ullt"]
 [ext_resource type="PackedScene" uid="uid://d0ryjerg3wgy8" path="res://assets/card_shop/counter.tscn" id="2_h0733"]
 [ext_resource type="PackedScene" uid="uid://cugdmnv4qe53f" path="res://clerkidle.tscn" id="2_u3c5j"]
+[ext_resource type="PackedScene" uid="uid://bpft2f2u7plqq" path="res://assets/card_shop/shelf.tscn" id="3_bxkix"]
 [ext_resource type="Texture2D" uid="uid://c8qneutrhlwmc" path="res://assets/ui/shop_hud/deck_edit.png" id="3_deck"]
 [ext_resource type="Texture2D" uid="uid://bhdp7vmwrlaaj" path="res://assets/ui/shop_hud/save.png" id="4_save"]
 [ext_resource type="Texture2D" uid="uid://cmgdqpvegxsm3" path="res://assets/ui/shop_hud/settings.png" id="5_settings"]
-[ext_resource type="Texture2D" path="res://assets/card_shop/textures/grey_low_poly_carpet.png" id="6_carpet"]
+[ext_resource type="Texture2D" uid="uid://da0fpd5kuqdnh" path="res://assets/card_shop/textures/grey_low_poly_carpet.png" id="6_carpet"]
+[ext_resource type="Texture2D" uid="uid://dp16w4t42gy3b" path="res://assets/cards/frames/spicy_ingredient/black.png" id="7_spicy_card"]
+[ext_resource type="Texture2D" uid="uid://bcyhib82e6pts" path="res://assets/cards/frames/sweet_ingredient/black.png" id="8_sweet_card"]
+[ext_resource type="Texture2D" uid="uid://c6fyxij63wre6" path="res://assets/cards/frames/hearty_ingredient/black.png" id="9_hearty_card"]
 
 [sub_resource type="Environment" id="Environment_demo"]
 background_mode = 1
@@ -19,7 +23,6 @@ ambient_light_energy = 0.72
 [sub_resource type="StandardMaterial3D" id="Material_floor"]
 albedo_texture = ExtResource("6_carpet")
 roughness = 0.96
-texture_repeat = 1
 uv1_scale = Vector3(3.6, 3, 1)
 
 [sub_resource type="BoxMesh" id="Mesh_floor"]
@@ -37,6 +40,44 @@ size = Vector3(12, 3.2, 0.2)
 [sub_resource type="BoxMesh" id="Mesh_side_wall"]
 material = SubResource("Material_wall")
 size = Vector3(0.2, 3.2, 10)
+
+[sub_resource type="StandardMaterial3D" id="Material_card_edge"]
+albedo_color = Color(0.035, 0.035, 0.04, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="Mesh_card_body"]
+material = SubResource("Material_card_edge")
+size = Vector3(0.42, 0.014, 0.596)
+
+[sub_resource type="StandardMaterial3D" id="Material_spicy_card"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("7_spicy_card")
+
+[sub_resource type="QuadMesh" id="Mesh_spicy_card"]
+material = SubResource("Material_spicy_card")
+size = Vector2(0.42, 0.596)
+
+[sub_resource type="StandardMaterial3D" id="Material_sweet_card"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("8_sweet_card")
+
+[sub_resource type="QuadMesh" id="Mesh_sweet_card"]
+material = SubResource("Material_sweet_card")
+size = Vector2(0.42, 0.596)
+
+[sub_resource type="StandardMaterial3D" id="Material_hearty_card"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("9_hearty_card")
+
+[sub_resource type="QuadMesh" id="Mesh_hearty_card"]
+material = SubResource("Material_hearty_card")
+size = Vector2(0.42, 0.596)
 
 [node name="GreyboxCameraDemo" type="Control" unique_id=217431883]
 custom_minimum_size = Vector2(0, 780)
@@ -87,6 +128,12 @@ cast_shadow = 0
 gi_mode = 0
 mesh = SubResource("Mesh_side_wall")
 
+[node name="shelf" parent="ViewportContainer/SubViewport/World" unique_id=1807172770 instance=ExtResource("3_bxkix")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3350773, 0, -4.6092052)
+
+[node name="shelf2" parent="ViewportContainer/SubViewport/World/shelf" unique_id=1503098029 instance=ExtResource("3_bxkix")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3388298, 0, -0.013985157)
+
 [node name="Table" parent="ViewportContainer/SubViewport/World" unique_id=279500675 instance=ExtResource("2_4ullt")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 2.383029, 0, 2.8475385)
 
@@ -97,16 +144,555 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002090454, 0, -2.459207)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0020906925, 0, -2.6147962)
 
 [node name="counter2" parent="ViewportContainer/SubViewport/World" unique_id=1291513717 instance=ExtResource("2_h0733")]
-transform = Transform3D(1.1999999, 0, 0, 0, 1.1999999, 0, 0, 0, 1.1999999, 1.1284013, -0.75414395, -2.5779176)
+transform = Transform3D(1.1999911, 0.004586714, 0, -0.004586714, 1.1999911, 0, 0, 0, 1.1999999, 1.1284013, -0.93501353, -2.1685772)
+
+[node name="CounterCards" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2" unique_id=577849545]
+
+[node name="CounterDisplayCardSpicy" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=1399026023]
+transform = Transform3D(0.29954627, -2.3283064e-10, -0.016491672, 1.1641532e-10, 0.29999986, -1.4551915e-11, 0.01649167, -5.8062897e-15, 0.29954618, -0.6862862, 1.6303599, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy" unique_id=337977786]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy" unique_id=1167200611]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=2053423313]
+transform = Transform3D(0.2999061, -2.3283064e-10, 0.0074992143, 2.3283064e-10, 0.2999998, 9.094947e-12, -0.007499213, 0, 0.29990602, -0.44987208, 1.6322634, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet" unique_id=1889723632]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet" unique_id=352830342]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=716876876]
+transform = Transform3D(0.29975984, -2.3283064e-10, -0.01199679, 2.3283064e-10, 0.29999974, -2.5465852e-11, 0.011996788, 0, 0.29975972, -0.2237984, 1.633317, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty" unique_id=106230891]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty" unique_id=979615057]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=682178541]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, 0.052345335, 1.633183, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy2" unique_id=873428524]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy2" unique_id=1761558213]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=992728698]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, 0.28875935, 1.6350865, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet2" unique_id=326247102]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet2" unique_id=1302734703]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=792799914]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, 0.5148331, 1.63614, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty2" unique_id=2047240828]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty2" unique_id=1333916316]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=906725400]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, -0.6862861, 1.6303596, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy3" unique_id=604097967]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy3" unique_id=279595853]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=786181631]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, -0.44987202, 1.6322632, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet3" unique_id=311434892]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet3" unique_id=9364224]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=151945379]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, -0.22379833, 1.6333168, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty3" unique_id=31240542]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty3" unique_id=1581627860]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=278992353]
+transform = Transform3D(0.2995462, -2.3283064e-10, -0.016491668, 2.3283064e-10, 0.29999977, -1.4551915e-11, 0.016491666, -5.806288e-15, 0.2995461, 0.052345335, 1.6331828, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy4" unique_id=1950910712]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSpicy4" unique_id=721275793]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=1265174711]
+transform = Transform3D(0.29990605, -2.3283064e-10, 0.007499212, 3.4924597e-10, 0.29999974, 1.0913936e-11, -0.0074992105, 0, 0.2999059, 0.28875923, 1.6350863, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet4" unique_id=38921424]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardSweet4" unique_id=1912466473]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards" unique_id=1246195840]
+transform = Transform3D(0.29975978, -2.3283064e-10, -0.011996786, 3.4924597e-10, 0.29999965, -2.910383e-11, 0.011996784, 0, 0.29975963, 0.5148331, 1.6361396, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty4" unique_id=1913115328]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards/CounterDisplayCardHearty4" unique_id=1805043853]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterCards2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2" unique_id=183008691]
+transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 0.06640655, -0.34819096, 0.053866863)
+
+[node name="CounterDisplayCardSpicy" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=1922684740]
+transform = Transform3D(0.29954627, -2.3283064e-10, -0.016491672, 1.1641532e-10, 0.29999986, -1.4551915e-11, 0.01649167, -5.8062897e-15, 0.29954618, -0.6862862, 1.6303599, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy" unique_id=391160242]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy" unique_id=206195735]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=410930554]
+transform = Transform3D(0.2999061, -2.3283064e-10, 0.0074992143, 2.3283064e-10, 0.2999998, 9.094947e-12, -0.007499213, 0, 0.29990602, -0.44987208, 1.6322634, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet" unique_id=730333150]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet" unique_id=1363319550]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=1929639468]
+transform = Transform3D(0.29975984, -2.3283064e-10, -0.01199679, 2.3283064e-10, 0.29999974, -2.5465852e-11, 0.011996788, 0, 0.29975972, -0.2237984, 1.633317, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty" unique_id=1961248708]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty" unique_id=1586067711]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=74960875]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, 0.052345335, 1.633183, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy2" unique_id=1153436289]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy2" unique_id=1513874667]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=695666237]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, 0.28875935, 1.6350865, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet2" unique_id=237111377]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet2" unique_id=381812764]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=560779931]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, 0.5148331, 1.63614, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty2" unique_id=1662974029]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty2" unique_id=923899555]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=1625908522]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, -0.6862861, 1.6303596, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy3" unique_id=549666416]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy3" unique_id=5752914]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=1505459250]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, -0.44987202, 1.6322632, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet3" unique_id=7595539]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet3" unique_id=415834479]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=2037150055]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, -0.22379833, 1.6333168, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty3" unique_id=1019961745]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty3" unique_id=1367944003]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=370065220]
+transform = Transform3D(0.2995462, -2.3283064e-10, -0.016491668, 2.3283064e-10, 0.29999977, -1.4551915e-11, 0.016491666, -5.806288e-15, 0.2995461, 0.052345335, 1.6331828, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy4" unique_id=1111337602]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSpicy4" unique_id=8571390]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=2040532137]
+transform = Transform3D(0.29990605, -2.3283064e-10, 0.007499212, 3.4924597e-10, 0.29999974, 1.0913936e-11, -0.0074992105, 0, 0.2999059, 0.28875923, 1.6350863, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet4" unique_id=68517811]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardSweet4" unique_id=1837441929]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2" unique_id=1354642465]
+transform = Transform3D(0.29975978, -2.3283064e-10, -0.011996786, 3.4924597e-10, 0.29999965, -2.910383e-11, 0.011996784, 0, 0.29975963, 0.5148331, 1.6361396, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty4" unique_id=517235265]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter2/CounterCards2/CounterDisplayCardHearty4" unique_id=107789460]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
 
 [node name="counter" parent="ViewportContainer/SubViewport/World" unique_id=2092542911 instance=ExtResource("2_h0733")]
-transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -1.0701256, -0.7480371, -2.5826142)
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -1.0701256, -0.9289067, -2.1631436)
+
+[node name="CounterCards" type="Node3D" parent="ViewportContainer/SubViewport/World/counter" unique_id=1372514888]
+transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0.06640655, 0, 0)
+
+[node name="CounterDisplayCardSpicy" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1761688649]
+transform = Transform3D(0.29954627, -2.3283064e-10, -0.016491672, 1.1641532e-10, 0.29999986, -1.4551915e-11, 0.01649167, -5.8062897e-15, 0.29954618, -0.6862862, 1.6303599, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy" unique_id=2021077836]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy" unique_id=805456615]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1626494760]
+transform = Transform3D(0.2999061, -2.3283064e-10, 0.0074992143, 2.3283064e-10, 0.2999998, 9.094947e-12, -0.007499213, 0, 0.29990602, -0.44987208, 1.6322634, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet" unique_id=406048936]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet" unique_id=1461600554]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1552595057]
+transform = Transform3D(0.29975984, -2.3283064e-10, -0.01199679, 2.3283064e-10, 0.29999974, -2.5465852e-11, 0.011996788, 0, 0.29975972, -0.2237984, 1.633317, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty" unique_id=102337788]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty" unique_id=1591557465]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=963442960]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, 0.052345335, 1.633183, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy2" unique_id=1904659015]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy2" unique_id=1080462012]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1996281342]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, 0.28875935, 1.6350865, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet2" unique_id=1127202603]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet2" unique_id=1325085453]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=98328550]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, 0.5148331, 1.63614, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty2" unique_id=510173363]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty2" unique_id=1526852291]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=687559230]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, -0.6862861, 1.6303596, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy3" unique_id=1775501616]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy3" unique_id=72343085]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1772263379]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, -0.44987202, 1.6322632, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet3" unique_id=811246757]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet3" unique_id=1073496753]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=892070002]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, -0.22379833, 1.6333168, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty3" unique_id=566359763]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty3" unique_id=1648077786]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=1246241470]
+transform = Transform3D(0.2995462, -2.3283064e-10, -0.016491668, 2.3283064e-10, 0.29999977, -1.4551915e-11, 0.016491666, -5.806288e-15, 0.2995461, 0.052345335, 1.6331828, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy4" unique_id=984703396]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSpicy4" unique_id=594106376]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=198193318]
+transform = Transform3D(0.29990605, -2.3283064e-10, 0.007499212, 3.4924597e-10, 0.29999974, 1.0913936e-11, -0.0074992105, 0, 0.2999059, 0.28875923, 1.6350863, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet4" unique_id=798991632]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardSweet4" unique_id=890675648]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards" unique_id=394228143]
+transform = Transform3D(0.29975978, -2.3283064e-10, -0.011996786, 3.4924597e-10, 0.29999965, -2.910383e-11, 0.011996784, 0, 0.29975963, 0.5148331, 1.6361396, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty4" unique_id=1837492318]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards/CounterDisplayCardHearty4" unique_id=123488147]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterCards2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter" unique_id=1556537294]
+transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 0.06640655, -0.34819096, 0.053866863)
+
+[node name="CounterDisplayCardSpicy" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1506782723]
+transform = Transform3D(0.29954627, -2.3283064e-10, -0.016491672, 1.1641532e-10, 0.29999986, -1.4551915e-11, 0.01649167, -5.8062897e-15, 0.29954618, -0.6862862, 1.6303599, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy" unique_id=396878105]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy" unique_id=869240344]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=366230639]
+transform = Transform3D(0.2999061, -2.3283064e-10, 0.0074992143, 2.3283064e-10, 0.2999998, 9.094947e-12, -0.007499213, 0, 0.29990602, -0.44987208, 1.6322634, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet" unique_id=1264046645]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet" unique_id=8933624]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1376269873]
+transform = Transform3D(0.29975984, -2.3283064e-10, -0.01199679, 2.3283064e-10, 0.29999974, -2.5465852e-11, 0.011996788, 0, 0.29975972, -0.2237984, 1.633317, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty" unique_id=793927906]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty" unique_id=523393554]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=433710103]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, 0.052345335, 1.633183, -0.51574063)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy2" unique_id=2094683076]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy2" unique_id=1575343351]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1388184674]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, 0.28875935, 1.6350865, -0.529552)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet2" unique_id=1789510512]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet2" unique_id=464585614]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty2" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=221636146]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, 0.5148331, 1.63614, -0.53210807)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty2" unique_id=1266140569]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty2" unique_id=1749199134]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1133849698]
+transform = Transform3D(0.29954624, -2.3283064e-10, -0.01649167, 2.3283064e-10, 0.2999998, -1.4551915e-11, 0.016491668, -5.806289e-15, 0.29954615, -0.6862861, 1.6303596, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy3" unique_id=1997885364]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy3" unique_id=1464887464]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1873564208]
+transform = Transform3D(0.29990608, -2.3283064e-10, 0.007499213, 2.3283064e-10, 0.29999977, 9.094947e-12, -0.007499212, 0, 0.29990596, -0.44987202, 1.6322632, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet3" unique_id=1231803958]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet3" unique_id=1202045868]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty3" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1146424703]
+transform = Transform3D(0.2997598, -2.3283064e-10, -0.011996788, 2.3283064e-10, 0.2999997, -2.5465852e-11, 0.011996786, 0, 0.2997597, -0.22379833, 1.6333168, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty3" unique_id=11468235]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty3" unique_id=1657119183]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
+
+[node name="CounterDisplayCardSpicy4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1700480561]
+transform = Transform3D(0.2995462, -2.3283064e-10, -0.016491668, 2.3283064e-10, 0.29999977, -1.4551915e-11, 0.016491666, -5.806288e-15, 0.2995461, 0.052345335, 1.6331828, -0.19654989)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy4" unique_id=1079473354]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSpicy4" unique_id=1819224198]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_spicy_card")
+
+[node name="CounterDisplayCardSweet4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=14977732]
+transform = Transform3D(0.29990605, -2.3283064e-10, 0.007499212, 3.4924597e-10, 0.29999974, 1.0913936e-11, -0.0074992105, 0, 0.2999059, 0.28875923, 1.6350863, -0.210361)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet4" unique_id=1133389294]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardSweet4" unique_id=2048061973]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_sweet_card")
+
+[node name="CounterDisplayCardHearty4" type="Node3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2" unique_id=1401122188]
+transform = Transform3D(0.29975978, -2.3283064e-10, -0.011996786, 3.4924597e-10, 0.29999965, -2.910383e-11, 0.011996784, 0, 0.29975963, 0.5148331, 1.6361396, -0.21291733)
+
+[node name="CardBody" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty4" unique_id=760712528]
+mesh = SubResource("Mesh_card_body")
+
+[node name="CardFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/counter/CounterCards2/CounterDisplayCardHearty4" unique_id=286357381]
+transform = Transform3D(1, 0, 0, 0, 7.54979e-08, 1, 0, -1, 7.54979e-08, 0, 0.0072, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_hearty_card")
 
 [node name="NPC" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=1495633306]
-transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, -4.5013885)
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 1.3499808, 0, -4.9262867)
 
 [node name="ShopkeeperModel" parent="ViewportContainer/SubViewport/World/NPC" unique_id=1033687673 instance=ExtResource("2_u3c5j")]
-transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 0, 0, 0)
+transform = Transform3D(1.7894714, -0.00015454208, 0.19439876, 0.00015495397, 1.8, 4.5781653e-06, -0.19439876, 1.2183618e-05, 1.7894714, 0, 0, 2.0982294)
 
 [node name="CameraTargets" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=599473288]
 
@@ -114,7 +700,7 @@ transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 0, 0, 0)
 transform = Transform3D(0.70710677, -0.4055798, 0.579228, 0, 0.81915206, 0.57357645, -0.70710677, -0.4055798, 0.579228, 8, 9, 8)
 
 [node name="MenuTarget" type="Marker3D" parent="ViewportContainer/SubViewport/World/CameraTargets" unique_id=607787078]
-transform = Transform3D(0.70710677, -0.2360371, 0.6665482, 0, 0.9426415, 0.33380687, -0.70710677, -0.2360371, 0.6665482, 3, 3.4, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 2.1, 1)
 
 [node name="CombatTarget" type="Marker3D" parent="ViewportContainer/SubViewport/World/CameraTargets" unique_id=671059635]
 transform = Transform3D(1, 0, 0, 0, 0.58070296, 0.8141155, 0, -0.8141155, 0.58070296, 0, 7, 5)

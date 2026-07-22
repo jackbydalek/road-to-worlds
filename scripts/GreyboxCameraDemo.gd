@@ -11,6 +11,8 @@ signal trade_extras_requested
 
 const OVERVIEW_SIZE := 11.5
 const SHOPKEEPER_SIZE := 4.0
+const SHOPKEEPER_FOCUS_HEIGHT := 1.55
+const SHOPKEEPER_CAMERA_OFFSET := Vector3(0.85, 0.55, 5.5)
 const TRANSITION_SECONDS := 0.75
 
 @onready var camera_rig: Node3D = $ViewportContainer/SubViewport/World/CameraRig
@@ -157,7 +159,7 @@ func _apply_shop_context() -> void:
 	var event_name := String(shop_context.get("event_name", "Weekly Locals"))
 	var money := int(shop_context.get("money", 0))
 	var prize_packs := int(shop_context.get("prize_packs", 0))
-	var difficulty := String(shop_context.get("difficulty_name", "White"))
+	var difficulty := String(shop_context.get("difficulty_name", "Black"))
 	var tournament_active := bool(shop_context.get("tournament_active", false))
 	var tournament_round := int(shop_context.get("tournament_round", 1))
 	cash_hud_button.text = "$%d" % money
@@ -608,7 +610,9 @@ func _show_settings_menu() -> void:
 
 
 func _show_menu() -> void:
-	menu_target.look_at(shopkeeper_model.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+	var focus_point := shopkeeper_model.global_position + Vector3(0, SHOPKEEPER_FOCUS_HEIGHT, 0)
+	menu_target.global_position = focus_point + SHOPKEEPER_CAMERA_OFFSET
+	menu_target.look_at(focus_point, Vector3.UP)
 	_move_to_shot(menu_target, SHOPKEEPER_SIZE, "SHOPKEEPER — packs, singles, trades, meta, and events", menu_panel)
 
 

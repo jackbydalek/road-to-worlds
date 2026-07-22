@@ -35,6 +35,8 @@ Only one Meal may be served each turn. There is no general limit on Ingredients 
 
 When a card asks for a choice, the game pauses that effect and presents only legal choices. This applies to discard costs, deck searches, discard-pile recovery, board targets, opponent-hand choices, and multi-step effects.
 
+Playing a Meal first opens recipe selection. Choose the highlighted recipe-ready Ingredients on the table, then confirm to sacrifice them and serve the Meal; cancelling leaves the Meal in hand. A Meal may be served into an otherwise full Prep or Plated zone when its recipe sacrifices an Ingredient in that zone. On the Living Table, the Meal occupies the exact slot vacated by the selected Ingredient.
+
 After an effect searches a deck or looks at cards in a deck, that deck is shuffled when the effect finishes. It is shuffled even if no matching card is found or the player chooses not to take a card.
 
 ## Combat

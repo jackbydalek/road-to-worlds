@@ -111,12 +111,17 @@ static func card_descriptor(card: Dictionary) -> String:
 	return "%s %s" % [label(String(card.get("archetype", "neutral"))), card_type.capitalize()]
 
 
+static func monochrome_symbol_font() -> FontFile:
+	var monochrome := SYMBOL_FONT.duplicate() as FontFile
+	monochrome.allow_system_fallback = false
+	return monochrome
+
+
 static func font_with_symbols(base_font: Font) -> FontVariation:
 	var scoped_base := base_font.duplicate() as Font
 	if scoped_base is FontFile or scoped_base is SystemFont:
 		scoped_base.set("allow_system_fallback", false)
-	var scoped_symbols := SYMBOL_FONT.duplicate() as FontFile
-	scoped_symbols.allow_system_fallback = false
+	var scoped_symbols := monochrome_symbol_font()
 	var combined := FontVariation.new()
 	combined.base_font = scoped_base
 	var symbol_fallbacks: Array[Font] = [scoped_symbols]

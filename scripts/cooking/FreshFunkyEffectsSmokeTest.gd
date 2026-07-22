@@ -258,6 +258,28 @@ func _test_ai_difficulty_decisions() -> void:
 	target_state.ai_difficulty = "hard"
 	_expect(int(service._ai_attack_target(target_state, attacker).instance_id) == int(threat_target.instance_id), "Hard AI did not remove the more dangerous KO-able defender.")
 
+	var expert_pass_state := _fresh_state()
+	expert_pass_state.ai_difficulty = "expert"
+	expert_pass_state.opponent.environment = "environment_blazing_wok"
+	expert_pass_state.opponent.hand = ["environment_blazing_wok"]
+	_expect(not service._ai_play_one_hand_card(expert_pass_state), "Expert AI replaced an established Environment with a duplicate instead of passing.")
+	_expect(expert_pass_state.opponent.hand == ["environment_blazing_wok"], "Expert AI spent the card it was supposed to hold.")
+
+	var expert_reaction_state := _fresh_state()
+	expert_reaction_state.ai_difficulty = "expert"
+	expert_reaction_state.opponent.hand = ["spicy_pantry_pouncer"]
+	_add_unit(expert_reaction_state, "player", "token_fresh_ingredient", "prep")
+	_expect(not service._ai_hand_trap_stops(expert_reaction_state, "enemy_ingredient_played", "player"), "Expert AI spent a Hand Trap on a low-value token.")
+	_expect(expert_reaction_state.opponent.hand == ["spicy_pantry_pouncer"], "Expert AI did not preserve its Hand Trap for a stronger play.")
+
+	var expert_search_state := _fresh_state()
+	expert_search_state.ai_difficulty = "expert"
+	var ready_piece := _add_unit(expert_search_state, "opponent", "spicy_hot_honey_bee", "prep")
+	ready_piece.recipe_ready_on_turn = 3
+	expert_search_state.opponent.deck = ["spicy_sriracharrow", "hearty_bagver"]
+	service._search_deck(expert_search_state, "opponent", {})
+	_expect(expert_search_state.opponent.hand.has("spicy_sriracharrow"), "Expert AI did not use lookahead context to search for its ready Meal.")
+
 
 func _test_all_starter_pairings_progress() -> void:
 	var deck_ids := [
@@ -282,8 +304,8 @@ func _test_all_starter_pairings_progress() -> void:
 				service.end_player_turn(state)
 				_pass_all_reactions(state)
 			_expect(bool(state.game_over) or int(state.turn) >= 3, "%s versus %s did not progress through full turns." % [player_deck, opponent_deck])
-	for ai_difficulty in ["easy", "medium", "hard"]:
-		var tier_state: Dictionary = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 9200 + ["easy", "medium", "hard"].find(ai_difficulty), "player", false, ai_difficulty)
+	for ai_difficulty in ["easy", "medium", "hard", "expert"]:
+		var tier_state: Dictionary = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 9200 + ["easy", "medium", "hard", "expert"].find(ai_difficulty), "player", false, ai_difficulty)
 		_pass_all_reactions(tier_state)
 		for unused_turn in range(3):
 			if bool(tier_state.game_over):

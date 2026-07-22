@@ -16,6 +16,7 @@ func _run() -> void:
 	await process_frame
 
 	_expect(main.cards_by_id.size() == 88, "Season shell did not load all 88 kitchen cards.")
+	_expect(String(main._difficulty_data("white").get("name", "")) == "Black" and String(main._difficulty_data("white").get("border_color", "")) == "#090909", "The standard difficulty did not display the new Black border.")
 	_expect(main.archetypes_by_id.size() == 5, "Season shell did not build the five kitchen archetypes.")
 	_expect(main._affinity_symbol("fresh") == "🍋‍🟩" and main._affinity_symbol("spicy") == "🌶️", "Fresh or Spicy affinity symbols were not configured.")
 	_expect(main._affinity_symbol("funky") == "🥒" and main._affinity_symbol("sweet") == "🍬" and main._affinity_symbol("hearty") == "🍲", "Funky, Sweet, or Hearty affinity symbols were not configured.")
@@ -115,7 +116,8 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_expect(main.current_screen == "kitchen_match", "Debug menu did not launch Kitchen Table TCG.")
-	_expect(main.find_child("KitchenGameRoot", true, false) != null, "Kitchen match board did not render inside the season shell.")
+	_expect(main.find_child("Tabletop3DPrototype", true, false) != null and main.find_child("KitchenGameRoot", true, false) == null, "The default debug match did not retire the classic renderer in favor of Living Table.")
+	_expect(String(main.run.get("kitchen_match", {}).get("presentation", "")) == "living_table", "The default debug match did not persist the Living Table presentation.")
 	main._on_kitchen_match_finished({
 		"winner": "player",
 		"turn": 4,
@@ -128,18 +130,235 @@ func _run() -> void:
 	main._start_debug_3d_arena()
 	await process_frame
 	await process_frame
-	var arena_game = main.find_child("KitchenGame3D", true, false)
-	_expect(main.current_screen == "kitchen_match" and arena_game != null and bool(arena_game.use_authored_arena), "The Debug Sandbox did not launch the isolated 3D Arena tab.")
-	_expect(main.find_child("PlayerPrepZone", true, false) != null, "The 3D Arena tab did not populate its authored board nodes.")
-	main._on_kitchen_exit_requested()
+	var tabletop_prototype = main.find_child("Tabletop3DPrototype", true, false)
+	_expect(main.current_screen == "kitchen_match" and tabletop_prototype != null, "The Debug Sandbox did not launch the production Living Table match.")
+	if tabletop_prototype != null:
+		_expect(bool(tabletop_prototype.production_match) and tabletop_prototype.configured_player_deck == main.run.deck, "The Living Table practice match did not receive the selected run deck.")
+		_expect(_deck_total(tabletop_prototype.configured_opponent_deck) == 30 and String(tabletop_prototype.configured_ai_difficulty) == "easy", "The Living Table practice match did not receive its generated opponent deck and AI tier.")
+		_expect(not bool(tabletop_prototype.configured_match_context.get("tournament_round", true)) and String(tabletop_prototype.configured_match_context.get("event_name", "")) == "Practice Match", "The Living Table practice match received incorrect production context.")
+		var player_hand_card := tabletop_prototype.find_child("PlayerHandCard_0", true, false) as Node3D
+		var opponent_hand_card := tabletop_prototype.find_child("OpponentHandCard_0", true, false) as Node3D
+		var full_card_face := tabletop_prototype.find_child("PrototypeFullCardFace_*", true, false) as Control
+		_expect(player_hand_card != null and opponent_hand_card != null and full_card_face != null and tabletop_prototype.art_frames.size() > 1, "The Living Table prototype did not build upright player cards, opponent card backs, and animated art support.")
+		_expect(player_hand_card != null and player_hand_card.rotation_degrees.x > 55.0 and opponent_hand_card != null and opponent_hand_card.rotation_degrees.x > 60.0, "The Living Table hands were not held upright toward the camera.")
+		_expect(opponent_hand_card != null and opponent_hand_card.position.z < -5.0, "The rival hand was not moved behind its Prep bench.")
+		_expect(tabletop_prototype.find_children("Slot*", "MeshInstance3D", true, false).size() >= 10, "The Living Table did not build separate physical boxes for its three Prep and two Plated slots on both sides.")
+		for auxiliary_zone in ["PlayerDeckZone", "PlayerDiscardZone", "PlayerEnvironmentZone", "OpponentDeckZone", "OpponentDiscardZone", "OpponentEnvironmentZone"]:
+			_expect(tabletop_prototype.find_child(auxiliary_zone, true, false) != null, "The Living Table did not build its %s physical zone." % auxiliary_zone)
+		for removed_zone in ["PlayerChefZone", "PlayerToolZone", "OpponentChefZone", "OpponentToolZone"]:
+			_expect(tabletop_prototype.find_child(removed_zone, true, false) == null, "The obsolete %s physical zone was still present." % removed_zone)
+		var player_environment_zone := tabletop_prototype.find_child("PlayerEnvironmentZone", true, false) as Node3D
+		var player_deck_zone := tabletop_prototype.find_child("PlayerDeckZone", true, false) as Node3D
+		var player_discard_zone := tabletop_prototype.find_child("PlayerDiscardZone", true, false) as Node3D
+		var opponent_deck_zone := tabletop_prototype.find_child("OpponentDeckZone", true, false) as Node3D
+		var opponent_discard_zone := tabletop_prototype.find_child("OpponentDiscardZone", true, false) as Node3D
+		_expect(player_environment_zone != null and player_environment_zone.position.x < -4.5, "The player Environment was not moved to the upper-left edge of their field.")
+		_expect(player_deck_zone != null and player_discard_zone != null and player_deck_zone.position.x > 4.5 and player_discard_zone.position.x > 4.5, "The player deck and discard were not aligned with the field's right edge.")
+		_expect(opponent_deck_zone != null and opponent_discard_zone != null and opponent_deck_zone.position.x < -4.5 and opponent_discard_zone.position.x < -4.5, "The rival deck and discard were not aligned with the field's left edge.")
+		_expect(tabletop_prototype.player_chef.position.x < -4.5 and tabletop_prototype.player_chef.position.z > 3.0, "The player life counter was not moved to the bottom-left corner.")
+		_expect(tabletop_prototype.opponent_chef.position.x > 4.5 and tabletop_prototype.opponent_chef.position.z < -4.0, "The rival life counter was not moved to the top-right corner.")
+		_expect(tabletop_prototype.find_children("PlayerDeckCard_*", "Node3D", true, false).size() > 0 and tabletop_prototype.find_children("OpponentDeckCard_*", "Node3D", true, false).size() > 0, "The Living Table did not render both physical deck stacks.")
+		var battle_log_button := tabletop_prototype.find_child("BattleLogButton", true, false) as Button
+		var battle_log_panel := tabletop_prototype.find_child("BattleLogPanel", true, false) as PanelContainer
+		var battle_log_text := tabletop_prototype.find_child("LogText", true, false) as RichTextLabel
+		_expect(battle_log_button != null and battle_log_panel != null and not battle_log_panel.visible and battle_log_text != null and "cook-off begins" in battle_log_text.text, "The Living Table battle log was not populated and hidden by default.")
+		if battle_log_button != null:
+			battle_log_button.emit_signal("pressed")
+		_expect(battle_log_panel != null and battle_log_panel.visible, "The side Battle Log button did not open its drawer.")
+		var battle_log_close := tabletop_prototype.find_child("CloseButton", true, false) as Button
+		if battle_log_close != null:
+			battle_log_close.emit_signal("pressed")
+		_expect(battle_log_panel != null and not battle_log_panel.visible, "The Battle Log drawer did not close.")
+		var middle_end_turn := tabletop_prototype.find_child("EndTurnButton", true, false) as Button
+		_expect(middle_end_turn != null and middle_end_turn.get_parent().name == "Interface" and is_equal_approx(middle_end_turn.anchor_top, 0.5), "End Turn was not moved to the middle-right table control.")
+		if player_hand_card != null:
+			tabletop_prototype._handle_card_click(player_hand_card)
+			_expect(tabletop_prototype.action_panel.visible and tabletop_prototype.find_child("LivingTableInfoCardFace", true, false) != null, "Clicking a Living Table card did not restore the full card-information window.")
+			tabletop_prototype._close_info_window()
+		tabletop_prototype.state.player.hand = ["spicy_hot_honey_bee"]
+		tabletop_prototype.state.player.prep = []
+		tabletop_prototype.state.player.plated = []
+		tabletop_prototype.state.phase = "player_main"
+		tabletop_prototype._render_match()
+		var starting_hand_size: int = tabletop_prototype.state.player.hand.size()
+		tabletop_prototype._play_hand_card(0, "prep", 2)
+		await create_timer(1.2).timeout
+		for unused_wait in range(30):
+			if not bool(tabletop_prototype.animation_busy):
+				break
+			await create_timer(0.1).timeout
+		_expect(tabletop_prototype.state.player.hand.size() == starting_hand_size - 1 and tabletop_prototype.state.player.prep.size() == 1, "The Living Table did not route a 3D hand play through the production combat rules.")
+		var field_card := tabletop_prototype.find_child("PlayerPrepCard_*", true, false) as Node3D
+		_expect(field_card != null and field_card.find_child("FloatingArt", true, false) != null, "A played Living Table card did not lay flat with bobbing artwork above it.")
+		_expect(not tabletop_prototype.state.player.prep.is_empty() and int(tabletop_prototype.state.player.prep[0].table_slot) == 2 and field_card != null and field_card.position.x > 1.6, "A card played to the right Prep box was recentered instead of remaining in that exact slot.")
+		tabletop_prototype.state.player.prep[0].spices = ["spice_cayenne_crunch"]
+		tabletop_prototype.state.player.environment = "environment_blazing_wok"
+		tabletop_prototype.state.player.discard = ["chef_mary", "item_wooden_spoon"]
+		tabletop_prototype._render_match()
+		var seasoned_card := tabletop_prototype.find_child("PlayerPrepCard_*", true, false) as Node3D
+		_expect(seasoned_card != null and seasoned_card.find_child("SpiceAttachment_0", true, false) != null, "An attached Spice did not receive its own physical 3D card.")
+		_expect(tabletop_prototype.find_child("PlayerEnvironmentCard", true, false) != null, "The active Environment did not appear in its 3D zone.")
+		_expect(tabletop_prototype.find_child("PlayerDiscardTop", true, false) != null, "The discard pile did not show its face-up top card.")
+		_expect(tabletop_prototype.find_child("PlayerChefActionCard", true, false) == null and tabletop_prototype.find_child("PlayerToolActionCard", true, false) == null, "Chef or Item cards still created dedicated action-bay objects instead of using the discard pile.")
+		tabletop_prototype._open_discard_tray("player")
+		var card_tray_overlay := tabletop_prototype.find_child("CardTrayOverlay", true, false) as Control
+		var discard_tray_cards := tabletop_prototype.find_children("CardTrayCard_*", "Button", true, false)
+		_expect(card_tray_overlay != null and card_tray_overlay.visible and discard_tray_cards.size() == 2, "Clicking the discard pile did not open both cards in the full-card tray.")
+		_expect(discard_tray_cards.all(func(card_button) -> bool: return card_button.find_child("FullCardFace", true, false) != null), "The discard tray did not render full card faces.")
+		tabletop_prototype._close_card_tray()
+		_expect(card_tray_overlay != null and not card_tray_overlay.visible, "The discard card tray did not close.")
+		tabletop_prototype.state.player.deck = ["spicy_hot_honey_bee", "item_wooden_spoon"]
+		tabletop_prototype.state.pending_search = {"effect": {"card_type": "ingredient"}, "prompt": "Choose an Ingredient from your deck."}
+		tabletop_prototype._render_match()
+		var search_tray_cards := tabletop_prototype.find_children("CardTrayCard_*", "Button", true, false)
+		_expect(card_tray_overlay != null and card_tray_overlay.visible and search_tray_cards.size() == 1 and not tabletop_prototype.prompt_panel.visible, "A deck search did not use the full-card tray in place of the old button prompt.")
+		if not search_tray_cards.is_empty():
+			(search_tray_cards[0] as Button).emit_signal("pressed")
+		await process_frame
+		_expect(tabletop_prototype.state.pending_search.is_empty() and tabletop_prototype.state.player.hand.has("spicy_hot_honey_bee") and not card_tray_overlay.visible, "Clicking a deck-search card did not add it to hand and close the tray.")
+		for unused_wait in range(20):
+			if not bool(tabletop_prototype.animation_busy):
+				break
+			await create_timer(0.05).timeout
+		tabletop_prototype.state.player.hand = ["item_recipe_prep", "chef_mary", "spicy_hot_honey_bee", "item_wooden_spoon"]
+		tabletop_prototype.state.pending_discard = {
+			"hand_index": 0,
+			"card_id": "item_recipe_prep",
+			"required": 2,
+			"selected_indices": []
+		}
+		tabletop_prototype.state.message = "Select 2 cards from your hand to discard for Recipe Prep."
+		tabletop_prototype._render_match()
+		var discard_confirm := tabletop_prototype.find_child("ConfirmChoiceButton", true, false) as Button
+		var discard_cancel := tabletop_prototype.find_child("CancelChoiceButton", true, false) as Button
+		_expect(not tabletop_prototype.prompt_panel.visible and discard_confirm != null and discard_confirm.visible and discard_confirm.disabled and discard_cancel != null and discard_cancel.visible, "Discard payment still opened the old card-name popup instead of using the physical hand.")
+		var locked_item := tabletop_prototype.find_child("PlayerHandCard_0", true, false) as Node3D
+		var first_discard := tabletop_prototype.find_child("PlayerHandCard_1", true, false) as Node3D
+		if locked_item != null:
+			tabletop_prototype._handle_card_click(locked_item)
+		_expect(tabletop_prototype.state.pending_discard.get("selected_indices", []).is_empty(), "The Item paying the discard cost could select itself.")
+		if first_discard != null:
+			tabletop_prototype._handle_card_click(first_discard)
+		var selected_hand_card := tabletop_prototype.find_child("PlayerHandCard_1", true, false) as Node3D
+		var selected_hand_body := selected_hand_card.find_child("CardBody", true, false) as MeshInstance3D if selected_hand_card != null else null
+		_expect(tabletop_prototype.state.pending_discard.get("selected_indices", []).has(1) and selected_hand_body != null and selected_hand_body.material_override is StandardMaterial3D and bool((selected_hand_body.material_override as StandardMaterial3D).emission_enabled), "Clicking a physical hand card did not select and highlight it for discard.")
+		var second_discard := tabletop_prototype.find_child("PlayerHandCard_2", true, false) as Node3D
+		if second_discard != null:
+			tabletop_prototype._handle_card_click(second_discard)
+		discard_confirm = tabletop_prototype.find_child("ConfirmChoiceButton", true, false) as Button
+		_expect(discard_confirm != null and not discard_confirm.disabled and tabletop_prototype.status_label.text == "Select 2 cards from your hand to discard: 2/2 selected.", "The physical-hand discard controls did not enable Confirm after the exact cost was selected.")
+		if discard_cancel != null:
+			discard_cancel.emit_signal("pressed")
+		await process_frame
+		_expect(tabletop_prototype.state.pending_discard.is_empty() and tabletop_prototype.state.player.hand.size() == 4 and not discard_confirm.visible, "Cancelling hand-native discard payment did not preserve the hand and close its controls.")
+		tabletop_prototype.state.player.turns_started = 2
+		tabletop_prototype.state.player.meal_served = false
+		tabletop_prototype.state.player.hand = ["spicy_sriracharrow"]
+		tabletop_prototype.state.player.prep = []
+		tabletop_prototype.state.player.plated = []
+		var selected_recipe_ingredient: Dictionary
+		for slot_index in range(tabletop_prototype.service.PREP_SLOTS):
+			var ingredient_id := "spicy_hot_honey_bee" if slot_index == 2 else "spicy_red_pepper_panda"
+			var prep_ingredient: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.player, tabletop_prototype.service.card(ingredient_id), "prep", "player")
+			prep_ingredient.table_slot = slot_index
+			prep_ingredient.recipe_ready_on_turn = 0
+			tabletop_prototype.state.player.prep.append(prep_ingredient)
+			if slot_index == 2:
+				selected_recipe_ingredient = prep_ingredient
+		for slot_index in range(tabletop_prototype.service.PLATED_SLOTS):
+			var plated_ingredient: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.player, tabletop_prototype.service.card("spicy_jalapeno_panther"), "plated", "player")
+			plated_ingredient.table_slot = slot_index
+			plated_ingredient.recipe_ready_on_turn = 0
+			tabletop_prototype.state.player.plated.append(plated_ingredient)
+		tabletop_prototype.state.selected_ingredients = []
+		tabletop_prototype.state.phase = "player_main"
+		tabletop_prototype._render_match()
+		var meal_data: Dictionary = tabletop_prototype.service.card("spicy_sriracharrow")
+		_expect(not tabletop_prototype._slot_is_open("player", "prep", 2) and tabletop_prototype._slot_can_receive_hand_card(meal_data, "player", "prep", 2), "A recipe-ready Ingredient's occupied slot was not offered as a legal Meal destination.")
+		tabletop_prototype._play_hand_card(0, "prep", 2)
+		var meal_confirm := tabletop_prototype.find_child("ConfirmChoiceButton", true, false) as Button
+		_expect(not tabletop_prototype.state.pending_meal.is_empty() and tabletop_prototype.state.player.hand == ["spicy_sriracharrow"] and not tabletop_prototype.prompt_panel.visible and meal_confirm != null and meal_confirm.visible and meal_confirm.disabled, "Attempting to serve a Meal did not pause on the table for physical Ingredient selection.")
+		var recipe_ingredient_card: Node3D
+		for candidate_card in tabletop_prototype.interactive_cards:
+			if int(candidate_card.get_meta("instance_id", -1)) == int(selected_recipe_ingredient.instance_id):
+				recipe_ingredient_card = candidate_card
+				break
+		if recipe_ingredient_card != null:
+			tabletop_prototype._handle_card_click(recipe_ingredient_card)
+		meal_confirm = tabletop_prototype.find_child("ConfirmChoiceButton", true, false) as Button
+		_expect(tabletop_prototype.state.selected_ingredients == [int(selected_recipe_ingredient.instance_id)] and meal_confirm != null and not meal_confirm.disabled, "Clicking the highlighted physical Ingredient did not satisfy and enable the Meal recipe.")
+		if meal_confirm != null:
+			meal_confirm.emit_signal("pressed")
+		for unused_wait in range(30):
+			if not bool(tabletop_prototype.animation_busy):
+				break
+			await create_timer(0.05).timeout
+		var replacement_meal: Dictionary
+		for unit in tabletop_prototype.state.player.prep:
+			if String(unit.get("card_id", "")) == "spicy_sriracharrow":
+				replacement_meal = unit
+				break
+		_expect(tabletop_prototype.state.player.prep.size() == tabletop_prototype.service.PREP_SLOTS and tabletop_prototype.state.player.plated.size() == tabletop_prototype.service.PLATED_SLOTS and not replacement_meal.is_empty() and int(replacement_meal.get("table_slot", -1)) == 2, "Serving a Meal on a full Living Table did not replace the sacrificed Ingredient in its exact slot.")
+		tabletop_prototype.state.player.hand = ["spicy_hot_honey_bee"]
+		tabletop_prototype.state.player.prep = []
+		tabletop_prototype.state.player.plated = []
+		tabletop_prototype.state.player.environment = ""
+		tabletop_prototype.state.player.discard = []
+		tabletop_prototype.state.opponent.life = 25
+		tabletop_prototype._render_match()
+		tabletop_prototype._play_hand_card(0, "prep", 2)
+		await create_timer(0.08).timeout
+		var arriving_bee := tabletop_prototype.find_child("PlayerPrepCard_*", true, false) as Node3D
+		_expect(bool(tabletop_prototype.animation_busy) and arriving_bee != null and tabletop_prototype.effect_layer.get_child_count() > 0 and int(tabletop_prototype.state.opponent.life) == 24, "Hot Honey Bee animation state was busy=%s card=%s effects=%d rival_life=%d." % [str(tabletop_prototype.animation_busy), str(arriving_bee != null), tabletop_prototype.effect_layer.get_child_count(), int(tabletop_prototype.state.opponent.life)])
+		await create_timer(1.2).timeout
+		for unused_wait in range(30):
+			if not bool(tabletop_prototype.animation_busy):
+				break
+			await create_timer(0.1).timeout
+		tabletop_prototype.state.player.prep = []
+		var firecracker: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.player, tabletop_prototype.service.card("spicy_firecracker_shrimp"), "plated", "player")
+		var prep_target_a: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.opponent, tabletop_prototype.service.card("hearty_bagver"), "prep", "opponent")
+		var prep_target_b: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.opponent, tabletop_prototype.service.card("hearty_macaroni_manatee"), "prep", "opponent")
+		var plated_target: Dictionary = tabletop_prototype.service._make_unit(tabletop_prototype.state, tabletop_prototype.state.opponent, tabletop_prototype.service.card("hearty_stewoose"), "plated", "opponent")
+		firecracker.ready = true
+		firecracker.table_slot = 1
+		tabletop_prototype.state.player.plated = [firecracker]
+		tabletop_prototype.state.opponent.prep = [prep_target_a, prep_target_b]
+		tabletop_prototype.state.opponent.plated = [plated_target]
+		tabletop_prototype.state.turn = 2
+		tabletop_prototype.state.player.turns_started = 2
+		tabletop_prototype.state.phase = "player_main"
+		tabletop_prototype.service.select_attacker(tabletop_prototype.state, int(firecracker.instance_id))
+		tabletop_prototype.service.attack(tabletop_prototype.state, int(plated_target.instance_id))
+		tabletop_prototype._render_match()
+		var cancel_targeting := tabletop_prototype.find_child("CancelChoiceButton", true, false) as Button
+		var targeting_prompt := tabletop_prototype.find_child("StatusLabel", true, false) as Label
+		var right_plated_card := tabletop_prototype.find_child("PlayerPlatedCard_*", true, false) as Node3D
+		_expect(right_plated_card != null and right_plated_card.position.x > 0.8, "A lone card assigned to the right Plated box was moved back to the center.")
+		_expect(not tabletop_prototype.prompt_panel.visible and cancel_targeting != null and cancel_targeting.visible, "Firecracker Shrimp's Prep targeting still covered the Living Table.")
+		_expect(String(tabletop_prototype.highlighted_zone) == "opponent_prep" and targeting_prompt != null and targeting_prompt.text == "Choose which prepped card to do 2 damage to.", "Firecracker Shrimp did not highlight the rival Prep bench with the requested instruction.")
+		if cancel_targeting != null:
+			cancel_targeting.emit_signal("pressed")
+		await process_frame
+		_expect(tabletop_prototype.state.pending_choice.is_empty() and bool(firecracker.ready), "Cancelling Firecracker Shrimp targeting spent the attacker or left the choice open.")
+		tabletop_prototype.service.attack(tabletop_prototype.state, int(plated_target.instance_id))
+		tabletop_prototype._render_match()
+		tabletop_prototype._choose_effect_target_animated(int(prep_target_a.instance_id))
+		_expect(bool(tabletop_prototype.animation_busy), "The Living Table did not begin an attack animation when Firecracker Shrimp's target resolved.")
+		await create_timer(0.58).timeout
+		_expect(tabletop_prototype.effect_layer.get_child_count() > 0, "The Living Table attack did not produce impact or damage feedback.")
+		await create_timer(1.3).timeout
+		_expect(not bool(tabletop_prototype.animation_busy), "The Living Table attack animation did not finish cleanly.")
+		tabletop_prototype.exit_requested.emit()
 	await process_frame
-	_expect(main.current_screen == "shop", "The 3D Arena tab did not return safely to the debug shell.")
+	_expect(main.current_screen == "shop", "The Living Table prototype did not return safely to the debug shell.")
 	main._show_greybox_camera_demo()
 	await process_frame
 	await process_frame
 	var camera_demo = main.find_child("GreyboxCameraDemo", true, false)
 	_expect(main.current_screen == "camera_demo" and camera_demo != null, "The Debug Sandbox did not launch the graybox camera demonstration.")
 	if camera_demo != null:
+		_expect(camera_demo.find_children("CounterDisplayCard*", "Node3D", true, false).size() >= 6, "The card-store counters did not display their individual 3D card props.")
 		camera_demo._show_menu()
 		_expect(camera_demo.camera_tween != null and camera_demo.camera_tween.is_valid(), "The graybox menu shot did not begin its camera transition.")
 		camera_demo.exit_requested.emit()
@@ -153,6 +372,9 @@ func _run() -> void:
 	_expect(not main.footer_label.visible and main.footer_label.custom_minimum_size.y == 0, "The 3D card store still reserved space for the instruction footer.")
 	var shop_overworld = main.find_child("CardShopOverworld", true, false)
 	_expect(shop_overworld != null, "The 3D card-store overworld did not render.")
+	if shop_overworld != null:
+		_expect(shop_overworld.find_children("CounterDisplayCard*", "Node3D", true, false).size() >= 6, "The card-store overworld counters did not display their individual 3D card props.")
+		_expect(shop_overworld.find_children("CardBody", "MeshInstance3D", true, false).size() >= 6, "The counter card props did not include physical rectangular bodies.")
 	var shop_environment := main.find_child("WorldEnvironment", true, false) as WorldEnvironment
 	_expect(shop_environment != null and shop_environment.environment.background_color.is_equal_approx(Color("#b0cece")), "The card-store diorama void is not using #b0cece.")
 	var shop_floor := main.find_child("Floor", true, false) as MeshInstance3D
@@ -183,7 +405,11 @@ func _run() -> void:
 		shopkeeper_hotspot.emit_signal("pressed")
 	await create_timer(0.8).timeout
 	_expect(shop_overworld != null and shop_overworld.menu_panel.visible, "Clicking Clerk 1 did not open her menu.")
-	_expect(shop_overworld != null and shop_overworld.camera_rig.global_position.y > 3.3, "The shopkeeper camera was not raised for Clerk 1's current position.")
+	var clerk_focus: Vector3 = shopkeeper_model.global_position + Vector3(0, shop_overworld.SHOPKEEPER_FOCUS_HEIGHT, 0) if shop_overworld != null and shopkeeper_model != null else Vector3.ZERO
+	var clerk_camera_position: Vector3 = clerk_focus + shop_overworld.SHOPKEEPER_CAMERA_OFFSET if shop_overworld != null else Vector3.ZERO
+	var clerk_camera_forward: Vector3 = -shop_overworld.camera_rig.global_basis.z if shop_overworld != null else Vector3.ZERO
+	var clerk_camera_is_centered: bool = shop_overworld != null and shop_overworld.camera_rig.global_position.distance_to(clerk_camera_position) < 0.01 and clerk_camera_forward.dot(shop_overworld.camera_rig.global_position.direction_to(clerk_focus)) > 0.999
+	_expect(clerk_camera_is_centered, "The shopkeeper camera did not finish slightly above and angled while keeping Clerk 1 centered.")
 	var shopkeeper_singles_button := main.find_child("BuySingles", true, false) as Button
 	if shopkeeper_singles_button != null:
 		shopkeeper_singles_button.emit_signal("pressed")
@@ -259,7 +485,25 @@ func _run() -> void:
 	_expect(int(cup_event.get("rounds", 0)) == 3 and int(cup_event.get("requiredWins", 0)) == 3, "The League Cup is not a sudden-death three-round event.")
 	_expect(main.tournament_service.ai_difficulty_for_round(main, locals_event, 1) == "easy", "The opening Locals round is not using Easy AI.")
 	_expect(main.tournament_service.ai_difficulty_for_round(main, locals_event, 2) == "medium", "Later Locals rounds do not advance to Medium AI.")
-	_expect(main.tournament_service.ai_difficulty_for_round(main, cup_event, 1) == "medium" and main.tournament_service.ai_difficulty_for_round(main, cup_event, 3) == "hard", "The League Cup does not ramp from Medium to Hard AI.")
+	_expect(main.tournament_service.ai_difficulty_for_round(main, cup_event, 1) == "hard" and main.tournament_service.ai_difficulty_for_round(main, cup_event, 3) == "expert", "The League Cup does not ramp from Hard to Expert AI.")
+	var original_difficulty := String(main.run.difficulty)
+	main.run.difficulty = "blue"
+	_expect(main.tournament_service.ai_difficulty_for_round(main, locals_event, 1) == "medium" and main.tournament_service.ai_difficulty_for_round(main, cup_event, 1) == "expert", "Blue difficulty does not promote opponents one AI tier earlier.")
+	main.run.difficulty = original_difficulty
+	for archetype_id in ["spicy", "hearty", "sweet", "fresh", "funky"]:
+		var starter_deck: Dictionary = main._deck_entries_to_dict(main.archetypes_by_id[archetype_id].starterDeck)
+		var easy_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "easy")
+		var medium_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "medium")
+		var hard_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "hard")
+		var expert_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "expert")
+		_expect(easy_deck == starter_deck, "%s Easy AI did not keep the starter deck." % archetype_id.capitalize())
+		_expect(_deck_total(medium_deck) == 30 and _deck_total(hard_deck) == 30 and _deck_total(expert_deck) == 30, "%s upgraded AI deck changed size." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, medium_deck) >= 3, "%s Medium AI did not receive three deck upgrades." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, hard_deck) >= 6, "%s Hard AI did not receive six deck upgrades." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, expert_deck) >= 7, "%s Expert AI did not receive at least seven deck upgrades." % archetype_id.capitalize())
+		var starter_score := _opponent_deck_score(main, starter_deck)
+		_expect(_opponent_deck_score(main, medium_deck) > starter_score and _opponent_deck_score(main, hard_deck) > _opponent_deck_score(main, medium_deck) and _opponent_deck_score(main, expert_deck) > _opponent_deck_score(main, hard_deck), "%s opponent decks do not improve with each AI tier." % archetype_id.capitalize())
+		_expect(_deck_respects_copy_limits(main, medium_deck) and _deck_respects_copy_limits(main, hard_deck) and _deck_respects_copy_limits(main, expert_deck), "%s upgraded AI deck exceeded a copy limit." % archetype_id.capitalize())
 
 	main._start_season_tournament()
 	await process_frame
@@ -267,17 +511,28 @@ func _run() -> void:
 	var shop_before_completed_round: Array = main.run.shop.duplicate()
 	_expect(main.current_screen == "kitchen_match", "Tournament round did not launch a Kitchen Match.")
 	_expect(main._season_tournament_active(), "Tournament state was not created.")
-	var opening_kitchen_game = main.find_child("KitchenGame3D", true, false)
-	_expect(opening_kitchen_game != null and bool(opening_kitchen_game.use_authored_arena), "The opening Locals match did not use the authored 3D combat view.")
+	var opening_kitchen_game = main.find_child("Tabletop3DPrototype", true, false)
+	_expect(opening_kitchen_game != null and bool(opening_kitchen_game.production_match), "The opening Locals match did not use the production Living Table view.")
+	_expect(opening_kitchen_game != null and opening_kitchen_game.configured_player_deck == main.run.deck and _deck_total(opening_kitchen_game.configured_opponent_deck) == 30, "The opening Locals match did not receive the selected and generated tournament decks.")
 	_expect(opening_kitchen_game != null and String(opening_kitchen_game.state.get("ai_difficulty", "")) == "easy", "The opening Locals match did not receive its Easy AI tier.")
+	_expect(opening_kitchen_game != null and bool(opening_kitchen_game.configured_match_context.get("tournament_round", false)) and int(opening_kitchen_game.configured_match_context.get("round", 0)) == 1 and String(opening_kitchen_game.configured_match_context.get("event_name", "")) == "Weekly Locals", "The Living Table did not receive its tournament event and round configuration.")
+	_expect(String(main.run.get("kitchen_match", {}).get("presentation", "")) == "living_table", "The active tournament match did not persist its Living Table presentation configuration.")
 
-	main._on_kitchen_match_finished({"winner": "opponent", "turn": 5, "player_life": 0, "opponent_life": 8})
-	await process_frame
-	await process_frame
+	opening_kitchen_game.state.game_over = true
+	opening_kitchen_game.state.winner = "opponent"
+	opening_kitchen_game.state.turn = 5
+	opening_kitchen_game.state.player.life = 0
+	opening_kitchen_game.state.opponent.life = 8
+	opening_kitchen_game._render_match()
+	for unused_pacing_wait in range(30):
+		if main.find_child("SeasonRoundResultHeading", true, false) != null:
+			break
+		await create_timer(0.1).timeout
 	var loss_heading := main.find_child("SeasonRoundResultHeading", true, false) as Label
 	var loss_action := main.find_child("SeasonRoundResultAction", true, false) as Button
 	_expect(loss_heading != null and loss_heading.text == "YOU LOST", "The loss popup did not display its loss message.")
 	_expect(loss_action != null and loss_action.text == "View Game Over", "The loss popup did not end the sudden-death run.")
+	_expect(not opening_kitchen_game.outcome_overlay.visible and opening_kitchen_game.outcome_overlay.mouse_filter == Control.MOUSE_FILTER_IGNORE, "The production victory/defeat overlay kept blocking the result controls.")
 	if loss_action != null:
 		loss_action.emit_signal("pressed")
 	await process_frame
@@ -328,6 +583,7 @@ func _run() -> void:
 	_expect(main._season_event_unlocked("monthly_regionals"), "Monthly Regionals did not unlock.")
 	_expect(not main._season_tournament_active(), "Completed tournament remained active.")
 	_expect(main.current_screen == "result", "Completed tournament did not show its result screen.")
+	_expect(int(main.run.get("last_event_result", {}).get("reward_money", 0)) == 14 and int(main.run.get("last_event_result", {}).get("reward_packs", 0)) == 1 and int(main.run.get("prize_packs", 0)) == 1, "The Living Table tournament callback did not preserve the Locals reward payout.")
 
 	main._open_reward_pack_flow()
 	await process_frame
@@ -375,3 +631,35 @@ func _expect(condition: bool, message: String) -> void:
 		return
 	failed = true
 	push_error(message)
+
+
+func _deck_total(deck: Dictionary) -> int:
+	var total := 0
+	for count in deck.values():
+		total += int(count)
+	return total
+
+
+func _deck_change_count(original: Dictionary, upgraded: Dictionary) -> int:
+	var card_ids: Array = original.keys()
+	for card_id in upgraded.keys():
+		if not card_ids.has(card_id):
+			card_ids.append(card_id)
+	var absolute_change := 0
+	for card_id in card_ids:
+		absolute_change += absi(int(original.get(card_id, 0)) - int(upgraded.get(card_id, 0)))
+	return absolute_change / 2
+
+
+func _opponent_deck_score(main, deck: Dictionary) -> float:
+	var score := 0.0
+	for card_id in deck:
+		score += main.tournament_service._opponent_card_upgrade_score(main, String(card_id)) * float(int(deck[card_id]))
+	return score
+
+
+func _deck_respects_copy_limits(main, deck: Dictionary) -> bool:
+	for card_id in deck:
+		if int(deck[card_id]) > main._deck_limit(String(card_id)):
+			return false
+	return true

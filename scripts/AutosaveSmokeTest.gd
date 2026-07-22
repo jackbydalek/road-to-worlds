@@ -68,7 +68,10 @@ func _run() -> void:
 	_expect(int(resumed.run.active_tournament.get("round", 0)) == saved_round, "Continue did not preserve the interrupted tournament round.")
 	_expect(int(resumed.run.active_tournament.get("current_seed", 0)) == saved_seed, "Continue did not preserve the interrupted match setup.")
 	_expect(String(resumed.run.active_tournament.get("current_opponent", {}).get("name", "")) == saved_opponent, "Continue did not preserve the interrupted opponent.")
-	_expect(resumed.find_child("KitchenGameRoot", true, false) != null, "Continue did not rebuild the interrupted Kitchen Match.")
+	var resumed_tabletop = resumed.find_child("Tabletop3DPrototype", true, false)
+	_expect(resumed_tabletop != null, "Continue did not rebuild the interrupted Living Table match.")
+	if resumed_tabletop != null:
+		_expect(int(resumed_tabletop.configured_seed) == saved_seed and int(resumed_tabletop.configured_match_context.get("round", 0)) == saved_round, "Continue did not restore the Living Table seed and tournament round configuration.")
 
 	resumed.queue_free()
 	await process_frame

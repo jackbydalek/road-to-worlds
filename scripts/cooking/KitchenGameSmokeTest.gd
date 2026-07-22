@@ -17,6 +17,72 @@ func _run() -> void:
 		_fail("Two-zone combat did not deal an opening hand and begin turn one.")
 		return
 
+	# The combat service exposes formal, drainable animation events instead of
+	# requiring a presentation to compare old and new state snapshots.
+	var event_state: Dictionary = service.start_game("test_a", "test_b", 12001)
+	event_state.player.hand = ["test_veg"]
+	event_state.player.prep = []
+	event_state.player.plated = []
+	service.play_card(event_state, 0, "prep")
+	var play_events: Array[Dictionary] = service.take_animation_events(event_state)
+	if _events_of_type(play_events, "play").size() != 1 or not event_state.animation_events.is_empty():
+		_fail("Playing a card did not enqueue and drain one formal play event.")
+		return
+	event_state.player.deck = ["test_tool"]
+	service._draw(event_state, "player")
+	if _events_of_type(service.take_animation_events(event_state), "draw").size() != 1:
+		_fail("Drawing a card did not enqueue a formal draw event.")
+		return
+	event_state.player.deck = ["test_protein"]
+	event_state.pending_search = {"effect": {"card_type": "ingredient"}, "prompt": "Choose."}
+	service.select_search_card(event_state, "test_protein")
+	if _events_of_type(service.take_animation_events(event_state), "search").size() != 1:
+		_fail("Selecting a searched card did not enqueue a formal search event.")
+		return
+	var recipe_event_state: Dictionary = service.start_game("test_a", "test_b", 12002)
+	recipe_event_state.player.prep = [_test_unit(501, "test_veg", "Vegetable", "ingredient", 3, 2, true, 0)]
+	recipe_event_state.player.plated = [_test_unit(502, "test_protein", "Protein", "ingredient", 1, 1, true, 0)]
+	recipe_event_state.player.hand = ["test_meal"]
+	recipe_event_state.player.turns_started = 2
+	service.play_card(recipe_event_state, 0, "plated")
+	if recipe_event_state.pending_meal.is_empty() or not service.take_animation_events(recipe_event_state).is_empty():
+		_fail("Playing a Meal did not pause for ingredient selection before creating animation events.")
+		return
+	service.toggle_ingredient_selection(recipe_event_state, 501)
+	service.toggle_ingredient_selection(recipe_event_state, 502)
+	if not service.meal_selection_is_ready(recipe_event_state):
+		_fail("A valid Meal recipe did not enable confirmation after its Ingredients were selected.")
+		return
+	service.confirm_meal_play(recipe_event_state)
+	var recipe_events: Array[Dictionary] = service.take_animation_events(recipe_event_state)
+	if _events_of_type(recipe_events, "sacrifice").size() != 2 or _events_of_type(recipe_events, "play").size() != 1:
+		_fail("Serving a Meal did not queue its sacrifices before its play event.")
+		return
+	var effect_event_state: Dictionary = service.start_game("test_a", "test_b", 12003)
+	effect_event_state.player.life = 20
+	var friendly_target := _test_unit(601, "test_veg", "Friendly", "ingredient", 2, 1, true, 0)
+	friendly_target.max_health = 3
+	effect_event_state.player.prep = [friendly_target]
+	effect_event_state.opponent.prep = [
+		_test_unit(602, "test_veg", "Target A", "ingredient", 1, 1, true, 0),
+		_test_unit(603, "test_protein", "Target B", "ingredient", 1, 1, true, 0)
+	]
+	effect_event_state.opponent.plated = []
+	service._resolve_effects(effect_event_state, "player", [
+		{"type": "heal_player", "amount": 2},
+		{"type": "heal_unit", "amount": 1},
+		{"type": "buff_friendly_unit", "attack": 1, "health": 1},
+		{"type": "damage_all_enemy_units", "amount": 1}
+	], friendly_target, 601)
+	var effect_events: Array[Dictionary] = service.take_animation_events(effect_event_state)
+	var multi_hit_events := _events_of_type(effect_events, "damage")
+	if _events_of_type(effect_events, "heal").size() != 2 or _events_of_type(effect_events, "buff").size() != 1 or _events_of_type(effect_events, "destroy").size() != 2:
+		_fail("Healing, buffing, or destruction did not produce formal animation events.")
+		return
+	if multi_hit_events.size() != 2 or int(multi_hit_events[0].group_id) <= 0 or int(multi_hit_events[0].group_id) != int(multi_hit_events[1].group_id):
+		_fail("A multi-hit effect did not give its damage events one shared animation group.")
+		return
+
 	# Turn draws are always exactly one card, even when the hand starts below five.
 	var draw_state: Dictionary = service.start_game("test_a", "test_b", 12346)
 	draw_state.player.hand = []
@@ -69,21 +135,29 @@ func _run() -> void:
 	service.play_card(recipe_state, 0, "plated")
 	var veg_id := int(recipe_state.player.prep[0].instance_id)
 	var protein_id := int(recipe_state.player.plated[0].instance_id)
+	recipe_state.player.prep[0].table_slot = 2
+	recipe_state.player.plated[0].table_slot = 1
 	service.toggle_ingredient_selection(recipe_state, veg_id)
 	if not recipe_state.selected_ingredients.is_empty():
 		_fail("A newly played ingredient was recipe-ready too early.")
 		return
 	service._start_turn(recipe_state, "player", false)
-	recipe_state.player.plated.append(_test_unit(799, "test_veg", "Unselected Plated Card", "ingredient", 3, 2, true, 3))
+	var unselected_plated := _test_unit(799, "test_veg", "Unselected Plated Card", "ingredient", 3, 2, true, 3)
+	unselected_plated.table_slot = 0
+	recipe_state.player.plated.append(unselected_plated)
+	service.play_card(recipe_state, 0, "plated")
 	service.toggle_ingredient_selection(recipe_state, veg_id)
 	service.toggle_ingredient_selection(recipe_state, protein_id)
-	service.play_card(recipe_state, 0, "plated")
+	service.confirm_meal_play(recipe_state)
 	if not recipe_state.player.prep.is_empty() or recipe_state.player.plated.size() != 2:
 		_fail("A valid aged recipe did not replace its ingredients with a Plated meal.")
 		return
 	var plated_meal := _first_unit_of_type(recipe_state.player.plated, "meal")
 	if plated_meal.is_empty() or not bool(plated_meal.ready):
 		_fail("Meal did not enter Plated attack-ready after the opening turn.")
+		return
+	if int(plated_meal.get("table_slot", -1)) != 1:
+		_fail("A Meal served into a full zone did not inherit its sacrificed ingredient's exact slot.")
 		return
 
 	# A player may serve only one meal per turn, even with another valid recipe available.
@@ -94,18 +168,20 @@ func _run() -> void:
 	service.play_card(multi_meal_state, 0, "plated")
 	service._start_turn(multi_meal_state, "player", false)
 	var first_recipe_ids := [int(multi_meal_state.player.prep[0].instance_id), int(multi_meal_state.player.plated[0].instance_id)]
+	service.play_card(multi_meal_state, 0, "plated")
 	for ingredient_id in first_recipe_ids:
 		service.toggle_ingredient_selection(multi_meal_state, ingredient_id)
-	service.play_card(multi_meal_state, 0, "plated")
-	var second_recipe_ids := [int(multi_meal_state.player.prep[0].instance_id), int(multi_meal_state.player.prep[1].instance_id)]
-	for ingredient_id in second_recipe_ids:
-		service.toggle_ingredient_selection(multi_meal_state, ingredient_id)
+	service.confirm_meal_play(multi_meal_state)
 	service.play_card(multi_meal_state, 0, "plated")
 	if multi_meal_state.player.plated.size() != 1 or multi_meal_state.player.prep.size() != 2 or multi_meal_state.player.hand != ["test_meal"]:
 		_fail("The game allowed a second Meal to be served during the same turn.")
 		return
 	service._start_turn(multi_meal_state, "player", false)
 	service.play_card(multi_meal_state, 0, "plated")
+	var second_recipe_ids := [int(multi_meal_state.player.prep[0].instance_id), int(multi_meal_state.player.prep[1].instance_id)]
+	for ingredient_id in second_recipe_ids:
+		service.toggle_ingredient_selection(multi_meal_state, ingredient_id)
+	service.confirm_meal_play(multi_meal_state)
 	if multi_meal_state.player.plated.size() != 2 or not multi_meal_state.player.prep.is_empty() or not multi_meal_state.player.hand.is_empty():
 		_fail("The Meal serving limit did not reset on the next turn.")
 		return
@@ -121,6 +197,18 @@ func _run() -> void:
 	service.move_unit(move_state, moving_id, "prep")
 	if not move_state.player.prep.is_empty():
 		_fail("A second zone move was allowed during the same turn.")
+		return
+	var opponent_move_state: Dictionary = service.start_game("test_a", "test_b", 3341)
+	opponent_move_state.phase = "opponent_turn"
+	opponent_move_state.opponent.zone_move_used = false
+	opponent_move_state.opponent.prep = [_test_unit(3341, "test_veg", "Carrot", "ingredient", 1, 2, false, 2)]
+	opponent_move_state.opponent.plated = []
+	opponent_move_state.opponent_sequence = {"stage": "move", "attack_ids": []}
+	service.clear_animation_events(opponent_move_state)
+	service.advance_opponent_turn(opponent_move_state)
+	var opponent_move_events: Array[Dictionary] = service.take_animation_events(opponent_move_state)
+	if opponent_move_events.size() != 1 or String(opponent_move_events[0].get("type", "")) != "move" or String(opponent_move_events[0].get("side", "")) != "opponent" or String(opponent_move_events[0].get("from", "")) != "prep" or String(opponent_move_events[0].get("to", "")) != "plated" or int(opponent_move_events[0].get("instance_id", -1)) != 3341:
+		_fail("The opponent Prep-to-Plated move did not queue its physical-card animation event.")
 		return
 	var chef_state: Dictionary = service.start_game("test_a", "test_b", 335)
 	chef_state.player.hand = ["test_chef", "test_chef"]
@@ -271,9 +359,29 @@ func _run() -> void:
 	if production_service.choice_target_ids(firecracker_target_state) != [902, 903] or firecracker_target_state.pending_resume.is_empty():
 		_fail("Firecracker Shrimp did not pause combat for its Prep target.")
 		return
+	production_service.cancel_pending_attack_choice(firecracker_target_state)
+	if not firecracker_target_state.pending_choice.is_empty() or not firecracker_target_state.pending_resume.is_empty() or int(firecracker_target_state.selected_attacker) != 901 or not bool(firecracker_target_state.player.plated[0].ready):
+		_fail("Cancelling Firecracker Shrimp's Prep targeting did not safely return to attack selection.")
+		return
+	production_service.attack(firecracker_target_state, 904)
 	production_service.choose_effect_target(firecracker_target_state, 903)
 	if int(firecracker_target_state.opponent.prep[0].health) != 2 or int(firecracker_target_state.opponent.prep[1].health) != 1 or int(firecracker_target_state.opponent.plated[0].health) != 3 or bool(firecracker_target_state.player.plated[0].ready):
 		_fail("Firecracker Shrimp did not damage the chosen Prep card and resume combat.")
+		return
+	var firecracker_animation_events: Array[Dictionary] = production_service.take_animation_events(firecracker_target_state)
+	var firecracker_attack_index := -1
+	var plated_hit_index := -1
+	var prep_hit_index := -1
+	for event_index in range(firecracker_animation_events.size()):
+		var animation_event: Dictionary = firecracker_animation_events[event_index]
+		if String(animation_event.get("type", "")) == "attack" and int(animation_event.get("source_instance_id", -1)) == 901:
+			firecracker_attack_index = event_index
+		elif String(animation_event.get("type", "")) == "damage" and int(animation_event.get("target_instance_id", -1)) == 904:
+			plated_hit_index = event_index
+		elif String(animation_event.get("type", "")) == "damage" and int(animation_event.get("target_instance_id", -1)) == 903:
+			prep_hit_index = event_index
+	if firecracker_attack_index < 0 or plated_hit_index <= firecracker_attack_index or prep_hit_index <= plated_hit_index:
+		_fail("Firecracker Shrimp did not animate its selected Prep hit after the Plated combat hit.")
 		return
 
 	# Board-target Tools and Blow Torch's sequential choices resolve selected targets.
@@ -386,8 +494,9 @@ func _run() -> void:
 	blazing_wok_state.player.environment = "environment_blazing_wok"
 	blazing_wok_state.player.prep = [_test_unit(913, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
 	blazing_wok_state.player.hand = ["spicy_sriracharrow"]
-	production_service.toggle_ingredient_selection(blazing_wok_state, 913)
 	production_service.play_card(blazing_wok_state, 0, "plated")
+	production_service.toggle_ingredient_selection(blazing_wok_state, 913)
+	production_service.confirm_meal_play(blazing_wok_state)
 	if int(blazing_wok_state.player.plated[0].attack) != 6:
 		_fail("Blazing Wok did not give a served Meal +1 Attack.")
 		return
@@ -403,8 +512,9 @@ func _run() -> void:
 	dessert_display_state.player.environment = "environment_dessert_display"
 	dessert_display_state.player.prep = [_test_unit(915, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2)]
 	dessert_display_state.player.hand = ["sweet_pup_tart"]
-	production_service.toggle_ingredient_selection(dessert_display_state, 915)
 	production_service.play_card(dessert_display_state, 0, "plated")
+	production_service.toggle_ingredient_selection(dessert_display_state, 915)
+	production_service.confirm_meal_play(dessert_display_state)
 	if int(dessert_display_state.player.plated[0].health) != 6 or int(dessert_display_state.player.plated[0].max_health) != 6:
 		_fail("Dessert Display did not give a served Meal +1 Health.")
 		return
@@ -782,10 +892,30 @@ func _run() -> void:
 		_fail("An inactive 3D Arena overlay can still intercept board clicks.")
 		return
 	arena_prototype.state.player.hand = ["spicy_hot_honey_bee"]
+	arena_prototype.state.player.prep = [_test_unit(942, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
 	arena_prototype._refresh()
 	await process_frame
 	await process_frame
 	var arena_card := arena_prototype.find_child("CookingHandCard_0", true, false) as Control
+	var arena_hand_face := arena_prototype.find_child("CookingHandAuthoredFace_0", true, false) as Control
+	var arena_board_face := arena_prototype.find_child("CookingPlayerPrepAuthoredFace_0", true, false) as Control
+	var arena_card_icon := arena_hand_face.find_child("CardAffinityIcon", true, false) as Label if arena_hand_face != null else null
+	var arena_hand_rules := arena_hand_face.find_child("CardRules", true, false) as Label if arena_hand_face != null else null
+	if arena_hand_face == null or arena_board_face == null:
+		_fail("Spicy Ingredient card faces did not render in the playable hand and board zones.")
+		return
+	if arena_hand_rules == null or not arena_hand_rules.visible:
+		_fail("The playable hand used a compact placeholder instead of the full card face.")
+		return
+	if arena_card_icon == null or not arena_card_icon.get_theme_font("font").has_char(0x1F336):
+		_fail("The playable card's top-left affinity icon did not use the Noto emoji subset.")
+		return
+	var full_drag_preview := arena_prototype._make_drag_preview("spicy_hot_honey_bee", "From your hand") as Control
+	var drag_preview_rules := full_drag_preview.find_child("CardRules", true, false) as Label if full_drag_preview != null else null
+	if full_drag_preview == null or full_drag_preview.name != "CookingFullCardDragPreview" or drag_preview_rules == null or not drag_preview_rules.visible:
+		_fail("Dragging an authored card still used a temporary text preview instead of the full card.")
+		return
+	full_drag_preview.free()
 	var arena_press := InputEventMouseButton.new()
 	arena_press.button_index = MOUSE_BUTTON_LEFT
 	arena_press.position = Vector2(20, 20)
@@ -798,8 +928,16 @@ func _run() -> void:
 	arena_card.gui_input.emit(arena_release)
 	await process_frame
 	await process_frame
-	if String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
-		_fail("Cards in the isolated 3D Arena did not receive click interactions.")
+	var arena_actions := arena_prototype.find_child("CookingHandActions_0", true, false) as PanelContainer
+	var arena_action_buttons := arena_actions.find_children("*", "Button", true, false) if arena_actions != null else []
+	var arena_play_button := arena_action_buttons[0] as Button if not arena_action_buttons.is_empty() else null
+	var arena_button_style := arena_play_button.get_theme_stylebox("normal") as StyleBoxFlat if arena_play_button != null else null
+	var arena_inspector := arena_prototype.find_child("CookingInspectPanel", true, false) as PanelContainer
+	if arena_actions == null or arena_play_button == null or arena_button_style == null or arena_button_style.corner_radius_top_left < 8 or arena_inspector == null or String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
+		_fail("Clicking the full hand card did not immediately open details and reveal rounded play buttons above it.")
+		return
+	if arena_prototype.find_child("CookingHandDetails_0", true, false) != null:
+		_fail("The hand action strip still rendered a redundant Details button.")
 		return
 	arena_prototype.queue_free()
 	await process_frame
@@ -859,8 +997,9 @@ func _run() -> void:
 	drag_source.gui_input.emit(release)
 	await process_frame
 	await process_frame
-	if String(prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
-		_fail("A click-release no longer opened the card inspector.")
+	var click_actions := prototype.find_child("CookingHandActions_0", true, false) as PanelContainer
+	if click_actions == null or prototype.find_child("CookingHandDetails_0", true, false) != null or String(prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee" or prototype.find_child("CookingInspectPanel", true, false) == null:
+		_fail("A click-release did not open card details automatically alongside the play actions.")
 		return
 	prototype.inspected_card = {}
 	prototype._refresh()
@@ -1137,9 +1276,11 @@ func _run() -> void:
 	prototype._refresh()
 	await process_frame
 	await process_frame
+	var tool_drawer_card := prototype.find_child("CookingHandCard_0", true, false) as Control
+	prototype._toggle_hand_card_actions(tool_drawer_card, 0, "item_tool_drawer")
 	var play_tool_drawer := prototype.find_child("CookingPlayHandCard_0_item_tool_drawer", true, false) as Button
 	if play_tool_drawer == null:
-		_fail("Tool Drawer did not render a play button.")
+		_fail("Tool Drawer did not reveal its play button above the clicked full card.")
 		return
 	play_tool_drawer.emit_signal("pressed")
 	await process_frame
@@ -1163,24 +1304,29 @@ func _run() -> void:
 	prototype._refresh()
 	await process_frame
 	await process_frame
+	var recipe_prep_card := prototype.find_child("CookingHandCard_0", true, false) as Control
+	prototype._toggle_hand_card_actions(recipe_prep_card, 0, "item_recipe_prep")
 	var play_discard_item := prototype.find_child("CookingPlayHandCard_0_item_recipe_prep", true, false) as Button
 	if play_discard_item == null:
-		_fail("The discard-cost Item did not render a play button.")
+		_fail("The discard-cost Item did not reveal a play button above the clicked full card.")
 		return
 	play_discard_item.emit_signal("pressed")
 	await process_frame
 	await process_frame
+	var first_discard_card := prototype.find_child("CookingHandCard_1", true, false) as Control
+	prototype._toggle_hand_card_actions(first_discard_card, 1, "spicy_hot_honey_bee")
 	var first_discard_choice := prototype.find_child("CookingDiscardChoice_1", true, false) as Button
-	var second_discard_choice := prototype.find_child("CookingDiscardChoice_3", true, false) as Button
 	var confirm_discard := prototype.find_child("CookingConfirmDiscardButton", true, false) as Button
 	var cancel_discard := prototype.find_child("CookingCancelDiscardButton", true, false) as Button
-	if first_discard_choice == null or second_discard_choice == null or confirm_discard == null or cancel_discard == null or not confirm_discard.disabled:
-		_fail("The discard selection prompt did not render in its initial state.")
+	if first_discard_choice == null or confirm_discard == null or cancel_discard == null or not confirm_discard.disabled:
+		_fail("The discard selection prompt did not reveal a selection button above the clicked card.")
 		return
 	first_discard_choice.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	second_discard_choice = prototype.find_child("CookingDiscardChoice_3", true, false) as Button
+	var second_discard_card := prototype.find_child("CookingHandCard_3", true, false) as Control
+	prototype._toggle_hand_card_actions(second_discard_card, 3, "spicy_sriracharrow")
+	var second_discard_choice := prototype.find_child("CookingDiscardChoice_3", true, false) as Button
 	if second_discard_choice == null:
 		_fail("The discard prompt disappeared after selecting one card.")
 		return
@@ -1325,6 +1471,14 @@ func _has_visual_event(events: Array[Dictionary], event_type: String, instance_i
 		if instance_id < 0 or int(event.get("instance_id", -1)) == instance_id:
 			return true
 	return false
+
+
+func _events_of_type(events: Array[Dictionary], event_type: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for event in events:
+		if String(event.get("type", "")) == event_type:
+			result.append(event)
+	return result
 
 
 func _fail(message: String) -> void:

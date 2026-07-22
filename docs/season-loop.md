@@ -12,7 +12,7 @@ Fresh and Funky remain available from the Debug Menu for development testing.
 
 Then choose a border:
 
-- **White** — standard rules
+- **Black** — standard rules
 - **Blue** — stronger opponents and earlier deck upgrades
 - **Yellow** — reduced starting money
 - **Silver** — a modest opposing deck-quality boost
@@ -46,9 +46,9 @@ Demo deck legality requires exactly 30 main-deck cards, legal copy counts, and e
 
 ## Tournament Rounds
 
-Season tournaments launch a live Kitchen Table match in the authored 3D arena each round. A circle wipe introduces the event and round number before play. The run's deck becomes the player match deck. The event generates a rival archetype and deck; the League Cup and Blue difficulty improve opposing lists.
+Season tournaments launch a live match on the angled 3D Living Table each round. A circle wipe introduces the event and round number before play. The run's selected deck becomes the player match deck. The event generates the rival archetype and exact opponent list, then passes the AI tier, seed, opening side, event, and round configuration into the table; the League Cup and Blue difficulty improve opposing lists.
 
-Opponent decision-making also advances with the calendar. Practice and the opening Locals round use Easy AI, later Locals rounds use Medium, and the League Cup progresses from Medium to Hard. State Championships and later events use Hard AI. Blue difficulty promotes the current opponent one AI tier earlier.
+Opponent decision-making and deck strength advance together. Practice and the opening Locals round use Easy AI with an unchanged starter deck. Later Locals rounds use Medium with three stronger card replacements. The first two League Cup rounds use Hard with six replacements, while the League Cup boss and later events use Expert with up to eight. Replacements preserve deck size, copy limits, and card-type ratios while favoring stronger in-archetype or neutral cards. Expert opponents also search two plays ahead, can pass instead of overcommitting, and use knowledge of the player's hand and upcoming draws. Blue difficulty promotes the current opponent one tier earlier, including both its decisions and deck upgrades.
 
 Finishing or forfeiting the match produces a tournament result. After a win, either continue directly to the next round or return to the card store to buy cards and edit the deck. The active tournament remains paused between rounds; speak to the clerk and choose the next round when ready. A loss ends the run. Clearing the third round pays rewards, updates the metagame, and advances the demo calendar.
 

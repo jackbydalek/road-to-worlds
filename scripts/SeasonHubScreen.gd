@@ -51,7 +51,7 @@ func _add_header(host, parent: Node, event: Dictionary, event_id: String, metric
 		int(host.run.get("max_season_lives", 0))
 	])
 	host._add_body_text(season_summary, "%s Border: %s" % [
-		String(difficulty.get("name", "White")),
+		String(difficulty.get("name", "Black")),
 		String(difficulty.get("summary", "Base season rules."))
 	])
 	host._add_body_text(season_summary, "Next event: %s | %d rounds | Need %d wins | Entry $%d" % [

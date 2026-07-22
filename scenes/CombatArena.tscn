@@ -168,9 +168,9 @@ offset_bottom = 124.0
 unique_name_in_owner = true
 anchors_preset = 0
 offset_left = 270.0
-offset_top = 270.0
+offset_top = 240.0
 offset_right = 1170.0
-offset_bottom = 414.0
+offset_bottom = 438.0
 mouse_filter = 1
 
 [node name="CenterMessageAnchor" type="Control" parent="." unique_id=1297750395]

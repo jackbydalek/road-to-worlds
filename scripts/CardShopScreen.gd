@@ -292,10 +292,11 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 	var card: Dictionary = host.cards_by_id[card_id]
 	var rarity := String(card.get("rarity", "common"))
 	var price: int = host._card_price(card_id)
+	var authored_face: bool = host._card_uses_authored_face(card)
 	var tile := PanelContainer.new()
 	tile.name = "CardShopSingleTile_%s" % card_id
 	tile.set_meta("card_id", card_id)
-	tile.custom_minimum_size = Vector2(220, 126)
+	tile.custom_minimum_size = Vector2(220, 344 if authored_face else 126)
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tile.add_theme_stylebox_override("panel", _style("#" + host._rarity_line_color(rarity).to_html(false), "#" + host._rarity_text_color(rarity).to_html(false), 1, 6))
 	_wire_hover(tile, hover_label, "%s: buy this single for $%d." % [String(card.get("name", card_id)), price])
@@ -305,17 +306,23 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 	box.add_theme_constant_override("separation", 4)
 	tile.add_child(box)
 
-	var name_label := Label.new()
-	name_label.text = host._card_display_name(card)
-	name_label.clip_text = true
-	name_label.add_theme_font_size_override("font_size", 13)
-	name_label.add_theme_color_override("font_color", host._rarity_text_color(rarity))
-	box.add_child(name_label)
-	host._add_body_text(box, "%s | %s | cost %d" % [
-		rarity.capitalize(),
-		host._card_descriptor(card),
-		int(card.get("cost", 0))
-	])
+	if authored_face:
+		var face_center := CenterContainer.new()
+		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(face_center)
+		face_center.add_child(host._make_card_face(card, Vector2(190, 270), true))
+	else:
+		var name_label := Label.new()
+		name_label.text = host._card_display_name(card)
+		name_label.clip_text = true
+		name_label.add_theme_font_size_override("font_size", 13)
+		name_label.add_theme_color_override("font_color", host._rarity_text_color(rarity))
+		box.add_child(name_label)
+		host._add_body_text(box, "%s | %s | cost %d" % [
+			rarity.capitalize(),
+			host._card_descriptor(card),
+			int(card.get("cost", 0))
+		])
 	host._add_body_text(box, "Owned %d | Deck %d/%d" % [
 		host._owned_count(card_id),
 		host._deck_count(card_id),

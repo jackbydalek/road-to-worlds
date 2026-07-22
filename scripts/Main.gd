@@ -26,9 +26,9 @@ const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
 const CARD_EFFECT_LAB_SCRIPT := preload("res://scripts/CardEffectLab.gd")
 const TUTORIAL_SCREEN_SCRIPT := preload("res://scripts/TutorialScreen.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
-const KITCHEN_GAME_SCENE := preload("res://scenes/KitchenGame.tscn")
-const KITCHEN_GAME_3D_SCENE := preload("res://scenes/KitchenGame3D.tscn")
+const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const GREYBOX_CAMERA_DEMO_SCENE := preload("res://scenes/GreyboxCameraDemo.tscn")
+const TABLETOP_3D_PROTOTYPE_SCENE := preload("res://scenes/Tabletop3DPrototype.tscn")
 
 var rng := RandomNumberGenerator.new()
 var content_catalog: RefCounted
@@ -490,7 +490,7 @@ func _show_season_run_setup() -> void:
 
 	var difficulty_card := _add_bordered_panel(
 		difficulty_row,
-		"%s Border" % String(difficulty.get("name", "White")),
+		"%s Border" % String(difficulty.get("name", "Black")),
 		String(difficulty.get("accent", "#202734")),
 		String(difficulty.get("border_color", "#f3efe4")),
 		4
@@ -559,7 +559,7 @@ func _start_new_run_with_mode(archetype_id: String, mode: String, difficulty_id:
 		"season":
 			_set_footer("Season started with %s on %s Border." % [
 				_starter_label(archetype_id),
-				String(_difficulty_data(difficulty_id).get("name", "White"))
+				String(_difficulty_data(difficulty_id).get("name", "Black"))
 			])
 			_show_shop()
 		_:
@@ -656,8 +656,7 @@ func _render_nav() -> void:
 	_add_nav_button("Scene Shop", _show_card_shop_scene_test)
 	_add_nav_button("Packs", _show_packs)
 	_add_nav_button("Deckbuilder", _show_deckbuilder)
-	_add_nav_button("Kitchen Match", _start_debug_kitchen_match)
-	_add_nav_button("3D Arena", _start_debug_3d_arena)
+	_add_nav_button("Living Table Match", _start_debug_kitchen_match)
 	_add_nav_button("Camera Demo", _show_greybox_camera_demo)
 	_add_nav_button("Card Lab", _show_card_effect_lab)
 	_add_nav_button("Tournament", _show_tournament)
@@ -725,9 +724,9 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 		_:
 			return {
 				"id": "white",
-				"name": "White",
-				"accent": "#29313b",
-				"border_color": "#f3efe4",
+				"name": "Black",
+				"accent": "#171717",
+				"border_color": "#090909",
 				"summary": "Base season rules.",
 				"rules_text": "Normal money, normal lives, starter-level opponents, and you begin each match."
 			}
@@ -882,7 +881,7 @@ func _shop_overworld_context() -> Dictionary:
 		"money": int(run.get("money", 0)),
 		"prize_packs": int(run.get("prize_packs", 0)),
 		"event_name": String(_selected_season_event().get("name", "Weekly Locals")),
-		"difficulty_name": String(_difficulty_data(_run_difficulty_id()).get("name", "White")),
+		"difficulty_name": String(_difficulty_data(_run_difficulty_id()).get("name", "Black")),
 		"tournament_active": _season_tournament_active(),
 		"tournament_round": int(active.get("round", 1)),
 		"singles": _shop_overworld_single_entries(),
@@ -1131,6 +1130,10 @@ func _show_greybox_camera_demo() -> void:
 	content.add_child(demo)
 
 
+func _show_tabletop_3d_prototype() -> void:
+	_start_debug_3d_arena()
+
+
 func _add_to_deck(card_id: String) -> void:
 	var result: Dictionary = run_state_service.add_to_deck(run, card_id)
 	if not result.ok:
@@ -1176,7 +1179,7 @@ func _start_debug_kitchen_match() -> void:
 func _start_debug_3d_arena() -> void:
 	if _guard_run_over():
 		return
-	_set_footer("Opened the isolated 3D Arena prototype. The normal Kitchen Match remains on the stable board.")
+	_set_footer("Opened a production-configured Living Table practice match using your current deck.")
 	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 	var opponent_archetype := _predator_archetype(String(metrics.get("primary", ARCHETYPE_ORDER[0])))
 	var opponent_deck := _opponent_deck_for_round(opponent_archetype, 1)
@@ -1187,12 +1190,11 @@ func _start_debug_3d_arena() -> void:
 		false,
 		rng.randi(),
 		"player",
-		"easy",
-		true
+		"easy"
 	)
 
 
-func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player", ai_difficulty: String = "easy", use_3d_arena: bool = false) -> void:
+func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player", ai_difficulty: String = "easy") -> void:
 	_dismiss_round_result_popup()
 	current_screen = "kitchen_match"
 	_render_nav()
@@ -1200,7 +1202,15 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 	_update_status()
 	var metrics := _calculate_deck_metrics(player_deck, {})
 	var player_name := String(archetypes_by_id.get(String(metrics.get("primary", ARCHETYPE_ORDER[0])), {}).get("name", "Your Kitchen"))
-	var kitchen_game = (KITCHEN_GAME_3D_SCENE if use_3d_arena else KITCHEN_GAME_SCENE).instantiate()
+	var kitchen_game = TABLETOP_3D_PROTOTYPE_SCENE.instantiate()
+	var active: Dictionary = run.get("active_tournament", {})
+	var match_context := {
+		"tournament_round": tournament_round,
+		"event_id": String(active.get("event_id", "")) if tournament_round else "",
+		"event_name": String(active.get("event_name", "Tournament")) if tournament_round else "Practice Match",
+		"round": int(active.get("round", 0)) if tournament_round else 0,
+		"rounds": int(active.get("rounds", 0)) if tournament_round else 0
+	}
 	kitchen_game.configure_match(
 		player_deck,
 		opponent_deck,
@@ -1209,7 +1219,9 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		seed_value,
 		first_side,
 		"Forfeit / Return to Tournament" if tournament_round else "Exit Practice Match",
-		ai_difficulty
+		ai_difficulty,
+		_run_difficulty_id(),
+		match_context
 	)
 	kitchen_game.custom_minimum_size = Vector2(0, 820)
 	kitchen_game.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1222,7 +1234,10 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		"tournament_round": tournament_round,
 		"seed": seed_value,
 		"opponent_name": opponent_name,
-		"ai_difficulty": ai_difficulty
+		"ai_difficulty": ai_difficulty,
+		"first_side": first_side,
+		"presentation": "living_table",
+		"match_context": match_context
 	}
 	run.kitchen_match_result = {"game_over": false}
 	content.add_child(kitchen_game)
@@ -1432,7 +1447,7 @@ func _show_tournament() -> void:
 	if _run_mode() == "season":
 		var difficulty := _difficulty_data(_run_difficulty_id())
 		_add_body_text(panel, "%s Border: %s" % [
-			String(difficulty.get("name", "White")),
+			String(difficulty.get("name", "Black")),
 			String(difficulty.get("rules_text", ""))
 		])
 	if _run_mode() == "season":
@@ -1478,7 +1493,7 @@ func _add_season_tournament_progress(parent: Node) -> void:
 		int(active.get("required_wins", 1))
 	])
 	_add_body_text(panel, "%s Border | Lives %d/%d" % [
-		String(difficulty.get("name", "White")),
+		String(difficulty.get("name", "Black")),
 		int(run.get("season_lives", 0)),
 		int(run.get("max_season_lives", 0))
 	])
@@ -1543,12 +1558,12 @@ func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_
 	if opponent.is_empty():
 		opponent = _generate_opponent(round_number, deck_metrics, event)
 	var opponent_archetype := String(opponent.get("archetype", _predator_archetype(String(deck_metrics.primary))))
-	var opponent_deck := _opponent_deck_for_round(opponent_archetype, round_number, event)
 	var saved_seed := int(active.get("current_seed", 0))
 	var seed_value := saved_seed if reuse_saved_setup and saved_seed != 0 else rng.randi()
 	var first_side := String(active.get("current_first_side", "player")) if reuse_saved_setup else _season_round_first_side()
 	var saved_ai := String(active.get("current_ai_difficulty", ""))
 	var ai_difficulty: String = saved_ai if reuse_saved_setup and saved_ai != "" else tournament_service.ai_difficulty_for_round(self, event, round_number)
+	var opponent_deck := _opponent_deck_for_round(opponent_archetype, round_number, event, ai_difficulty)
 
 	active["current_opponent"] = opponent
 	active["current_seed"] = seed_value
@@ -1571,8 +1586,7 @@ func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_
 		true,
 		seed_value,
 		first_side,
-		ai_difficulty,
-		true
+		ai_difficulty
 	)
 
 
@@ -2127,8 +2141,8 @@ func _season_round_first_side() -> String:
 	return tournament_service.season_round_first_side(self)
 
 
-func _opponent_deck_for_round(opponent_archetype: String, round_number: int, event: Dictionary = {}) -> Dictionary:
-	return tournament_service.opponent_deck_for_round(self, opponent_archetype, round_number, event)
+func _opponent_deck_for_round(opponent_archetype: String, round_number: int, event: Dictionary = {}, ai_difficulty: String = "easy") -> Dictionary:
+	return tournament_service.opponent_deck_for_round(self, opponent_archetype, round_number, event, ai_difficulty)
 
 
 func _weighted_meta_pick() -> String:
@@ -2460,6 +2474,17 @@ func _card_descriptor(card: Dictionary) -> String:
 	return AFFINITY_VISUALS.card_descriptor(card)
 
 
+func _card_uses_authored_face(card: Dictionary) -> bool:
+	return CARD_FACE_SCRIPT.supports_card(card)
+
+
+func _make_card_face(card: Dictionary, minimum_size: Vector2 = Vector2(250, 355), animate_art: bool = true) -> Control:
+	var face := CARD_FACE_SCRIPT.new()
+	face.configure(card, _run_difficulty_id(), animate_art)
+	face.custom_minimum_size = minimum_size
+	return face
+
+
 func _affinity_color(archetype_id: String) -> Color:
 	match archetype_id:
 		"spicy":
@@ -2599,7 +2624,7 @@ func _update_status() -> void:
 		status_label.text = "Week %d | $%d | %s Border%s | Main %d/%d" % [
 			int(run.week),
 			int(run.money),
-			String(difficulty.get("name", "White")),
+			String(difficulty.get("name", "Black")),
 			life_text,
 			main_count,
 			MAIN_DECK_SIZE
@@ -2609,7 +2634,7 @@ func _update_status() -> void:
 	status_label.text = "Week %d | $%d | %s Border | Main %d/%d | Side %d/%d" % [
 		int(run.week),
 		int(run.money),
-		String(difficulty.get("name", "White")),
+		String(difficulty.get("name", "Black")),
 		main_count,
 		MAIN_DECK_SIZE,
 		side_count,

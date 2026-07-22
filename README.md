@@ -27,7 +27,7 @@ Runs autosave after progression changes and navigation, as well as before return
 2. Select a difficulty border that changes money, opponent strength, or opening-player rules.
 3. Explore the mouse-driven 3D card store and click the shopkeeper, trading table, metagame board, or deck box.
 4. Browse and buy exact singles inside the 3D shop scene, or open six-card boosters.
-5. Register through the shopkeeper and play three rounds in the authored 3D Kitchen Table arena.
+5. Register through the shopkeeper and play three rounds on the angled 3D Living Table.
 6. Win all three rounds to earn money and prize packs. One round loss ends the run.
 7. Clear Weekly Locals and the League Cup, open the final prizes, and reach Thanks for Playing.
 
@@ -36,7 +36,7 @@ See [Season Loop](docs/season-loop.md) and [Kitchen Match Rules](docs/game-rules
 ## Project Layout
 
 - `scenes/Main.tscn` and `scripts/Main.gd` — season shell and debug menu
-- `scenes/KitchenGame3D.tscn`, `scenes/CombatArena.tscn`, and `scripts/cooking/KitchenGame.gd` — authored 3D tournament match UI
+- `scenes/Tabletop3DPrototype.tscn` and `scripts/Tabletop3DPrototype.gd` — the sole campaign and debug-match presentation on the production 3D Living Table
 - `scripts/cooking/CookingCombatService.gd` — Kitchen Table rules and AI
 - `scripts/CardEffectLab.gd` — Debug Sandbox scenarios for the expansion card effects
 - `scripts/ContentCatalog.gd` — kitchen-card-to-season metadata adapter
@@ -60,9 +60,11 @@ GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
 "$GODOT_BIN" --headless --path . \
   --script res://scripts/AutosaveSmokeTest.gd
 "$GODOT_BIN" --headless --path . \
+  --script res://scripts/CardFaceSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
   --script res://scripts/cooking/StarterBalanceSimulation.gd -- --games=500
 "$GODOT_BIN" --headless --path . \
-  --script res://scripts/cooking/StarterBalanceSimulation.gd -- --games=100 --ai=hard
+  --script res://scripts/cooking/StarterBalanceSimulation.gd -- --games=100 --ai=expert
 "$GODOT_BIN" --headless --path . --quit-after 3
 ```
 

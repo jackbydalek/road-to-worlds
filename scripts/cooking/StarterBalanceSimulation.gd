@@ -27,7 +27,7 @@ func _run() -> void:
 			turn_cap = maxi(1, int(argument.trim_prefix("--turn-cap=")))
 		elif argument.begins_with("--ai="):
 			var requested_ai := String(argument.trim_prefix("--ai="))
-			if requested_ai in ["easy", "medium", "hard"]:
+			if requested_ai in ["easy", "medium", "hard", "expert"]:
 				ai_difficulty = requested_ai
 
 	var service: RefCounted = SERVICE_SCRIPT.new()
