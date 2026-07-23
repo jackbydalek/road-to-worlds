@@ -40,7 +40,7 @@ func _test_card_costs_and_stats() -> void:
 	_expect(hydra.get("recipe", []) == ["fresh"] and String(hydra.get("required_meal_archetype", "")) == "fresh", "Harvest Hydra does not require a Fresh Ingredient plus a Fresh Meal.")
 	var tern: Dictionary = service.card("sweet_bottomless_trifle_tern")
 	_expect(tern.get("recipe", []) == ["sweet"] and String(tern.get("required_meal_archetype", "")) == "sweet", "Bottomless Trifle Tern does not require a Sweet Ingredient plus a Sweet Meal.")
-	_expect(service.card("funky_remix_raccoon").get("recipe", []).size() == 3, "Remix Raccoon is not a three-Ingredient Meal.")
+	_expect(service.card("funky_remix_raccoon").get("recipe", []).size() == 3, "Relish Raccoon is not a three-Ingredient Meal.")
 	_expect(service.card("fresh_saladmander").get("recipe", []) == ["fresh"], "Saladmander is not the intended one-Ingredient Fresh Meal.")
 
 
@@ -113,13 +113,13 @@ func _test_board_effects() -> void:
 	var copied := _add_unit(state, "player", "hearty_gravy_gazelle", "prep")
 	service._resolve_activated_ability(state, int(raccoon.instance_id), service.card("funky_remix_raccoon").abilities[0], int(copied.instance_id))
 	service.choose_effect_target(state, int(raccoon.instance_id))
-	_expect(int(raccoon.attack) == 5 and int(raccoon.health) == 7, "Remix Raccoon did not copy the Prep unit's activated ability.")
+	_expect(int(raccoon.attack) == 5 and int(raccoon.health) == 7, "Relish Raccoon did not copy the Prep unit's activated ability.")
 
 	state = _fresh_state()
 	state.player.deck = ["fresh_crisp_capybara"]
 	var beetle := _add_unit(state, "player", "funky_beat_beetle", "prep")
 	service._resolve_effects(state, "player", service.card("funky_beat_beetle").on_play, beetle)
-	_expect(int(beetle.attack) == 4 and int(beetle.health) == 4 and state.player.discard == ["fresh_crisp_capybara"], "Beat Beetle did not mill a unit and gain +3/+3.")
+	_expect(int(beetle.attack) == 4 and int(beetle.health) == 4 and state.player.discard == ["fresh_crisp_capybara"], "Beet Beetle did not mill a unit and gain +3/+3.")
 
 	state = _fresh_state()
 	state.player.hand = ["fresh_sprout_squirrel"]
@@ -130,7 +130,7 @@ func _test_board_effects() -> void:
 	var turniptable := _add_unit(state, "player", "funky_turniptable_turtle", "prep")
 	state.player.deck = ["fresh_crisp_capybara"]
 	service._resolve_activated_ability(state, int(turniptable.instance_id), service.card("funky_turniptable_turtle").abilities[0], -1)
-	_expect(int(turniptable.attack) == 2 and int(turniptable.health) == 3 and state.player.discard.has("fresh_crisp_capybara"), "Turniptable Turtle did not provide a copyable discard ability.")
+	_expect(int(turniptable.attack) == 2 and int(turniptable.health) == 3 and state.player.discard.has("fresh_crisp_capybara"), "Pickled Turnip Turtle did not provide a copyable discard ability.")
 
 	state = _fresh_state()
 	var lynx := _add_unit(state, "player", "funky_leftover_lynx", "plated")
@@ -138,7 +138,7 @@ func _test_board_effects() -> void:
 	service._resolve_effects(state, "player", service.card("funky_leftover_lynx").on_play, lynx)
 	service.toggle_discard_choice(state, 0)
 	service.confirm_discard_choice(state)
-	_expect(state.player.hand.has("funky_beat_beetle") and state.player.discard.is_empty(), "Leftover Lynx did not recover a discarded unit.")
+	_expect(state.player.hand.has("funky_beat_beetle") and state.player.discard.is_empty(), "Limburger Lynx did not recover a discarded unit.")
 
 
 func _test_attack_and_protection_effects() -> void:
@@ -170,9 +170,9 @@ func _test_hand_responses() -> void:
 	state.player.hand = ["funky_chef_check_chinchilla"]
 	state.opponent.hand = ["chef_mary"]
 	service._play_chef(state, "opponent", 0)
-	_expect(not state.pending_reaction.is_empty(), "Chef-Check Chinchilla did not open a response window.")
+	_expect(not state.pending_reaction.is_empty(), "Chutney Chinchilla did not open a response window.")
 	service.resolve_reaction(state, 0)
-	_expect(state.opponent.discard.has("chef_mary") and not state.opponent.hand.has("chef_mary"), "Chef-Check Chinchilla did not negate the Chef.")
+	_expect(state.opponent.discard.has("chef_mary") and not state.opponent.hand.has("chef_mary"), "Chutney Chinchilla did not negate the Chef.")
 
 	state = _fresh_state()
 	state.player.hand = ["spicy_pantry_pouncer"]
@@ -186,7 +186,7 @@ func _test_hand_responses() -> void:
 	state.opponent.hand = ["item_wooden_spoon"]
 	service._play_tool(state, "opponent", 0)
 	service.resolve_reaction(state, 0)
-	_expect(state.opponent.discard.has("item_wooden_spoon") and state.opponent.hand.is_empty(), "Toolbox Toad did not negate the Tool.")
+	_expect(state.opponent.discard.has("item_wooden_spoon") and state.opponent.hand.is_empty(), "Tamari Toad did not negate the Tool.")
 
 	state = _fresh_state()
 	state.player.hand = ["sweet_ability_axolotl"]
@@ -210,7 +210,7 @@ func _test_hand_responses() -> void:
 	var guarded_target := _add_unit(state, "opponent", "hearty_stewoose", "plated")
 	state.opponent.hand = ["sweet_ability_axolotl"]
 	service._resolve_activated_ability(state, int(guarded_pike.instance_id), service.card("spicy_pepper_pike").abilities[0], int(guarded_target.instance_id))
-	_expect(int(guarded_target.health) == 7 and guard.get("used_abilities", []).has("hand_trap_guard"), "Trap Jam Tapir did not negate the opposing hand trap once per turn.")
+	_expect(int(guarded_target.health) == 7 and guard.get("used_abilities", []).has("hand_trap_guard"), "Tempeh Tapir did not negate the opposing hand trap once per turn.")
 
 
 func _test_stepwise_opponent_turn() -> void:

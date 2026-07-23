@@ -24,6 +24,21 @@ func _run() -> void:
 	if failed:
 		quit(1)
 		return
+	var animated_art_frame_counts := {
+		"spicy_sriracharrow": 6,
+		"spicy_firecracker_shrimp": 6,
+		"hearty_bagver": 6,
+		"hearty_french_bread_dog": 6,
+		"sweet_cinnamon_snail": 6,
+		"sweet_donutphin": 6,
+		"sweet_jellyfish": 6,
+		"sweet_caramel_camel": 7,
+		"sweet_strawberry_sharkcake": 6
+	}
+	for card_id in animated_art_frame_counts:
+		var frames: Array = catalog.cards_by_id[card_id].get("art_frames", [])
+		_expect(frames.size() == int(animated_art_frame_counts[card_id]) and frames.all(func(frame_path) -> bool: return ResourceLoader.exists(String(frame_path))), "%s did not load every converted artwork frame." % card_id)
+	_expect(String(catalog.cards_by_id.sweet_caramel_camel.name) == "Choco Bat" and String(catalog.cards_by_id.sweet_caramel_camel.art_frames[0]).contains("sweet_caramel_camel"), "Choco Bat did not replace Caramel Camel with the converted artwork.")
 
 	var bee_face := CARD_FACE_SCRIPT.new()
 	bee_face.configure(catalog.cards_by_id.spicy_hot_honey_bee, "white", true)
@@ -61,13 +76,45 @@ func _run() -> void:
 	_expect(sweet_frame != null and sweet_frame.texture.resource_path.ends_with("sweet_ingredient/gold.png"), "The Gold difficulty did not use the corrected Sweet Ingredient frame.")
 	_expect(hearty_frame != null and hearty_frame.texture.resource_path.ends_with("hearty_meal/blue.png"), "The Blue difficulty did not use the Hearty Meal frame.")
 	_expect(bee_art != null and not bool(bee_art.get_meta("art_pending", true)), "Hot Honey Bee did not load its converted artwork frames.")
-	_expect(sweet_art != null and bool(sweet_art.get_meta("art_pending", false)), "A Sweet Ingredient without artwork did not use ART PENDING.")
+	_expect(sweet_art != null and not bool(sweet_art.get_meta("art_pending", true)), "Choco Bat did not load its converted artwork frames.")
 	_expect(hearty_art != null and bool(hearty_art.get_meta("art_pending", false)), "A Hearty Meal without artwork did not use ART PENDING.")
 	_expect(sweet_icon != null and sweet_icon.text == "🍬" and hearty_icon != null and hearty_icon.text == "🍲", "Sweet or Hearty cards did not use their Noto affinity emoji.")
 	_expect(card_icon_font != null and not card_icon_font.allow_system_fallback, "Card affinity symbols could still fall back to the system's colored emoji font.")
 	_expect(hearty_type != null and hearty_type.text == "Meal", "The Hearty Meal frame did not render its card type.")
 	_expect(hearty_requirements != null and hearty_requirements.text == "2× Hearty Ingredients", "The Hearty Meal frame did not summarize its recipe requirements.")
 	_expect(hearty_requirements.get_theme_font_size("font_size") < hearty_type.get_theme_font_size("font_size"), "Meal requirements were not rendered smaller than the Meal label.")
+
+	var fresh_ingredient_face := CARD_FACE_SCRIPT.new()
+	fresh_ingredient_face.configure(catalog.cards_by_id.fresh_crisp_capybara, "silver", false)
+	var fresh_ingredient_frame := fresh_ingredient_face.find_child("CardFrame", true, false) as TextureRect
+	var fresh_meal_face := CARD_FACE_SCRIPT.new()
+	fresh_meal_face.configure(catalog.cards_by_id.fresh_saladmander, "yellow", false)
+	var fresh_meal_frame := fresh_meal_face.find_child("CardFrame", true, false) as TextureRect
+	for fresh_card_type in ["ingredient", "meal"]:
+		for fresh_border in ["black", "blue", "yellow", "silver", "gold"]:
+			var fresh_frame_path := "res://assets/cards/frames/fresh_%s/%s.png" % [fresh_card_type, fresh_border]
+			_expect(ResourceLoader.exists(fresh_frame_path), "The supplied Fresh %s %s frame was not imported." % [fresh_border.capitalize(), fresh_card_type.capitalize()])
+	_expect(CARD_FACE_SCRIPT.supports_card(catalog.cards_by_id.fresh_crisp_capybara), "Fresh cards were not accepted by the authored card renderer.")
+	_expect(fresh_ingredient_frame != null and fresh_ingredient_frame.texture.resource_path.ends_with("fresh_ingredient/silver.png"), "A Fresh Ingredient did not use its supplied Silver frame.")
+	_expect(fresh_meal_frame != null and fresh_meal_frame.texture.resource_path.ends_with("fresh_meal/yellow.png"), "A Fresh Meal did not use its supplied Yellow frame.")
+	fresh_ingredient_face.free()
+	fresh_meal_face.free()
+
+	var funky_ingredient_face := CARD_FACE_SCRIPT.new()
+	funky_ingredient_face.configure(catalog.cards_by_id.funky_fondue_ferret, "blue", false)
+	var funky_ingredient_frame := funky_ingredient_face.find_child("CardFrame", true, false) as TextureRect
+	var funky_meal_face := CARD_FACE_SCRIPT.new()
+	funky_meal_face.configure(catalog.cards_by_id.funky_leftover_lynx, "gold", false)
+	var funky_meal_frame := funky_meal_face.find_child("CardFrame", true, false) as TextureRect
+	for funky_card_type in ["ingredient", "meal"]:
+		for funky_border in ["black", "blue", "yellow", "silver", "gold"]:
+			var funky_frame_path := "res://assets/cards/frames/funky_%s/%s.png" % [funky_card_type, funky_border]
+			_expect(ResourceLoader.exists(funky_frame_path), "The supplied Funky %s %s frame was not imported." % [funky_border.capitalize(), funky_card_type.capitalize()])
+	_expect(CARD_FACE_SCRIPT.supports_card(catalog.cards_by_id.funky_fondue_ferret), "Funky cards were not accepted by the authored card renderer.")
+	_expect(funky_ingredient_frame != null and funky_ingredient_frame.texture.resource_path.ends_with("funky_ingredient/blue.png"), "A Funky Ingredient did not use its supplied Blue frame.")
+	_expect(funky_meal_frame != null and funky_meal_frame.texture.resource_path.ends_with("funky_meal/gold.png"), "A Funky Meal did not use its supplied Gold frame.")
+	funky_ingredient_face.free()
+	funky_meal_face.free()
 
 	var chef_face := CARD_FACE_SCRIPT.new()
 	chef_face.configure(catalog.cards_by_id.chef_mary, "gold", false)
@@ -100,9 +147,12 @@ func _run() -> void:
 	required_meal_face.free()
 
 	var first_art_path := bee_art.texture.resource_path if bee_art != null and bee_art.texture != null else ""
+	var first_sweet_art_path := sweet_art.texture.resource_path if sweet_art != null and sweet_art.texture != null else ""
 	await create_timer(0.08).timeout
 	var advanced_art_path := bee_art.texture.resource_path if bee_art != null and bee_art.texture != null else ""
+	var advanced_sweet_art_path := sweet_art.texture.resource_path if sweet_art != null and sweet_art.texture != null else ""
 	_expect(first_art_path != "" and advanced_art_path != first_art_path, "Hot Honey Bee artwork did not advance at its authored frame timing.")
+	_expect(first_sweet_art_path != "" and advanced_sweet_art_path != first_sweet_art_path, "Choco Bat artwork did not advance at its authored frame timing.")
 
 	await process_frame
 	var preview: Image = null

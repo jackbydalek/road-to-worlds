@@ -648,7 +648,7 @@ func _run() -> void:
 	var vanilla_high_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7003)
 	vanilla_high_state.player.prep = [
 		_test_unit(910, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2),
-		_test_unit(911, "sweet_caramel_camel", "Caramel Camel", "ingredient", 1, 1, false, 2),
+		_test_unit(911, "sweet_caramel_camel", "Choco Bat", "ingredient", 1, 1, false, 2),
 		_test_unit(912, "sweet_toffee_collie", "Toffee Collie", "ingredient", 1, 1, false, 2)
 	]
 	vanilla_high_state.player.hand = ["sweet_vanilla_gorilla"]

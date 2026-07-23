@@ -55,6 +55,9 @@ var meta_panel: PanelContainer
 var meta_list: VBoxContainer
 var meta_report_list: VBoxContainer
 var shopkeeper_hotspot: Button
+var shopkeeper_highlight_material: StandardMaterial3D
+var shopkeeper_original_overlays: Dictionary = {}
+var shopkeeper_hover_enabled := true
 
 
 func _ready() -> void:
@@ -563,6 +566,35 @@ func _rarity_accent(rarity: String) -> Color:
 
 func _add_world_hotspots() -> void:
 	shopkeeper_hotspot = _add_hotspot("ShopkeeperHotspot", Vector2(280, 360), _show_menu)
+	shopkeeper_hotspot.mouse_entered.connect(func() -> void: _set_shopkeeper_highlighted(true))
+	shopkeeper_hotspot.mouse_exited.connect(func() -> void: _set_shopkeeper_highlighted(false))
+
+
+func _set_shopkeeper_highlighted(highlighted: bool) -> void:
+	if shopkeeper_model == null:
+		return
+	highlighted = highlighted and shopkeeper_hover_enabled
+	if highlighted and shopkeeper_highlight_material == null:
+		shopkeeper_highlight_material = StandardMaterial3D.new()
+		shopkeeper_highlight_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		shopkeeper_highlight_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		shopkeeper_highlight_material.albedo_color = Color(1.0, 0.78, 0.22, 0.34)
+		shopkeeper_highlight_material.emission_enabled = true
+		shopkeeper_highlight_material.emission = Color(1.0, 0.67, 0.08)
+		shopkeeper_highlight_material.emission_energy_multiplier = 1.5
+		shopkeeper_highlight_material.render_priority = 1
+	for child in shopkeeper_model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := child as MeshInstance3D
+		if mesh == null:
+			continue
+		if highlighted:
+			if not shopkeeper_original_overlays.has(mesh):
+				shopkeeper_original_overlays[mesh] = mesh.material_overlay
+			mesh.material_overlay = shopkeeper_highlight_material
+		else:
+			mesh.material_overlay = shopkeeper_original_overlays.get(mesh)
+	if not highlighted:
+		shopkeeper_original_overlays.clear()
 
 
 func _add_hotspot(node_name: String, size_value: Vector2, callback: Callable) -> Button:
@@ -592,7 +624,12 @@ func _position_shopkeeper_hotspot() -> void:
 
 
 func _show_overview() -> void:
-	_move_to_shot(overview_target, OVERVIEW_SIZE, _overview_description(), null)
+	shopkeeper_hover_enabled = false
+	_set_shopkeeper_highlighted(false)
+	await _move_to_shot(overview_target, OVERVIEW_SIZE, _overview_description(), null)
+	shopkeeper_hover_enabled = true
+	if shopkeeper_hotspot != null and shopkeeper_hotspot.is_hovered():
+		_set_shopkeeper_highlighted(true)
 
 
 func _show_settings_menu() -> void:
@@ -610,6 +647,8 @@ func _show_settings_menu() -> void:
 
 
 func _show_menu() -> void:
+	shopkeeper_hover_enabled = false
+	_set_shopkeeper_highlighted(false)
 	var focus_point := shopkeeper_model.global_position + Vector3(0, SHOPKEEPER_FOCUS_HEIGHT, 0)
 	menu_target.global_position = focus_point + SHOPKEEPER_CAMERA_OFFSET
 	menu_target.look_at(focus_point, Vector3.UP)

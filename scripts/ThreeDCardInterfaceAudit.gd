@@ -230,10 +230,13 @@ func _audit_search_discard_and_reaction_presentations() -> void:
 
 	var reaction_state := _fresh_state()
 	reaction_state.player.hand = ["funky_chef_check_chinchilla"]
-	reaction_state.pending_reaction = {"reaction_kind": "hand_trap", "eligible_indices": [0], "acting_side": "opponent", "action_kind": "chef"}
+	reaction_state.pending_reaction = {"reaction_kind": "hand_trap", "eligible_indices": [0], "acting_side": "opponent", "action_kind": ""}
 	table.state = reaction_state
 	table._render_match()
-	_expect(table.prompt_panel.visible and table.prompt_content.get_child_count() >= 3, "Reaction windows did not expose Use and Pass controls in the 3D interface.")
+	_expect(table.prompt_panel.visible and table.prompt_content.get_child_count() >= 4, "Reaction windows did not expose the timer, Use, and Pass controls in the 3D interface.")
+	_expect(table.reaction_countdown_active and is_equal_approx(table.reaction_countdown_remaining, table.REACTION_WINDOW_SECONDS), "Hand Trap reaction windows did not start a five-second countdown.")
+	table._update_reaction_countdown(table.REACTION_WINDOW_SECONDS + 0.01)
+	_expect(reaction_state.pending_reaction.is_empty() and reaction_state.player.hand == ["funky_chef_check_chinchilla"], "An expired Hand Trap reaction did not auto-pass without using the card.")
 
 
 func _audit_effect_lab_regressions() -> void:

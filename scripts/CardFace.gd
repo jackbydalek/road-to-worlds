@@ -8,7 +8,7 @@ const ART_PENDING := preload("res://assets/cards/art_pending.png")
 
 const DEFAULT_SIZE := Vector2(250, 355)
 const DEFAULT_FRAME_DURATION := 0.1
-const SUPPORTED_ARCHETYPES := ["spicy", "sweet", "hearty"]
+const SUPPORTED_ARCHETYPES := ["spicy", "sweet", "hearty", "fresh", "funky"]
 const AFFINITY_CARD_TYPES := ["ingredient", "meal"]
 const NEUTRAL_CARD_TYPES := ["chef", "tool"]
 
@@ -19,6 +19,7 @@ var _frame_elapsed := 0.0
 var _frame_index := 0
 var _animate_art := true
 var _compact_visual := false
+var _show_art := true
 
 var _frame_texture: TextureRect
 var _art_texture: TextureRect
@@ -37,10 +38,11 @@ static func supports_card(card: Dictionary) -> bool:
 	return String(card.get("archetype", "")) in SUPPORTED_ARCHETYPES and card_type in AFFINITY_CARD_TYPES
 
 
-func configure(card: Dictionary, difficulty_id: String = "white", animate_art: bool = true, compact_visual: bool = false) -> void:
+func configure(card: Dictionary, difficulty_id: String = "white", animate_art: bool = true, compact_visual: bool = false, show_art: bool = true) -> void:
 	_card = card.duplicate(true)
 	_animate_art = animate_art
 	_compact_visual = compact_visual
+	_show_art = show_art
 	custom_minimum_size = DEFAULT_SIZE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
@@ -67,7 +69,12 @@ func _build_face(difficulty_id: String) -> void:
 	_art_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_set_relative_rect(_art_texture, 0.055, 0.145, 0.945, 0.585)
 	add_child(_art_texture)
-	_load_art()
+	if _show_art:
+		_load_art()
+	else:
+		_art_texture.visible = false
+		_art_texture.set_meta("art_pending", false)
+		set_process(false)
 
 	var card_type := String(_card.get("card_type", "ingredient"))
 	var uses_neutral_frame := card_type in NEUTRAL_CARD_TYPES

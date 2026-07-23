@@ -17,6 +17,8 @@ const PLAYER_HAND_MAX_WIDTH := 8.8
 const OPPONENT_HAND_MAX_WIDTH := 6.6
 const HAND_CARD_GAP := 0.14
 const CARD_FACE_TEXTURE_SIZE := Vector2i(320, 455)
+const FLOATING_ART_HEIGHT := 0.62
+const REACTION_WINDOW_SECONDS := 5.0
 const ZONE_CENTERS := {
 	"player_prep": Vector3(0.0, TABLE_Y, 1.25),
 	"player_plated": Vector3(0.0, TABLE_Y, -0.65),
@@ -123,6 +125,9 @@ var outcome_subtitle: Label
 var outcome_sequence_running := false
 var outcome_sequence_played := false
 var card_face_redraw_requests := 0
+var reaction_countdown_active := false
+var reaction_countdown_remaining := 0.0
+var reaction_countdown_label: Label
 
 
 func configure_match(
@@ -484,7 +489,7 @@ func _build_field_cards(side: String, zone: String) -> void:
 	for unit in units:
 		var slot_index := int(unit.get("table_slot", 0))
 		var offset := float(slot_index) - float(capacity - 1) * 0.5
-		var root := _make_card(String(unit.card_id), true)
+		var root := _make_card(String(unit.card_id), true, false)
 		root.name = "%s%sCard_%d" % [side.capitalize(), zone.capitalize(), int(unit.instance_id)]
 		root.position = center + Vector3(offset * spacing, 0.0, 0.0)
 		root.set_meta("kind", "field")
@@ -669,7 +674,7 @@ func _add_spice_attachments(root: Node3D, unit: Dictionary, side: String) -> voi
 		root.add_child(spice_card)
 
 
-func _make_card(card_id: String, face_up: bool) -> Node3D:
+func _make_card(card_id: String, face_up: bool, show_art: bool = true) -> Node3D:
 	var root := Node3D.new()
 	var body := MeshInstance3D.new()
 	body.name = "CardBody"
@@ -689,16 +694,17 @@ func _make_card(card_id: String, face_up: bool) -> Node3D:
 	var face_mesh := QuadMesh.new()
 	face_mesh.size = FIELD_CARD_SIZE
 	face.mesh = face_mesh
-	face.material_override = _face_material(card_id) if face_up else _card_back_material()
+	face.material_override = _face_material(card_id, show_art) if face_up else _card_back_material()
 	root.add_child(face)
 	return root
 
 
-func _face_material(card_id: String) -> StandardMaterial3D:
-	if face_materials.has(card_id):
-		return face_materials[card_id]
+func _face_material(card_id: String, show_art: bool = true) -> StandardMaterial3D:
+	var cache_key := card_id if show_art else "%s__field_no_art" % card_id
+	if face_materials.has(cache_key):
+		return face_materials[cache_key]
 	var viewport := SubViewport.new()
-	viewport.name = "PrototypeFullCardFaceViewport_%s" % card_id
+	viewport.name = "PrototypeFullCardFaceViewport_%s%s" % [card_id, "" if show_art else "_NoArt"]
 	viewport.disable_3d = true
 	viewport.transparent_bg = true
 	viewport.size = CARD_FACE_TEXTURE_SIZE
@@ -712,19 +718,19 @@ func _face_material(card_id: String) -> StandardMaterial3D:
 	var data: Dictionary = service.card(card_id)
 	if CARD_FACE_SCRIPT.supports_card(data):
 		var face_control := CARD_FACE_SCRIPT.new()
-		face_control.name = "PrototypeFullCardFace_%s" % card_id
+		face_control.name = "PrototypeFullCardFace_%s%s" % [card_id, "" if show_art else "_NoArt"]
 		face_control.visual_changed.connect(func() -> void: _request_card_face_redraw(viewport))
-		face_control.configure(data, configured_card_border_id if production_match else "black", true, false)
+		face_control.configure(data, configured_card_border_id if production_match else "black", show_art, false, show_art)
 		face_control.position = Vector2.ZERO
 		face_control.size = Vector2(viewport.size)
 		viewport.add_child(face_control)
 	else:
-		viewport.add_child(_make_fallback_card_face(data, viewport.size))
+		viewport.add_child(_make_fallback_card_face(data, viewport.size, show_art))
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.albedo_texture = viewport.get_texture()
-	face_materials[card_id] = material
+	face_materials[cache_key] = material
 	return material
 
 
@@ -735,7 +741,7 @@ func _request_card_face_redraw(viewport: SubViewport) -> void:
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
-func _make_fallback_card_face(data: Dictionary, face_size: Vector2i) -> Control:
+func _make_fallback_card_face(data: Dictionary, face_size: Vector2i, show_art: bool = true) -> Control:
 	var root := PanelContainer.new()
 	root.name = "PrototypeFallbackCardFace_%s" % String(data.get("id", "card"))
 	root.size = Vector2(face_size)
@@ -762,6 +768,7 @@ func _make_fallback_card_face(data: Dictionary, face_size: Vector2i) -> Control:
 	var art := TextureRect.new()
 	art.custom_minimum_size = Vector2(0, 235)
 	art.texture = ART_PENDING
+	art.visible = show_art
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	box.add_child(art)
@@ -787,7 +794,7 @@ func _card_back_material() -> StandardMaterial3D:
 	return material
 
 
-func _add_floating_art(root: Node3D, data: Dictionary, side: String) -> void:
+func _add_floating_art(root: Node3D, data: Dictionary, _side: String) -> void:
 	var frames: Array[Texture2D] = []
 	for path in data.get("art_frames", []):
 		var frame := load(String(path)) as Texture2D
@@ -804,7 +811,7 @@ func _add_floating_art(root: Node3D, data: Dictionary, side: String) -> void:
 	var mesh := QuadMesh.new()
 	mesh.size = Vector2(1.03, 0.86)
 	art.mesh = mesh
-	art.position = Vector3(0.0, 0.91, -0.05)
+	art.position = Vector3(0.0, FLOATING_ART_HEIGHT, -0.05)
 	art.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -817,7 +824,6 @@ func _add_floating_art(root: Node3D, data: Dictionary, side: String) -> void:
 	art.set_meta("frame_duration", float(data.get("art_frame_duration", 0.12)))
 	art.set_meta("elapsed", 0.0)
 	art.set_meta("frame_index", 0)
-	art.set_meta("bob_seed", float(int(root.get_instance_id()) % 17) * 0.23 + (1.1 if side == "opponent" else 0.0))
 	root.add_child(art)
 	floating_arts.append(art)
 
@@ -928,6 +934,7 @@ func _zone_node_name(zone_id: String) -> String:
 
 
 func _process(delta: float) -> void:
+	_update_reaction_countdown(delta)
 	var time := Time.get_ticks_msec() * 0.001
 	for art in floating_arts:
 		if not is_instance_valid(art):
@@ -942,10 +949,6 @@ func _process(delta: float) -> void:
 			(art.material_override as StandardMaterial3D).albedo_texture = frames[frame_index]
 		art.set_meta("elapsed", elapsed)
 		art.set_meta("frame_index", frame_index)
-		var seed := float(art.get_meta("bob_seed", 0.0))
-		art.position.y = 0.91 + sin(time * 2.8 + seed) * 0.075
-		art.position.x = sin(time * 1.4 + seed) * 0.022
-		art.rotation.z = sin(time * 1.7 + seed) * 0.025
 	_animate_physical_cards(delta, time)
 	_update_zone_flair(time)
 	for body in highlighted_bodies:
@@ -1102,9 +1105,7 @@ func _begin_drag(point: Vector3) -> void:
 func _update_drag(point: Vector3) -> void:
 	if pressed_card == null:
 		return
-	var desired := point + drag_offset
-	desired.x = clampf(desired.x, -5.4, 5.4)
-	desired.z = clampf(desired.z, -4.8, 4.5)
+	var desired := _dragged_card_point(point)
 	pressed_card.position = Vector3(desired.x, DRAG_Y, desired.z)
 	var hovered_slot := _slot_at_point(desired)
 	highlighted_zone = String(hovered_slot.get("zone", ""))
@@ -1115,7 +1116,8 @@ func _finish_drag(point: Variant) -> void:
 	if pressed_card == null:
 		return
 	dragging = false
-	var drop_slot := _slot_at_point(point as Vector3) if point != null else {}
+	var drop_point: Variant = _dragged_card_point(point as Vector3) if point != null else null
+	var drop_slot := _slot_at_point(drop_point as Vector3) if drop_point != null else {}
 	var destination := String(drop_slot.get("zone", ""))
 	var destination_slot := int(drop_slot.get("slot", -1))
 	var requested_hand_play := -1
@@ -1141,12 +1143,18 @@ func _finish_drag(point: Variant) -> void:
 			_move_unit(instance_id, destination.trim_prefix("player_"), destination_slot)
 		elif destination == "opponent_plated":
 			requested_attacker = instance_id
-			requested_attack_target = _field_target_near(point as Vector3, "opponent", "plated")
-		elif _point_near_chef(point as Vector3, opponent_chef.position):
+			requested_attack_target = _field_target_near(drop_point as Vector3, "opponent", "plated")
+		elif drop_point != null and _point_near_chef(drop_point as Vector3, opponent_chef.position):
 			requested_attacker = instance_id
 			requested_attack_target = -1
 	highlighted_zone = ""
 	highlighted_slot = -1
+	if requested_attacker >= 0:
+		# Attack animations must begin at the card's board slot, not wherever the
+		# pointer released it over a defender or chef.
+		pressed_card.position = drag_original_position
+		pressed_card.rotation = drag_original_rotation
+		pressed_card.scale = pressed_card.get_meta("base_scale", pressed_card.scale)
 	pressed_card = null
 	selected_ref = {}
 	if requested_hand_play >= 0:
@@ -1156,6 +1164,13 @@ func _finish_drag(point: Variant) -> void:
 		_perform_attack(requested_attack_target, requested_attacker)
 		return
 	_render_match()
+
+
+func _dragged_card_point(pointer_point: Vector3) -> Vector3:
+	var desired := pointer_point + drag_offset
+	desired.x = clampf(desired.x, -5.4, 5.4)
+	desired.z = clampf(desired.z, -4.8, 4.5)
+	return Vector3(desired.x, TABLE_Y, desired.z)
 
 
 func _zone_at_point(point: Vector3) -> String:
@@ -1425,7 +1440,11 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 	for event in events:
 		var event_type := String(event.get("type", ""))
 		if event_type == "attack":
-			await _animate_attack_motion(int(event.get("source_instance_id", -1)), int(event.get("target_instance_id", -1)))
+			await _animate_attack_motion(
+				int(event.get("source_instance_id", -1)),
+				int(event.get("target_instance_id", -1)),
+				String(event.get("target_kind", "unit"))
+			)
 			continue
 		longest_duration = maxf(longest_duration, _start_animation_event(event, play_origin_pose))
 	if longest_duration > 0.0:
@@ -1489,9 +1508,12 @@ func _start_card_transfer_event_animation(event: Dictionary) -> float:
 	var source_position: Vector3 = AUX_ZONE_POSITIONS[source_key] + Vector3(0.0, 0.9, 0.0)
 	var destination_position := card_node.global_position
 	var accent := Color("#42d7ff") if side == "player" else Color("#c979e8")
-	_spawn_particle_burst(source_position, accent, 7, "•")
+	var show_particles := String(event.get("type", "")) != "draw"
+	if show_particles:
+		_spawn_particle_burst(source_position, accent, 7, "•")
 	_start_node_arrival_animation(card_node, {}, source_position)
-	get_tree().create_timer(0.31).timeout.connect(func() -> void: _spawn_particle_burst(destination_position + Vector3(0.0, 0.2, 0.0), accent, 9, "✦"))
+	if show_particles:
+		get_tree().create_timer(0.31).timeout.connect(func() -> void: _spawn_particle_burst(destination_position + Vector3(0.0, 0.2, 0.0), accent, 9, "✦"))
 	return 0.48
 
 
@@ -1530,20 +1552,23 @@ func _start_node_arrival_animation(card_node: Node3D, origin_pose: Dictionary, f
 	pose_tween.tween_property(card_node, "scale", target_scale, 0.36)
 
 
-func _animate_attack_motion(attacker_instance_id: int, target_instance_id: int) -> void:
+func _animate_attack_motion(attacker_instance_id: int, target_instance_id: int, target_kind: String = "unit") -> void:
 	var attacker_node := _card_node_for_instance(attacker_instance_id)
 	if attacker_node == null:
 		return
 	var attacker_side := String(attacker_node.get_meta("side", "player"))
 	var origin := attacker_node.position
+	var attacks_chef := target_kind == "chef"
 	var target_position := origin + Vector3(0.0, 0.0, -4.5 if attacker_side == "player" else 4.5)
-	var target_node := _card_node_for_instance(target_instance_id)
+	var target_node: Node3D
+	if not attacks_chef:
+		target_node = _card_node_for_instance(target_instance_id)
 	if target_node != null:
 		target_position = target_node.position
 	var origin_scale := attacker_node.scale
 	var lunge_position := origin.lerp(target_position, 0.58)
 	lunge_position.y = maxf(origin.y + 0.5, 0.82)
-	if target_instance_id < 0:
+	if attacks_chef:
 		_start_camera_pulse(attacker_side, 2.2)
 	var tween := create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -1754,15 +1779,13 @@ func _spawn_screen_particle_burst(screen_position: Vector2, color: Color, count:
 	if effect_layer == null or count <= 0:
 		return
 	for particle_index in range(count):
-		var particle := _label(glyph, 16 + particle_index % 4 * 2, color.lightened(float(particle_index % 3) * 0.09))
-		particle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		particle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		particle.size = Vector2(30.0, 30.0)
-		particle.position = screen_position - particle.size * 0.5
-		particle.pivot_offset = particle.size * 0.5
+		var particle := Polygon2D.new()
+		var radius := 6.0 + float(particle_index % 4) * 1.5
+		particle.polygon = _particle_polygon(glyph, radius)
+		particle.color = color.lightened(float(particle_index % 3) * 0.09)
+		particle.position = screen_position
 		particle.scale = Vector2(0.35, 0.35)
 		particle.z_index = 235
-		particle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		effect_layer.add_child(particle)
 		var angle := TAU * float(particle_index) / float(count) + float(particle_index % 3) * 0.17
 		var distance := 34.0 + float((particle_index * 17) % 54)
@@ -1775,6 +1798,38 @@ func _spawn_screen_particle_burst(screen_position: Vector2, color: Color, count:
 		tween.tween_property(particle, "rotation", angle * 0.35, duration)
 		tween.tween_property(particle, "modulate:a", 0.0, duration * 0.55).set_delay(duration * 0.45)
 		tween.finished.connect(particle.queue_free)
+
+
+func _particle_polygon(style: String, radius: float) -> PackedVector2Array:
+	match style:
+		"+":
+			var arm := radius * 0.34
+			return PackedVector2Array([
+				Vector2(-arm, -radius), Vector2(arm, -radius),
+				Vector2(arm, -arm), Vector2(radius, -arm),
+				Vector2(radius, arm), Vector2(arm, arm),
+				Vector2(arm, radius), Vector2(-arm, radius),
+				Vector2(-arm, arm), Vector2(-radius, arm),
+				Vector2(-radius, -arm), Vector2(-arm, -arm)
+			])
+		"◆":
+			return PackedVector2Array([
+				Vector2(0.0, -radius), Vector2(radius, 0.0),
+				Vector2(0.0, radius), Vector2(-radius, 0.0)
+			])
+		"✦":
+			var inner := radius * 0.22
+			return PackedVector2Array([
+				Vector2(0.0, -radius), Vector2(inner, -inner),
+				Vector2(radius, 0.0), Vector2(inner, inner),
+				Vector2(0.0, radius), Vector2(-inner, inner),
+				Vector2(-radius, 0.0), Vector2(-inner, -inner)
+			])
+	var circle := PackedVector2Array()
+	for point_index in range(10):
+		var angle := TAU * float(point_index) / 10.0
+		circle.append(Vector2(cos(angle), sin(angle)) * radius)
+	return circle
 
 
 func _start_camera_pulse(side: String, fov_amount: float = 2.0) -> void:
@@ -2005,11 +2060,54 @@ func _refresh_prompt() -> void:
 	if not pending_reaction.is_empty():
 		_add_prompt_title("REACTION WINDOW")
 		_add_prompt_text(String(state.message))
+		if String(pending_reaction.get("reaction_kind", "hand_trap")) == "hand_trap":
+			if not reaction_countdown_active:
+				_start_reaction_countdown()
+			reaction_countdown_label = _label("", 17, Color("#ffd36f"))
+			reaction_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			prompt_content.add_child(reaction_countdown_label)
+			_update_reaction_countdown_label()
+		else:
+			_cancel_reaction_countdown()
 		for hand_index in service.reaction_hand_indices(state):
 			var card_id := String(state.player.hand[hand_index])
 			var reaction_hand_index := hand_index
 			_add_prompt_button("Use %s" % String(service.card(card_id).get("name", card_id)), func() -> void: _resolve_reaction(reaction_hand_index))
 		_add_prompt_button("Pass", func() -> void: _resolve_reaction(-1))
+		return
+	_cancel_reaction_countdown()
+
+
+func _start_reaction_countdown() -> void:
+	reaction_countdown_active = true
+	reaction_countdown_remaining = REACTION_WINDOW_SECONDS
+
+
+func _cancel_reaction_countdown() -> void:
+	reaction_countdown_active = false
+	reaction_countdown_remaining = 0.0
+	reaction_countdown_label = null
+
+
+func _update_reaction_countdown(delta: float) -> void:
+	if not reaction_countdown_active:
+		return
+	var pending_reaction: Dictionary = state.get("pending_reaction", {})
+	if pending_reaction.is_empty() or String(pending_reaction.get("reaction_kind", "hand_trap")) != "hand_trap":
+		_cancel_reaction_countdown()
+		return
+	reaction_countdown_remaining = maxf(0.0, reaction_countdown_remaining - delta)
+	_update_reaction_countdown_label()
+	if reaction_countdown_remaining <= 0.0 and not animation_busy:
+		reaction_countdown_active = false
+		_resolve_reaction(-1)
+
+
+func _update_reaction_countdown_label() -> void:
+	if not is_instance_valid(reaction_countdown_label):
+		return
+	var seconds_left := ceili(reaction_countdown_remaining)
+	reaction_countdown_label.text = "Auto-pass in %d second%s" % [seconds_left, "" if seconds_left == 1 else "s"]
 
 
 func _uses_bottom_target_prompt() -> bool:
@@ -2401,6 +2499,7 @@ func _cancel_ability() -> void:
 func _resolve_reaction(hand_index: int) -> void:
 	if animation_busy:
 		return
+	_cancel_reaction_countdown()
 	animation_busy = true
 	service.resolve_reaction(state, hand_index, false)
 	await _drain_animation_event_queue()

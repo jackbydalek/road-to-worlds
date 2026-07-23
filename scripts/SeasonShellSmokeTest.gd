@@ -189,7 +189,7 @@ func _run() -> void:
 			await create_timer(0.1).timeout
 		_expect(tabletop_prototype.state.player.hand.size() == starting_hand_size - 1 and tabletop_prototype.state.player.prep.size() == 1, "The Living Table did not route a 3D hand play through the production combat rules.")
 		var field_card := tabletop_prototype.find_child("PlayerPrepCard_*", true, false) as Node3D
-		_expect(field_card != null and field_card.find_child("FloatingArt", true, false) != null, "A played Living Table card did not lay flat with bobbing artwork above it.")
+		_expect(field_card != null and field_card.find_child("FloatingArt", true, false) != null, "A played Living Table card did not lay flat with looping artwork above it.")
 		_expect(not tabletop_prototype.state.player.prep.is_empty() and int(tabletop_prototype.state.player.prep[0].table_slot) == 2 and field_card != null and field_card.position.x > 1.6, "A card played to the right Prep box was recentered instead of remaining in that exact slot.")
 		tabletop_prototype.state.player.prep[0].spices = ["spice_cayenne_crunch"]
 		tabletop_prototype.state.player.environment = "environment_blazing_wok"
@@ -389,6 +389,13 @@ func _run() -> void:
 		_expect(active_idle != null and active_idle.loop_mode == Animation.LOOP_LINEAR, "Clerk 1's idle animation is not configured to loop.")
 	var shopkeeper_hotspot := main.find_child("ShopkeeperHotspot", true, false) as Button
 	_expect(shopkeeper_hotspot != null and shopkeeper_hotspot.text == "" and shopkeeper_hotspot.flat and shopkeeper_hotspot.modulate.a == 0.0, "Clerk 1 does not have an invisible direct-click target.")
+	var shopkeeper_meshes := shopkeeper_model.find_children("*", "MeshInstance3D", true, false) if shopkeeper_model != null else []
+	if shopkeeper_hotspot != null:
+		shopkeeper_hotspot.emit_signal("mouse_entered")
+	_expect(not shopkeeper_meshes.is_empty() and shopkeeper_meshes.all(func(mesh) -> bool: return mesh.material_overlay == shop_overworld.shopkeeper_highlight_material), "Hovering Clerk 1 did not highlight the full animated model.")
+	if shopkeeper_hotspot != null:
+		shopkeeper_hotspot.emit_signal("mouse_exited")
+	_expect(shopkeeper_meshes.all(func(mesh) -> bool: return mesh.material_overlay == null), "Clerk 1's hover highlight did not clear when the pointer left.")
 	_expect(main.find_child("ShotButtons", true, false) == null and main.find_child("TradingHotspot", true, false) == null and main.find_child("MetaHotspot", true, false) == null and main.find_child("DeckHotspot", true, false) == null, "The old store navigation buttons are still present.")
 	var cash_hud := main.find_child("ShopHudCashButton", true, false) as Button
 	var deck_hud := main.find_child("ShopHudDeckButton", true, false) as Button
@@ -405,6 +412,9 @@ func _run() -> void:
 		shopkeeper_hotspot.emit_signal("pressed")
 	await create_timer(0.8).timeout
 	_expect(shop_overworld != null and shop_overworld.menu_panel.visible, "Clicking Clerk 1 did not open her menu.")
+	if shopkeeper_hotspot != null:
+		shopkeeper_hotspot.emit_signal("mouse_entered")
+	_expect(not shop_overworld.shopkeeper_hover_enabled and shopkeeper_meshes.all(func(mesh) -> bool: return mesh.material_overlay == null), "Clerk 1 remained highlighted while the shopkeeper menu was zoomed in.")
 	var clerk_focus: Vector3 = shopkeeper_model.global_position + Vector3(0, shop_overworld.SHOPKEEPER_FOCUS_HEIGHT, 0) if shop_overworld != null and shopkeeper_model != null else Vector3.ZERO
 	var clerk_camera_position: Vector3 = clerk_focus + shop_overworld.SHOPKEEPER_CAMERA_OFFSET if shop_overworld != null else Vector3.ZERO
 	var clerk_camera_forward: Vector3 = -shop_overworld.camera_rig.global_basis.z if shop_overworld != null else Vector3.ZERO

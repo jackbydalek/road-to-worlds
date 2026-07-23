@@ -22,7 +22,7 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 2. **Twenty-one cards use fallback faces.** These are the Fresh and Funky cards plus Spices and Environments; they remain fully playable, but need supplied frame families to match the authored Spicy/Sweet/Hearty presentation.
 3. **Reaction windows are functional but still generic.** The five reaction cards appear in a centered Use/Pass overlay rather than using the physical hand directly.
 4. **Tongs is functional but still generic.** Its opponent-hand choice uses card-name buttons rather than full card faces.
-5. **One schema-maintenance risk remains.** `hand_trap_guard_zone` is authored on Trap Jam Tapir, while the resolver currently enforces the present Plated behavior structurally rather than reading that field generically. The current card works; a future guard with a different zone would need resolver work.
+5. **One schema-maintenance risk remains.** `hand_trap_guard_zone` is authored on Tempeh Tapir, while the resolver currently enforces the present Plated behavior structurally rather than reading that field generically. The current card works; a future guard with a different zone would need resolver work.
 
 ## Interaction coverage
 
@@ -64,11 +64,11 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 | 21 | Pepper Pike | Meal | Recipe selector, Highlighted board target, Activated target | Pass |
 | 22 | Meatloaf Mole | Meal | Recipe selector | Pass |
 | 23 | Broth Buffalo | Meal | Recipe selector, Highlighted board target, Activated target | Pass |
-| 24 | Remix Raccoon | Meal | Recipe selector, Activated target | Pass (fallback face) |
-| 25 | Leftover Lynx | Meal | Recipe selector, Discard tray | Pass (fallback face) |
+| 24 | Relish Raccoon | Meal | Recipe selector, Activated target | Pass (fallback face) |
+| 25 | Limburger Lynx | Meal | Recipe selector, Discard tray | Pass (fallback face) |
 | 26 | Bottomless Trifle Tern | Meal | Recipe selector | Pass |
 | 27 | Pudding Puma | Meal | Recipe selector | Pass |
-| 28 | Trap Jam Tapir | Meal | Recipe selector | Pass (fallback face) |
+| 28 | Tempeh Tapir | Meal | Recipe selector | Pass (fallback face) |
 | 29 | Hot Honey Bee | Ingredient | Automatic / triggered effect | Pass |
 | 30 | Jalapeño Panther | Ingredient | Direct / passive play | Pass |
 | 31 | Red Pepper Panda | Ingredient | Direct / passive play | Pass |
@@ -78,17 +78,17 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 | 35 | Harebanero | Ingredient | Automatic / triggered effect | Pass |
 | 36 | Ghost Pepython | Ingredient | Automatic / triggered effect | Pass |
 | 37 | Chili Cicada | Ingredient | Highlighted board target | Pass |
-| 38 | Beat Beetle | Ingredient | Automatic / triggered effect | Pass (fallback face) |
+| 38 | Beet Beetle | Ingredient | Automatic / triggered effect | Pass (fallback face) |
 | 39 | Salad Shield Skunk | Ingredient | Direct / passive play | Pass (fallback face) |
-| 40 | Chef-Check Chinchilla | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
+| 40 | Chutney Chinchilla | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
 | 41 | Pantry Pouncer | Ingredient | Reaction window | Pass (generic reaction overlay) |
-| 42 | Toolbox Toad | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
+| 42 | Tamari Toad | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
 | 43 | Ability Axolotl | Ingredient | Reaction window | Pass (generic reaction overlay) |
 | 44 | Comeback Cucumber Corgi | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
 | 45 | Crisp Capybara | Ingredient | Direct / passive play | Pass (fallback face) |
 | 46 | Sprout Squirrel | Ingredient | Automatic / triggered effect | Pass (fallback face) |
-| 47 | Fondue Ferret | Ingredient | Direct / passive play | Pass (fallback face) |
-| 48 | Turniptable Turtle | Ingredient | Activated action | Pass (fallback face) |
+| 47 | Feta Ferret | Ingredient | Direct / passive play | Pass (fallback face) |
+| 48 | Pickled Turnip Turtle | Ingredient | Activated action | Pass (fallback face) |
 | 49 | Bagver | Ingredient | Automatic / triggered effect | Pass |
 | 50 | French Bread Dog | Ingredient | Direct / passive play | Pass |
 | 51 | Macaronatee | Ingredient | Direct / passive play | Pass |
@@ -99,7 +99,7 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 | 56 | Kwhale | Ingredient | Automatic / triggered effect | Pass |
 | 57 | Sugar Glider | Ingredient | Automatic / triggered effect | Pass |
 | 58 | Marshmallow Swallows | Ingredient | Direct / passive play | Pass |
-| 59 | Caramel Camel | Ingredient | Automatic / triggered effect | Pass |
+| 59 | Choco Bat | Ingredient | Automatic / triggered effect | Pass |
 | 60 | Toffee Collie | Ingredient | Automatic / triggered effect | Pass |
 | 61 | Nutmeg | Ingredient | Direct / passive play | Pass |
 | 62 | Vanilla Extract Gorilla | Ingredient | Automatic / triggered effect | Pass |
@@ -139,4 +139,3 @@ Run:
 ```
 
 The audit fails on catalog-count drift, unsupported effect operations, broken physical 3D faces, unsatisfiable recipe prompts, invalid activated-ability targets, missing board-choice highlights, broken trays/overlays, or a regression in the 19 complex-card scenarios.
-

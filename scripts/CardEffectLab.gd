@@ -12,17 +12,17 @@ const SCENARIOS := [
 	{"id":"pike_ping", "card_id":"spicy_pepper_pike", "label":"Pepper Pike — once-per-turn Meal damage", "archetype":"Spicy"},
 	{"id":"mole_ko_heal", "card_id":"hearty_meatloaf_mole", "label":"Meatloaf Mole — heal after KO", "archetype":"Hearty"},
 	{"id":"buffalo_heal", "card_id":"hearty_broth_buffalo", "label":"Broth Buffalo — targeted heal", "archetype":"Hearty"},
-	{"id":"raccoon_copy", "card_id":"funky_remix_raccoon", "label":"Remix Raccoon — copy Prep ability", "archetype":"Funky"},
-	{"id":"beetle_mill", "card_id":"funky_beat_beetle", "label":"Beat Beetle — mill and +3/+3", "archetype":"Funky"},
+	{"id":"raccoon_copy", "card_id":"funky_remix_raccoon", "label":"Relish Raccoon — copy Prep ability", "archetype":"Funky"},
+	{"id":"beetle_mill", "card_id":"funky_beat_beetle", "label":"Beet Beetle — mill and +3/+3", "archetype":"Funky"},
 	{"id":"tern_refill", "card_id":"sweet_bottomless_trifle_tern", "label":"Bottomless Trifle Tern — attack refill", "archetype":"Sweet"},
 	{"id":"skunk_shield", "card_id":"fresh_salad_shield_skunk", "label":"Salad Shield Skunk — Prep protection", "archetype":"Fresh"},
 	{"id":"puma_prep_attack", "card_id":"sweet_pudding_puma", "label":"Pudding Puma — attack from Prep", "archetype":"Sweet"},
-	{"id":"chef_trap", "card_id":"funky_chef_check_chinchilla", "label":"Chef-Check Chinchilla — negate Chef", "archetype":"Funky"},
+	{"id":"chef_trap", "card_id":"funky_chef_check_chinchilla", "label":"Chutney Chinchilla — negate Chef", "archetype":"Funky"},
 	{"id":"ingredient_trap", "card_id":"spicy_pantry_pouncer", "label":"Pantry Pouncer — destroy Ingredient", "archetype":"Spicy"},
-	{"id":"tool_trap", "card_id":"funky_toolbox_toad", "label":"Toolbox Toad — negate Tool", "archetype":"Funky"},
+	{"id":"tool_trap", "card_id":"funky_toolbox_toad", "label":"Tamari Toad — negate Tool", "archetype":"Funky"},
 	{"id":"ability_trap", "card_id":"sweet_ability_axolotl", "label":"Ability Axolotl — negate ability", "archetype":"Sweet"},
 	{"id":"corgi_comeback", "card_id":"fresh_comeback_corgi", "label":"Comeback Cucumber Corgi — damage response", "archetype":"Fresh"},
-	{"id":"tapir_guard", "card_id":"funky_trap_jam_tapir", "label":"Trap Jam Tapir — negate Hand Trap", "archetype":"Funky"}
+	{"id":"tapir_guard", "card_id":"funky_trap_jam_tapir", "label":"Tempeh Tapir — negate Hand Trap", "archetype":"Funky"}
 ]
 
 var service: RefCounted
@@ -167,7 +167,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 		"raccoon_copy":
 			var raccoon := _add_unit(state, "player", "funky_remix_raccoon", "plated")
 			var copied := _add_unit(state, "player", "hearty_gravy_gazelle", "prep")
-			expected = "Remix Raccoon copies Gravy Gazelle and buffs itself to 5/7."
+			expected = "Relish Raccoon copies Gravy Gazelle and buffs itself to 5/7."
 			before = _snapshot(state)
 			service._resolve_activated_ability(state, int(raccoon.instance_id), service.card("funky_remix_raccoon").abilities[0], int(copied.instance_id))
 			service.choose_effect_target(state, int(raccoon.instance_id))
@@ -175,7 +175,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 		"beetle_mill":
 			state.player.deck = ["fresh_crisp_capybara"]
 			var beetle := _add_unit(state, "player", "funky_beat_beetle", "prep")
-			expected = "Beat Beetle mills a unit and grows from 1/1 to 4/4."
+			expected = "Beet Beetle mills a unit and grows from 1/1 to 4/4."
 			before = _snapshot(state)
 			service._resolve_effects(state, "player", service.card("funky_beat_beetle").on_play, beetle)
 			passed = int(beetle.attack) == 4 and int(beetle.health) == 4 and state.player.discard.has("fresh_crisp_capybara")
@@ -222,7 +222,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 		"tool_trap":
 			state.player.hand = ["funky_toolbox_toad"]
 			state.opponent.hand = ["item_wooden_spoon"]
-			expected = "Toolbox Toad negates Wooden Spoon before it draws."
+			expected = "Tamari Toad negates Wooden Spoon before it draws."
 			before = _snapshot(state)
 			service._play_tool(state, "opponent", 0)
 			service.resolve_reaction(state, 0)
