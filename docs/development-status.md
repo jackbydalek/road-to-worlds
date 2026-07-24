@@ -25,11 +25,11 @@
 
 ## Content
 
-The Kitchen catalog contains 88 collectible cards:
+The Kitchen catalog contains 89 collectible cards:
 
 - 36 Ingredients
 - 28 Meals
-- 14 Tools
+- 15 Tools
 - 3 Spices
 - 3 Environments
 - 4 Chefs

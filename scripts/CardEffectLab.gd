@@ -206,7 +206,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 		"chef_trap":
 			state.player.hand = ["funky_chef_check_chinchilla"]
 			state.opponent.hand = ["chef_mary"]
-			expected = "The response window consumes Chinchilla and negates Chef Mary."
+			expected = "The response window consumes Chinchilla and negates Chef Giada."
 			before = _snapshot(state)
 			service._play_chef(state, "opponent", 0)
 			service.resolve_reaction(state, 0)

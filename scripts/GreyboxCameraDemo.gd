@@ -13,6 +13,8 @@ const OVERVIEW_SIZE := 11.5
 const SHOPKEEPER_SIZE := 4.0
 const SHOPKEEPER_FOCUS_HEIGHT := 1.55
 const SHOPKEEPER_CAMERA_OFFSET := Vector3(0.85, 0.55, 5.5)
+const SHOPKEEPER_ARROW_HEIGHT := 2.45
+const SHOPKEEPER_ARROW_BOB_DISTANCE := 12.0
 const TRANSITION_SECONDS := 0.75
 
 @onready var camera_rig: Node3D = $ViewportContainer/SubViewport/World/CameraRig
@@ -55,9 +57,12 @@ var meta_panel: PanelContainer
 var meta_list: VBoxContainer
 var meta_report_list: VBoxContainer
 var shopkeeper_hotspot: Button
+var shopkeeper_arrow: Control
+var shopkeeper_arrow_tween: Tween
 var shopkeeper_highlight_material: StandardMaterial3D
 var shopkeeper_original_overlays: Dictionary = {}
 var shopkeeper_hover_enabled := true
+var overview_active := true
 
 
 func _ready() -> void:
@@ -92,6 +97,7 @@ func _ready() -> void:
 	_render_singles_case()
 	_render_trade_binder()
 	_render_meta_analysis()
+	resized.connect(_position_shopkeeper_hotspot)
 	call_deferred("_position_shopkeeper_hotspot")
 
 
@@ -568,6 +574,63 @@ func _add_world_hotspots() -> void:
 	shopkeeper_hotspot = _add_hotspot("ShopkeeperHotspot", Vector2(280, 360), _show_menu)
 	shopkeeper_hotspot.mouse_entered.connect(func() -> void: _set_shopkeeper_highlighted(true))
 	shopkeeper_hotspot.mouse_exited.connect(func() -> void: _set_shopkeeper_highlighted(false))
+	_add_shopkeeper_arrow()
+
+
+func _add_shopkeeper_arrow() -> void:
+	shopkeeper_arrow = Control.new()
+	shopkeeper_arrow.name = "ShopkeeperArrow"
+	shopkeeper_arrow.visible = false
+	shopkeeper_arrow.size = Vector2(72, 72)
+	shopkeeper_arrow.pivot_offset = shopkeeper_arrow.size * 0.5
+	shopkeeper_arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shopkeeper_arrow.z_index = 30
+	$Interface.add_child(shopkeeper_arrow)
+
+	var arrow_outline := Polygon2D.new()
+	arrow_outline.name = "ArrowOutline"
+	arrow_outline.polygon = PackedVector2Array([
+		Vector2(22, 4),
+		Vector2(50, 4),
+		Vector2(50, 29),
+		Vector2(66, 29),
+		Vector2(36, 68),
+		Vector2(6, 29),
+		Vector2(22, 29),
+	])
+	arrow_outline.color = Color("#2a1d0b")
+	shopkeeper_arrow.add_child(arrow_outline)
+
+	var arrow_fill := Polygon2D.new()
+	arrow_fill.name = "ArrowFill"
+	arrow_fill.polygon = PackedVector2Array([
+		Vector2(29, 12),
+		Vector2(43, 12),
+		Vector2(43, 37),
+		Vector2(51, 37),
+		Vector2(36, 57),
+		Vector2(21, 37),
+		Vector2(29, 37),
+	])
+	arrow_fill.color = Color("#ffd54a")
+	shopkeeper_arrow.add_child(arrow_fill)
+
+
+func _start_shopkeeper_arrow_bob() -> void:
+	if shopkeeper_arrow == null:
+		return
+	if shopkeeper_arrow_tween != null and shopkeeper_arrow_tween.is_valid():
+		shopkeeper_arrow_tween.kill()
+	var rest_y := shopkeeper_arrow.position.y
+	shopkeeper_arrow_tween = create_tween().set_loops()
+	shopkeeper_arrow_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	shopkeeper_arrow_tween.tween_property(
+		shopkeeper_arrow,
+		"position:y",
+		rest_y + SHOPKEEPER_ARROW_BOB_DISTANCE,
+		0.58
+	)
+	shopkeeper_arrow_tween.tween_property(shopkeeper_arrow, "position:y", rest_y, 0.58)
 
 
 func _set_shopkeeper_highlighted(highlighted: bool) -> void:
@@ -621,12 +684,30 @@ func _position_shopkeeper_hotspot() -> void:
 	var screen_position := camera.unproject_position(shopkeeper_model.global_position + Vector3(0, 0.9, 0))
 	var interface_scale: Vector2 = $Interface.size / viewport_size
 	shopkeeper_hotspot.position = screen_position * interface_scale - shopkeeper_hotspot.size * 0.5
+	if shopkeeper_arrow != null:
+		var arrow_screen_position := camera.unproject_position(
+			shopkeeper_model.global_position + Vector3(0, SHOPKEEPER_ARROW_HEIGHT, 0)
+		)
+		shopkeeper_arrow.position = (
+			arrow_screen_position * interface_scale
+			- Vector2(shopkeeper_arrow.size.x * 0.5, shopkeeper_arrow.size.y)
+		)
+		shopkeeper_arrow.visible = overview_active
+		_start_shopkeeper_arrow_bob()
 
 
 func _show_overview() -> void:
+	overview_active = false
+	if shopkeeper_arrow != null:
+		shopkeeper_arrow.visible = false
 	shopkeeper_hover_enabled = false
 	_set_shopkeeper_highlighted(false)
+	var overview_generation := transition_generation + 1
 	await _move_to_shot(overview_target, OVERVIEW_SIZE, _overview_description(), null)
+	if transition_generation != overview_generation:
+		return
+	overview_active = true
+	_position_shopkeeper_hotspot()
 	shopkeeper_hover_enabled = true
 	if shopkeeper_hotspot != null and shopkeeper_hotspot.is_hovered():
 		_set_shopkeeper_highlighted(true)
@@ -647,6 +728,9 @@ func _show_settings_menu() -> void:
 
 
 func _show_menu() -> void:
+	overview_active = false
+	if shopkeeper_arrow != null:
+		shopkeeper_arrow.visible = false
 	shopkeeper_hover_enabled = false
 	_set_shopkeeper_highlighted(false)
 	var focus_point := shopkeeper_model.global_position + Vector3(0, SHOPKEEPER_FOCUS_HEIGHT, 0)
@@ -703,6 +787,9 @@ func _show_meta_analysis() -> void:
 
 
 func _show_station(target: Marker3D, target_size: float, description: String, heading: String, body: String, actions: Array) -> void:
+	overview_active = false
+	if shopkeeper_arrow != null:
+		shopkeeper_arrow.visible = false
 	station_heading.text = heading
 	station_description.text = body
 	for child in station_actions.get_children():

@@ -2,16 +2,16 @@
 
 ## Outcome
 
-All 88 playable cards build as physical 3D cards and have a functional rules/presentation route. The repeatable audit runner passes every catalog, renderer, recipe, activated-ability, target-selection, search, discard, reaction, and complex-effect check.
+All 89 playable cards build as physical 3D cards and have a functional rules/presentation route. The repeatable audit runner passes every catalog, renderer, recipe, activated-ability, target-selection, search, discard, reaction, and complex-effect check.
 
-- 88/88 playable cards pass the 3D compatibility audit.
-- 67 cards use authored frames; 21 use the valid fallback face.
-- 35 distinct effect operations are recognized by the production rules service.
+- 89/89 playable cards pass the 3D compatibility audit.
+- 83 cards use authored frames; 6 use the valid fallback face.
+- 36 distinct effect operations are recognized by the production rules service.
 - 28/28 Meals open and complete the Ingredient-selection recipe flow.
 - 12 search cards route to the full-card deck tray.
 - 4 discard-pile choice cards route to the full-card discard tray.
 - 7 discard-cost Items use physical hand-card selection.
-- 13 board-target cards expose legal highlighted 3D targets.
+- 14 board-target cards expose legal highlighted 3D targets.
 - 8 activated abilities resolve or expose legal highlighted targets.
 - 5 reaction cards resolve through the reaction window.
 - The existing 19 complex-card production scenarios all pass.
@@ -19,7 +19,7 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 ## Findings
 
 1. **No gameplay blockers found.** Every authored card has a legal 3D play and resolution path.
-2. **Twenty-one cards use fallback faces.** These are the Fresh and Funky cards plus Spices and Environments; they remain fully playable, but need supplied frame families to match the authored Spicy/Sweet/Hearty presentation.
+2. **Six cards use fallback faces.** These are the Spices and Environments; they remain fully playable, but need supplied frame families to match the authored card presentation.
 3. **Reaction windows are functional but still generic.** The five reaction cards appear in a centered Use/Pass overlay rather than using the physical hand directly.
 4. **Tongs is functional but still generic.** Its opponent-hand choice uses card-name buttons rather than full card faces.
 5. **One schema-maintenance risk remains.** `hand_trap_guard_zone` is authored on Tempeh Tapir, while the resolver currently enforces the present Plated behavior structurally rather than reading that field generically. The current card works; a future guard with a different zone would need resolver work.
@@ -116,19 +116,20 @@ All 88 playable cards build as physical 3D cards and have a functional rules/pre
 | 73 | Tongs | Tool | Opponent-hand choice | Pass (generic opponent-hand overlay) |
 | 74 | Strainer | Tool | Discard tray | Pass |
 | 75 | Hand Mixer | Tool | Highlighted board target | Pass |
-| 76 | Grater | Tool | Highlighted board target | Pass |
-| 77 | Measuring Cup | Tool | Hand discard cost, Discard tray | Pass |
-| 78 | Wooden Spoon | Tool | Automatic / triggered effect | Pass |
-| 79 | Cayenne Crunch | Spice | Field-card Spice target | Pass (fallback face) |
-| 80 | Savory Gravy | Spice | Field-card Spice target | Pass (fallback face) |
-| 81 | Sugar Glaze | Spice | Field-card Spice target | Pass (fallback face) |
-| 82 | Blazing Wok | Environment | Environment zone | Pass (fallback face) |
-| 83 | Slow Cooker | Environment | Environment zone | Pass (fallback face) |
-| 84 | Dessert Display | Environment | Environment zone | Pass (fallback face) |
-| 85 | Chef John | Chef | Direct Chef action | Pass |
-| 86 | Chef Bill | Chef | Deck-search tray, Direct Chef action | Pass |
-| 87 | Chef Carl | Chef | Discard tray, Direct Chef action | Pass |
-| 88 | Chef Mary | Chef | Direct Chef action | Pass |
+| 76 | Switchblade | Tool | Two highlighted board targets | Pass |
+| 77 | Grater | Tool | Highlighted board target | Pass |
+| 78 | Measuring Cup | Tool | Hand discard cost, Discard tray | Pass |
+| 79 | Wooden Spoon | Tool | Automatic / triggered effect | Pass |
+| 80 | Cayenne Crunch | Spice | Field-card Spice target | Pass (fallback face) |
+| 81 | Savory Gravy | Spice | Field-card Spice target | Pass (fallback face) |
+| 82 | Sugar Glaze | Spice | Field-card Spice target | Pass (fallback face) |
+| 83 | Blazing Wok | Environment | Environment zone | Pass (fallback face) |
+| 84 | Slow Cooker | Environment | Environment zone | Pass (fallback face) |
+| 85 | Dessert Display | Environment | Environment zone | Pass (fallback face) |
+| 86 | Chef Carmy | Chef | Direct Chef action | Pass |
+| 87 | Chef Rachel | Chef | Deck-search tray, Direct Chef action | Pass |
+| 88 | Chef Ramsey | Chef | Discard tray, Direct Chef action | Pass |
+| 89 | Chef Giada | Chef | Direct Chef action | Pass |
 
 ## Repeatable verification
 

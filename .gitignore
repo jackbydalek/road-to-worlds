@@ -14,7 +14,6 @@ Icon?
 *.translation
 
 # Local/export artifacts
-export_presets.cfg
 exports/
 builds/
 node_modules/

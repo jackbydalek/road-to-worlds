@@ -29,16 +29,39 @@ func _run() -> void:
 		"spicy_firecracker_shrimp": 6,
 		"hearty_bagver": 6,
 		"hearty_french_bread_dog": 6,
+		"hearty_dumpling_tortoise": 6,
+		"hearty_kale_whale": 6,
+		"hearty_ramen_ram": 6,
 		"sweet_cinnamon_snail": 6,
 		"sweet_donutphin": 6,
 		"sweet_jellyfish": 6,
 		"sweet_caramel_camel": 7,
-		"sweet_strawberry_sharkcake": 6
+		"sweet_strawberry_sharkcake": 6,
+		"sweet_pup_tart": 6,
+		"sweet_pandacake": 6,
+		"sweet_soft_serve_crab": 6,
+		"fresh_harvest_hydra": 6,
+		"fresh_garden_gorilla": 6,
+		"fresh_saladmander": 6,
+		"fresh_salad_shield_skunk": 6,
+		"fresh_comeback_corgi": 6,
+		"fresh_crisp_capybara": 6,
+		"fresh_sprout_squirrel": 6
 	}
 	for card_id in animated_art_frame_counts:
 		var frames: Array = catalog.cards_by_id[card_id].get("art_frames", [])
 		_expect(frames.size() == int(animated_art_frame_counts[card_id]) and frames.all(func(frame_path) -> bool: return ResourceLoader.exists(String(frame_path))), "%s did not load every converted artwork frame." % card_id)
 	_expect(String(catalog.cards_by_id.sweet_caramel_camel.name) == "Choco Bat" and String(catalog.cards_by_id.sweet_caramel_camel.art_frames[0]).contains("sweet_caramel_camel"), "Choco Bat did not replace Caramel Camel with the converted artwork.")
+	var chef_names := {
+		"chef_john": "Chef Carmy",
+		"chef_bill": "Chef Rachel",
+		"chef_carl": "Chef Ramsey",
+		"chef_mary": "Chef Giada"
+	}
+	for card_id in chef_names:
+		var chef_frames: Array = catalog.cards_by_id[card_id].get("art_frames", [])
+		_expect(String(catalog.cards_by_id[card_id].name) == String(chef_names[card_id]), "%s did not use its updated chef name." % card_id)
+		_expect(chef_frames.size() == 1 and ResourceLoader.exists(String(chef_frames[0])), "%s did not load its supplied portrait." % card_id)
 
 	var bee_face := CARD_FACE_SCRIPT.new()
 	bee_face.configure(catalog.cards_by_id.spicy_hot_honey_bee, "white", true)
@@ -119,10 +142,12 @@ func _run() -> void:
 	var chef_face := CARD_FACE_SCRIPT.new()
 	chef_face.configure(catalog.cards_by_id.chef_mary, "gold", false)
 	var chef_frame := chef_face.find_child("CardFrame", true, false) as TextureRect
+	var chef_art := chef_face.find_child("CardArtwork", true, false) as TextureRect
 	var chef_icon := chef_face.find_child("CardAffinityIcon", true, false) as Label
 	var chef_stats := chef_face.find_child("CardStats", true, false) as Label
 	_expect(CARD_FACE_SCRIPT.supports_card(catalog.cards_by_id.chef_mary), "Chef cards were not accepted by the authored card renderer.")
 	_expect(chef_frame != null and chef_frame.texture.resource_path.ends_with("frames/chef/black.png"), "Chef cards did not use the supplied Black Chef frame.")
+	_expect(chef_art != null and not bool(chef_art.get_meta("art_pending", true)), "Chef Giada did not load her supplied portrait.")
 	_expect(chef_icon != null and not chef_icon.visible and chef_stats != null and not chef_stats.visible, "Chef cards displayed affinity or combat-stat fields that are not present on their frame.")
 
 	var tool_face := CARD_FACE_SCRIPT.new()

@@ -538,6 +538,14 @@ func choose_effect_target(state: Dictionary, target_instance_id: int) -> Diction
 		return state
 	if not choice_target_ids(state).has(target_instance_id):
 		return _message(state, "Choose one of the highlighted cards.")
+	var pending_effect: Dictionary = pending.get("effect", {})
+	if String(pending_effect.get("type", "")) == "switch_friendly_zones" and not pending_effect.has("plated_instance_id"):
+		pending_effect = pending_effect.duplicate(true)
+		pending_effect.plated_instance_id = target_instance_id
+		pending.effect = pending_effect
+		pending.prompt = "Choose one of your Prep foods to switch with it."
+		state.pending_choice = pending
+		return _message(state, String(pending.prompt))
 	state.pending_choice = {}
 	var side := String(pending.get("side", "player"))
 	var source := _choice_source(state, side, int(pending.get("source_instance_id", -1)))
@@ -2431,6 +2439,44 @@ func _resolve_effects(
 					moving_target.ready = false
 					state[side].prep.append(moving_target)
 					_log(state, "%s moves %s to Prep." % [_side_name(side), moving_target.name])
+			"switch_friendly_zones":
+				var plated_target_id := int(effect.get("plated_instance_id", -1))
+				var prep_target_id := target_instance_id
+				if side != "player" and plated_target_id < 0 and not state[side].plated.is_empty() and not state[side].prep.is_empty():
+					plated_target_id = int(state[side].plated[0].instance_id)
+					prep_target_id = int(state[side].prep[0].instance_id)
+				var plated_target := _find_unit_in_zone(state[side], "plated", plated_target_id)
+				var prep_target := _find_unit_in_zone(state[side], "prep", prep_target_id)
+				if not plated_target.is_empty() and not prep_target.is_empty():
+					var plated_index: int = state[side].plated.find(plated_target)
+					var prep_index: int = state[side].prep.find(prep_target)
+					var plated_slot := int(plated_target.get("table_slot", -1))
+					var prep_slot := int(prep_target.get("table_slot", -1))
+					state[side].plated[plated_index] = prep_target
+					state[side].prep[prep_index] = plated_target
+					if plated_slot >= 0:
+						prep_target.table_slot = plated_slot
+					if prep_slot >= 0:
+						plated_target.table_slot = prep_slot
+					prep_target.ready = not _opening_attack_lock(state, side)
+					plated_target.ready = bool(card(String(plated_target.card_id)).get("can_attack_from_prep", false)) and not _opening_attack_lock(state, side)
+					var switch_group_id := _next_animation_group(state)
+					_queue_animation_event(state, "move", {
+						"side": side,
+						"instance_id": int(plated_target.instance_id),
+						"card_id": String(plated_target.card_id),
+						"from": "plated",
+						"to": "prep"
+					}, switch_group_id)
+					_queue_animation_event(state, "move", {
+						"side": side,
+						"instance_id": int(prep_target.instance_id),
+						"card_id": String(prep_target.card_id),
+						"from": "prep",
+						"to": "plated"
+					}, switch_group_id)
+					_resolve_effects(state, side, card(String(prep_target.card_id)).get("on_move_to_plated", []), prep_target)
+					_log(state, "%s switches %s with %s without using the turn's switch." % [_side_name(side), plated_target.name, prep_target.name])
 			"swap_attack_health":
 				var swap_target := _find_unit(state.player, target_instance_id)
 				if swap_target.is_empty():
@@ -2478,6 +2524,7 @@ func _effect_needs_board_choice(effect: Dictionary) -> bool:
 		"damage_enemy_plated",
 		"return_enemy_ingredient",
 		"move_friendly_to_prep",
+		"switch_friendly_zones",
 		"destroy_enemy_unit",
 		"swap_attack_health",
 		"remove_enemy_spice"
@@ -2541,6 +2588,8 @@ func _valid_board_target_ids(state: Dictionary, side: String, effect: Dictionary
 			zones = ["plated"]
 			if state[side].prep.size() >= PREP_SLOTS:
 				return result
+		"switch_friendly_zones":
+			zones = ["prep"] if effect.has("plated_instance_id") else ["plated"]
 		"damage_enemy_prep":
 			target_side = enemy_side
 			zones = ["prep"]
@@ -2593,6 +2642,8 @@ func _board_choice_prompt(effect: Dictionary) -> String:
 			return "Choose an opposing Plated unit to damage."
 		"move_friendly_to_prep":
 			return "Choose a friendly Spicy Plated card to move to Prep."
+		"switch_friendly_zones":
+			return "Choose one of your Plated foods to switch."
 		"destroy_enemy_unit":
 			return "Choose an opposing card to destroy."
 		"swap_attack_health":

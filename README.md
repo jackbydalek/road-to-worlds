@@ -43,7 +43,7 @@ See [Season Loop](docs/season-loop.md) and [Kitchen Match Rules](docs/game-rules
 - `scripts/RunStateService.gd`, `SeasonFlowService.gd`, and `TournamentService.gd` — campaign progression
 - `scripts/ShopEconomyService.gd` — packs, singles, prices, and collection rewards
 - `scripts/CardShopScreen.gd`, `PackOpeningScreen.gd`, `DeckbuilderScreen.gd`, and `SeasonHubScreen.gd` — campaign screens
-- `data/cards.json` — 88 Kitchen Table cards and five 30-card starter decks
+- `data/cards.json` — 89 Kitchen Table cards and five 30-card starter decks
 - `data/content/boosters.json` and `tournaments.json` — campaign content
 
 The old fish combat, fish card catalog, mana/threat renderer, and animal artwork are not part of the runtime.

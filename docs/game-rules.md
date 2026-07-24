@@ -73,11 +73,11 @@ Bodyguard prevents piercing damage through that defender. Stalwart lets its atta
 
 ## Current Card Pool
 
-The data catalog contains 88 collectible cards:
+The data catalog contains 89 collectible cards:
 
 - 36 Ingredients
 - 28 Meals
-- 14 Tools
+- 15 Tools
 - 3 Spices
 - 3 Environments
 - 4 Chefs

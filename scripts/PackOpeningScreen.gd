@@ -2,18 +2,19 @@ extends RefCounted
 class_name PackOpeningScreen
 
 const PACK_OPENING_SCENE := preload("res://scenes/PackOpeningScene.tscn")
+const CARD_BACK := preload("res://assets/cards/card_backs/living_table.png")
 const BOOSTER_ID := "base_standard_pack"
 const PRIZE_BOOSTER_ID := "season_prize_pack"
-const SCENE_SIZE := Vector2(1440, 900)
-const CARD_SLOT_SIZE := Vector2(168, 236)
-const FAN_CENTER_X := 666.0
+const SCENE_SIZE := Vector2(1360, 680)
+const CARD_SLOT_SIZE := Vector2(210, 295)
+const FAN_CENTER_X := 543.0
 const FAN_BASE_Y := 66.0
-const FAN_SPACING := 164.0
+const FAN_SPACING := 185.0
 const FAN_ROTATION_STEP := 0.04
 
 var scene_root: Node
 var status_label: Label
-var pack_button: TextureButton
+var pack_button: Button
 var reveal_all_button: Button
 var done_button: Button
 var card_fan: Control
@@ -31,7 +32,6 @@ func show(host) -> void:
 
 	scene_root = _add_scene(host)
 	_cache_nodes()
-	_fit_pack_button_hitbox_to_art()
 	_layout_slots()
 	_connect_controls(host)
 	_render(host)
@@ -41,7 +41,7 @@ func show(host) -> void:
 func _add_store_exit(host) -> void:
 	exit_button = host._make_button("Exit to Card Store")
 	exit_button.name = "PackExitToStoreButton"
-	exit_button.position = Vector2(1180, 26)
+	exit_button.position = Vector2(1100, 26)
 	exit_button.size = Vector2(220, 44)
 	exit_button.z_index = 200
 	host._connect_pressed(exit_button, host._show_shop)
@@ -52,7 +52,7 @@ func _add_scene(host) -> Node:
 	var frame := PanelContainer.new()
 	frame.name = "PackOpeningSceneFrame"
 	frame.custom_minimum_size = SCENE_SIZE
-	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	frame.add_theme_stylebox_override("panel", _style("#11141a", "#3a4352", 1, 6))
 	host.content.add_child(frame)
 
@@ -70,7 +70,12 @@ func _add_scene(host) -> Node:
 
 
 func _cache_nodes() -> void:
-	pack_button = _find_node_by_name(scene_root, "PackButton") as TextureButton
+	pack_button = _find_node_by_name(scene_root, "PackButton") as Button
+	if pack_button != null:
+		pack_button.add_theme_stylebox_override("normal", _style("#e8dec4", "#6a5c42", 3, 4))
+		pack_button.add_theme_stylebox_override("hover", _style("#f2e9d2", "#d0a94f", 4, 4))
+		pack_button.add_theme_stylebox_override("pressed", _style("#d8ccb0", "#d0a94f", 4, 4))
+		pack_button.add_theme_stylebox_override("disabled", _style("#8c8577", "#514c43", 3, 4))
 	reveal_all_button = _find_node_by_name(scene_root, "RevealAllButton") as Button
 	done_button = _find_node_by_name(scene_root, "DoneButton") as Button
 	card_fan = _find_node_by_name(scene_root, "CardFan") as Control
@@ -78,8 +83,8 @@ func _cache_nodes() -> void:
 	if status_label == null:
 		status_label = Label.new()
 		status_label.name = "PackStatusLabel"
-		status_label.position = Vector2(84, 72)
-		status_label.size = Vector2(760, 42)
+		status_label.position = Vector2(44, 28)
+		status_label.size = Vector2(780, 50)
 		scene_root.add_child(status_label)
 	status_label.add_theme_font_size_override("font_size", 22)
 	status_label.add_theme_color_override("font_color", Color("#f3efe4"))
@@ -102,28 +107,6 @@ func _layout_slots() -> void:
 		slot.pivot_offset = CARD_SLOT_SIZE * 0.5
 		slot.rotation = float(layout.rotation)
 		slot.ignore_texture_size = true
-
-
-func _fit_pack_button_hitbox_to_art() -> void:
-	if pack_button == null:
-		return
-
-	for child in pack_button.get_children():
-		var sprite := child as Sprite2D
-		if sprite == null or sprite.texture == null:
-			continue
-
-		var texture_size := sprite.texture.get_size() * sprite.scale.abs()
-		if texture_size.x <= 0.0 or texture_size.y <= 0.0:
-			return
-
-		var sprite_top_left := sprite.position - texture_size * 0.5
-		pack_button.position += sprite_top_left
-		pack_button.size = texture_size
-		pack_button.custom_minimum_size = texture_size
-		pack_button.pivot_offset = texture_size * 0.5
-		sprite.position = texture_size * 0.5
-		return
 
 
 func _connect_controls(host) -> void:
@@ -279,6 +262,16 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 	face.set_anchors_preset(Control.PRESET_FULL_RECT)
 	face.add_theme_stylebox_override("panel", _card_style(host, rarity, revealed))
 	slot.add_child(face)
+	if not revealed:
+		var card_back := TextureRect.new()
+		card_back.name = "PackCardBack%d" % index
+		card_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_back.set_anchors_preset(Control.PRESET_FULL_RECT)
+		card_back.texture = CARD_BACK
+		card_back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		card_back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		face.add_child(card_back)
+		return
 	if revealed and host._card_uses_authored_face(card):
 		var authored_face: Control = host._make_card_face(card, CARD_SLOT_SIZE, true)
 		authored_face.name = "PackAuthoredCardFace%d" % index
@@ -298,13 +291,6 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 5)
 	margin.add_child(box)
-
-	if not revealed:
-		_add_slot_label(box, "ROAD", 19, Color("#f3efe4"), HORIZONTAL_ALIGNMENT_CENTER)
-		_add_slot_spacer(box)
-		_add_slot_label(box, "TO", 15, Color("#9fb0c4"), HORIZONTAL_ALIGNMENT_CENTER)
-		_add_slot_label(box, "WORLDS", 19, Color("#f3efe4"), HORIZONTAL_ALIGNMENT_CENTER)
-		return
 
 	_add_slot_label(box, host._card_display_name(card), 13, host._rarity_text_color(rarity), HORIZONTAL_ALIGNMENT_CENTER)
 	_add_slot_label(box, rarity.capitalize(), 12, Color("#c7d0df"), HORIZONTAL_ALIGNMENT_CENTER)

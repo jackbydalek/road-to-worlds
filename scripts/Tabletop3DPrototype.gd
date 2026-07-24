@@ -19,6 +19,35 @@ const HAND_CARD_GAP := 0.14
 const CARD_FACE_TEXTURE_SIZE := Vector2i(320, 455)
 const FLOATING_ART_HEIGHT := 0.62
 const REACTION_WINDOW_SECONDS := 5.0
+const TUTORIAL_STEPS := [
+	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 25 life. Ingredients and Meals occupy Prep or Plated. Prep is protected; Plated is where combat happens.", "prompt": "Press Begin to learn by playing a fixed practice hand.", "action": "continue", "scenario": "opening"},
+	{"lesson": 2, "title": "Play an Ingredient", "body": "Ingredients build recipes. New Ingredients are PREPARING until the start of your next turn.", "prompt": "Click the glowing Hot Honey Bee in your hand.", "action": "select_hand", "card_id": "spicy_hot_honey_bee"},
+	{"lesson": 2, "title": "Choose a Safe Zone", "body": "Prep protects a card from normal attacks while it matures. Plated cards can fight, but can also be attacked.", "prompt": "In Card Info, choose Play → Prep 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
+	{"lesson": 2, "title": "Let It Mature", "body": "At the start of your next turn, the Ingredient becomes RECIPE READY. Normal matches give the rival a full turn in between.", "prompt": "Press END TURN. The lesson will fast-forward the scripted rival turn.", "action": "end_turn"},
+	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. Playing another replaces the old one.", "prompt": "Click the glowing Blazing Wok.", "action": "select_hand", "card_id": "environment_blazing_wok", "scenario": "recipe"},
+	{"lesson": 3, "title": "Use the Environment", "body": "Blazing Wok gives each Meal you serve +1 Attack.", "prompt": "Choose Use Environment in Card Info.", "action": "play_hand", "card_id": "environment_blazing_wok"},
+	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe.", "prompt": "Click the glowing Sriracharrow in your hand.", "action": "select_hand", "card_id": "spicy_sriracharrow"},
+	{"lesson": 4, "title": "Choose Its Zone", "body": "You may serve one Meal each turn. This one will enter Prep, using the slot its Ingredient is about to vacate.", "prompt": "Choose Serve → Prep 2 (Sacrifice).", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
+	{"lesson": 4, "title": "Pay the Recipe", "body": "The cyan glow marks legal recipe Ingredients. The selected Ingredient will be sacrificed to your discard pile.", "prompt": "Click the glowing Hot Honey Bee on your table.", "action": "select_recipe", "card_id": "spicy_hot_honey_bee"},
+	{"lesson": 4, "title": "Confirm the Meal", "body": "Sriracharrow needs one Spicy Ingredient. The selected Bee satisfies the full recipe.", "prompt": "Press Serve Meal in the message strip.", "action": "confirm_meal"},
+	{"lesson": 5, "title": "Prep Versus Plated", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Click your glowing Sriracharrow.", "action": "select_field", "card_id": "spicy_sriracharrow"},
+	{"lesson": 5, "title": "Move Into Combat", "body": "Moving into Plated makes a unit available for combat immediately, unless another rule says otherwise.", "prompt": "Choose Move → Plated 1.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
+	{"lesson": 6, "title": "Support Cards", "body": "Spices attach to a unit. Tools resolve once and go to discard. Chef cards are powerful actions limited to one per turn.", "prompt": "Click your glowing Sriracharrow first.", "action": "select_field", "card_id": "spicy_sriracharrow", "scenario": "support"},
+	{"lesson": 6, "title": "Choose a Spice Target", "body": "A Spice needs a friendly unit selected before it can be played.", "prompt": "Choose Season This Card.", "action": "select_spice_target", "card_id": "spicy_sriracharrow"},
+	{"lesson": 6, "title": "Play a Spice", "body": "Cayenne Crunch stays attached and gives the selected Meal +1 Attack.", "prompt": "Click the glowing Cayenne Crunch in your hand.", "action": "select_hand", "card_id": "spice_cayenne_crunch"},
+	{"lesson": 6, "title": "Attach the Spice", "body": "The action is locked to the Meal you selected.", "prompt": "Choose Season Selected.", "action": "play_hand", "card_id": "spice_cayenne_crunch"},
+	{"lesson": 6, "title": "Use a Tool", "body": "Tools are one-shot effects. Wooden Spoon draws one card, then goes to your discard pile.", "prompt": "Click the glowing Wooden Spoon.", "action": "select_hand", "card_id": "item_wooden_spoon"},
+	{"lesson": 6, "title": "Resolve the Tool", "body": "Tools do not occupy a board slot.", "prompt": "Choose Use Tool.", "action": "play_hand", "card_id": "item_wooden_spoon"},
+	{"lesson": 6, "title": "Use a Chef", "body": "Chef Giada draws three cards. You may use only one Chef card each turn.", "prompt": "Click the glowing Chef Giada.", "action": "select_hand", "card_id": "chef_mary"},
+	{"lesson": 6, "title": "Resolve the Chef", "body": "Chef cards also resolve immediately and go to your discard pile.", "prompt": "Choose Use Chef.", "action": "play_hand", "card_id": "chef_mary"},
+	{"lesson": 7, "title": "Choose an Attacker", "body": "Only ready Plated units can normally attack. Each attacker can attack once per turn.", "prompt": "Click the glowing left Sriracharrow.", "action": "select_field", "instance_id": 1, "scenario": "combat"},
+	{"lesson": 7, "title": "Declare the Attack", "body": "Selecting an attacker makes legal defenders glow.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 1},
+	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "If the rival has a Plated unit, you must attack a legal defender before attacking their Chef. Combat damage is simultaneous.", "prompt": "Click the glowing opposing Bagver.", "action": "attack_unit", "target_instance_id": 3},
+	{"lesson": 7, "title": "Choose Your Second Attacker", "body": "Your first Meal is spent, but the second is still ready.", "prompt": "Click the glowing right Sriracharrow.", "action": "select_field", "instance_id": 2},
+	{"lesson": 7, "title": "Declare the Final Attack", "body": "The rival Plated zone is empty, so a direct Chef attack is now legal.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 2},
+	{"lesson": 7, "title": "Attack the Rival Chef", "body": "Reducing the opposing Chef to 0 life wins the match.", "prompt": "Click the glowing rival Chef.", "action": "attack_chef"},
+	{"lesson": 7, "title": "Tutorial Complete", "body": "You played an Ingredient, matured and sacrificed it, served and moved a Meal, used support cards, cleared a defender, and won with a direct attack.", "prompt": "Return to the title screen when you are ready.", "action": "finish"}
+]
 const ZONE_CENTERS := {
 	"player_prep": Vector3(0.0, TABLE_Y, 1.25),
 	"player_plated": Vector3(0.0, TABLE_Y, -0.65),
@@ -128,6 +157,14 @@ var card_face_redraw_requests := 0
 var reaction_countdown_active := false
 var reaction_countdown_remaining := 0.0
 var reaction_countdown_label: Label
+var tutorial_mode := false
+var tutorial_step_index := 0
+var tutorial_panel: PanelContainer
+var tutorial_title_label: Label
+var tutorial_body_label: Label
+var tutorial_prompt_label: Label
+var tutorial_progress_label: Label
+var tutorial_action_button: Button
 
 
 func configure_match(
@@ -153,6 +190,14 @@ func configure_match(
 	configured_ai_difficulty = ai_difficulty
 	configured_card_border_id = card_border_id
 	configured_match_context = match_context.duplicate(true)
+
+
+func configure_tutorial() -> void:
+	tutorial_mode = true
+	configured_player_name = "Teaching Kitchen"
+	configured_opponent_name = "Practice Rival"
+	configured_exit_label = "Exit to Title"
+	configured_card_border_id = "white"
 
 
 func _ready() -> void:
@@ -186,6 +231,11 @@ func _ready() -> void:
 		service.decks["configured_opponent"] = {"name": configured_opponent_name, "archetype": "", "cards": configured_opponent_deck}
 		reset_button.visible = false
 		exit_button.text = configured_exit_label
+	if tutorial_mode:
+		reset_button.visible = false
+		exit_button.text = configured_exit_label
+		battle_log_button.visible = false
+		_build_tutorial_interface()
 	_load_reference_art()
 	_prepare_zone_materials()
 	_start_match()
@@ -205,7 +255,11 @@ func _start_match() -> void:
 		turn_banner_panel.visible = false
 	_clear_animation_ghosts()
 	manual_discard_tray_side = ""
-	if production_match:
+	if tutorial_mode:
+		tutorial_step_index = 0
+		state = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 7107, "player", true, "easy")
+		_load_tutorial_scenario("opening")
+	elif production_match:
 		state = service.start_game("configured_player", "configured_opponent", configured_seed, configured_first_side, true, configured_ai_difficulty)
 	else:
 		match_seed += 1
@@ -215,7 +269,10 @@ func _start_match() -> void:
 	pressed_card = null
 	opponent_running = false
 	_render_match()
-	call_deferred("_begin_match_pacing")
+	if tutorial_mode:
+		_refresh_tutorial_panel()
+	else:
+		call_deferred("_begin_match_pacing")
 
 
 func _begin_match_pacing() -> void:
@@ -231,6 +288,202 @@ func _begin_match_pacing() -> void:
 	_render_match()
 	if String(state.get("phase", "")) == "opponent_turn":
 		_run_opponent_sequence()
+
+
+func _build_tutorial_interface() -> void:
+	tutorial_panel = PanelContainer.new()
+	tutorial_panel.name = "GuidedTutorialPanel"
+	tutorial_panel.z_index = 40
+	tutorial_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	tutorial_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	tutorial_panel.offset_left = 18.0
+	tutorial_panel.offset_top = 84.0
+	tutorial_panel.offset_right = 430.0
+	tutorial_panel.offset_bottom = 310.0
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.12, 0.16, 0.96)
+	panel_style.border_color = Color("#f1b84f")
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(18)
+	panel_style.shadow_color = Color(0, 0, 0, 0.55)
+	panel_style.shadow_size = 14
+	tutorial_panel.add_theme_stylebox_override("panel", panel_style)
+	$Interface.add_child(tutorial_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	tutorial_panel.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 7)
+	margin.add_child(content)
+
+	tutorial_progress_label = _label("", 12, Color("#8ed9ff"))
+	content.add_child(tutorial_progress_label)
+	tutorial_title_label = _label("", 24, Color("#fff1c5"))
+	content.add_child(tutorial_title_label)
+	tutorial_body_label = _label("", 14, Color("#dce9ed"))
+	tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(tutorial_body_label)
+	tutorial_prompt_label = _label("", 15, Color("#ffd36f"))
+	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(tutorial_prompt_label)
+	tutorial_action_button = _styled_button("Begin")
+	tutorial_action_button.pressed.connect(_on_tutorial_action_pressed)
+	content.add_child(tutorial_action_button)
+
+	# Keep Card Info visible below the written lesson instead of covering it.
+	action_panel.offset_top = 322.0
+
+
+func _refresh_tutorial_panel() -> void:
+	if not tutorial_mode or not is_instance_valid(tutorial_panel):
+		return
+	var step := _tutorial_step()
+	tutorial_progress_label.text = "GUIDED HOW TO PLAY  •  LESSON %d OF 7  •  STEP %d/%d" % [
+		int(step.get("lesson", 1)),
+		tutorial_step_index + 1,
+		TUTORIAL_STEPS.size()
+	]
+	tutorial_title_label.text = String(step.get("title", "How to Play"))
+	tutorial_body_label.text = String(step.get("body", ""))
+	tutorial_prompt_label.text = "DO THIS: " + String(step.get("prompt", ""))
+	var action := String(step.get("action", ""))
+	tutorial_action_button.visible = action in ["continue", "finish"]
+	tutorial_action_button.text = "Begin Tutorial" if action == "continue" else "Return to Title"
+	title_label.text = "HOW TO PLAY  •  GUIDED PRACTICE"
+
+
+func _on_tutorial_action_pressed() -> void:
+	if String(_tutorial_step().get("action", "")) == "finish":
+		exit_requested.emit()
+	else:
+		_tutorial_complete_action("continue")
+		_render_match()
+
+
+func _tutorial_step() -> Dictionary:
+	if tutorial_step_index < 0 or tutorial_step_index >= TUTORIAL_STEPS.size():
+		return TUTORIAL_STEPS[TUTORIAL_STEPS.size() - 1]
+	return TUTORIAL_STEPS[tutorial_step_index]
+
+
+func _tutorial_complete_action(action: String, details: Dictionary = {}) -> bool:
+	if not tutorial_mode:
+		return true
+	if not _tutorial_action_matches(action, details):
+		_tutorial_reject_action()
+		return false
+	tutorial_step_index = mini(tutorial_step_index + 1, TUTORIAL_STEPS.size() - 1)
+	var next_step := _tutorial_step()
+	var scenario := String(next_step.get("scenario", ""))
+	if scenario != "":
+		_load_tutorial_scenario(scenario)
+	_refresh_tutorial_panel()
+	return true
+
+
+func _tutorial_action_matches(action: String, details: Dictionary = {}) -> bool:
+	var expected := _tutorial_step()
+	if String(expected.get("action", "")) != action:
+		return false
+	for key in ["card_id", "instance_id", "zone", "slot", "target_instance_id"]:
+		if expected.has(key) and expected[key] != details.get(key):
+			return false
+	return true
+
+
+func _tutorial_reject_action() -> void:
+	var prompt := String(_tutorial_step().get("prompt", "Follow the highlighted action."))
+	state.message = "Tutorial locked: " + prompt
+	_refresh_bottom_status()
+	if is_instance_valid(tutorial_prompt_label):
+		tutorial_prompt_label.modulate = Color("#ff8f7a")
+		var tween := create_tween()
+		tween.tween_property(tutorial_prompt_label, "modulate", Color.WHITE, 0.35)
+
+
+func _load_tutorial_scenario(scenario: String) -> void:
+	_reset_tutorial_state()
+	match scenario:
+		"recipe":
+			state.player.hand = ["environment_blazing_wok", "spicy_sriracharrow", "item_wooden_spoon"]
+			state.player.deck = ["spicy_jalapeno_panther", "spicy_firecracker_shrimp", "spicy_sriracharrow"]
+			_add_tutorial_unit("player", "spicy_hot_honey_bee", "prep", 1, false, true)
+			state.message = "A preplanned turn: Hot Honey Bee is now RECIPE READY."
+		"support":
+			state.player.hand = ["spice_cayenne_crunch", "item_wooden_spoon", "chef_mary"]
+			state.player.deck = [
+				"spicy_hot_honey_bee", "spicy_jalapeno_panther", "spicy_firecracker_shrimp",
+				"spicy_sriracharrow", "spicy_ghost_pepper_python"
+			]
+			_add_tutorial_unit("player", "spicy_sriracharrow", "plated", 0, true, true)
+			state.message = "Support cards use the real card effects with a fixed deck."
+		"combat":
+			state.player.hand = []
+			state.player.deck = ["spicy_hot_honey_bee"]
+			state.opponent.life = 5
+			_add_tutorial_unit("player", "spicy_sriracharrow", "plated", 0, true, true)
+			_add_tutorial_unit("player", "spicy_sriracharrow", "plated", 1, true, true)
+			_add_tutorial_unit("opponent", "hearty_bagver", "plated", 0, true, true)
+			state.message = "Two ready Meals face one Plated defender."
+		_:
+			state.player.hand = ["spicy_hot_honey_bee", "item_wooden_spoon", "spicy_sriracharrow"]
+			state.player.deck = ["spicy_jalapeno_panther", "spicy_firecracker_shrimp"]
+			state.message = "This practice hand is fixed. Only the glowing tutorial action is available."
+	selected_ref = {}
+	service.clear_animation_events(state)
+
+
+func _reset_tutorial_state() -> void:
+	state.turn = 2
+	state.phase = "player_main"
+	state.first_player = "opponent"
+	state.game_over = false
+	state.winner = ""
+	state.next_instance_id = 1
+	state.selected_ingredients = []
+	state.selected_attacker = -1
+	state.selected_spice_target = -1
+	state.pending_meal = {}
+	state.pending_discard = {}
+	state.pending_ability = {}
+	state.pending_search = {}
+	state.pending_choice = {}
+	state.pending_resume = {}
+	state.pending_reaction = {}
+	state.opponent_sequence = {}
+	state.animation_events = []
+	state.log = []
+	for side in ["player", "opponent"]:
+		var who: Dictionary = state[side]
+		who.life = 25
+		who.deck = []
+		who.hand = []
+		who.prep = []
+		who.plated = []
+		who.environment = ""
+		who.discard = []
+		who.meal_served = false
+		who.chef_used = false
+		who.zone_move_used = false
+		who.chefs_disabled = false
+		who.items_disabled = false
+		who.hand_trap_used = false
+		who.fatigue = 0
+		who.turns_started = 2
+
+
+func _add_tutorial_unit(side: String, card_id: String, zone: String, slot: int, ready: bool, recipe_ready: bool) -> Dictionary:
+	var who: Dictionary = state[side]
+	var unit: Dictionary = service._make_unit(state, who, service.card(card_id), zone, side)
+	unit.table_slot = slot
+	unit.ready = ready
+	unit.recipe_ready_on_turn = 1 if recipe_ready else int(who.turns_started) + 1
+	who[zone].append(unit)
+	return unit
 
 
 func _load_reference_art() -> void:
@@ -265,17 +518,24 @@ func _render_match() -> void:
 	turn_label.text = "TURN %d  •  %s" % [int(state.turn), "YOU" if String(state.phase) == "player_main" else "RIVAL"]
 	_update_match_title()
 	end_turn_button.disabled = animation_busy or String(state.phase) != "player_main" or _has_blocking_prompt() or bool(state.game_over)
+	if tutorial_mode:
+		end_turn_button.disabled = String(_tutorial_step().get("action", "")) != "end_turn"
 	_update_chef_labels()
 	_refresh_action_panel()
 	_refresh_prompt()
 	_refresh_card_tray()
 	_refresh_bottom_status()
 	_refresh_battle_log()
-	if bool(state.get("game_over", false)) and not animation_busy:
+	if tutorial_mode:
+		_refresh_tutorial_panel()
+	if bool(state.get("game_over", false)) and not animation_busy and not tutorial_mode:
 		_queue_outcome_sequence()
 
 
 func _update_match_title() -> void:
+	if tutorial_mode:
+		title_label.text = "HOW TO PLAY  •  GUIDED PRACTICE"
+		return
 	if not production_match:
 		title_label.text = "LIVING TABLE  •  PLAYABLE MATCH"
 		return
@@ -474,6 +734,7 @@ func _build_hand_cards(side: String) -> void:
 		root.set_meta("card_id", String(hand[hand_index]))
 		if is_player:
 			_apply_pending_discard_hand_style(root, hand_index)
+			_apply_tutorial_card_highlight(root, "hand", side, String(hand[hand_index]), -1)
 		_store_card_pose(root, float(hand_index) * 0.47)
 		card_layer.add_child(root)
 		if is_player:
@@ -502,6 +763,7 @@ func _build_field_cards(side: String, zone: String) -> void:
 		card_layer.add_child(root)
 		interactive_cards.append(root)
 		_apply_card_highlight(root, unit, side)
+		_apply_tutorial_card_highlight(root, "field", side, String(unit.card_id), int(unit.instance_id))
 		_add_spice_attachments(root, unit, side)
 		_add_floating_art(root, service.card(String(unit.card_id)), side)
 		_add_stat_badge(root, unit, side)
@@ -902,6 +1164,35 @@ func _apply_pending_discard_hand_style(root: Node3D, hand_index: int) -> void:
 	root.add_child(badge)
 
 
+func _apply_tutorial_card_highlight(root: Node3D, kind: String, side: String, card_id: String, instance_id: int) -> void:
+	if not tutorial_mode:
+		return
+	var step := _tutorial_step()
+	var action := String(step.get("action", ""))
+	var should_highlight := false
+	if kind == "hand" and side == "player" and action == "select_hand":
+		should_highlight = String(step.get("card_id", "")) == card_id
+	elif kind == "field":
+		if action in ["select_field", "select_recipe"]:
+			should_highlight = side == "player"
+			if step.has("instance_id"):
+				should_highlight = should_highlight and int(step.instance_id) == instance_id
+			elif step.has("card_id"):
+				should_highlight = should_highlight and String(step.card_id) == card_id
+		elif action == "attack_unit":
+			should_highlight = side == "opponent" and int(step.get("target_instance_id", -1)) == instance_id
+	if not should_highlight:
+		return
+	var body := root.get_node("CardBody") as MeshInstance3D
+	var material := body.get_active_material(0).duplicate() as StandardMaterial3D
+	material.albedo_color = Color("#e9a93b")
+	material.emission_enabled = true
+	material.emission = Color("#ffd45b")
+	material.emission_energy_multiplier = 2.25
+	body.material_override = material
+	highlighted_bodies.append(body)
+
+
 func _store_card_pose(root: Node3D, flair_seed: float) -> void:
 	root.set_meta("base_position", root.position)
 	root.set_meta("base_rotation_degrees", root.rotation_degrees)
@@ -1085,6 +1376,10 @@ func _mouse_to_table(container_position: Vector2) -> Variant:
 func _can_drag_card(card_node: Node3D) -> bool:
 	if animation_busy or String(state.get("phase", "")) != "player_main" or _has_blocking_prompt():
 		return false
+	if tutorial_mode:
+		# The guided lesson uses explicit click-and-button actions so the selected
+		# card and exact legal destination stay unambiguous.
+		return false
 	return String(card_node.get_meta("side", "")) == "player" and String(card_node.get_meta("kind", "")) in ["hand", "field"]
 
 
@@ -1220,9 +1515,14 @@ func _handle_card_click(card_node: Node3D) -> void:
 	var kind := String(card_node.get_meta("kind", ""))
 	var side := String(card_node.get_meta("side", ""))
 	var instance_id := int(card_node.get_meta("instance_id", -1))
+	var card_id := String(card_node.get_meta("card_id", ""))
 	if not state.get("pending_meal", {}).is_empty():
 		if kind == "field" and side == "player" and service.meal_selectable_ingredient_ids(state).has(instance_id):
+			if tutorial_mode and not _tutorial_action_matches("select_recipe", {"card_id": card_id, "instance_id": instance_id}):
+				_tutorial_reject_action()
+				return
 			service.toggle_ingredient_selection(state, instance_id)
+			_tutorial_complete_action("select_recipe", {"card_id": card_id, "instance_id": instance_id})
 			_render_match()
 		return
 	var pending_discard: Dictionary = state.get("pending_discard", {})
@@ -1240,9 +1540,31 @@ func _handle_card_click(card_node: Node3D) -> void:
 	if service.choice_target_ids(state).has(instance_id):
 		_choose_effect_target_animated(instance_id)
 		return
+	if tutorial_mode and String(_tutorial_step().get("action", "")) in ["select_hand", "select_field"]:
+		var selection_action := "select_hand" if kind == "hand" else "select_field"
+		var selection_details := {"card_id": card_id, "instance_id": instance_id}
+		if side != "player":
+			_tutorial_reject_action()
+			return
+		if not _tutorial_complete_action(selection_action, selection_details):
+			return
+		selected_ref = {
+			"kind": kind,
+			"side": side,
+			"hand_index": int(card_node.get_meta("hand_index", -1)),
+			"instance_id": instance_id,
+			"zone": String(card_node.get_meta("zone", "")),
+			"card_id": card_id
+		}
+		_refresh_action_panel()
+		_refresh_bottom_status()
+		return
 	if side == "opponent" and String(card_node.get_meta("zone", "")) == "plated" and int(state.get("selected_attacker", -1)) >= 0:
 		selected_ref = {}
 		_perform_attack(instance_id)
+		return
+	if tutorial_mode:
+		_tutorial_reject_action()
 		return
 	selected_ref = {
 		"kind": kind,
@@ -1259,6 +1581,9 @@ func _on_opponent_chef_clicked() -> void:
 	if animation_busy:
 		return
 	if int(state.get("selected_attacker", -1)) >= 0:
+		if tutorial_mode and not _tutorial_action_matches("attack_chef"):
+			_tutorial_reject_action()
+			return
 		selected_ref = {}
 		_perform_attack(-1)
 
@@ -1319,6 +1644,10 @@ func _close_info_window() -> void:
 func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> void:
 	if animation_busy:
 		return
+	var tutorial_action := "attack_chef" if target_instance_id < 0 else "attack_unit"
+	if tutorial_mode and not _tutorial_action_matches(tutorial_action, {"target_instance_id": target_instance_id}):
+		_tutorial_reject_action()
+		return
 	if attacker_override >= 0:
 		service.select_attacker(state, attacker_override)
 	var attacker_id := int(state.get("selected_attacker", -1))
@@ -1329,6 +1658,7 @@ func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> vo
 	service.attack(state, target_instance_id)
 	await _drain_animation_event_queue()
 	animation_busy = false
+	_tutorial_complete_action(tutorial_action, {"target_instance_id": target_instance_id})
 	_render_match()
 
 
@@ -1860,6 +2190,7 @@ func _reset_camera_pacing() -> void:
 
 func _build_hand_actions(data: Dictionary, hand_index: int) -> void:
 	var card_type := String(data.get("card_type", ""))
+	var card_id := String(data.get("id", ""))
 	if card_type in ["ingredient", "meal"]:
 		for zone in ["prep", "plated"]:
 			var capacity: int = service.PREP_SLOTS if zone == "prep" else service.PLATED_SLOTS
@@ -1868,12 +2199,16 @@ func _build_hand_actions(data: Dictionary, hand_index: int) -> void:
 				var chosen_slot: int = slot_index
 				var replacing_ingredient := card_type == "meal" and not _slot_is_open("player", zone, slot_index) and _slot_can_receive_hand_card(data, "player", zone, slot_index)
 				var action_text := "%s → %s %d%s" % ["Serve" if card_type == "meal" else "Play", zone.capitalize(), slot_index + 1, " (Sacrifice)" if replacing_ingredient else ""]
-				_add_action_button(action_text, func() -> void: _play_hand_card(hand_index, chosen_zone, chosen_slot), not _slot_can_receive_hand_card(data, "player", zone, slot_index))
+				var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
+				var tutorial_locked := tutorial_mode and not _tutorial_action_matches(tutorial_action, {"card_id": card_id, "zone": zone, "slot": slot_index})
+				_add_action_button(action_text, func() -> void: _play_hand_card(hand_index, chosen_zone, chosen_slot), not _slot_can_receive_hand_card(data, "player", zone, slot_index) or tutorial_locked)
 	elif card_type == "spice":
 		var target_id := int(state.get("selected_spice_target", -1))
-		_add_action_button("Season Selected" if target_id >= 0 else "Select a Field Card First", func() -> void: _play_hand_card(hand_index, "prep"), target_id < 0)
+		var tutorial_locked := tutorial_mode and not _tutorial_action_matches("play_hand", {"card_id": card_id})
+		_add_action_button("Season Selected" if target_id >= 0 else "Select a Field Card First", func() -> void: _play_hand_card(hand_index, "prep"), target_id < 0 or tutorial_locked)
 	else:
-		_add_action_button("Use %s" % card_type.capitalize(), func() -> void: _play_hand_card(hand_index, "prep"))
+		var tutorial_locked := tutorial_mode and not _tutorial_action_matches("play_hand", {"card_id": card_id})
+		_add_action_button("Use %s" % card_type.capitalize(), func() -> void: _play_hand_card(hand_index, "prep"), tutorial_locked)
 
 
 func _build_field_actions(data: Dictionary, instance_id: int, zone: String) -> void:
@@ -1888,18 +2223,21 @@ func _build_field_actions(data: Dictionary, instance_id: int, zone: String) -> v
 		var active_zone := String(ability.get("active_zone", ""))
 		var wrong_zone := active_zone != "" and active_zone != zone
 		var selected_ability_id := ability_id
-		_add_action_button("Activate Ability", func() -> void: _activate_ability(instance_id, selected_ability_id), used or wrong_zone)
+		_add_action_button("Activate Ability", func() -> void: _activate_ability(instance_id, selected_ability_id), used or wrong_zone or tutorial_mode)
 	if String(data.get("card_type", "")) == "ingredient":
 		var recipe_ready := service.ingredient_recipe_status(state.player, unit) == "RECIPE READY"
-		_add_action_button("Select for Recipe", func() -> void: _select_recipe_ingredient(instance_id), not recipe_ready)
+		_add_action_button("Select for Recipe", func() -> void: _select_recipe_ingredient(instance_id), not recipe_ready or tutorial_mode)
 	if zone == "plated" or bool(data.get("can_attack_from_prep", false)):
-		_add_action_button("Choose Attacker", func() -> void: _select_attacker(instance_id), not bool(unit.get("ready", false)))
-	_add_action_button("Season This Card", func() -> void: _select_spice_target(instance_id), not unit.get("spices", []).is_empty())
+		var attacker_locked := tutorial_mode and not _tutorial_action_matches("select_attacker", {"card_id": String(data.get("id", "")), "instance_id": instance_id})
+		_add_action_button("Choose Attacker", func() -> void: _select_attacker(instance_id), not bool(unit.get("ready", false)) or attacker_locked)
+	var spice_locked := tutorial_mode and not _tutorial_action_matches("select_spice_target", {"card_id": String(data.get("id", "")), "instance_id": instance_id})
+	_add_action_button("Season This Card", func() -> void: _select_spice_target(instance_id), not unit.get("spices", []).is_empty() or spice_locked)
 	var destination := "prep" if zone == "plated" else "plated"
 	var destination_capacity: int = service.PREP_SLOTS if destination == "prep" else service.PLATED_SLOTS
 	for slot_index in range(destination_capacity):
 		var chosen_slot := slot_index
-		_add_action_button("Move → %s %d" % [destination.capitalize(), slot_index + 1], func() -> void: _move_unit(instance_id, destination, chosen_slot), bool(state.player.zone_move_used) or not _slot_is_open("player", destination, slot_index))
+		var move_locked := tutorial_mode and not _tutorial_action_matches("move_unit", {"card_id": String(data.get("id", "")), "instance_id": instance_id, "zone": destination, "slot": slot_index})
+		_add_action_button("Move → %s %d" % [destination.capitalize(), slot_index + 1], func() -> void: _move_unit(instance_id, destination, chosen_slot), bool(state.player.zone_move_used) or not _slot_is_open("player", destination, slot_index) or move_locked)
 
 
 func _play_hand_card(hand_index: int, destination: String, destination_slot: int = -1) -> void:
@@ -1910,6 +2248,11 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 	var played_card_id := String(state.player.hand[hand_index])
 	var card_data: Dictionary = service.card(played_card_id)
 	var card_type := String(card_data.get("card_type", ""))
+	var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
+	var tutorial_details := {"card_id": played_card_id, "zone": destination, "slot": destination_slot}
+	if tutorial_mode and not _tutorial_action_matches(tutorial_action, tutorial_details):
+		_tutorial_reject_action()
+		return
 	if card_type in ["ingredient", "meal"]:
 		if destination_slot < 0:
 			state.message = "Choose an exact %s slot." % destination.capitalize()
@@ -1922,6 +2265,7 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 	if card_type == "meal":
 		service.begin_meal_play(state, hand_index, destination, destination_slot)
 		selected_ref = {}
+		_tutorial_complete_action("begin_meal", tutorial_details)
 		_render_match()
 		return
 	var previous_ids: Array[int] = []
@@ -1935,6 +2279,7 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 	selected_ref = {}
 	await _drain_animation_event_queue(hand_pose)
 	animation_busy = false
+	_tutorial_complete_action("play_hand", tutorial_details)
 	_render_match()
 
 
@@ -1967,14 +2312,26 @@ func _select_recipe_ingredient(instance_id: int) -> void:
 
 
 func _select_attacker(instance_id: int) -> void:
+	var unit := service._find_unit(state.player, instance_id)
+	var details := {"instance_id": instance_id, "card_id": String(unit.get("card_id", ""))}
+	if tutorial_mode and not _tutorial_action_matches("select_attacker", details):
+		_tutorial_reject_action()
+		return
 	service.select_attacker(state, instance_id)
 	selected_ref = {}
+	_tutorial_complete_action("select_attacker", details)
 	_render_match()
 
 
 func _select_spice_target(instance_id: int) -> void:
+	var unit := service._find_unit(state.player, instance_id)
+	var details := {"instance_id": instance_id, "card_id": String(unit.get("card_id", ""))}
+	if tutorial_mode and not _tutorial_action_matches("select_spice_target", details):
+		_tutorial_reject_action()
+		return
 	service.select_spice_target(state, instance_id)
 	selected_ref = {}
+	_tutorial_complete_action("select_spice_target", details)
 	_render_match()
 
 
@@ -1983,6 +2340,10 @@ func _move_unit(instance_id: int, destination: String, destination_slot: int = -
 		return
 	var unit := service._find_unit(state.player, instance_id)
 	if unit.is_empty():
+		return
+	var tutorial_details := {"instance_id": instance_id, "card_id": String(unit.get("card_id", "")), "zone": destination, "slot": destination_slot}
+	if tutorial_mode and not _tutorial_action_matches("move_unit", tutorial_details):
+		_tutorial_reject_action()
 		return
 	if destination_slot < 0 or not _slot_is_open("player", destination, destination_slot, instance_id):
 		state.message = "%s slot %d is occupied." % [destination.capitalize(), destination_slot + 1]
@@ -2002,6 +2363,7 @@ func _move_unit(instance_id: int, destination: String, destination_slot: int = -
 	if animation_busy:
 		await _drain_animation_event_queue()
 		animation_busy = false
+	_tutorial_complete_action("move_unit", tutorial_details)
 	_render_match()
 
 
@@ -2292,8 +2654,10 @@ func _refresh_bottom_status() -> void:
 		status_label.text = String(state.message)
 		confirm_choice_button.visible = true
 		confirm_choice_button.text = "Serve Meal"
-		confirm_choice_button.disabled = not service.meal_selection_is_ready(state)
-		cancel_choice_button.visible = true
+		confirm_choice_button.disabled = not service.meal_selection_is_ready(state) or (tutorial_mode and String(_tutorial_step().get("action", "")) != "confirm_meal")
+		cancel_choice_button.visible = not tutorial_mode
+		if tutorial_mode:
+			highlighted_zone = "player_prep"
 		return
 	var pending_discard: Dictionary = state.get("pending_discard", {})
 	if not pending_discard.is_empty():
@@ -2323,6 +2687,12 @@ func _refresh_bottom_status() -> void:
 		cancel_choice_button.visible = true
 		return
 	status_label.text = String(state.message)
+	if tutorial_mode:
+		var step := _tutorial_step()
+		var action := String(step.get("action", ""))
+		if action in ["play_hand", "begin_meal", "move_unit"] and step.has("zone"):
+			highlighted_zone = "player_%s" % String(step.zone)
+			highlighted_slot = int(step.get("slot", -1))
 
 
 func _toggle_battle_log() -> void:
@@ -2405,6 +2775,9 @@ func _confirm_bottom_choice() -> void:
 func _confirm_meal_play() -> void:
 	if animation_busy or not service.meal_selection_is_ready(state):
 		return
+	if tutorial_mode and not _tutorial_action_matches("confirm_meal"):
+		_tutorial_reject_action()
+		return
 	var pending: Dictionary = state.get("pending_meal", {}).duplicate(true)
 	var destination := String(pending.get("destination", "plated"))
 	var destination_slot := int(pending.get("destination_slot", -1))
@@ -2418,6 +2791,7 @@ func _confirm_meal_play() -> void:
 	selected_ref = {}
 	await _drain_animation_event_queue(hand_pose)
 	animation_busy = false
+	_tutorial_complete_action("confirm_meal")
 	_render_match()
 
 
@@ -2512,6 +2886,12 @@ func _resolve_reaction(hand_index: int) -> void:
 func _on_end_turn_pressed() -> void:
 	if opponent_running or animation_busy:
 		return
+	if tutorial_mode:
+		if not _tutorial_complete_action("end_turn"):
+			return
+		selected_ref = {}
+		_render_match()
+		return
 	animation_busy = true
 	service.end_player_turn(state, true)
 	selected_ref = {}
@@ -2546,7 +2926,10 @@ func _run_opponent_sequence() -> void:
 
 func _update_chef_labels() -> void:
 	(player_chef.get_node("Label") as Label3D).text = "YOU\n%d" % int(state.player.life)
-	(opponent_chef.get_node("Label") as Label3D).text = "RIVAL\n%d" % int(state.opponent.life)
+	var rival_text := "RIVAL\n%d" % int(state.opponent.life)
+	if tutorial_mode and String(_tutorial_step().get("action", "")) == "attack_chef":
+		rival_text += "\nCLICK TO ATTACK"
+	(opponent_chef.get_node("Label") as Label3D).text = rival_text
 
 
 func _clear_children(parent: Node) -> void:

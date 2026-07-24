@@ -10,12 +10,13 @@ func _init() -> void:
 
 
 func _run() -> void:
+	root.size = Vector2i(1440, 900)
 	var main = MAIN_SCENE.instantiate()
 	root.add_child(main)
 	await process_frame
 	await process_frame
 
-	_expect(main.cards_by_id.size() == 88, "Season shell did not load all 88 kitchen cards.")
+	_expect(main.cards_by_id.size() == 89, "Season shell did not load all 89 kitchen cards.")
 	_expect(String(main._difficulty_data("white").get("name", "")) == "Black" and String(main._difficulty_data("white").get("border_color", "")) == "#090909", "The standard difficulty did not display the new Black border.")
 	_expect(main.archetypes_by_id.size() == 5, "Season shell did not build the five kitchen archetypes.")
 	_expect(main._affinity_symbol("fresh") == "🍋‍🟩" and main._affinity_symbol("spicy") == "🌶️", "Fresh or Spicy affinity symbols were not configured.")
@@ -61,16 +62,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_expect(main.current_screen == "tutorial", "The opening Tutorial action did not open the walkthrough.")
-	_expect(main.find_child("TutorialProgress", true, false) != null, "The Tutorial did not render its step progress.")
-	for step_number in range(1, main.tutorial_screen.STEPS.size()):
-		var next_tutorial_step := main.find_child("TutorialNextButton", true, false) as Button
-		_expect(next_tutorial_step != null, "The Tutorial lost its Next action before the final step.")
-		if next_tutorial_step != null:
-			next_tutorial_step.emit_signal("pressed")
-		await process_frame
-		await process_frame
-	_expect(int(main.tutorial_screen.step_index) == main.tutorial_screen.STEPS.size() - 1, "The Tutorial did not advance through all basic-mechanics steps.")
-	_expect(main.find_child("TutorialFinishButton", true, false) != null, "The Tutorial did not offer a Finish action on its final step.")
+	var guided_tutorial := main.find_child("Tabletop3DPrototype", true, false)
+	_expect(guided_tutorial != null and bool(guided_tutorial.tutorial_mode), "The title-screen Tutorial did not open its standalone guided practice table.")
+	_expect(main.find_child("GuidedTutorialPanel", true, false) != null, "The guided Tutorial did not render its written lesson panel.")
+	_expect(main.run.is_empty(), "Opening How to Play unexpectedly created or entered a Season Run.")
 	main._show_start()
 	await process_frame
 
@@ -81,6 +76,55 @@ func _run() -> void:
 	_expect(main.run.shop.size() == 8, "Shop did not generate eight singles.")
 
 	var collection_before: int = main._deck_total(main.run.collection)
+	var sealed_pack: Array = main._generate_pack("base_standard_pack")
+	main._start_pack(sealed_pack)
+	main._show_packs()
+	await process_frame
+	await process_frame
+	var pack_scroll := main.scroll as ScrollContainer
+	_expect(pack_scroll != null and not pack_scroll.get_v_scroll_bar().visible and not pack_scroll.get_h_scroll_bar().visible, "The pack-opening table did not fit in the standard viewport without scrolling.")
+	var sealed_exit := main.find_child("PackExitToStoreButton", true, false) as Button
+	_expect(sealed_exit != null, "The pack table did not render its return-to-store button.")
+	if sealed_exit != null:
+		sealed_exit.emit_signal("pressed")
+	await process_frame
+	await process_frame
+	_expect(main.current_screen == "shop", "Returning from an unopened pack did not reach the shop.")
+	_expect(not bool(main.run.get("pack_opened", false)) and main.run.get("current_pack", []) == sealed_pack, "Returning from an unopened pack changed or opened the sealed pack.")
+	_expect(main._deck_total(main.run.collection) == collection_before, "Returning from an unopened pack added cards to the collection.")
+
+	main._show_packs()
+	await process_frame
+	await process_frame
+	var sealed_pack_button := main.find_child("PackButton", true, false) as Button
+	_expect(sealed_pack_button != null, "The preserved sealed pack was not available when the pack table reopened.")
+	_expect(sealed_pack_button != null and sealed_pack_button.text == "I haven't made the pack art yet", "The pack table did not render the unfinished-art placeholder.")
+	if sealed_pack_button != null:
+		_click_control(sealed_pack_button)
+	await process_frame
+	await process_frame
+	_expect(bool(main.run.get("pack_opened", false)), "Clicking the preserved sealed pack did not open its wrapper.")
+	var first_pack_card := main.find_child("PackCardSlot0", true, false) as TextureButton
+	_expect(first_pack_card != null and first_pack_card.visible and first_pack_card.size == Vector2(210, 295), "Opened pack cards did not use the enlarged card size.")
+	var first_pack_card_back := main.find_child("PackCardBack0", true, false) as TextureRect
+	_expect(first_pack_card_back != null and first_pack_card_back.texture != null and first_pack_card_back.texture.resource_path == "res://assets/cards/card_backs/living_table.png", "The pack-opening table did not use the Living Table card back for face-down cards.")
+	var pack_frame := main.find_child("PackOpeningSceneFrame", true, false) as Control
+	var pack_canvas := main.find_child("PackOpeningSceneHost", true, false) as Control
+	var pack_card_fan := main.find_child("CardFan", true, false) as Control
+	if pack_frame != null and pack_canvas != null and pack_card_fan != null:
+		var authored_fan_midpoint: float = pack_card_fan.position.x + float(main.pack_opening_screen.FAN_CENTER_X) + float(main.pack_opening_screen.CARD_SLOT_SIZE.x) * 0.5
+		_expect(absf(authored_fan_midpoint - pack_canvas.size.x * 0.5) <= 1.0, "The opened card fan was not centered in the pack table.")
+		_expect(absf(pack_frame.get_global_rect().get_center().x - pack_scroll.get_global_rect().get_center().x) <= 1.0, "The pack table was not centered in the available viewport.")
+	var opened_exit := main.find_child("PackExitToStoreButton", true, false) as Button
+	if opened_exit != null:
+		opened_exit.emit_signal("pressed")
+	await process_frame
+	await process_frame
+	_expect(main.current_screen == "shop", "Returning from an opened pack did not reach the shop.")
+	_expect(main.run.get("current_pack", []).is_empty() and main.run.get("revealed_pack", []).is_empty() and not bool(main.run.get("pack_opened", false)), "Returning from an opened pack did not clear the completed pack state.")
+	_expect(main._deck_total(main.run.collection) == collection_before + sealed_pack.size(), "Returning from an opened pack did not safely collect every card before clearing it.")
+
+	collection_before = main._deck_total(main.run.collection)
 	var pack: Array = main._generate_pack("base_standard_pack")
 	_expect(pack.size() == 6, "Base booster did not generate six cards.")
 	main._start_pack(pack)
@@ -389,6 +433,9 @@ func _run() -> void:
 		_expect(active_idle != null and active_idle.loop_mode == Animation.LOOP_LINEAR, "Clerk 1's idle animation is not configured to loop.")
 	var shopkeeper_hotspot := main.find_child("ShopkeeperHotspot", true, false) as Button
 	_expect(shopkeeper_hotspot != null and shopkeeper_hotspot.text == "" and shopkeeper_hotspot.flat and shopkeeper_hotspot.modulate.a == 0.0, "Clerk 1 does not have an invisible direct-click target.")
+	var shopkeeper_arrow := main.find_child("ShopkeeperArrow", true, false) as Control
+	var shopkeeper_arrow_fill := main.find_child("ArrowFill", true, false) as Polygon2D
+	_expect(shopkeeper_arrow != null and shopkeeper_arrow.visible and shopkeeper_arrow.mouse_filter == Control.MOUSE_FILTER_IGNORE and shopkeeper_arrow_fill != null and shopkeeper_arrow_fill.polygon.size() == 7, "The zoomed-out store is missing its vector-drawn floating shopkeeper arrow.")
 	var shopkeeper_meshes := shopkeeper_model.find_children("*", "MeshInstance3D", true, false) if shopkeeper_model != null else []
 	if shopkeeper_hotspot != null:
 		shopkeeper_hotspot.emit_signal("mouse_entered")
@@ -410,6 +457,7 @@ func _run() -> void:
 	_expect(shopkeeper_meta_button != null, "The shopkeeper menu is missing Meta Analysis.")
 	if shopkeeper_hotspot != null:
 		shopkeeper_hotspot.emit_signal("pressed")
+	_expect(shopkeeper_arrow != null and not shopkeeper_arrow.visible, "The shopkeeper arrow remained visible after leaving the zoomed-out store.")
 	await create_timer(0.8).timeout
 	_expect(shop_overworld != null and shop_overworld.menu_panel.visible, "Clicking Clerk 1 did not open her menu.")
 	if shopkeeper_hotspot != null:
@@ -641,6 +689,26 @@ func _expect(condition: bool, message: String) -> void:
 		return
 	failed = true
 	push_error(message)
+
+
+func _click_control(control: Control) -> void:
+	var click_position := control.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = click_position
+	motion.global_position = click_position
+	root.push_input(motion)
+	var press := InputEventMouseButton.new()
+	press.position = click_position
+	press.global_position = click_position
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	root.push_input(press)
+	var release := InputEventMouseButton.new()
+	release.position = click_position
+	release.global_position = click_position
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	root.push_input(release)
 
 
 func _deck_total(deck: Dictionary) -> int:

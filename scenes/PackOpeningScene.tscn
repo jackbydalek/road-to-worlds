@@ -1,33 +1,35 @@
 [gd_scene format=3 uid="uid://cpk43dopsnng8"]
 
-[ext_resource type="Texture2D" path="res://assets/card pack/Untitled.png" id="1_25ae7"]
-
 [node name="Control" type="Node2D" unique_id=375189134]
 
 [node name="TableBackground" type="ColorRect" parent="." unique_id=275513703]
 offset_left = 6.0
-offset_top = 11.0
-offset_right = 1436.0
-offset_bottom = 897.0
+offset_top = 6.0
+offset_right = 1354.0
+offset_bottom = 674.0
 color = Color(0.08, 0.065, 0.05, 1)
 
-[node name="PackButton" type="TextureButton" parent="." unique_id=1458735756]
-offset_left = 510.0
-offset_top = 245.0
-offset_right = 840.0
-offset_bottom = 787.0
-
-[node name="Untitled" type="Sprite2D" parent="PackButton" unique_id=1588814902]
-position = Vector2(172, 234)
-texture = ExtResource("1_25ae7")
+[node name="PackButton" type="Button" parent="." unique_id=1458735756]
+z_index = 100
+offset_left = 515.0
+offset_top = 105.0
+offset_right = 845.0
+offset_bottom = 545.0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.09, 0.08, 0.07, 1)
+theme_override_font_sizes/font_size = 28
+text = "I haven't made the pack art yet"
+autowrap_mode = 2
 
 [node name="CardFan" type="Control" parent="." unique_id=1065774735]
 layout_mode = 3
 anchors_preset = 0
 offset_left = 32.0
-offset_top = 333.0
-offset_right = 1410.0
-offset_bottom = 885.0
+offset_top = 140.0
+offset_right = 1352.0
+offset_bottom = 590.0
+mouse_filter = 2
 
 [node name="PackCardSlot0" type="TextureButton" parent="CardFan" unique_id=1007009109]
 layout_mode = 0
@@ -94,22 +96,22 @@ offset_bottom = 412.0
 rotation = 0.13
 
 [node name="PackStatusLabel" type="Label" parent="." unique_id=1840105955]
-offset_left = 84.0
-offset_top = 72.0
-offset_right = 844.0
-offset_bottom = 118.0
+offset_left = 44.0
+offset_top = 28.0
+offset_right = 824.0
+offset_bottom = 78.0
 text = "PackStatusLabel"
 
 [node name="DoneButton" type="Button" parent="." unique_id=2101028036]
-offset_left = 336.0
-offset_top = 805.0
-offset_right = 542.4
-offset_bottom = 863.0
+offset_left = 385.0
+offset_top = 605.0
+offset_right = 591.4
+offset_bottom = 660.0
 text = "Done"
 
 [node name="RevealAllButton" type="Button" parent="." unique_id=791025081]
-offset_left = 780.0
-offset_top = 811.0
-offset_right = 998.4
-offset_bottom = 871.0
+offset_left = 752.0
+offset_top = 605.0
+offset_right = 970.4
+offset_bottom = 660.0
 text = "reveal all"

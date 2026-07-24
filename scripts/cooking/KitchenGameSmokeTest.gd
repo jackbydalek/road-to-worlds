@@ -394,6 +394,37 @@ func _run() -> void:
 	if int(mixer_state.opponent.plated[0].attack) != 5 or int(mixer_state.opponent.plated[0].health) != 4:
 		_fail("Hand Mixer did not swap the chosen card's Attack and Health.")
 		return
+	var switchblade_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69861)
+	switchblade_state.player.turns_started = 2
+	var switchblade_plated := _test_unit(912, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 0)
+	switchblade_plated.table_slot = 1
+	var switchblade_prep := _test_unit(913, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 0)
+	switchblade_prep.table_slot = 2
+	switchblade_state.player.plated = [switchblade_plated]
+	switchblade_state.player.prep = [switchblade_prep]
+	switchblade_state.player.hand = ["item_switchblade"]
+	production_service.play_card(switchblade_state, 0)
+	if production_service.choice_target_ids(switchblade_state) != [912]:
+		_fail("Switchblade did not begin by offering the player's Plated food.")
+		return
+	production_service.choose_effect_target(switchblade_state, 912)
+	if production_service.choice_target_ids(switchblade_state) != [913]:
+		_fail("Switchblade did not follow with the player's Prep food.")
+		return
+	production_service.choose_effect_target(switchblade_state, 913)
+	if int(switchblade_state.player.plated[0].instance_id) != 913 or int(switchblade_state.player.prep[0].instance_id) != 912 or not bool(switchblade_state.player.plated[0].ready):
+		_fail("Switchblade did not exchange and ready the selected Prep and Plated foods.")
+		return
+	if int(switchblade_state.player.plated[0].get("table_slot", -1)) != 1 or int(switchblade_state.player.prep[0].get("table_slot", -1)) != 2:
+		_fail("Switchblade did not preserve the exchanged foods' destination slots.")
+		return
+	if bool(switchblade_state.player.zone_move_used):
+		_fail("Switchblade incorrectly consumed the player's once-per-turn switch.")
+		return
+	production_service.move_unit(switchblade_state, 913, "prep")
+	if not bool(switchblade_state.player.zone_move_used) or switchblade_state.player.prep.size() != 2:
+		_fail("The normal once-per-turn switch was not available after Switchblade resolved.")
+		return
 	var grater_state: Dictionary = production_service.start_game("spicy_test_kitchen", "sweet_test_kitchen", 6987)
 	grater_state.opponent.plated = [_test_unit(907, "sweet_marshmallow_swallow", "Marshmallow Swallows", "ingredient", 3, 4, false, 2)]
 	grater_state.opponent.plated[0].max_health = 4
@@ -445,12 +476,12 @@ func _run() -> void:
 	chef_carl_choice_state.player.discard = ["hearty_dumpling_tortoise", "hearty_stewoose", "hearty_bagver"]
 	production_service.play_card(chef_carl_choice_state, 0)
 	if production_service.discard_choice_indices(chef_carl_choice_state) != [0, 1]:
-		_fail("Chef Carl did not offer only Meals from the discard pile.")
+		_fail("Chef Ramsey did not offer only Meals from the discard pile.")
 		return
 	production_service.toggle_discard_choice(chef_carl_choice_state, 0)
 	production_service.confirm_discard_choice(chef_carl_choice_state)
 	if chef_carl_choice_state.player.hand != ["hearty_dumpling_tortoise"]:
-		_fail("Chef Carl did not return the selected Meal.")
+		_fail("Chef Ramsey did not return the selected Meal.")
 		return
 	var measuring_choice_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69900)
 	measuring_choice_state.player.hand = ["item_measuring_cup", "spicy_hot_honey_bee", "item_wooden_spoon"]
@@ -595,15 +626,15 @@ func _run() -> void:
 	chef_bill_state.player.deck = ["item_wooden_spoon", "spicy_sriracharrow", "spicy_hot_honey_bee"]
 	production_service.play_card(chef_bill_state, 0)
 	if production_service.search_candidates(chef_bill_state) != ["spicy_hot_honey_bee"] or chef_bill_state.search_queue.size() != 1:
-		_fail("Chef Bill did not begin with an Ingredient-only deck choice.")
+		_fail("Chef Rachel did not begin with an Ingredient-only deck choice.")
 		return
 	production_service.select_search_card(chef_bill_state, "spicy_hot_honey_bee")
 	if production_service.search_candidates(chef_bill_state) != ["spicy_sriracharrow"]:
-		_fail("Chef Bill did not advance to a Meal-only deck choice.")
+		_fail("Chef Rachel did not advance to a Meal-only deck choice.")
 		return
 	production_service.select_search_card(chef_bill_state, "spicy_sriracharrow")
 	if not chef_bill_state.pending_search.is_empty() or not chef_bill_state.search_queue.is_empty() or chef_bill_state.player.hand != ["spicy_hot_honey_bee", "spicy_sriracharrow"]:
-		_fail("Chef Bill's queued searches did not add both selected cards.")
+		_fail("Chef Rachel's queued searches did not add both selected cards.")
 		return
 
 	# Revised production stats and simple effect amounts load exactly as authored.
@@ -823,7 +854,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	# The service also registers one non-collectible Fresh token at runtime.
-	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 89:
+	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 90:
 		_fail("Production card catalog did not load into a playable game.")
 		return
 	if _count_prefix(prototype, "CookingPlayerPrepSlot_") != 3 or _count_prefix(prototype, "CookingPlayerPlatedSlot_") != 2:
@@ -1189,20 +1220,20 @@ func _run() -> void:
 	var choose_discard_meal := prototype.find_child("CookingSelectDiscardPile_1", true, false) as Button
 	var confirm_discard_pile := prototype.find_child("CookingConfirmDiscardPileButton", true, false) as Button
 	if choose_discard_meal == null or confirm_discard_pile == null or not confirm_discard_pile.disabled:
-		_fail("The kitchen UI did not render Chef Carl's discard-pile picker.")
+		_fail("The kitchen UI did not render Chef Ramsey's discard-pile picker.")
 		return
 	choose_discard_meal.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	confirm_discard_pile = prototype.find_child("CookingConfirmDiscardPileButton", true, false) as Button
 	if confirm_discard_pile == null or confirm_discard_pile.disabled:
-		_fail("Chef Carl's discard confirmation did not enable after one selection.")
+		_fail("Chef Ramsey's discard confirmation did not enable after one selection.")
 		return
 	confirm_discard_pile.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	if prototype.state.player.hand != ["hearty_stewoose"]:
-		_fail("Chef Carl's rendered picker did not return the selected Meal.")
+		_fail("Chef Ramsey's rendered picker did not return the selected Meal.")
 		return
 	prototype.state.player.hand = ["item_tongs"]
 	prototype.state.opponent.hand = ["item_wooden_spoon", "hearty_bagver"]

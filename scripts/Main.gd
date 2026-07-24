@@ -24,7 +24,6 @@ const SEASON_HUB_SCREEN_SCRIPT := preload("res://scripts/SeasonHubScreen.gd")
 const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
 const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
 const CARD_EFFECT_LAB_SCRIPT := preload("res://scripts/CardEffectLab.gd")
-const TUTORIAL_SCREEN_SCRIPT := preload("res://scripts/TutorialScreen.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const GREYBOX_CAMERA_DEMO_SCENE := preload("res://scenes/GreyboxCameraDemo.tscn")
@@ -42,7 +41,6 @@ var season_hub_screen: RefCounted
 var season_flow_service: RefCounted
 var tournament_service: RefCounted
 var card_effect_lab: RefCounted
-var tutorial_screen: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -97,7 +95,6 @@ func _ready() -> void:
 	season_flow_service.setup(run_state_service, tournaments_by_id)
 	tournament_service = TOURNAMENT_SERVICE_SCRIPT.new()
 	card_effect_lab = CARD_EFFECT_LAB_SCRIPT.new()
-	tutorial_screen = TUTORIAL_SCREEN_SCRIPT.new()
 	_build_shell()
 	_show_start()
 	last_autosave_screen = current_screen
@@ -335,7 +332,7 @@ func _show_start() -> void:
 
 	var tutorial_panel := _add_panel(mode_row, "How to Play", "#173447")
 	tutorial_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_body_text(tutorial_panel, "A guided walkthrough of cards, recipes, Prep and Plated zones, combat, and the basic turn sequence.")
+	_add_body_text(tutorial_panel, "Play a guided practice table with fixed hands, highlighted cards, recipes, zones, support cards, and combat.")
 	var tutorial_button := _make_button("How to Play")
 	tutorial_button.name = "StartTutorialButton"
 	_style_button(tutorial_button, "action")
@@ -391,7 +388,19 @@ func _show_new_game_menu() -> void:
 
 func _show_tutorial() -> void:
 	run = {}
-	tutorial_screen.open(self)
+	current_screen = "tutorial"
+	_apply_screen_chrome()
+	_clear(nav)
+	_clear(content)
+	_update_status()
+	_set_footer("")
+	var tutorial_game = TABLETOP_3D_PROTOTYPE_SCENE.instantiate()
+	tutorial_game.configure_tutorial()
+	tutorial_game.custom_minimum_size = Vector2(0, 820)
+	tutorial_game.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tutorial_game.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tutorial_game.exit_requested.connect(_show_start)
+	content.add_child(tutorial_game)
 
 
 func _show_debug_starter_selection() -> void:
@@ -735,7 +744,7 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
-	var compact_duel := current_screen == "kitchen_match"
+	var compact_duel := current_screen in ["kitchen_match", "tutorial"]
 	var compact_deck := current_screen == "deck" and _run_mode() == "season"
 	var hide_footer := compact_duel or compact_deck or (current_screen == "shop" and _run_mode() == "season")
 	if header_bar != null:
@@ -844,6 +853,12 @@ func _show_season_run() -> void:
 
 
 func _show_shop() -> void:
+	# Leaving an untouched sealed pack keeps it available for later. Once the
+	# wrapper has been opened, returning to the store finalizes the pack just as
+	# the Done button does, including safely collecting any face-down cards.
+	if current_screen == "packs" and bool(run.get("pack_opened", false)):
+		shop_economy_service.reveal_all_cards(run, _current_primary_archetype())
+		_finish_pack_state()
 	if _run_mode() == "season":
 		_show_shop_overworld()
 	else:
@@ -2311,7 +2326,7 @@ func _add_to_collection(card_id: String, count: int) -> void:
 
 
 func _add_panel(parent: Node, title: String, accent: String = "#202734") -> VBoxContainer:
-	var compact_duel := current_screen == "kitchen_match"
+	var compact_duel := current_screen in ["kitchen_match", "tutorial"]
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style := StyleBoxFlat.new()
@@ -2531,7 +2546,7 @@ func _add_body_text(parent: Node, text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if current_screen == "kitchen_match":
+	if current_screen in ["kitchen_match", "tutorial"]:
 		label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", Color("#d8dfec"))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
