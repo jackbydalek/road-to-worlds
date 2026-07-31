@@ -72,10 +72,21 @@ func _run() -> void:
 	_expect(
 		round_button != null
 		and round_button.visible
-		and round_button.text == "Start Round 1"
+		and round_button.text == "START ROUND 1   →"
 		and "Register" in round_button.tooltip_text,
 		"The store overview did not offer Start Round 1 before tournament registration."
 	)
+	if round_button != null:
+		var round_style := round_button.get_theme_stylebox("normal") as StyleBoxFlat
+		_expect(
+			round_button.custom_minimum_size.x >= 500.0
+			and round_button.custom_minimum_size.y >= 84.0
+			and round_button.get_theme_font_size("font_size") >= 28
+			and round_style != null
+			and round_style.border_width_left >= 6
+			and round_style.shadow_size >= 12,
+			"Start Round does not have the larger tournament-CTA silhouette."
+		)
 	shop_world.call("_return_to_shopkeeper_menu")
 	await process_frame
 
@@ -126,7 +137,7 @@ func _run() -> void:
 	_expect(
 		round_button != null
 		and round_button.visible
-		and round_button.text == "Start Round 2"
+		and round_button.text == "START ROUND 2   →"
 		and round_button.custom_minimum_size.x >= 400.0
 		and round_button.get_signal_connection_list("pressed").size() > 0,
 		"The store overview did not expose a large, connected Start Round 2 action."

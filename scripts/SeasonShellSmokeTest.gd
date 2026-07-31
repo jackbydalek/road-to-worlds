@@ -626,7 +626,7 @@ func _run() -> void:
 			_expect(main.run.shop.size() == 8, "Returning between rounds did not expose the freshly restocked singles case.")
 			shop_overworld = main.find_child("CardShopOverworld", true, false)
 			var overview_next_round := main.find_child("StoreOverviewRoundButton", true, false) as Button
-			_expect(overview_next_round != null and overview_next_round.visible and overview_next_round.text == "Start Round 2", "The store overview did not offer the pending next round.")
+			_expect(overview_next_round != null and overview_next_round.visible and overview_next_round.text == "START ROUND 2   →", "The store overview did not offer the pending next round.")
 			if overview_next_round != null:
 				overview_next_round.emit_signal("pressed")
 			await process_frame

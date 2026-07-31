@@ -480,6 +480,20 @@ func _build_environment(parent: Node, combatant: Dictionary, is_player: bool) ->
 		var rules := _label(String(data.get("text", "")), 11, Color("#fff0d4"))
 		rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		panel.add_child(rules)
+		if is_player:
+			for ability in data.get("abilities", []):
+				if String(ability.get("timing", "")) != "activated" or String(ability.get("active_zone", "")) != "environment":
+					continue
+				var ability_id := String(ability.get("id", "activated"))
+				var used := bool(ability.get("once_per_turn", false)) and combatant.get("environment_used_abilities", []).has(ability_id)
+				var activate := _button("Used" if used else "Activate Ability", true)
+				activate.name = "CookingActivateEnvironmentAbility_%s" % ability_id
+				activate.disabled = used or not _dragging_allowed()
+				activate.pressed.connect(func() -> void:
+					service.activate_environment_ability(state, ability_id)
+					call_deferred("_refresh")
+				, CONNECT_DEFERRED)
+				panel.add_child(activate)
 
 
 func _build_combat_zones(parent: Node, combatant: Dictionary, is_player: bool) -> void:

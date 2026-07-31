@@ -1,7 +1,7 @@
 extends RefCounted
 class_name CookingCombatService
 
-const STARTING_LIFE := 15
+const STARTING_LIFE := 20
 const OPENING_HAND := 5
 const START_TURN_HAND_FLOOR := 2
 const PREP_SLOTS := 3
@@ -9,7 +9,9 @@ const PLATED_SLOTS := 2
 const EXPERT_LOOKAHEAD_DEPTH := 2
 const EXPERT_MIN_PLAY_GAIN := 1.5
 const AI_DECK_RESERVE := 3
-const AI_PERSONALITIES := ["aggressive", "defensive"]
+const AI_PERSONALITIES := ["pressure", "defensive", "value"]
+const AI_POLICY_PRODUCTION := "production"
+const AI_POLICY_FACE_RACE := "face_race"
 
 var cards_by_id: Dictionary = {}
 var decks: Dictionary = {}
@@ -73,15 +75,16 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 		player_deck_id = deck_ids[0]
 	if opponent_deck_id == "" and not deck_ids.is_empty():
 		opponent_deck_id = deck_ids[1] if deck_ids.size() > 1 else deck_ids[0]
+	var player_combatant := _make_combatant(player_deck_id)
+	var opponent_combatant := _make_combatant(opponent_deck_id)
 	var state := {
 		"turn": 1,
 		"phase": "player_main" if has_playable_content() else "awaiting_cards",
 		"first_player": first_side,
 		"ai_difficulty": ai_difficulty if ai_difficulty in ["easy", "medium", "hard", "expert"] else "easy",
-		# A rival keeps one deterministic personality for the whole match. This
-		# gives the same seed a reproducible opponent while making different rivals
-		# visibly favor pressure or a protected board.
-		"ai_personality": AI_PERSONALITIES[posmod(seed, AI_PERSONALITIES.size())],
+		# Kept for compatibility with older diagnostics. Runtime decisions read the
+		# acting combatant's profile, so perspective swaps preserve deck identity.
+		"ai_personality": String(opponent_combatant.get("ai_profile", "defensive")),
 		"game_over": false,
 		"winner": "",
 		"next_instance_id": 1,
@@ -106,8 +109,8 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 		"search_queue": [],
 		"message": "Add cards to data/cards.json to begin testing." if not has_playable_content() else "Play units to Prep or Plated. Only Plated cards can attack or be attacked.",
 		"log": [],
-		"player": _make_combatant(player_deck_id),
-		"opponent": _make_combatant(opponent_deck_id)
+		"player": player_combatant,
+		"opponent": opponent_combatant
 	}
 	if not has_playable_content():
 		return state
@@ -128,7 +131,7 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 	else:
 		_start_turn(state, "player", false)
 	_log(state, "The cook-off begins. The first player skips their opening draw and cannot attack on their first turn.")
-	_log(state, "Opponent style: %s." % ("aggressive pressure" if _ai_is_aggressive(state) else "defensive positioning"))
+	_log(state, "Opponent style: %s." % _ai_profile_label(state))
 	# Opening hands and setup are the initial presentation state, not gameplay animations.
 	state.animation_events.clear()
 	return state
@@ -449,6 +452,27 @@ func activate_ability(state: Dictionary, source_instance_id: int, ability_id: St
 	return _resolve_activated_ability(state, source_instance_id, ability, -1)
 
 
+func activate_environment_ability(state: Dictionary, ability_id: String = "") -> Dictionary:
+	if not _can_player_act(state) or not state.get("pending_ability", {}).is_empty():
+		return state
+	var card_id := String(state.player.get("environment", ""))
+	var data := card(card_id)
+	var ability := _find_activated_ability(data, ability_id)
+	if card_id == "" or ability.is_empty() or String(ability.get("active_zone", "")) != "environment":
+		return _message(state, "Your active Environment has no usable ability.")
+	var resolved_id := String(ability.get("id", "activated"))
+	var used: Array = state.player.get("environment_used_abilities", [])
+	if bool(ability.get("once_per_turn", false)) and used.has(resolved_id):
+		return _message(state, "%s has already used that ability this turn." % data.get("name", "This Environment"))
+	if bool(ability.get("once_per_turn", false)):
+		used.append(resolved_id)
+		state.player.environment_used_abilities = used
+	_log(state, "Player activates %s's ability." % data.get("name", "Environment"))
+	_resolve_effects(state, "player", ability.get("effects", []), {})
+	_refresh_stat_auras(state)
+	return state
+
+
 func choose_ability_target(state: Dictionary, target_instance_id: int) -> Dictionary:
 	var pending: Dictionary = state.get("pending_ability", {})
 	if pending.is_empty():
@@ -583,11 +607,16 @@ func choose_effect_target(state: Dictionary, target_instance_id: int) -> Diction
 	if not choice_target_ids(state).has(target_instance_id):
 		return _message(state, "Choose one of the highlighted cards.")
 	var pending_effect: Dictionary = pending.get("effect", {})
-	if String(pending_effect.get("type", "")) == "switch_friendly_zones" and not pending_effect.has("plated_instance_id"):
+	var pending_effect_type := String(pending_effect.get("type", ""))
+	if pending_effect_type in ["switch_friendly_zones", "switch_enemy_zones"] and not pending_effect.has("plated_instance_id"):
 		pending_effect = pending_effect.duplicate(true)
 		pending_effect.plated_instance_id = target_instance_id
 		pending.effect = pending_effect
-		pending.prompt = "Choose one of your Prep foods to switch with it."
+		pending.prompt = (
+			"Choose one of your opponent's Prep foods to switch with it."
+			if pending_effect_type == "switch_enemy_zones"
+			else "Choose one of your Prep foods to switch with it."
+		)
 		state.pending_choice = pending
 		return _message(state, String(pending.prompt))
 	state.pending_choice = {}
@@ -999,12 +1028,15 @@ func _make_combatant(deck_id: String) -> Dictionary:
 			deck_list.append(String(card_id))
 	return {
 		"deck_id": deck_id,
+		"ai_profile": _ai_profile_for_deck(deck_id),
+		"ai_policy": AI_POLICY_PRODUCTION,
 		"life": STARTING_LIFE,
 		"deck": deck_list,
 		"hand": [],
 		"prep": [],
 		"plated": [],
 		"environment": "",
+		"environment_used_abilities": [],
 		"discard": [],
 		"meal_served": false,
 		"meals_served": 0,
@@ -1017,6 +1049,19 @@ func _make_combatant(deck_id: String) -> Dictionary:
 		"fatigue": 0,
 		"turns_started": 0
 	}
+
+
+func _ai_profile_for_deck(deck_id: String) -> String:
+	match String(decks.get(deck_id, {}).get("archetype", "")).to_lower():
+		"spicy":
+			return "pressure"
+		"hearty":
+			return "defensive"
+		"sweet":
+			return "value"
+	# Custom or mixed decks receive a stable profile instead of inheriting the
+	# other seat's seed-derived personality.
+	return String(AI_PERSONALITIES[posmod(deck_id.hash(), AI_PERSONALITIES.size())])
 
 
 func reaction_hand_indices(state: Dictionary) -> Array[int]:
@@ -1537,6 +1582,7 @@ func _start_turn(state: Dictionary, side: String, draw_card: bool = true) -> boo
 	who.zone_move_used = false
 	who.hand_trap_used = false
 	who.discard_ingredient_play_used = false
+	who.environment_used_abilities = []
 	for unit in who.prep:
 		unit.ready = bool(card(String(unit.card_id)).get("can_attack_from_prep", false)) and not _opening_attack_lock(state, side)
 		unit.used_abilities = []
@@ -1681,6 +1727,8 @@ func _ai_play_discard_ingredient(state: Dictionary) -> bool:
 
 
 func _ai_play_one_hand_card(state: Dictionary) -> bool:
+	if _ai_policy(state) == AI_POLICY_FACE_RACE:
+		return _ai_play_face_race_hand_card(state)
 	if _ai_level(state) >= 3:
 		return _ai_play_lookahead_hand_card(state)
 	if _ai_level(state) > 0:
@@ -1715,6 +1763,53 @@ func _ai_play_first_hand_card(state: Dictionary) -> bool:
 		if card_type == "chef":
 			return _play_chef(state, "opponent", hand_index)
 	return false
+
+
+func _ai_play_face_race_hand_card(state: Dictionary) -> bool:
+	var best_action: Dictionary = {}
+	var best_score := -INF
+	for hand_index in range(state.opponent.hand.size()):
+		var action := _ai_hand_action(state, hand_index)
+		if action.is_empty():
+			continue
+		var score := _ai_face_race_card_score(state, card(String(action.card_id)))
+		if score > best_score:
+			best_score = score
+			best_action = action
+	if best_action.is_empty():
+		return false
+	return _ai_execute_hand_action(state, best_action)
+
+
+func _ai_face_race_card_score(state: Dictionary, data: Dictionary) -> float:
+	var score := 0.0
+	match String(data.get("card_type", "")):
+		"meal":
+			score += 40.0 + float(int(data.get("attack", 0)) * 8)
+		"ingredient":
+			score += 25.0 + float(int(data.get("attack", 0)) * 8)
+		"spice":
+			score += 20.0 + float(int(data.get("attack_bonus", 0)) * 10)
+		"environment":
+			score += float(int(data.get("meal_attack_bonus", 0)) * 12)
+		_:
+			score += 5.0
+	if data.get("keywords", []).has("stalwart"):
+		score += 60.0
+	for effect_group in [data.get("effects", []), data.get("on_play", [])]:
+		for effect in effect_group:
+			var amount := maxi(1, int(effect.get("amount", 1)))
+			match String(effect.get("type", "")):
+				"damage_enemy_player":
+					score += float(amount * 120)
+				"damage_all_enemy_units", "damage_all_enemy_plated", "damage_enemy_unit", "damage_enemy_plated":
+					score += float(amount * 20)
+				"return_enemy_plated_unit", "destroy_enemy_unit":
+					if not state.player.plated.is_empty():
+						score += 50.0
+				"draw", "search", "look_and_take":
+					score += float(amount * 3)
+	return score
 
 
 func _ai_play_best_hand_card(state: Dictionary) -> bool:
@@ -2152,10 +2247,31 @@ func _ai_level(state: Dictionary) -> int:
 
 
 func _ai_is_aggressive(state: Dictionary) -> bool:
-	return String(state.get("ai_personality", "aggressive")) == "aggressive"
+	return _ai_profile(state) in ["pressure", "aggressive"]
+
+
+func _ai_profile(state: Dictionary) -> String:
+	return String(state.get("opponent", {}).get("ai_profile", state.get("ai_personality", "defensive")))
+
+
+func _ai_policy(state: Dictionary) -> String:
+	return String(state.get("opponent", {}).get("ai_policy", AI_POLICY_PRODUCTION))
+
+
+func _ai_profile_label(state: Dictionary) -> String:
+	match _ai_profile(state):
+		"pressure":
+			return "aggressive pressure"
+		"value":
+			return "patient value"
+	return "defensive positioning"
 
 
 func _ai_deployment_zone(state: Dictionary, _card_type: String) -> String:
+	if _ai_policy(state) == AI_POLICY_FACE_RACE:
+		return "plated" if state.opponent.plated.size() < PLATED_SLOTS else "prep"
+	if _ai_profile(state) == "defensive" and _ai_faces_lethal_next_turn(state):
+		return "plated" if state.opponent.plated.size() < PLATED_SLOTS else "prep"
 	var preferred_zone := "plated" if _ai_is_aggressive(state) else "prep"
 	var fallback_zone := "prep" if preferred_zone == "plated" else "plated"
 	var preferred_capacity := PLATED_SLOTS if preferred_zone == "plated" else PREP_SLOTS
@@ -2170,24 +2286,35 @@ func _ai_deployment_zone(state: Dictionary, _card_type: String) -> String:
 func _ai_should_move_to_plated(state: Dictionary) -> bool:
 	if bool(state.opponent.zone_move_used) or state.opponent.plated.size() >= PLATED_SLOTS or state.opponent.prep.is_empty():
 		return false
+	if _ai_policy(state) == AI_POLICY_FACE_RACE:
+		return true
 	if _ai_is_aggressive(state):
 		return true
-	# A defensive rival exposes a unit only to establish its first blocker.
-	return state.opponent.plated.is_empty()
+	if _ai_faces_lethal_next_turn(state):
+		return true
+	# Defensive rivals establish a blocker first, then commit a second attacker
+	# when the board is stable instead of indefinitely holding every threat back.
+	return state.opponent.plated.is_empty() or (
+		state.opponent.plated.size() < 2
+		and state.player.plated.size() <= state.opponent.plated.size()
+	)
 
 
 func _ai_should_attack(state: Dictionary, attacker: Dictionary) -> bool:
 	if _ai_is_aggressive(state):
 		return true
 	if state.player.plated.is_empty():
-		# Preserve the defensive position unless the direct hit wins immediately.
-		return int(attacker.attack) >= int(state.player.life)
+		# An undefended Chef is free pressure; defensive rivals should take it.
+		return true
 	var target := _ai_attack_target(state, attacker)
 	if target.is_empty():
 		return false
-	# Defensive rivals only trade when they remove a threat and keep their own
-	# card. Skipping every other attack activates the Defending overflow shield.
-	return int(attacker.attack) >= int(target.health) and int(attacker.health) > int(target.attack)
+	# Favor clean trades, but trade up into an equal-or-larger opposing threat
+	# rather than leaving it unchecked just to preserve the attacker.
+	var can_ko := int(attacker.attack) >= int(target.health)
+	var survives := int(attacker.health) > int(target.attack)
+	var favorable_trade := int(target.attack) >= int(attacker.attack)
+	return can_ko and (survives or favorable_trade)
 
 
 func _ai_unit_to_plate(state: Dictionary) -> Dictionary:
@@ -2195,10 +2322,13 @@ func _ai_unit_to_plate(state: Dictionary) -> Dictionary:
 		return state.opponent.prep[0] if not state.opponent.prep.is_empty() else {}
 	var best: Dictionary = state.opponent.prep[0]
 	var best_score := -999999
+	var needs_emergency_blocker := _ai_profile(state) == "defensive" and _ai_faces_lethal_next_turn(state)
 	for unit in state.opponent.prep:
-		var score := int(unit.attack) * 4 + int(unit.health)
+		var score := int(unit.attack) + int(unit.health) * 5 if needs_emergency_blocker else int(unit.attack) * 4 + int(unit.health)
 		if String(unit.card_type) == "meal":
 			score += 12
+		if needs_emergency_blocker and (_unit_has_keyword(unit, "taunt") or _unit_has_keyword(unit, "bodyguard")):
+			score += 18
 		if bool(card(String(unit.card_id)).get("can_attack_from_prep", false)):
 			score -= 8
 		if score > best_score:
@@ -2241,6 +2371,15 @@ func _ai_attack_target(state: Dictionary, attacker: Dictionary) -> Dictionary:
 	if candidates.is_empty():
 		for plated_unit in state.player.plated:
 			candidates.append(plated_unit)
+	if _ai_policy(state) == AI_POLICY_FACE_RACE:
+		var cheapest: Dictionary = candidates[0]
+		for target in candidates:
+			if int(target.health) < int(cheapest.health) or (
+				int(target.health) == int(cheapest.health)
+				and int(target.attack) < int(cheapest.attack)
+			):
+				cheapest = target
+		return cheapest
 	if _ai_level(state) == 0:
 		return _weakest_plated_unit(state.player)
 	var best: Dictionary = candidates[0]
@@ -2259,6 +2398,38 @@ func _ai_attack_target(state: Dictionary, attacker: Dictionary) -> Dictionary:
 			best_score = score
 			best = target
 	return best
+
+
+func _ai_faces_lethal_next_turn(state: Dictionary) -> bool:
+	return _ai_estimated_incoming_face_damage(state) >= int(state.opponent.life)
+
+
+func _ai_estimated_incoming_face_damage(state: Dictionary) -> int:
+	var blockable_attacks: Array[int] = []
+	var unavoidable_damage := 0
+	for unit in state.player.plated:
+		var attack := maxi(0, int(unit.get("attack", 0)))
+		if _unit_has_keyword(unit, "stalwart"):
+			unavoidable_damage += attack
+		else:
+			blockable_attacks.append(attack)
+	for unit in state.player.prep:
+		if not bool(card(String(unit.get("card_id", ""))).get("can_attack_from_prep", false)):
+			continue
+		var prep_attack := maxi(0, int(unit.get("attack", 0)))
+		if _unit_has_keyword(unit, "stalwart"):
+			unavoidable_damage += prep_attack
+		else:
+			blockable_attacks.append(prep_attack)
+	# This intentionally errs toward defense: each Plated blocker is credited with
+	# absorbing one of the opponent's smallest attacks, preserving their largest
+	# threats for face in the worst plausible attack order.
+	blockable_attacks.sort()
+	var blocked_attacks := mini(state.opponent.plated.size(), blockable_attacks.size())
+	var estimated_damage := unavoidable_damage
+	for index in range(blocked_attacks, blockable_attacks.size()):
+		estimated_damage += int(blockable_attacks[index])
+	return estimated_damage
 
 
 func _ai_turn(state: Dictionary, start_turn: bool = true) -> void:
@@ -2483,6 +2654,16 @@ func _resolve_effects(
 				for discarded_card in state[side].hand:
 					state[side].discard.append(String(discarded_card))
 				state[side].hand.clear()
+			"shuffle_both_hands_then_draw":
+				# Chef Duff follows Pokémon TCG's Judge pattern: both hands are
+				# shuffled away before either player receives their replacement cards.
+				for affected_side in [side, enemy_side]:
+					state[affected_side].deck.append_array(state[affected_side].hand)
+					state[affected_side].hand.clear()
+					_shuffle(state[affected_side].deck)
+				for affected_side in [side, enemy_side]:
+					for unused in range(amount):
+						_draw(state, affected_side)
 			"discard_hand_then_draw":
 				for discarded_card in state[side].hand:
 					state[side].discard.append(String(discarded_card))
@@ -2774,6 +2955,45 @@ func _resolve_effects(
 					}, switch_group_id)
 					_resolve_effects(state, side, card(String(prep_target.card_id)).get("on_move_to_plated", []), prep_target)
 					_log(state, "%s switches %s with %s without using the turn's switch." % [_side_name(side), plated_target.name, prep_target.name])
+			"switch_enemy_zones":
+				var switched_side := enemy_side
+				var enemy_plated_target_id := int(effect.get("plated_instance_id", -1))
+				var enemy_prep_target_id := target_instance_id
+				if side != "player" and enemy_plated_target_id < 0 and not state[switched_side].plated.is_empty() and not state[switched_side].prep.is_empty():
+					enemy_plated_target_id = int(state[switched_side].plated[0].instance_id)
+					enemy_prep_target_id = int(state[switched_side].prep[0].instance_id)
+				var enemy_plated_target := _find_unit_in_zone(state[switched_side], "plated", enemy_plated_target_id)
+				var enemy_prep_target := _find_unit_in_zone(state[switched_side], "prep", enemy_prep_target_id)
+				if not enemy_plated_target.is_empty() and not enemy_prep_target.is_empty():
+					var enemy_plated_index: int = state[switched_side].plated.find(enemy_plated_target)
+					var enemy_prep_index: int = state[switched_side].prep.find(enemy_prep_target)
+					var enemy_plated_slot := int(enemy_plated_target.get("table_slot", -1))
+					var enemy_prep_slot := int(enemy_prep_target.get("table_slot", -1))
+					state[switched_side].plated[enemy_plated_index] = enemy_prep_target
+					state[switched_side].prep[enemy_prep_index] = enemy_plated_target
+					if enemy_plated_slot >= 0:
+						enemy_prep_target.table_slot = enemy_plated_slot
+					if enemy_prep_slot >= 0:
+						enemy_plated_target.table_slot = enemy_prep_slot
+					enemy_prep_target.ready = not _opening_attack_lock(state, switched_side)
+					enemy_plated_target.ready = bool(card(String(enemy_plated_target.card_id)).get("can_attack_from_prep", false)) and not _opening_attack_lock(state, switched_side)
+					var enemy_switch_group_id := _next_animation_group(state)
+					_queue_animation_event(state, "move", {
+						"side": switched_side,
+						"instance_id": int(enemy_plated_target.instance_id),
+						"card_id": String(enemy_plated_target.card_id),
+						"from": "plated",
+						"to": "prep"
+					}, enemy_switch_group_id)
+					_queue_animation_event(state, "move", {
+						"side": switched_side,
+						"instance_id": int(enemy_prep_target.instance_id),
+						"card_id": String(enemy_prep_target.card_id),
+						"from": "prep",
+						"to": "plated"
+					}, enemy_switch_group_id)
+					_resolve_effects(state, switched_side, card(String(enemy_prep_target.card_id)).get("on_move_to_plated", []), enemy_prep_target)
+					_log(state, "%s uses Tongs to switch %s with %s." % [_side_name(side), enemy_plated_target.name, enemy_prep_target.name])
 			"swap_attack_health":
 				var swap_target := _find_unit(state.player, target_instance_id)
 				if swap_target.is_empty():
@@ -2823,6 +3043,7 @@ func _effect_needs_board_choice(effect: Dictionary) -> bool:
 		"return_enemy_plated_unit",
 		"move_friendly_to_prep",
 		"switch_friendly_zones",
+		"switch_enemy_zones",
 		"destroy_enemy_unit",
 		"swap_attack_health",
 		"remove_enemy_spice"
@@ -2888,6 +3109,11 @@ func _valid_board_target_ids(state: Dictionary, side: String, effect: Dictionary
 				return result
 		"switch_friendly_zones":
 			zones = ["prep"] if effect.has("plated_instance_id") else ["plated"]
+		"switch_enemy_zones":
+			target_side = enemy_side
+			if not effect.has("plated_instance_id") and state[target_side].prep.is_empty():
+				return result
+			zones = ["prep"] if effect.has("plated_instance_id") else ["plated"]
 		"damage_enemy_prep":
 			target_side = enemy_side
 			zones = ["prep"]
@@ -2946,6 +3172,8 @@ func _board_choice_prompt(effect: Dictionary) -> String:
 			return "Choose a friendly Spicy Plated card to move to Prep."
 		"switch_friendly_zones":
 			return "Choose one of your Plated foods to switch."
+		"switch_enemy_zones":
+			return "Choose one of your opponent's Plated foods to switch."
 		"destroy_enemy_unit":
 			return "Choose an opposing card to destroy."
 		"swap_attack_health":
@@ -3777,6 +4005,7 @@ func _recover_from_discard(state: Dictionary, side: String, effect: Dictionary) 
 	var remaining := int(effect.get("amount", 1))
 	var allowed_types: Array = effect.get("card_types", [])
 	var required_type := String(effect.get("card_type", ""))
+	var required_archetype := String(effect.get("archetype", ""))
 	for index in range(combatant.discard.size() - 1, -1, -1):
 		if remaining <= 0:
 			break
@@ -3785,6 +4014,8 @@ func _recover_from_discard(state: Dictionary, side: String, effect: Dictionary) 
 		if required_type != "" and candidate_type != required_type:
 			continue
 		if not allowed_types.is_empty() and not allowed_types.has(candidate_type):
+			continue
+		if required_archetype != "" and not _card_has_archetype(card(candidate_id), required_archetype):
 			continue
 		combatant.hand.append(candidate_id)
 		combatant.discard.remove_at(index)

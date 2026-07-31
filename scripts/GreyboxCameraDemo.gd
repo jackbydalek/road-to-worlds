@@ -21,6 +21,7 @@ const SHOPKEEPER_CAMERA_OFFSET := Vector3(0.85, 0.55, 5.5)
 const SHOPKEEPER_ARROW_HEIGHT := 2.45
 const SHOPKEEPER_ARROW_BOB_DISTANCE := 12.0
 const TRANSITION_SECONDS := 0.75
+const CARD_HOVER_DELAY_SECONDS := 0.38
 
 @onready var camera_rig: Node3D = $ViewportContainer/SubViewport/World/CameraRig
 @onready var camera: Camera3D = $ViewportContainer/SubViewport/World/CameraRig/Camera3D
@@ -67,6 +68,7 @@ var meta_report_list: VBoxContainer
 var shopkeeper_hotspot: Button
 var shopkeeper_arrow: Control
 var shopkeeper_arrow_tween: Tween
+var overview_round_tween: Tween
 var shopkeeper_highlight_material: StandardMaterial3D
 var shopkeeper_original_overlays: Dictionary = {}
 var shopkeeper_hover_enabled := true
@@ -74,6 +76,10 @@ var overview_active := true
 var selected_single_id := ""
 var menu_cash_status_label: Label
 var menu_prize_status_label: Label
+var external_overlay: Control
+var card_hover_preview: PanelContainer
+var card_hover_preview_body: CenterContainer
+var card_hover_request_id := 0
 
 
 func _ready() -> void:
@@ -100,6 +106,7 @@ func _ready() -> void:
 	_add_singles_panel()
 	_add_trade_panel()
 	_add_meta_panel()
+	_add_card_hover_preview()
 	_add_world_hotspots()
 	_start_shopkeeper_idle()
 	camera_rig.global_transform = overview_target.global_transform
@@ -113,6 +120,11 @@ func _ready() -> void:
 	_render_meta_analysis()
 	resized.connect(_position_shopkeeper_hotspot)
 	call_deferred("_position_shopkeeper_hotspot")
+
+
+func _exit_tree() -> void:
+	if overview_round_tween != null and overview_round_tween.is_valid():
+		overview_round_tween.kill()
 
 
 func _style_shop_hud_buttons() -> void:
@@ -276,50 +288,51 @@ func _style_shopkeeper_action(button: Button, variant: String, tooltip: String) 
 
 
 func _style_overview_round_button() -> void:
-	overview_round_button.add_theme_font_override("font", SKETCH_UI.body_font(0.7))
-	overview_round_button.add_theme_font_size_override("font_size", 24)
-	overview_round_button.add_theme_color_override("font_color", Color.WHITE)
-	overview_round_button.add_theme_color_override("font_hover_color", Color.WHITE)
-	overview_round_button.add_theme_color_override("font_pressed_color", Color.WHITE)
-	overview_round_button.add_theme_stylebox_override(
-		"normal",
-		WORKSPACE_UI.clean_style(
-			SKETCH_UI.TEAL,
-			SKETCH_UI.TEAL.darkened(0.24),
-			2,
-			12,
-			Vector4(28, 15, 28, 16),
-			0,
-			true
-		)
+	overview_round_button.custom_minimum_size = Vector2(500, 84)
+	overview_round_button.add_theme_font_override("font", SKETCH_UI.body_font(0.8))
+	overview_round_button.add_theme_font_size_override("font_size", 28)
+	overview_round_button.add_theme_color_override("font_color", WORKSPACE_UI.INK)
+	overview_round_button.add_theme_color_override("font_hover_color", WORKSPACE_UI.INK)
+	overview_round_button.add_theme_color_override("font_pressed_color", WORKSPACE_UI.INK)
+	overview_round_button.add_theme_color_override("font_focus_color", WORKSPACE_UI.INK)
+	overview_round_button.add_theme_color_override("font_disabled_color", WORKSPACE_UI.MUTED_INK)
+	var normal := WORKSPACE_UI.clean_style(
+		Color("#F4C95D"),
+		SKETCH_UI.TEAL.darkened(0.28),
+		3,
+		14,
+		Vector4(34, 18, 34, 19),
+		6,
+		true
 	)
-	overview_round_button.add_theme_stylebox_override(
-		"hover",
-		WORKSPACE_UI.clean_style(
-			SKETCH_UI.TEAL.lightened(0.08),
-			SKETCH_UI.MUSTARD,
-			3,
-			12,
-			Vector4(28, 15, 28, 16),
-			0,
-			true
-		)
-	)
-	overview_round_button.add_theme_stylebox_override(
-		"pressed",
-		WORKSPACE_UI.clean_style(
-			SKETCH_UI.TEAL.darkened(0.08),
-			SKETCH_UI.MUSTARD.darkened(0.12),
-			3,
-			12,
-			Vector4(28, 17, 28, 14),
-			0,
-			true
-		)
-	)
+	normal.shadow_color = Color(0.08, 0.07, 0.05, 0.34)
+	normal.shadow_size = 13
+	normal.shadow_offset = Vector2(0, 6)
+	overview_round_button.add_theme_stylebox_override("normal", normal)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("#FFDA78")
+	hover.border_color = SKETCH_UI.ORANGE
+	hover.set_border_width_all(4)
+	hover.border_width_left = 7
+	hover.shadow_color = Color(SKETCH_UI.MUSTARD.r, SKETCH_UI.MUSTARD.g, SKETCH_UI.MUSTARD.b, 0.42)
+	hover.shadow_size = 16
+	overview_round_button.add_theme_stylebox_override("hover", hover)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("#E8B94C")
+	pressed.border_color = SKETCH_UI.TEAL.darkened(0.18)
+	pressed.content_margin_top = 21
+	pressed.content_margin_bottom = 16
+	pressed.shadow_size = 5
+	pressed.shadow_offset = Vector2(0, 2)
+	overview_round_button.add_theme_stylebox_override("pressed", pressed)
+	var disabled := normal.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color("#D8CFB6")
+	disabled.border_color = WORKSPACE_UI.BORDER_SOFT
+	disabled.shadow_size = 3
+	overview_round_button.add_theme_stylebox_override("disabled", disabled)
 	overview_round_button.add_theme_stylebox_override(
 		"focus",
-		WORKSPACE_UI.clean_style(Color.TRANSPARENT, SKETCH_UI.MUSTARD, 3, 12)
+		WORKSPACE_UI.clean_style(Color.TRANSPARENT, Color.WHITE, 4, 14)
 	)
 	overview_round_button.tooltip_text = "Start the next tournament match."
 
@@ -329,13 +342,27 @@ func _update_overview_round_button() -> void:
 		return
 	var tournament_active := bool(shop_context.get("tournament_active", false))
 	var tournament_round := int(shop_context.get("tournament_round", 1))
-	overview_round_button.text = "Start Round %d" % tournament_round
+	overview_round_button.text = "START ROUND %d   →" % tournament_round
 	overview_round_button.tooltip_text = (
 		"Start the next tournament match."
 		if tournament_active
 		else "Register for the selected tournament and start Round 1."
 	)
 	overview_round_button.visible = overview_active
+	call_deferred("_refresh_overview_round_attention")
+
+
+func _refresh_overview_round_attention() -> void:
+	if overview_round_tween != null and overview_round_tween.is_valid():
+		overview_round_tween.kill()
+	overview_round_button.scale = Vector2.ONE
+	if not overview_round_button.visible or bool(get_tree().root.get_meta("reduced_motion", false)):
+		return
+	overview_round_button.pivot_offset = overview_round_button.size * 0.5
+	overview_round_tween = create_tween().set_loops()
+	overview_round_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	overview_round_tween.tween_property(overview_round_button, "scale", Vector2(1.014, 1.014), 0.82)
+	overview_round_tween.tween_property(overview_round_button, "scale", Vector2.ONE, 0.82)
 
 
 func _start_shopkeeper_idle() -> void:
@@ -371,6 +398,61 @@ func update_shop_context(context: Dictionary, message: String = "", message_targ
 	_render_meta_analysis()
 
 
+func current_menu_view() -> String:
+	if external_overlay != null and external_overlay.visible:
+		return "packs"
+	if singles_panel != null and singles_panel.visible:
+		return "singles"
+	if trade_panel != null and trade_panel.visible:
+		return "trade"
+	if meta_panel != null and meta_panel.visible:
+		return "meta"
+	if menu_panel.visible:
+		return "shopkeeper"
+	return "overview"
+
+
+func restore_menu_view(view: String) -> void:
+	if view == "overview":
+		return
+	transition_generation += 1
+	if camera_tween != null and camera_tween.is_valid():
+		camera_tween.kill()
+	_hide_overlays()
+	overview_active = false
+	_update_overview_round_button()
+	shopkeeper_hover_enabled = false
+	_set_shopkeeper_highlighted(false)
+	if shopkeeper_arrow != null:
+		shopkeeper_arrow.visible = false
+
+	var focus_point := shopkeeper_model.global_position + Vector3(0, SHOPKEEPER_FOCUS_HEIGHT, 0)
+	menu_target.global_position = focus_point + SHOPKEEPER_CAMERA_OFFSET
+	menu_target.look_at(focus_point, Vector3.UP)
+	camera_rig.global_transform = menu_target.global_transform
+	camera.size = SHOPKEEPER_SIZE
+
+	match view:
+		"singles":
+			shot_label.text = "SINGLES CASE — buy cards without leaving the store"
+			singles_panel.visible = true
+			singles_panel.modulate.a = 1.0
+		"trade":
+			_render_trade_binder()
+			shot_label.text = "TRADE BINDER — review safe extras without leaving the store"
+			trade_panel.visible = true
+			trade_panel.modulate.a = 1.0
+		"meta":
+			_render_meta_analysis()
+			shot_label.text = "META ANALYSIS — local field shares and shop talk"
+			meta_panel.visible = true
+			meta_panel.modulate.a = 1.0
+		_:
+			shot_label.text = "SHOPKEEPER — packs, singles, trades, meta, and events"
+			menu_panel.visible = true
+			menu_panel.modulate.a = 1.0
+
+
 func _apply_shop_context() -> void:
 	if shot_label == null:
 		return
@@ -398,6 +480,81 @@ func _add_station_actions_container() -> void:
 	station_actions.name = "StationActions"
 	station_actions.add_theme_constant_override("separation", 8)
 	$Interface/CombatPanel/Margin/Content.add_child(station_actions)
+
+
+func show_external_overlay(overlay: Control, description: String) -> void:
+	_hide_overlays()
+	overview_active = false
+	_update_overview_round_button()
+	shopkeeper_hover_enabled = false
+	_set_shopkeeper_highlighted(false)
+	if shopkeeper_arrow != null:
+		shopkeeper_arrow.visible = false
+	external_overlay = overlay
+	shot_label.text = description
+	_fade_in_overlay(overlay)
+
+
+func close_external_overlay(overlay: Control) -> void:
+	if overlay != null and is_instance_valid(overlay):
+		overlay.queue_free()
+	if external_overlay == overlay:
+		external_overlay = null
+	_return_to_shopkeeper_menu()
+
+
+func _add_card_hover_preview() -> void:
+	card_hover_preview = SKETCH_UI.make_rough_panel(
+		Vector2(326, 466), SKETCH_UI.PAPER, SKETCH_UI.INK, SKETCH_UI.TEAL, Vector4(12, 12, 12, 12), 1
+	)
+	card_hover_preview.name = "ShopCardHoverPreview"
+	card_hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_hover_preview.z_index = 400
+	card_hover_preview.visible = false
+	$Interface.add_child(card_hover_preview)
+	card_hover_preview_body = CenterContainer.new()
+	card_hover_preview_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_hover_preview.add_child(card_hover_preview_body)
+
+
+func _queue_card_hover_preview(source: Control, card: Dictionary) -> void:
+	card_hover_request_id += 1
+	var request_id := card_hover_request_id
+	await get_tree().create_timer(CARD_HOVER_DELAY_SECONDS).timeout
+	if (
+		request_id != card_hover_request_id
+		or not is_instance_valid(source)
+		or not singles_panel.visible
+		or not source.get_global_rect().has_point(get_viewport().get_mouse_position())
+	):
+		return
+	_show_card_hover_preview(source, card)
+
+
+func _show_card_hover_preview(source: Control, card: Dictionary) -> void:
+	if card_hover_preview == null or card_hover_preview_body == null or card.is_empty():
+		return
+	for child in card_hover_preview_body.get_children():
+		child.queue_free()
+	var card_face := CARD_FACE_SCRIPT.new()
+	card_face.configure(card, "white", false)
+	card_face.custom_minimum_size = Vector2(300, 426)
+	card_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_hover_preview_body.add_child(card_face)
+	card_hover_preview.visible = true
+	var preview_size := Vector2(326, 466)
+	var source_rect := source.get_global_rect()
+	var viewport_size := get_viewport_rect().size
+	card_hover_preview.global_position = Vector2(
+		clampf(source_rect.end.x + 14, 12, viewport_size.x - preview_size.x - 12),
+		clampf(source_rect.position.y - 110, 12, viewport_size.y - preview_size.y - 12)
+	)
+
+
+func _hide_card_hover_preview() -> void:
+	card_hover_request_id += 1
+	if card_hover_preview != null:
+		card_hover_preview.visible = false
 
 
 func _add_singles_panel() -> void:
@@ -791,6 +948,8 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 			)
 		)
 	select_button.pressed.connect(func() -> void: _select_in_scene_single(card_id))
+	select_button.mouse_entered.connect(func() -> void: _queue_card_hover_preview(select_button, card))
+	select_button.mouse_exited.connect(_hide_card_hover_preview)
 	card_stack.add_child(select_button)
 
 	var owned_label := Label.new()
@@ -1134,6 +1293,7 @@ func _move_to_shot(target: Marker3D, target_size: float, description: String, ov
 func _hide_overlays() -> void:
 	if overlay_tween != null and overlay_tween.is_valid():
 		overlay_tween.kill()
+	_hide_card_hover_preview()
 	menu_panel.visible = false
 	station_panel.visible = false
 	if singles_panel != null:
@@ -1142,6 +1302,8 @@ func _hide_overlays() -> void:
 		trade_panel.visible = false
 	if meta_panel != null:
 		meta_panel.visible = false
+	if external_overlay != null:
+		external_overlay.visible = false
 
 
 func _fade_in_overlay(overlay: Control) -> void:

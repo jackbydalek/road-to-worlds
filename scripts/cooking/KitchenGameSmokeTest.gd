@@ -499,7 +499,7 @@ func _run() -> void:
 		_fail("Blow Torch did not destroy its second selected target.")
 		return
 
-	# Discard recovery and Tongs use explicit card pickers instead of automatic choices.
+	# Discard recovery uses explicit card pickers, while Tongs selects two opposing board cards.
 	var strainer_choice_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6989)
 	strainer_choice_state.player.hand = ["item_strainer"]
 	strainer_choice_state.player.deck = []
@@ -541,14 +541,24 @@ func _run() -> void:
 		return
 	var tongs_choice_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69901)
 	tongs_choice_state.player.hand = ["item_tongs"]
-	tongs_choice_state.opponent.hand = ["item_wooden_spoon", "hearty_bagver", "hearty_dumpling_tortoise"]
+	var tongs_plated := _test_unit(914, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, true, 1)
+	var tongs_prep := _test_unit(915, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)
+	tongs_choice_state.opponent.plated = [tongs_plated]
+	tongs_choice_state.opponent.prep = [tongs_prep]
 	production_service.play_card(tongs_choice_state, 0)
-	if production_service.opponent_hand_choice_indices(tongs_choice_state) != [1, 2]:
-		_fail("Tongs did not reveal only selectable opposing-hand units.")
+	if production_service.choice_target_ids(tongs_choice_state) != [914]:
+		_fail("Tongs did not begin by offering the opponent's Plated food.")
 		return
-	production_service.choose_opponent_hand_card(tongs_choice_state, 2)
-	if tongs_choice_state.opponent.hand != ["item_wooden_spoon", "hearty_bagver"] or tongs_choice_state.opponent.prep.size() != 1 or String(tongs_choice_state.opponent.prep[0].card_id) != "hearty_dumpling_tortoise" or bool(tongs_choice_state.opponent.prep[0].ready):
-		_fail("Tongs did not put the selected opposing-hand unit into Prep.")
+	production_service.choose_effect_target(tongs_choice_state, 914)
+	if production_service.choice_target_ids(tongs_choice_state) != [915]:
+		_fail("Tongs did not follow with the opponent's Prep food.")
+		return
+	production_service.choose_effect_target(tongs_choice_state, 915)
+	if int(tongs_choice_state.opponent.plated[0].instance_id) != 915 or int(tongs_choice_state.opponent.prep[0].instance_id) != 914:
+		_fail("Tongs did not switch the selected opposing Prep and Plated foods.")
+		return
+	if int(tongs_choice_state.opponent.plated[0].get("table_slot", -1)) != 1 or int(tongs_choice_state.opponent.prep[0].get("table_slot", -1)) != 2:
+		_fail("Tongs did not preserve the switched foods' destination slots.")
 		return
 
 	# Production Spices attach real bonuses and each Environment applies its authored engine effect.
@@ -1296,23 +1306,28 @@ func _run() -> void:
 		_fail("Chef Ramsey's rendered picker did not return the selected Meal.")
 		return
 	prototype.state.player.hand = ["item_tongs"]
-	prototype.state.opponent.hand = ["item_wooden_spoon", "hearty_bagver"]
-	prototype.state.opponent.prep = []
-	prototype.state.opponent.plated = []
+	prototype.state.opponent.prep = [_test_unit(960, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)]
+	prototype.state.opponent.plated = [_test_unit(961, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, true, 1)]
 	prototype.service.play_card(prototype.state, 0)
 	prototype._refresh()
 	await process_frame
 	await process_frame
-	var blocked_opponent_tool := prototype.find_child("CookingChooseOpponentHand_0", true, false) as Button
-	var choose_opponent_unit := prototype.find_child("CookingChooseOpponentHand_1", true, false) as Button
-	if blocked_opponent_tool == null or not blocked_opponent_tool.disabled or choose_opponent_unit == null or choose_opponent_unit.disabled:
-		_fail("Tongs did not reveal the opponent's hand with only its unit enabled.")
+	var choose_opponent_plated := prototype.find_child("CookingEffectTarget_961", true, false) as Button
+	if choose_opponent_plated == null:
+		_fail("Tongs did not render its opposing Plated target.")
 		return
-	choose_opponent_unit.emit_signal("pressed")
+	choose_opponent_plated.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	if prototype.state.opponent.prep.size() != 1 or String(prototype.state.opponent.prep[0].card_id) != "hearty_bagver":
-		_fail("Tongs' rendered hand picker did not deploy the selected unit.")
+	var choose_opponent_prep := prototype.find_child("CookingEffectTarget_960", true, false) as Button
+	if choose_opponent_prep == null:
+		_fail("Tongs did not render its follow-up opposing Prep target.")
+		return
+	choose_opponent_prep.emit_signal("pressed")
+	await process_frame
+	await process_frame
+	if int(prototype.state.opponent.plated[0].instance_id) != 960 or int(prototype.state.opponent.prep[0].instance_id) != 961:
+		_fail("Tongs' rendered board picker did not switch the selected cards.")
 		return
 
 	# The kitchen card inspector explains live zone rules and follows a card when it moves.

@@ -11,7 +11,7 @@ All 89 playable cards build as physical 3D cards and have a functional rules/pre
 - 12 search cards route to the full-card deck tray.
 - 4 discard-pile choice cards route to the full-card discard tray.
 - 7 discard-cost Items use physical hand-card selection.
-- 14 board-target cards expose legal highlighted 3D targets.
+- 15 board-target cards expose legal highlighted 3D targets.
 - 8 activated abilities resolve or expose legal highlighted targets.
 - 5 reaction cards resolve through the reaction window.
 - The existing 19 complex-card production scenarios all pass.
@@ -21,7 +21,7 @@ All 89 playable cards build as physical 3D cards and have a functional rules/pre
 1. **No gameplay blockers found.** Every authored card has a legal 3D play and resolution path.
 2. **Six cards use fallback faces.** These are the Spices and Environments; they remain fully playable, but need supplied frame families to match the authored card presentation.
 3. **Reaction windows are functional but still generic.** The five reaction cards appear in a centered Use/Pass overlay rather than using the physical hand directly.
-4. **Tongs is functional but still generic.** Its opponent-hand choice uses card-name buttons rather than full card faces.
+4. **Tongs uses direct board interaction.** Its opposing Plated and Prep targets are selected from highlighted physical cards in sequence.
 5. **One schema-maintenance risk remains.** `hand_trap_guard_zone` is authored on Tempeh Tapir, while the resolver currently enforces the present Plated behavior structurally rather than reading that field generically. The current card works; a future guard with a different zone would need resolver work.
 
 ## Interaction coverage
@@ -113,7 +113,7 @@ All 89 playable cards build as physical 3D cards and have a functional rules/pre
 | 70 | Recipe Prep | Tool | Hand discard cost, Deck-search tray | Pass |
 | 71 | Blow Torch | Tool | Highlighted board target | Pass |
 | 72 | Tool Drawer | Tool | Deck-search tray | Pass |
-| 73 | Tongs | Tool | Opponent-hand choice | Pass (generic opponent-hand overlay) |
+| 73 | Tongs | Tool | Two highlighted opposing board targets | Pass |
 | 74 | Strainer | Tool | Discard tray | Pass |
 | 75 | Hand Mixer | Tool | Highlighted board target | Pass |
 | 76 | Switchblade | Tool | Two highlighted board targets | Pass |

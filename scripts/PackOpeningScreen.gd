@@ -13,6 +13,7 @@ const FAN_CENTER_X := 543.0
 const FAN_BASE_Y := 66.0
 const FAN_SPACING := 185.0
 const FAN_ROTATION_STEP := 0.04
+const HOVER_DELAY_SECONDS := 0.38
 
 var scene_root: Node
 var status_label: Label
@@ -22,6 +23,11 @@ var done_button: Button
 var card_fan: Control
 var exit_button: Button
 var card_slots: Array[TextureButton] = []
+var overlay_frame: PanelContainer
+var overlay_shop_world: Control
+var hover_preview: PanelContainer
+var hover_preview_body: CenterContainer
+var hover_request_id := 0
 
 
 func show(host) -> void:
@@ -40,6 +46,19 @@ func show(host) -> void:
 	_add_store_exit(host)
 
 
+func show_in_shop_overlay(host, shop_world: Control) -> void:
+	overlay_shop_world = shop_world
+	scene_root = _add_shop_overlay_scene(shop_world)
+	_cache_nodes(host)
+	_layout_slots()
+	_connect_controls(host)
+	_render(host)
+	_add_store_exit(host)
+	_create_hover_preview()
+	if shop_world.has_method("show_external_overlay"):
+		shop_world.call("show_external_overlay", overlay_frame, "PACK OPENING — crack a pack without leaving the store")
+
+
 func _add_store_exit(host) -> void:
 	exit_button = host._make_button("Exit to Card Store")
 	exit_button.name = "PackExitToStoreButton"
@@ -48,7 +67,10 @@ func _add_store_exit(host) -> void:
 	exit_button.z_index = 200
 	exit_button.theme = host.theme
 	host._style_button(exit_button)
-	host._connect_pressed(exit_button, host._show_shop)
+	if overlay_shop_world != null:
+		host._connect_pressed(exit_button, func() -> void: _close_shop_overlay(host))
+	else:
+		host._connect_pressed(exit_button, host._show_shop)
 	scene_root.add_child(exit_button)
 
 
@@ -75,6 +97,36 @@ func _add_scene(host) -> Node:
 	canvas.clip_contents = true
 	frame.add_child(canvas)
 
+	var root := PACK_OPENING_SCENE.instantiate()
+	root.name = "PackOpeningScene"
+	canvas.add_child(root)
+	return root
+
+
+func _add_shop_overlay_scene(shop_world: Control) -> Node:
+	overlay_frame = PanelContainer.new()
+	overlay_frame.name = "InScenePackOpening"
+	overlay_frame.set_anchors_preset(Control.PRESET_CENTER)
+	overlay_frame.offset_left = -680.0
+	overlay_frame.offset_top = -340.0
+	overlay_frame.offset_right = 680.0
+	overlay_frame.offset_bottom = 340.0
+	overlay_frame.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay_frame.add_theme_stylebox_override(
+		"panel",
+		SKETCH_UI.texture_style(SKETCH_UI.PANEL_PAPER, Color.WHITE, Vector4(24, 24, 24, 24), Vector4.ZERO)
+	)
+	var interface := shop_world.get_node_or_null("Interface") as Control
+	if interface != null:
+		interface.add_child(overlay_frame)
+	else:
+		shop_world.add_child(overlay_frame)
+
+	var canvas := Control.new()
+	canvas.name = "PackOpeningSceneHost"
+	canvas.custom_minimum_size = SCENE_SIZE
+	canvas.clip_contents = true
+	overlay_frame.add_child(canvas)
 	var root := PACK_OPENING_SCENE.instantiate()
 	root.name = "PackOpeningScene"
 	canvas.add_child(root)
@@ -134,11 +186,16 @@ func _connect_controls(host) -> void:
 	if reveal_all_button != null:
 		host._connect_pressed(reveal_all_button, func() -> void: _on_reveal_all_pressed(host))
 	if done_button != null:
-		host._connect_pressed(done_button, host._finish_pack_opening)
+		if overlay_shop_world != null:
+			done_button.pressed.connect(func() -> void: _finish_in_shop_overlay(host), CONNECT_DEFERRED)
+		else:
+			host._connect_pressed(done_button, host._finish_pack_opening)
 
 	for index in range(card_slots.size()):
 		var slot_index := index
 		card_slots[index].pressed.connect(func() -> void: _on_card_slot_pressed(host, slot_index), CONNECT_DEFERRED)
+		card_slots[index].mouse_entered.connect(func() -> void: _queue_card_hover_preview(host, card_slots[slot_index], slot_index))
+		card_slots[index].mouse_exited.connect(_hide_card_hover_preview)
 
 
 func _render(host) -> void:
@@ -247,6 +304,8 @@ func _finish_reveal_slot(host, index: int, slot: TextureButton) -> void:
 	if index >= 0 and index < pack.size():
 		var rarity := String(pack[index].get("rarity", "common"))
 		_animate_reveal(slot, rarity)
+	if slot.get_global_rect().has_point(slot.get_viewport().get_mouse_position()):
+		_queue_card_hover_preview(host, slot, index)
 
 
 func _on_reveal_all_pressed(host) -> void:
@@ -324,6 +383,90 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 	var note := _note_for_pack_index(host.run.get("revealed_pack", []), index)
 	if note != "":
 		_add_slot_label(box, note, 10, Color("#ffe08a"), HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _create_hover_preview() -> void:
+	if overlay_frame == null:
+		return
+	hover_preview = SKETCH_UI.make_rough_panel(
+		Vector2(326, 466), SKETCH_UI.PAPER, SKETCH_UI.INK, SKETCH_UI.TEAL, Vector4(12, 12, 12, 12), 1
+	)
+	hover_preview.name = "PackCardHoverPreview"
+	hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hover_preview.z_index = 400
+	hover_preview.visible = false
+	overlay_frame.add_child(hover_preview)
+	hover_preview_body = CenterContainer.new()
+	hover_preview_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hover_preview.add_child(hover_preview_body)
+
+
+func _queue_card_hover_preview(host, slot: TextureButton, index: int) -> void:
+	hover_request_id += 1
+	var request_id := hover_request_id
+	await slot.get_tree().create_timer(HOVER_DELAY_SECONDS).timeout
+	var pack: Array = host.run.get("current_pack", [])
+	if (
+		request_id != hover_request_id
+		or overlay_shop_world == null
+		or not is_instance_valid(slot)
+		or index < 0 or index >= pack.size()
+		or not bool((pack[index] as Dictionary).get("revealed", false))
+		or not slot.get_global_rect().has_point(slot.get_viewport().get_mouse_position())
+	):
+		return
+	_show_card_hover_preview(host, slot, String((pack[index] as Dictionary).get("cardId", "")))
+
+
+func _show_card_hover_preview(host, slot: TextureButton, card_id: String) -> void:
+	if hover_preview == null or hover_preview_body == null or not host.cards_by_id.has(card_id):
+		return
+	for child in hover_preview_body.get_children():
+		child.queue_free()
+	var card_face: Control = host._make_card_face(host.cards_by_id[card_id], Vector2(300, 426), true)
+	card_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hover_preview_body.add_child(card_face)
+	hover_preview.visible = true
+	var size := Vector2(326, 466)
+	var source_rect := slot.get_global_rect()
+	var viewport_size := slot.get_viewport_rect().size
+	hover_preview.global_position = Vector2(
+		clampf(source_rect.position.x - size.x - 14, 12, viewport_size.x - size.x - 12),
+		clampf(source_rect.position.y - 110, 12, viewport_size.y - size.y - 12)
+	)
+
+
+func _hide_card_hover_preview() -> void:
+	hover_request_id += 1
+	if hover_preview != null:
+		hover_preview.visible = false
+
+
+func _close_shop_overlay(host) -> void:
+	_hide_card_hover_preview()
+	if bool(host.run.get("pack_opened", false)):
+		host.shop_economy_service.reveal_all_cards(host.run, host._current_primary_archetype())
+		host._finish_pack_state()
+	_close_overlay_frame()
+
+
+func _finish_in_shop_overlay(host) -> void:
+	host._finish_pack_state()
+	var shop_world := overlay_shop_world
+	_close_overlay_frame()
+	if shop_world != null and int(host.run.get("prize_packs", 0)) > 0:
+		show_in_shop_overlay(host, shop_world)
+
+
+func _close_overlay_frame() -> void:
+	if overlay_shop_world != null and overlay_shop_world.has_method("close_external_overlay"):
+		overlay_shop_world.call("close_external_overlay", overlay_frame)
+	elif overlay_frame != null:
+		overlay_frame.queue_free()
+	overlay_frame = null
+	overlay_shop_world = null
+	hover_preview = null
+	hover_preview_body = null
 
 
 func _animate_spread() -> void:

@@ -81,6 +81,10 @@ GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
   --script res://scripts/cooking/StarterBalanceSimulation.gd -- --games=500
 "$GODOT_BIN" --headless --path . \
   --script res://scripts/cooking/StarterBalanceSimulation.gd -- --games=100 --ai=expert
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/cooking/AiPolicySmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/cooking/FaceRaceBaselineSimulation.gd -- --games=250 --ai=hard
 "$GODOT_BIN" --headless --path . --quit-after 3
 ```
 

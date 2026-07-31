@@ -18,12 +18,12 @@ const SUPPORTED_EFFECT_TYPES := [
 	"draw_for_friendly_archetype", "draw_to_hand_size", "heal_all_friendly_units", "heal_player",
 	"heal_self", "heal_unit", "look_and_take", "move_friendly_to_prep", "recover", "recycle",
 	"remove_enemy_spice", "return_enemy_ingredient", "search", "swap_attack_health",
-	"switch_friendly_zones"
+	"switch_enemy_zones", "switch_friendly_zones"
 ]
 const BOARD_CHOICE_EFFECTS := [
 	"buff_friendly_unit", "buff_friendly_plated", "heal_unit", "damage_enemy_unit",
 	"damage_enemy_plated", "damage_enemy_prep", "return_enemy_ingredient",
-	"move_friendly_to_prep", "switch_friendly_zones", "destroy_enemy_unit",
+	"move_friendly_to_prep", "switch_enemy_zones", "switch_friendly_zones", "destroy_enemy_unit",
 	"swap_attack_health", "remove_enemy_spice"
 ]
 const EXPECTED_CATEGORY_COUNTS := {
@@ -31,7 +31,7 @@ const EXPECTED_CATEGORY_COUNTS := {
 	"recipes": 28,
 	"searches": 12,
 	"discard_choices": 4,
-	"board_choices": 14,
+	"board_choices": 15,
 	"reactions": 5,
 	"abilities": 8,
 	"discard_costs": 7
@@ -69,7 +69,7 @@ func _run() -> void:
 			push_error(failure)
 		quit(1)
 		return
-	print("3D card interface audit passed: 89/89 playable cards (%d authored faces, %d fallback faces); 36 effect operations; 28 recipes; 12 searches; 4 discard choices; 14 board-target cards; 8 activated abilities; 5 reactions; 7 discard-cost Items." % [authored_face_count, fallback_face_count])
+	print("3D card interface audit passed: 89/89 playable cards (%d authored faces, %d fallback faces); 37 effect operations; 28 recipes; 12 searches; 4 discard choices; 15 board-target cards; 8 activated abilities; 5 reactions; 7 discard-cost Items." % [authored_face_count, fallback_face_count])
 	quit()
 
 

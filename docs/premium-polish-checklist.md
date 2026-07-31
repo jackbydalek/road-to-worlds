@@ -54,6 +54,11 @@ This checklist tracks the player-facing polish pass started on 2026-07-30.
 - [x] Keep general turn guidance available inside the Match Log.
 - [ ] Complete the deeper battlefield art pass: chef markers, table materials, lane dressing, and ambient presentation.
 
+## Storefront CTA
+
+- [x] Promote Start Round into a high-contrast mustard tournament action with a larger silhouette.
+- [x] Add strong hover, pressed, focus, disabled, and reduced-motion-aware attention states.
+
 ## Notes
 
 - Settings are stored separately from season saves in `user://kitchen_table_settings.json`.

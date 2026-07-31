@@ -58,6 +58,7 @@ const BUTTON_MOTION_SCRIPT := preload("res://scripts/ui/AudaciousButtonMotion.gd
 const SKETCH_UI_SCRIPT := preload("res://scripts/ui/SketchUIComponents.gd")
 const WORKSPACE_UI_SCRIPT := preload("res://scripts/ui/WorkspaceUIComponents.gd")
 const WIRED_TITLE_DOODLES_SCRIPT := preload("res://scripts/ui/WiredTitleDoodles.gd")
+const CARD_SHOP_MUSIC := preload("res://assets/audio/card_shop_background.mp3")
 const ICON_ARROW_OUT := preload("res://assets/ui/audacious/arrow-square-out-bold.svg")
 const ICON_BOWL := preload("res://assets/ui/audacious/bowl-food-bold.svg")
 const ICON_CALENDAR := preload("res://assets/ui/audacious/calendar-blank-bold.svg")
@@ -123,6 +124,7 @@ var footer_label: RichTextLabel
 var round_result_popup: Control
 var autosave_label: Label
 var autosave_tween: Tween
+var card_shop_music_player: AudioStreamPlayer
 var autosave_enabled := true
 var autosave_suspended := false
 var autosave_poll_elapsed := 0.0
@@ -143,6 +145,8 @@ var player_settings: Dictionary = {
 }
 var settings_return_screen := "start"
 var settings_path := SETTINGS_PATH
+var deckbuilder_return_screen := ""
+var deckbuilder_return_shop_view := ""
 
 
 func _ready() -> void:
@@ -570,10 +574,31 @@ func _load_content() -> void:
 
 
 func _clear(node: Node) -> void:
+	if node == content:
+		_stop_card_shop_music()
 	for child in node.get_children():
 		# Screen rebuilds are often triggered by button signals; queue deletion so the
 		# emitting button is not freed while Godot is still dispatching its signal.
 		child.queue_free()
+
+
+func _play_card_shop_music() -> void:
+	if card_shop_music_player == null:
+		card_shop_music_player = AudioStreamPlayer.new()
+		card_shop_music_player.name = "CardShopMusic"
+		var music_stream := CARD_SHOP_MUSIC.duplicate() as AudioStreamMP3
+		music_stream.loop = true
+		card_shop_music_player.stream = music_stream
+		card_shop_music_player.bus = &"Music"
+		card_shop_music_player.volume_db = -10.0
+		add_child(card_shop_music_player)
+	if not card_shop_music_player.playing:
+		card_shop_music_player.play()
+
+
+func _stop_card_shop_music() -> void:
+	if card_shop_music_player != null and card_shop_music_player.playing:
+		card_shop_music_player.stop()
 
 
 func _make_front_door_screen(node_name: String) -> Control:
@@ -3174,6 +3199,7 @@ func _show_shop() -> void:
 		_show_shop_overworld()
 	else:
 		card_shop_screen.show(self)
+		_play_card_shop_music()
 
 
 func _show_shop_overworld() -> void:
@@ -3200,6 +3226,7 @@ func _show_shop_overworld() -> void:
 	shop_world.connect("exit_requested", _show_start)
 	content.add_child(shop_world)
 	shop_world.call("configure_shop", _shop_overworld_context())
+	_play_card_shop_music()
 
 
 func _shop_overworld_context() -> Dictionary:
@@ -3355,6 +3382,14 @@ func _show_card_effect_lab() -> void:
 
 
 func _show_packs() -> void:
+	if _run_mode() == "season":
+		var shop_world := content.find_child("CardShopOverworld", true, false) as Control
+		if shop_world == null:
+			_show_shop_overworld()
+			shop_world = content.find_child("CardShopOverworld", true, false) as Control
+		if shop_world != null:
+			pack_opening_screen.show_in_shop_overlay(self, shop_world)
+			return
 	pack_opening_screen.show(self)
 
 
@@ -3458,7 +3493,70 @@ func _strongest_pack_affinity() -> String:
 
 
 func _show_deckbuilder() -> void:
+	if current_screen != "deck":
+		deckbuilder_return_screen = current_screen
+		deckbuilder_return_shop_view = ""
+		if current_screen == "shop":
+			var shop_world := content.find_child("CardShopOverworld", true, false)
+			if shop_world != null and shop_world.has_method("current_menu_view"):
+				deckbuilder_return_shop_view = String(shop_world.call("current_menu_view"))
 	deckbuilder_screen.show(self)
+
+
+func _add_deckbuilder_back_button(parent: Node) -> Button:
+	var back_button := _make_button("Back")
+	back_button.name = "DeckbuilderBackButton"
+	_connect_pressed(back_button, _return_from_deckbuilder)
+	parent.add_child(back_button)
+	return back_button
+
+
+func _return_from_deckbuilder() -> void:
+	var return_screen := deckbuilder_return_screen
+	var return_shop_view := deckbuilder_return_shop_view
+	deckbuilder_return_screen = ""
+	deckbuilder_return_shop_view = ""
+	match return_screen:
+		"start":
+			_show_start()
+		"game_start":
+			_show_game_start()
+		"new_game":
+			_show_new_game_menu()
+		"path_choice":
+			_show_run_path_choice()
+		"season":
+			_show_season_run()
+		"shop":
+			_show_shop()
+			if return_shop_view != "":
+				var shop_world := content.find_child("CardShopOverworld", true, false)
+				if shop_world != null and shop_world.has_method("restore_menu_view"):
+					shop_world.call("restore_menu_view", return_shop_view)
+		"singles":
+			_show_singles_shop()
+		"trading":
+			_show_trading_station()
+		"packs":
+			_show_packs()
+		"tournament":
+			_show_tournament()
+		"result":
+			var summary: Dictionary = run.get("last_event_result", {})
+			_show_tournament_result(run.get("last_result", []), bool(summary.get("run_continues", true)))
+		"thanks":
+			_show_thanks_for_playing()
+		"meta":
+			_show_meta()
+		"camera_demo":
+			_show_greybox_camera_demo()
+		"card_lab":
+			_show_card_effect_lab()
+		_:
+			if _run_mode() == "season":
+				_show_season_run()
+			else:
+				_show_run_path_choice()
 
 
 func _show_greybox_camera_demo() -> void:

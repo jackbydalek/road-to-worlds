@@ -53,8 +53,8 @@ func show(host) -> void:
 	_create_hover_preview(host)
 
 	if host._run_mode() == "season":
-		var exit_button: Button = host._add_exit_to_store_button(host.content)
-		_style_deck_button(exit_button)
+		var back_button: Button = host._add_deckbuilder_back_button(host.content)
+		_style_deck_button(back_button)
 
 
 func _add_header(host, metrics: Dictionary, legal: Dictionary) -> void:

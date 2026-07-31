@@ -1414,6 +1414,8 @@ func _build_environment_card(side: String) -> void:
 	_store_card_pose(root, 0.0)
 	card_layer.add_child(root)
 	interactive_cards.append(root)
+	if _environment_has_ready_activated_ability(side):
+		_add_pulsing_card_aura(root, "AbilityReadyAura", 9000 if side == "player" else 9001, Color("#ffd84d"), Color.WHITE, Vector2(1.18, 1.68), 1.35, 1.05, 1.8)
 
 
 func _add_spice_attachments(root: Node3D, unit: Dictionary, side: String) -> void:
@@ -1557,6 +1559,18 @@ func _unit_has_ready_activated_ability(unit: Dictionary, side: String, zone: Str
 			if service._first_ability_target_id(state, "player", unit, target_spec) < 0:
 				continue
 		return true
+	return false
+
+
+func _environment_has_ready_activated_ability(side: String) -> bool:
+	if side != "player" or tutorial_mode or not service._can_player_act(state) or _has_blocking_prompt():
+		return false
+	var data := service.card(String(state[side].get("environment", "")))
+	var used: Array = state[side].get("environment_used_abilities", [])
+	for ability in data.get("abilities", []):
+		if String(ability.get("timing", "")) == "activated" and String(ability.get("active_zone", "")) == "environment":
+			if not bool(ability.get("once_per_turn", false)) or not used.has(String(ability.get("id", "activated"))):
+				return true
 	return false
 
 
