@@ -4,9 +4,9 @@ These are the rules used by every live match in Season Run and by the Debug Sand
 
 ## Objective and Setup
 
-Reduce the opposing Chef from 25 life to zero.
+Reduce the opposing Chef from 20 life to zero.
 
-Each player chooses a deck, shuffles, and draws five cards. The first player begins. At the start of every turn, the active player draws exactly one card, readies their units, resets once-per-turn abilities, and makes newly matured Ingredients recipe-ready.
+Each player chooses a deck, shuffles, and draws five cards. The first player begins but skips the draw at the start of their first turn. The second player draws normally on their first turn. On later turns, the active player draws one card; if they then have fewer than two cards in hand, they continue drawing until they have two or their deck is empty. Players also ready their units, reset once-per-turn abilities, and make newly matured Ingredients recipe-ready.
 
 Each side of the table has:
 
@@ -31,7 +31,9 @@ Ingredients can be played directly into an open Prep or Plated slot.
 
 Meals require a recipe. To serve a Meal, sacrifice recipe-ready Ingredients that supply every required archetype, then put the Meal into an open unit slot. An Ingredient played this turn does not become recipe-ready until the start of its controller's next turn. Ingredients mature in either unit zone.
 
-Only one Meal may be served each turn. There is no general limit on Ingredients or Tools beyond cards, legal targets, and available slots. Only one Chef card may be used each turn.
+Only one Meal may normally be served each turn; Pup Tart raises that limit to two while it remains on the field. There is no general limit on Ingredients or Tools beyond cards, legal targets, and available slots. Only one Chef card may be used each turn.
+
+Dual-type Ingredients may satisfy either of their printed affinities, but one Ingredient can satisfy only one recipe requirement. An either/or recipe requirement likewise needs only one Ingredient of either listed type.
 
 When a card asks for a choice, the game pauses that effect and presents only legal choices. This applies to discard costs, deck searches, discard-pile recovery, board targets, opponent-hand choices, and multi-step effects.
 
@@ -47,9 +49,9 @@ Each ready Plated unit may attack once.
 2. Choose a legal opposing Plated defender. If there are none, attack the opposing Chef.
 3. The attacker deals its Attack to the defender. The defender simultaneously deals its Attack to the attacker.
 4. A unit with damage equal to or greater than its Health is discarded with its attachments.
-5. If the attacker's Attack exceeds the defender's remaining Health before combat, the excess pierces to the defending Chef.
+5. A Plated unit that did not attack on its controller's most recent turn is **Defending**. It stops excess combat damage unless the attacker has Piercing. A unit that attacked is exposed: when it is attacked, damage beyond its remaining Health reaches its Chef using the normal overflow calculation.
 
-Bodyguard prevents piercing damage through that defender. Stalwart lets its attacker choose the opposing Chef even while opposing Plated units are present. Effects that trigger on combat damage to a Chef require actual combat damage, not effect damage.
+**Piercing** cards deal excess combat damage through a Defending unit. **Stalwart** cards may attack the opposing Chef even while opposing Plated units are present. Effects that trigger on combat damage to a Chef require actual combat damage, not effect damage.
 
 ## Card Types
 
@@ -60,10 +62,13 @@ Bodyguard prevents piercing damage through that defender. Stalwart lets its atta
 - **Environment** — a persistent engine in the Environment slot. Playing another replaces the current one.
 - **Chef** — a powerful action card. A player may use one Chef each turn.
 
+Tokens are temporary units rather than collectible cards. If a token would leave Prep or Plated for a hand or discard pile—including by return, sacrifice, destruction, or combat defeat—it evaporates and ceases to exist. Real cards attached to that token still move to their normal destination.
+
 ## Common Keywords and Timing
 
-- **Bodyguard** — combat damage does not pierce through this defender.
-- **Stalwart** — while Plated, this unit may attack the opposing Chef through Plated defenders.
+- **Defending** — a Plated unit that did not attack on its controller's last turn. It stops excess combat damage unless hit by Piercing.
+- **Piercing** — excess combat damage reaches the opposing Chef when this card overpowers a Defending unit.
+- **Stalwart** — this card may attack the opposing Chef through Plated defenders.
 - **Taunt** — while Plated, this unit must be attacked before other legal Plated units.
 - **On play** — resolves after the card enters play normally. A card put into play by another effect may explicitly skip it.
 - **On sacrifice** — resolves when the card is sacrificed, including as a Meal ingredient.
@@ -73,16 +78,16 @@ Bodyguard prevents piercing damage through that defender. Stalwart lets its atta
 
 ## Current Card Pool
 
-The data catalog contains 89 collectible cards:
+The focused data catalog contains 59 collectible cards:
 
-- 36 Ingredients
-- 28 Meals
-- 15 Tools
-- 3 Spices
+- 25 Ingredients
+- 20 Meals
+- 5 Tools
+- 1 Spice
 - 3 Environments
-- 4 Chefs
+- 5 Chefs
 
-Spicy, Hearty, Sweet, Fresh, and Funky each have a deliberate 30-card starter deck built around their core game plan. Fresh fills Prep with future recipe material and recycles the discard pile; Funky mills cards, copies abilities, and disrupts opposing actions.
+Spicy, Hearty, and Sweet each have a deliberate 20-card starter deck. Fresh and Funky remain represented in the draft-ready card pool through mono- and dual-affinity cards.
 
 ## Controls
 

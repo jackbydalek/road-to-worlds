@@ -4,7 +4,7 @@
 
 [sub_resource type="Environment" id="Environment_tabletop"]
 background_mode = 1
-background_color = Color(0.690196, 0.807843, 0.807843, 1)
+background_color = Color(0.9137255, 0.8745098, 0.7882353, 1)
 ambient_light_source = 3
 ambient_light_color = Color(0.56, 0.69, 0.88, 1)
 ambient_light_energy = 0.5
@@ -97,9 +97,9 @@ light_energy = 5.0
 omni_range = 14.0
 
 [node name="Camera3D" type="Camera3D" parent="ViewportContainer/WorldViewport/World" unique_id=599173441]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.5, 11.9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.5, 8.35)
 current = true
-fov = 43.0
+fov = 42.0
 
 [node name="Table" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World" unique_id=1556251163]
 mesh = SubResource("Mesh_table")
@@ -124,12 +124,12 @@ material_override = SubResource("Material_player_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPrep" unique_id=1338183598]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.3, 0.25, 0.55)
-visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.15, 0.25, 0)
 billboard = 1
+visible = false
 modulate = Color(0.38, 0.87, 1, 1)
-text = "YOUR PREP"
-font_size = 38
+text = "PREP"
+font_size = 28
 outline_size = 8
 
 [node name="PlayerPlated" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=1315631575]
@@ -146,12 +146,12 @@ material_override = SubResource("Material_player_plated")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPlated" unique_id=1261856495]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.45, 0.25, 0.55)
-visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.25, 0)
 billboard = 1
+visible = false
 modulate = Color(1, 0.58, 0.3, 1)
-text = "YOUR PLATED"
-font_size = 38
+text = "PLATED"
+font_size = 28
 outline_size = 8
 
 [node name="OpponentPlated" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=911238150]
@@ -168,12 +168,12 @@ material_override = SubResource("Material_opponent")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1757616386]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.25, -0.55)
-visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0.25, 0)
 billboard = 1
+visible = false
 modulate = Color(0.92, 0.6, 1, 1)
-text = "RIVAL PLATED"
-font_size = 34
+text = "PLATED"
+font_size = 26
 outline_size = 8
 
 [node name="OpponentPrep" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=1126898678]
@@ -194,16 +194,16 @@ material_override = SubResource("Material_opponent")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=1096383554]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.25, -0.52)
-visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.15, 0.25, 0)
 billboard = 1
+visible = false
 modulate = Color(0.82, 0.55, 0.95, 1)
-text = "RIVAL PREP"
-font_size = 34
+text = "PREP"
+font_size = 26
 outline_size = 8
 
 [node name="PlayerChef" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=941425673]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.05, 0.3, 3.42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.644406, 0.3, 2.9101782)
 
 [node name="Mesh" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/PlayerChef" unique_id=1110386112]
 material_override = SubResource("Material_chef_player")
@@ -232,7 +232,7 @@ outline_size = 10
 
 [node name="CardLayer" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=1294236409]
 
-[node name="AnimationGhostLayer" type="Node3D" parent="ViewportContainer/WorldViewport/World"]
+[node name="AnimationGhostLayer" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=2099867754]
 
 [node name="CardTextureViewports" type="Node" parent="." unique_id=1349331755]
 
@@ -258,7 +258,7 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 72.0
+offset_bottom = 76.0
 grow_horizontal = 2
 mouse_filter = 1
 
@@ -276,20 +276,21 @@ theme_override_constants/separation = 12
 [node name="Title" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1039128186]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 23
-text = "LIVING TABLE  •  PLAYABLE MATCH"
+theme_override_font_sizes/font_size = 20
+text = "PRACTICE MATCH"
 vertical_alignment = 1
 
 [node name="OpponentLife" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=817551452]
-custom_minimum_size = Vector2(125, 42)
+visible = false
+custom_minimum_size = Vector2(142, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "RIVAL  25"
+text = "RIVAL  20"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="TurnLabel" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1476930291]
-custom_minimum_size = Vector2(130, 42)
+custom_minimum_size = Vector2(178, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
 text = "TURN 1"
@@ -297,10 +298,11 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PlayerLife" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1270119525]
-custom_minimum_size = Vector2(110, 42)
+visible = false
+custom_minimum_size = Vector2(132, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "YOU  25"
+text = "YOU  20"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -323,14 +325,14 @@ anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -172.0
-offset_top = -36.0
+offset_left = -190.0
+offset_top = -38.0
 offset_right = -24.0
-offset_bottom = 36.0
+offset_bottom = 38.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_font_sizes/font_size = 19
-text = "END TURN"
+theme_override_font_sizes/font_size = 18
+text = "END TURN  →"
 
 [node name="ActionPanel" type="PanelContainer" parent="Interface" unique_id=1785371859]
 layout_mode = 1
@@ -354,7 +356,7 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="CardTrayOverlay" type="Control" parent="Interface"]
+[node name="CardTrayOverlay" type="Control" parent="Interface" unique_id=172086404]
 visible = false
 z_index = 25
 layout_mode = 1
@@ -365,7 +367,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="Dimmer" type="ColorRect" parent="Interface/CardTrayOverlay"]
+[node name="Dimmer" type="ColorRect" parent="Interface/CardTrayOverlay" unique_id=868887455]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -375,7 +377,7 @@ grow_vertical = 2
 mouse_filter = 1
 color = Color(0.01, 0.035, 0.055, 0.34)
 
-[node name="TrayPanel" type="PanelContainer" parent="Interface/CardTrayOverlay"]
+[node name="TrayPanel" type="PanelContainer" parent="Interface/CardTrayOverlay" unique_id=1640054453]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -390,35 +392,35 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="Margin" type="MarginContainer" parent="Interface/CardTrayOverlay/TrayPanel"]
+[node name="Margin" type="MarginContainer" parent="Interface/CardTrayOverlay/TrayPanel" unique_id=679908049]
 layout_mode = 2
 theme_override_constants/margin_left = 22
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 22
 theme_override_constants/margin_bottom = 16
 
-[node name="Content" type="VBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin"]
+[node name="Content" type="VBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin" unique_id=1638952247]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Header" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content"]
+[node name="Header" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content" unique_id=1156769770]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Header"]
+[node name="Title" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Header" unique_id=500179775]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 26
 text = "DISCARD"
 vertical_alignment = 1
 
-[node name="CardTrayCloseButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Header"]
+[node name="CardTrayCloseButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Header" unique_id=657305219]
 custom_minimum_size = Vector2(92, 38)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "Close"
 
-[node name="Prompt" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content"]
+[node name="Prompt" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content" unique_id=114750319]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.93, 0.97, 1)
 theme_override_font_sizes/font_size = 16
@@ -426,40 +428,39 @@ text = "Cards in your discard pile"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="CardScroll" type="ScrollContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content"]
+[node name="CardScroll" type="ScrollContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content" unique_id=247204547]
 custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 1
 vertical_scroll_mode = 0
 
-[node name="CardCenter" type="CenterContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/CardScroll"]
+[node name="CardCenter" type="CenterContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/CardScroll" unique_id=344252486]
 custom_minimum_size = Vector2(1050, 248)
 layout_mode = 2
 
-[node name="CardRow" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/CardScroll/CardCenter"]
+[node name="CardRow" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/CardScroll/CardCenter" unique_id=311643604]
 layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="Footer" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content"]
+[node name="Footer" type="HBoxContainer" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content" unique_id=1961236217]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SelectionStatus" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer"]
+[node name="SelectionStatus" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer" unique_id=1426079674]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.64, 0.87, 0.96, 1)
 theme_override_font_sizes/font_size = 15
 vertical_alignment = 1
 
-[node name="CardTraySkipButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer"]
+[node name="CardTraySkipButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer" unique_id=225475368]
 custom_minimum_size = Vector2(110, 38)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "Skip"
 
-[node name="CardTrayConfirmButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer"]
+[node name="CardTrayConfirmButton" type="Button" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer" unique_id=282272744]
 custom_minimum_size = Vector2(120, 38)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
@@ -493,16 +494,17 @@ layout_mode = 2
 theme_override_constants/separation = 7
 
 [node name="StatusPanel" type="PanelContainer" parent="Interface" unique_id=1265010983]
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -430.0
-offset_top = -66.0
-offset_right = 430.0
-offset_bottom = -14.0
+offset_left = -470.0
+offset_top = -52.0
+offset_right = 470.0
+offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 1
@@ -510,13 +512,22 @@ mouse_filter = 1
 [node name="Margin" type="MarginContainer" parent="Interface/StatusPanel" unique_id=454350235]
 layout_mode = 2
 theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_bottom = 5
 
 [node name="StatusRow" type="HBoxContainer" parent="Interface/StatusPanel/Margin" unique_id=1313127884]
 layout_mode = 2
 theme_override_constants/separation = 12
+
+[node name="StatusContext" type="Label" parent="Interface/StatusPanel/Margin/StatusRow"]
+custom_minimum_size = Vector2(105, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56, 0.87, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "YOUR MOVE"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="StatusLabel" type="Label" parent="Interface/StatusPanel/Margin/StatusRow" unique_id=1335406267]
 layout_mode = 2
@@ -526,7 +537,7 @@ text = "Loading match…"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ConfirmChoiceButton" type="Button" parent="Interface/StatusPanel/Margin/StatusRow"]
+[node name="ConfirmChoiceButton" type="Button" parent="Interface/StatusPanel/Margin/StatusRow" unique_id=390379299]
 visible = false
 custom_minimum_size = Vector2(112, 36)
 layout_mode = 2
@@ -540,9 +551,9 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "Cancel"
 
-[node name="BattleLogButton" type="Button" parent="Interface"]
+[node name="BattleLogButton" type="Button" parent="Interface" unique_id=976289787]
 layout_mode = 1
-anchors_preset = 6
+anchors_preset = -1
 anchor_left = 1.0
 anchor_top = 0.72
 anchor_right = 1.0
@@ -556,10 +567,11 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 16
 text = "BATTLE LOG"
 
-[node name="BattleLogPanel" type="PanelContainer" parent="Interface"]
+[node name="BattleLogPanel" type="PanelContainer" parent="Interface" unique_id=1897852012]
 visible = false
 z_index = 30
 layout_mode = 1
+anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -571,41 +583,39 @@ grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="Margin" type="MarginContainer" parent="Interface/BattleLogPanel"]
+[node name="Margin" type="MarginContainer" parent="Interface/BattleLogPanel" unique_id=481896119]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="Content" type="VBoxContainer" parent="Interface/BattleLogPanel/Margin"]
+[node name="Content" type="VBoxContainer" parent="Interface/BattleLogPanel/Margin" unique_id=85111139]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Header" type="HBoxContainer" parent="Interface/BattleLogPanel/Margin/Content"]
+[node name="Header" type="HBoxContainer" parent="Interface/BattleLogPanel/Margin/Content" unique_id=1940528295]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="Interface/BattleLogPanel/Margin/Content/Header"]
+[node name="Title" type="Label" parent="Interface/BattleLogPanel/Margin/Content/Header" unique_id=529131189]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 21
-text = "BATTLE LOG"
+text = "MATCH LOG"
 vertical_alignment = 1
 
-[node name="CloseButton" type="Button" parent="Interface/BattleLogPanel/Margin/Content/Header"]
+[node name="CloseButton" type="Button" parent="Interface/BattleLogPanel/Margin/Content/Header" unique_id=1977894358]
 custom_minimum_size = Vector2(82, 38)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "Close"
 
-[node name="LogText" type="RichTextLabel" parent="Interface/BattleLogPanel/Margin/Content"]
+[node name="LogText" type="RichTextLabel" parent="Interface/BattleLogPanel/Margin/Content" unique_id=924161912]
 custom_minimum_size = Vector2(0, 420)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_font_sizes/normal_font_size = 16
 bbcode_enabled = true
-fit_content = false
-scroll_active = true
-scroll_following = true
 text = "The battle log will appear here."
+scroll_following = true

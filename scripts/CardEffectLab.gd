@@ -7,7 +7,7 @@ const SCENARIOS := [
 	{"id":"parfait_draw", "card_id":"sweet_parfait_parrot", "label":"Parfait Parrot — Plated end-turn draw", "archetype":"Sweet"},
 	{"id":"gazelle_buff", "card_id":"hearty_gravy_gazelle", "label":"Gravy Gazelle — targeted +1/+1", "archetype":"Hearty"},
 	{"id":"cicada_ko", "card_id":"spicy_chili_cicada", "label":"Chili Cicada — KO damage", "archetype":"Spicy"},
-	{"id":"hydra_absorb", "card_id":"fresh_harvest_hydra", "label":"Harvest Hydra — Meal sacrifice and absorb", "archetype":"Fresh"},
+	{"id":"hydra_absorb", "card_id":"fresh_harvest_hydra", "label":"Harvest Hydra — Ingredient sacrifice and absorb", "archetype":"Fresh"},
 	{"id":"gorilla_prep", "card_id":"fresh_garden_gorilla", "label":"Garden Gorilla — Fresh Prep scaling", "archetype":"Fresh"},
 	{"id":"pike_ping", "card_id":"spicy_pepper_pike", "label":"Pepper Pike — once-per-turn Meal damage", "archetype":"Spicy"},
 	{"id":"mole_ko_heal", "card_id":"hearty_meatloaf_mole", "label":"Meatloaf Mole — heal after KO", "archetype":"Hearty"},
@@ -18,7 +18,7 @@ const SCENARIOS := [
 	{"id":"skunk_shield", "card_id":"fresh_salad_shield_skunk", "label":"Salad Shield Skunk — Prep protection", "archetype":"Fresh"},
 	{"id":"puma_prep_attack", "card_id":"sweet_pudding_puma", "label":"Pudding Puma — attack from Prep", "archetype":"Sweet"},
 	{"id":"chef_trap", "card_id":"funky_chef_check_chinchilla", "label":"Chutney Chinchilla — negate Chef", "archetype":"Funky"},
-	{"id":"ingredient_trap", "card_id":"spicy_pantry_pouncer", "label":"Pantry Pouncer — destroy Ingredient", "archetype":"Spicy"},
+	{"id":"ingredient_trap", "card_id":"spicy_pantry_pouncer", "label":"Quinoa Fly Trap — destroy Ingredient", "archetype":"Spicy"},
 	{"id":"tool_trap", "card_id":"funky_toolbox_toad", "label":"Tamari Toad — negate Tool", "archetype":"Funky"},
 	{"id":"ability_trap", "card_id":"sweet_ability_axolotl", "label":"Ability Axolotl — negate ability", "archetype":"Sweet"},
 	{"id":"corgi_comeback", "card_id":"fresh_comeback_corgi", "label":"Comeback Cucumber Corgi — damage response", "archetype":"Fresh"},
@@ -187,7 +187,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 			before = _snapshot(state)
 			service.select_attacker(state, int(tern.instance_id))
 			service.attack(state, -1)
-			passed = state.player.hand.size() == 6 and int(state.opponent.life) == 21
+			passed = state.player.hand.size() == 6 and int(state.opponent.life) == 16
 		"skunk_shield":
 			_add_unit(state, "player", "fresh_salad_shield_skunk", "prep")
 			var protected := _add_unit(state, "player", "fresh_crisp_capybara", "prep")
@@ -202,7 +202,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 			before = _snapshot(state)
 			service.select_attacker(state, int(puma.instance_id))
 			service.attack(state, -1)
-			passed = int(state.opponent.life) == 22 and not bool(puma.ready)
+			passed = int(state.opponent.life) == 17 and not bool(puma.ready)
 		"chef_trap":
 			state.player.hand = ["funky_chef_check_chinchilla"]
 			state.opponent.hand = ["chef_mary"]
@@ -214,7 +214,7 @@ func run_scenario(scenario_id: String) -> Dictionary:
 		"ingredient_trap":
 			state.player.hand = ["spicy_pantry_pouncer"]
 			state.opponent.hand = ["hearty_macaroni_manatee"]
-			expected = "Pantry Pouncer resolves after the Ingredient's on-play timing and destroys it."
+			expected = "Quinoa Fly Trap resolves after the Ingredient's on-play timing and destroys it."
 			before = _snapshot(state)
 			service._play_ingredient(state, "opponent", 0, "prep")
 			service.resolve_reaction(state, 0)
@@ -333,7 +333,7 @@ func _fresh_state() -> Dictionary:
 		state[side].discard = []
 		state[side].prep = []
 		state[side].plated = []
-		state[side].life = 25
+		state[side].life = service.STARTING_LIFE
 		state[side].fatigue = 0
 		state[side].turns_started = 3
 		state[side].chef_used = false

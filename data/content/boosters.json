@@ -6,7 +6,7 @@
       "price": 5,
       "slots": [
         { "rarity": "common", "count": 3 },
-        { "rarity": "uncommon", "count": 2 },
+        { "rarity": "uncommon", "count": 1 },
         { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" }
       ]
     },
@@ -14,8 +14,9 @@
       "id": "season_prize_pack",
       "name": "Prize Pack",
       "price": 0,
+      "rewardPool": "strongest_affinity_or_support",
       "slots": [
-        { "rarity": "common", "count": 1 },
+        { "rarity": "common", "count": 3 },
         { "rarity": "uncommon", "count": 1 },
         { "rarity": "rare", "count": 1, "upgradeChance": 0.125, "upgradeRarity": "mythic" }
       ]

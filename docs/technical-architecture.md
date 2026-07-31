@@ -13,7 +13,7 @@ The project has two layers: a persistent season shell and the Kitchen Table matc
 - `TournamentService.gd` creates opponents, upgrades later lists, calculates quick debug results, and evaluates event records.
 - The shop, pack opening, deckbuilder, and season hub are independent screen scripts that render against the host controller.
 
-The season deck size is 30 cards. The public demo exposes Spicy, Hearty, and Sweet starters; Fresh and Funky remain available in the Debug Menu. Sideboard data and editing remain implemented for debug/campaign experimentation, but the sideboard is hidden from the public demo flow.
+Legal season decks contain 20–30 cards, and all starters begin at 20 so newly acquired cards can be added without first removing a starter card. The public demo and Debug Menu expose the Spicy, Hearty, and Sweet starters. Fresh and Funky remain available as card affinities for mixed deckbuilding. Sideboard data and editing remain implemented for debug/campaign experimentation, but the sideboard is hidden from the public demo flow.
 
 The public Season Run uses a two-event calendar and the 3D card-store overworld as its navigation hub. Singles purchases, the trade binder, and Meta Analysis all render directly inside that overworld, so wallet, collection, field-share, and report changes update without replacing the store instance. A persistent top-right utility strip exposes wallet, calendar, deck editing, and settings/save; world hotspots continue to handle the shopkeeper, trading, metagame, and tournament interactions. Each routed menu returns through an explicit Exit to Card Store action.
 
@@ -38,7 +38,7 @@ The same bridge launches practice matches from the Debug Sandbox; it has no rend
 
 ### Combat animation events
 
-`CookingCombatService.gd` writes presentation-neutral events to `state.animation_events` as rules mutations occur. Draws, plays, moves, sacrifices, searches, healing, buffs, damage, attacks, and destruction carry stable card or instance IDs plus their source, target, amount, and destination. Related events share a positive `group_id`; this lets area damage, simultaneous combat damage, recipe sacrifices, and play-triggered effects animate together without reconstructing changes from old and new state snapshots. The Living Table drains and presents these events in order.
+`CookingCombatService.gd` writes presentation-neutral events to `state.animation_events` as rules mutations occur. Draws, plays, moves, defense-position changes, sacrifices, searches, healing, buffs, damage, attacks, and destruction carry stable card or instance IDs plus their source, target, amount, and destination. Related events share a positive `group_id`; this lets area damage, simultaneous combat damage, grouped card rotations, recipe sacrifices, and play-triggered effects animate together without reconstructing changes from old and new state snapshots. The Living Table drains and presents these events in order.
 
 Physical card faces are cached once per unique card in a match. Their SubViewports use `UPDATE_ONCE`; static cards stop rendering after their first frame, while animated artwork emits a change signal at its authored frame rate to request one additional redraw. Multiple physical copies share the same material and viewport texture.
 
@@ -49,8 +49,9 @@ Physical card faces are cached once per unique card in a match. Their SubViewpor
 ## Validation
 
 - `KitchenGameSmokeTest.gd` covers match rules, effects, selection workflows, inspection, and drag-and-drop.
+- `RebalancedCardPoolSmokeTest.gd` validates the focused 58-card catalog, three exact 20-card starters, dual recipes, discard deployment, direct-to-Prep tutoring, Pup Tart's Meal limit, and Chef Soup's reset. `DeckSizeRangeSmokeTest.gd` covers the constructed-deck range and 30-card editor capacity.
 - `SeasonShellSmokeTest.gd` covers content adaptation, debug navigation, shop generation, booster collection updates, deckbuilder, metagame, calendar, live Kitchen Match launch, tournament records, and event unlocking.
 - `AutosaveSmokeTest.gd` covers versioned checkpoints, the animated indicator, backup recovery, resume-screen metadata, and interrupted-match reconstruction.
-- `StarterBalanceSimulation.gd` runs every ordered pairing of the five starters through the production AI, including response windows and expansion mechanics, and reports seat-neutral matchups plus balance flags. Pass `--ai=easy`, `--ai=medium`, `--ai=hard`, or `--ai=expert` to validate a particular policy. Expert AI searches two plays ahead, evaluates passing, uses known opposing hand and upcoming-deck information, preserves low-value reactions, and chooses higher-value search and discard options. Automated player-side defenders in the simulator still use the first eligible response whenever a Hand Trap or damage-response window opens; results are a consistent tuning baseline, not a substitute for skilled human play.
+- `StarterBalanceSimulation.gd` runs every ordered pairing of the three starters through the production AI, including response windows, and reports seat-neutral matchups plus balance flags. Pass `--ai=easy`, `--ai=medium`, `--ai=hard`, or `--ai=expert` to validate a particular policy. Expert AI searches two plays ahead, evaluates passing, uses known opposing hand and upcoming-deck information, preserves low-value reactions, and chooses higher-value search and discard options. Automated player-side defenders in the simulator still use the first eligible response whenever a Hand Trap or damage-response window opens; results are a consistent tuning baseline, not a substitute for skilled human play.
 
 The retired fish combat service, old manual-combat UI, and mana/threat card renderer are intentionally absent.

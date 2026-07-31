@@ -3,13 +3,13 @@
 ## Playable Now
 
 - Mouse-driven demo Season Run and direct Debug Menu entry paths
-- Spicy, Hearty, Sweet, Fresh, and Funky 30-card constructed starters
+- Spicy, Hearty, and Sweet 20-card constructed starters
 - Two-event public demo calendar: Weekly Locals and League Cup
 - Five difficulty borders with economy, life, opponent, or opening-turn modifiers
 - Easy, Medium, Hard, and two-ply Expert AI with progressively upgraded legal decks from Locals through later championships
 - Save and load for the active season
 - Clickable 3D card-store overworld with in-scene singles, trade-binder, and meta-analysis overlays plus a persistent top-right wallet/calendar/deck/settings HUD
-- Six-card boosters, prize packs, individual reveals, and collection updates
+- Five-card boosters, affinity-focused tournament prize packs, individual reveals, and collection updates
 - Collection-aware deckbuilder with sideboard functionality retained in Debug mode
 - One-screen Season deck editor with internally scrolling collection and main-deck lists; sideboard UI is hidden for the demo
 - Metagame reports and weighted rival archetypes
@@ -25,21 +25,21 @@
 
 ## Content
 
-The Kitchen catalog contains 89 collectible cards:
+The Kitchen catalog contains 59 collectible cards:
 
-- 36 Ingredients
-- 28 Meals
-- 15 Tools
-- 3 Spices
+- 25 Ingredients
+- 20 Meals
+- 5 Tools
+- 1 Spice
 - 3 Environments
-- 4 Chefs
+- 5 Chefs
 
 Campaign rarity is derived from card type and the existing rare flag so boosters and singles work without maintaining a second card catalog.
 
 ## Next Product Work
 
-1. Playtest the complete shop-to-tournament loop and tune income, pack price, entry fees, and reward pacing.
-2. Playtest and tune all five constructed starter lists and finalize copy limits.
+1. Playtest the complete shop-to-tournament loop and tune income, pack prices, and reward pacing.
+2. Playtest and tune all three constructed starter lists and finalize copy limits.
 3. Improve card and board art while preserving the current readable inspectors.
 4. Add stronger transition feedback between a Kitchen Match, its tournament slip, and the next calendar event.
 5. Tune AI deck selection and higher-event opponent upgrades.

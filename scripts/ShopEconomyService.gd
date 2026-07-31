@@ -1,6 +1,9 @@
 extends RefCounted
 class_name ShopEconomyService
 
+const AFFINITY_REWARD_POOL := "strongest_affinity_or_support"
+const SUPPORT_CARD_TYPES := ["chef", "environment", "spice", "tool"]
+
 var cards: Array = []
 var cards_by_id: Dictionary = {}
 var boosters_by_id: Dictionary = {}
@@ -45,6 +48,7 @@ func start_pack(target_run: Dictionary, pack: Array) -> void:
 func generate_pack(booster_id: String, current_primary: String) -> Array:
 	var booster: Dictionary = boosters_by_id[booster_id]
 	var pack: Array = []
+	var affinity_restricted := String(booster.get("rewardPool", "")) == AFFINITY_REWARD_POOL
 
 	for slot in booster.get("slots", []):
 		var count := int(slot.get("count", 1))
@@ -65,18 +69,26 @@ func generate_pack(booster_id: String, current_primary: String) -> Array:
 				if slot.has("upgradeChance") and rng.randf() < float(slot.upgradeChance):
 					rarity = slot.get("upgradeRarity", rarity)
 
-			pack.append({ "cardId": pick_card_by_rarity(rarity, current_primary), "rarity": rarity })
+			pack.append({
+				"cardId": pick_card_by_rarity(rarity, current_primary, affinity_restricted),
+				"rarity": rarity
+			})
 
 	pack.shuffle()
 	pack.sort_custom(func(a, b) -> bool: return rarity_rank(a.rarity) < rarity_rank(b.rarity))
 	return pack
 
 
-func pick_card_by_rarity(rarity: String, current_primary: String) -> String:
+func pick_card_by_rarity(rarity: String, current_primary: String, affinity_restricted := false) -> String:
 	var pool := []
 	for card in cards:
-		if card.get("rarity", "") == rarity:
+		if card.get("rarity", "") == rarity and (not affinity_restricted or card_is_affinity_reward_eligible(card, current_primary)):
 			pool.append(card.id)
+
+	if pool.is_empty() and affinity_restricted:
+		for card in cards:
+			if card_is_affinity_reward_eligible(card, current_primary):
+				pool.append(card.id)
 
 	if pool.is_empty():
 		return cards[0].id
@@ -84,11 +96,61 @@ func pick_card_by_rarity(rarity: String, current_primary: String) -> String:
 	var weighted := []
 	for card_id in pool:
 		var card: Dictionary = cards_by_id[card_id]
-		var weight := 2 if card.get("archetype", "") == current_primary or card.get("archetype", "") == "neutral" else 1
+		var weight := 2 if _card_has_affinity(card, current_primary) or card.get("archetype", "") == "neutral" else 1
 		for i in range(weight):
 			weighted.append(card_id)
 
 	return weighted[rng.randi_range(0, weighted.size() - 1)]
+
+
+func strongest_affinity_for_deck(deck: Dictionary, affinity_order: Array) -> String:
+	if affinity_order.is_empty():
+		return ""
+
+	var counts := {}
+	for affinity in affinity_order:
+		counts[String(affinity)] = 0
+
+	for card_id in deck.keys():
+		if not cards_by_id.has(card_id):
+			continue
+		var copies := int(deck.get(card_id, 0))
+		for affinity in _card_affinities(cards_by_id[card_id]):
+			if counts.has(affinity):
+				counts[affinity] = int(counts[affinity]) + copies
+
+	var strongest := String(affinity_order[0])
+	for affinity in affinity_order:
+		var affinity_id := String(affinity)
+		if int(counts.get(affinity_id, 0)) > int(counts.get(strongest, 0)):
+			strongest = affinity_id
+	return strongest
+
+
+func card_is_affinity_reward_eligible(card: Dictionary, affinity: String) -> bool:
+	if String(card.get("card_type", "")) in SUPPORT_CARD_TYPES:
+		return true
+	return _card_has_affinity(card, affinity)
+
+
+func _card_has_affinity(card: Dictionary, affinity: String) -> bool:
+	return _card_affinities(card).has(affinity)
+
+
+func _card_affinities(card: Dictionary) -> Array:
+	var affinities: Array = []
+	for value in card.get("archetypes", []):
+		var affinity := String(value)
+		if affinity != "neutral" and not affinities.has(affinity):
+			affinities.append(affinity)
+	for value in card.get("ingredient_types", []):
+		var affinity := String(value)
+		if affinity != "neutral" and affinity != "any" and not affinities.has(affinity):
+			affinities.append(affinity)
+	var primary := String(card.get("archetype", "neutral"))
+	if primary != "neutral" and not affinities.has(primary):
+		affinities.append(primary)
+	return affinities
 
 
 func rarity_rank(rarity: String) -> int:
@@ -148,7 +210,7 @@ func reveal_pack_card(target_run: Dictionary, pack_index: int, current_primary: 
 
 func card_matches_current_deck(card_id: String, current_primary: String) -> bool:
 	var card: Dictionary = cards_by_id[card_id]
-	return card.get("archetype", "") == current_primary or card.get("archetype", "") == "neutral"
+	return _card_has_affinity(card, current_primary) or card.get("archetype", "") == "neutral"
 
 
 func buy_single(target_run: Dictionary, card_id: String) -> Dictionary:

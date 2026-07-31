@@ -62,7 +62,6 @@ func _run() -> void:
 		var chef_frames: Array = catalog.cards_by_id[card_id].get("art_frames", [])
 		_expect(String(catalog.cards_by_id[card_id].name) == String(chef_names[card_id]), "%s did not use its updated chef name." % card_id)
 		_expect(chef_frames.size() == 1 and ResourceLoader.exists(String(chef_frames[0])), "%s did not load its supplied portrait." % card_id)
-
 	var bee_face := CARD_FACE_SCRIPT.new()
 	bee_face.configure(catalog.cards_by_id.spicy_hot_honey_bee, "white", true)
 	bee_face.position = Vector2(20, 20)
@@ -94,6 +93,8 @@ func _run() -> void:
 	var hearty_icon := hearty_face.find_child("CardAffinityIcon", true, false) as Label
 	var hearty_type := hearty_face.find_child("CardType", true, false) as Label
 	var hearty_requirements := hearty_face.find_child("CardRequirements", true, false) as Label
+	var hearty_rules := hearty_face.find_child("CardRules", true, false) as Label
+	var hearty_rules_backdrop := hearty_face.find_child("CardRulesBackdrop", true, false) as Panel
 	var card_icon_font := sweet_icon.get_theme_font("font") as FontFile if sweet_icon != null else null
 	_expect(bee_frame != null and bee_frame.texture.resource_path.ends_with("spicy_ingredient/black.png"), "The default difficulty did not use the black Spicy Ingredient frame.")
 	_expect(sweet_frame != null and sweet_frame.texture.resource_path.ends_with("sweet_ingredient/gold.png"), "The Gold difficulty did not use the corrected Sweet Ingredient frame.")
@@ -106,6 +107,11 @@ func _run() -> void:
 	_expect(hearty_type != null and hearty_type.text == "Meal", "The Hearty Meal frame did not render its card type.")
 	_expect(hearty_requirements != null and hearty_requirements.text == "2× Hearty Ingredients", "The Hearty Meal frame did not summarize its recipe requirements.")
 	_expect(hearty_requirements.get_theme_font_size("font_size") < hearty_type.get_theme_font_size("font_size"), "Meal requirements were not rendered smaller than the Meal label.")
+	_expect(hearty_rules != null and hearty_rules.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER, "Card rules were not centered in the ability area.")
+	_expect(hearty_rules != null and hearty_rules.get_theme_font("font").resource_path.ends_with("AtkinsonHyperlegibleNext.ttf"), "Card rules did not use the bundled hyperlegible font.")
+	_expect(hearty_rules_backdrop != null and hearty_rules_backdrop.visible, "Card rules lost their layout backdrop control.")
+	var rules_style := hearty_rules_backdrop.get_theme_stylebox("panel") as StyleBoxFlat if hearty_rules_backdrop != null else null
+	_expect(rules_style != null and rules_style.bg_color.a == 0.0 and rules_style.border_color.a == 0.0, "Card rules still rendered a visible backdrop.")
 
 	var fresh_ingredient_face := CARD_FACE_SCRIPT.new()
 	fresh_ingredient_face.configure(catalog.cards_by_id.fresh_crisp_capybara, "silver", false)

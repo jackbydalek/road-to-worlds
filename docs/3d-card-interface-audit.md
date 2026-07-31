@@ -81,7 +81,7 @@ All 89 playable cards build as physical 3D cards and have a functional rules/pre
 | 38 | Beet Beetle | Ingredient | Automatic / triggered effect | Pass (fallback face) |
 | 39 | Salad Shield Skunk | Ingredient | Direct / passive play | Pass (fallback face) |
 | 40 | Chutney Chinchilla | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
-| 41 | Pantry Pouncer | Ingredient | Reaction window | Pass (generic reaction overlay) |
+| 41 | Quinoa Fly Trap | Ingredient | Reaction window | Pass (generic reaction overlay) |
 | 42 | Tamari Toad | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |
 | 43 | Ability Axolotl | Ingredient | Reaction window | Pass (generic reaction overlay) |
 | 44 | Comeback Cucumber Corgi | Ingredient | Reaction window | Pass (fallback face; generic reaction overlay) |

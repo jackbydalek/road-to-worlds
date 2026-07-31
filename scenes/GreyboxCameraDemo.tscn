@@ -5,9 +5,9 @@
 [ext_resource type="PackedScene" uid="uid://d0ryjerg3wgy8" path="res://assets/card_shop/counter.tscn" id="2_h0733"]
 [ext_resource type="PackedScene" uid="uid://cugdmnv4qe53f" path="res://clerkidle.tscn" id="2_u3c5j"]
 [ext_resource type="PackedScene" uid="uid://bpft2f2u7plqq" path="res://assets/card_shop/shelf.tscn" id="3_bxkix"]
-[ext_resource type="Texture2D" uid="uid://c8qneutrhlwmc" path="res://assets/ui/shop_hud/deck_edit.png" id="3_deck"]
-[ext_resource type="Texture2D" uid="uid://bhdp7vmwrlaaj" path="res://assets/ui/shop_hud/save.png" id="4_save"]
-[ext_resource type="Texture2D" uid="uid://cmgdqpvegxsm3" path="res://assets/ui/shop_hud/settings.png" id="5_settings"]
+[ext_resource type="Texture2D" path="res://assets/ui/audacious/cube-bold.svg" id="3_deck"]
+[ext_resource type="Texture2D" path="res://assets/ui/audacious/folder.svg" id="4_save"]
+[ext_resource type="Texture2D" path="res://assets/ui/audacious/dots-three-vertical-bold.svg" id="5_settings"]
 [ext_resource type="Texture2D" uid="uid://da0fpd5kuqdnh" path="res://assets/card_shop/textures/grey_low_poly_carpet.png" id="6_carpet"]
 [ext_resource type="Texture2D" uid="uid://dp16w4t42gy3b" path="res://assets/cards/frames/spicy_ingredient/black.png" id="7_spicy_card"]
 [ext_resource type="Texture2D" uid="uid://bcyhib82e6pts" path="res://assets/cards/frames/sweet_ingredient/black.png" id="8_sweet_card"]
@@ -15,7 +15,7 @@
 
 [sub_resource type="Environment" id="Environment_demo"]
 background_mode = 1
-background_color = Color(0.690196, 0.807843, 0.807843, 1)
+background_color = Color(0.9137255, 0.8745098, 0.7882353, 1)
 ambient_light_source = 3
 ambient_light_color = Color(0.64, 0.7, 0.78, 1)
 ambient_light_energy = 0.72
@@ -726,7 +726,7 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 58.0
+offset_bottom = 64.0
 grow_horizontal = 2
 mouse_filter = 1
 
@@ -734,7 +734,7 @@ mouse_filter = 1
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 18
+theme_override_constants/margin_right = 338
 theme_override_constants/margin_bottom = 12
 
 [node name="TopContent" type="VBoxContainer" parent="Interface/TopBar/TopMargin" unique_id=1911233100]
@@ -753,39 +753,57 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -336.0
-offset_top = 7.0
-offset_right = -12.0
-offset_bottom = 57.0
+offset_top = 9.0
+offset_right = -14.0
+offset_bottom = 55.0
 grow_horizontal = 0
 theme_override_constants/separation = 8
 
 [node name="CashButton" type="Button" parent="Interface/ShopHud" unique_id=945402050]
-custom_minimum_size = Vector2(126, 50)
+custom_minimum_size = Vector2(112, 46)
 layout_mode = 2
 tooltip_text = "Sell all safe extra card copies"
 theme_override_font_sizes/font_size = 20
 text = "$0"
 
 [node name="DeckButton" type="Button" parent="Interface/ShopHud" unique_id=906578419]
-custom_minimum_size = Vector2(58, 50)
+custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
 tooltip_text = "Deck Edit"
 icon = ExtResource("3_deck")
 expand_icon = true
 
 [node name="SaveButton" type="Button" parent="Interface/ShopHud" unique_id=930632481]
-custom_minimum_size = Vector2(58, 50)
+custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
 tooltip_text = "Save Game"
 icon = ExtResource("4_save")
 expand_icon = true
 
 [node name="SettingsButton" type="Button" parent="Interface/ShopHud" unique_id=1603612990]
-custom_minimum_size = Vector2(58, 50)
+custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
 tooltip_text = "Settings"
 icon = ExtResource("5_settings")
 expand_icon = true
+
+[node name="OverviewRoundButton" type="Button" parent="Interface"]
+visible = false
+z_index = 25
+custom_minimum_size = Vector2(430, 72)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -215.0
+offset_top = -100.0
+offset_right = 215.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Start Round 1"
 
 [node name="MenuPanel" type="PanelContainer" parent="Interface" unique_id=1650585668]
 visible = false
@@ -796,23 +814,23 @@ anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
 offset_left = -430.0
-offset_top = -270.0
+offset_top = -260.0
 offset_right = -22.0
-offset_bottom = 270.0
+offset_bottom = 260.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 1
 
 [node name="Margin" type="MarginContainer" parent="Interface/MenuPanel" unique_id=989626262]
 layout_mode = 2
-theme_override_constants/margin_left = 22
-theme_override_constants/margin_top = 22
-theme_override_constants/margin_right = 22
-theme_override_constants/margin_bottom = 22
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="Content" type="VBoxContainer" parent="Interface/MenuPanel/Margin" unique_id=1229125249]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 10
 
 [node name="Heading" type="Label" parent="Interface/MenuPanel/Margin/Content" unique_id=752940367]
 layout_mode = 2
@@ -839,10 +857,6 @@ text = "View Meta Analysis"
 [node name="Calendar" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1769035314]
 layout_mode = 2
 text = "View Calendar"
-
-[node name="Tournament" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1369059932]
-layout_mode = 2
-text = "Register for Tournament"
 
 [node name="Leave" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=551306247]
 layout_mode = 2

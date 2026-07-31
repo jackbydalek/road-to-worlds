@@ -25,7 +25,13 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_expect(main.run_state_service.has_saved_run(), "Changing screens did not create an autosave.")
-	_expect(main.autosave_label != null and main.autosave_label.visible and main.autosave_label.text == "Autosaving...", "Autosaving did not display the animated top-right indicator.")
+	_expect(
+		main.autosave_label != null
+		and main.autosave_label.visible
+		and main.autosave_label.text == "◆"
+		and main.autosave_label.size.x <= 40.0,
+		"Autosaving did not display the compact top-right glyph."
+	)
 
 	var envelope = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
 	_expect(typeof(envelope) == TYPE_DICTIONARY, "The autosave was not valid JSON.")

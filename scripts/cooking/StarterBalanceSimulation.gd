@@ -4,9 +4,7 @@ const SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
 const DECK_IDS := [
 	"spicy_test_kitchen",
 	"hearty_test_kitchen",
-	"sweet_test_kitchen",
-	"fresh_test_kitchen",
-	"funky_test_kitchen"
+	"sweet_test_kitchen"
 ]
 const DEFAULT_GAMES_PER_ORDER := 500
 const DEFAULT_TURN_CAP := 100

@@ -1,6 +1,8 @@
 extends RefCounted
 class_name PackOpeningScreen
 
+const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+
 const PACK_OPENING_SCENE := preload("res://scenes/PackOpeningScene.tscn")
 const CARD_BACK := preload("res://assets/cards/card_backs/living_table.png")
 const BOOSTER_ID := "base_standard_pack"
@@ -31,7 +33,7 @@ func show(host) -> void:
 	host._update_status()
 
 	scene_root = _add_scene(host)
-	_cache_nodes()
+	_cache_nodes(host)
 	_layout_slots()
 	_connect_controls(host)
 	_render(host)
@@ -44,6 +46,8 @@ func _add_store_exit(host) -> void:
 	exit_button.position = Vector2(1100, 26)
 	exit_button.size = Vector2(220, 44)
 	exit_button.z_index = 200
+	exit_button.theme = host.theme
+	host._style_button(exit_button)
 	host._connect_pressed(exit_button, host._show_shop)
 	scene_root.add_child(exit_button)
 
@@ -53,7 +57,15 @@ func _add_scene(host) -> Node:
 	frame.name = "PackOpeningSceneFrame"
 	frame.custom_minimum_size = SCENE_SIZE
 	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	frame.add_theme_stylebox_override("panel", _style("#11141a", "#3a4352", 1, 6))
+	frame.add_theme_stylebox_override(
+		"panel",
+		SKETCH_UI.texture_style(
+			SKETCH_UI.PANEL_PAPER,
+			Color.WHITE,
+			Vector4(24, 24, 24, 24),
+			Vector4.ZERO
+		)
+	)
 	host.content.add_child(frame)
 
 	var canvas := Control.new()
@@ -69,15 +81,21 @@ func _add_scene(host) -> Node:
 	return root
 
 
-func _cache_nodes() -> void:
+func _cache_nodes(host) -> void:
 	pack_button = _find_node_by_name(scene_root, "PackButton") as Button
 	if pack_button != null:
-		pack_button.add_theme_stylebox_override("normal", _style("#e8dec4", "#6a5c42", 3, 4))
-		pack_button.add_theme_stylebox_override("hover", _style("#f2e9d2", "#d0a94f", 4, 4))
-		pack_button.add_theme_stylebox_override("pressed", _style("#d8ccb0", "#d0a94f", 4, 4))
-		pack_button.add_theme_stylebox_override("disabled", _style("#8c8577", "#514c43", 3, 4))
+		pack_button.add_theme_stylebox_override("normal", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color.WHITE, Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
+		pack_button.add_theme_stylebox_override("hover", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#FFF5DA"), Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
+		pack_button.add_theme_stylebox_override("pressed", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#E4D5B6"), Vector4(18, 12, 18, 12), Vector4(14, 10, 14, 7)))
+		pack_button.add_theme_stylebox_override("disabled", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#B5AEA1"), Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
+		pack_button.add_theme_font_override("font", SKETCH_UI.display_font(0.72))
+		pack_button.add_theme_color_override("font_color", SKETCH_UI.INK)
 	reveal_all_button = _find_node_by_name(scene_root, "RevealAllButton") as Button
 	done_button = _find_node_by_name(scene_root, "DoneButton") as Button
+	for action_button in [reveal_all_button, done_button]:
+		if action_button != null:
+			action_button.theme = host.theme
+			host._style_button(action_button, "action")
 	card_fan = _find_node_by_name(scene_root, "CardFan") as Control
 	status_label = _find_node_by_name(scene_root, "PackStatusLabel") as Label
 	if status_label == null:
@@ -87,7 +105,8 @@ func _cache_nodes() -> void:
 		status_label.size = Vector2(780, 50)
 		scene_root.add_child(status_label)
 	status_label.add_theme_font_size_override("font_size", 22)
-	status_label.add_theme_color_override("font_color", Color("#f3efe4"))
+	status_label.add_theme_font_override("font", SKETCH_UI.body_font(0.1))
+	status_label.add_theme_color_override("font_color", SKETCH_UI.INK)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	card_slots = []
@@ -148,11 +167,11 @@ func _render(host) -> void:
 	if pack.is_empty():
 		match pack_action:
 			"prize":
-				_set_status("Click the pack to open a 3-card prize pack. Prize packs waiting: %d." % int(host.run.get("prize_packs", 0)))
+				_set_status("Click the pack to open a 5-card prize pack. Prize packs waiting: %d." % int(host.run.get("prize_packs", 0)))
 			"buy":
-				_set_status("Click the pack to buy and open a 6-card booster for $%d." % _booster_price(host))
+				_set_status("Click the pack to buy and open a 5-card booster for $%d." % _booster_price(host))
 			_:
-				_set_status("No prize packs waiting. You need $%d to buy a 6-card booster." % _booster_price(host))
+				_set_status("No prize packs waiting. You need $%d to buy a 5-card booster." % _booster_price(host))
 	elif not opened:
 		_set_status("Sealed pack on the table. Click it to crack it open.")
 	else:
@@ -176,7 +195,7 @@ func _on_pack_pressed(host) -> void:
 		var result: Dictionary = {}
 		match action:
 			"prize":
-				result = host.shop_economy_service.open_prize_pack(host.run, PRIZE_BOOSTER_ID, host._current_primary_archetype())
+				result = host.shop_economy_service.open_prize_pack(host.run, PRIZE_BOOSTER_ID, host._strongest_pack_affinity())
 			"buy":
 				result = host.shop_economy_service.buy_and_open_pack(host.run, BOOSTER_ID, host._current_primary_archetype())
 			_:
@@ -210,6 +229,9 @@ func _on_card_slot_pressed(host, index: int) -> void:
 		return
 
 	var slot := card_slots[index]
+	if _reduced_motion_enabled(slot):
+		_finish_reveal_slot(host, index, slot)
+		return
 	slot.pivot_offset = CARD_SLOT_SIZE * 0.5
 	var tween := slot.create_tween()
 	tween.tween_property(slot, "scale", Vector2(0.04, 1.0), 0.09).set_trans(Tween.TRANS_SINE)
@@ -317,6 +339,12 @@ func _animate_spread() -> void:
 		var layout: Dictionary = _slot_layout(index, max(1, visible_count))
 		var final_position: Vector2 = layout.position
 		var final_rotation := float(layout.rotation)
+		if _reduced_motion_enabled(slot):
+			slot.position = final_position
+			slot.rotation = final_rotation
+			slot.modulate.a = 1.0
+			slot.scale = Vector2.ONE
+			continue
 		slot.position = start_position
 		slot.rotation = -0.03 + float(index) * 0.008
 		slot.modulate.a = 0.0
@@ -349,6 +377,10 @@ func _animate_pack_open() -> void:
 	pack_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pack_button.modulate.a = 1.0
 	pack_button.scale = Vector2.ONE
+	if _reduced_motion_enabled(pack_button):
+		pack_button.visible = false
+		pack_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		return
 	var tween := pack_button.create_tween()
 	tween.tween_property(pack_button, "scale", Vector2(1.08, 0.92), 0.08).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(pack_button, "scale", Vector2(1.18, 0.72), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -370,7 +402,7 @@ func _pack_origin_in_fan() -> Vector2:
 
 
 func _animate_reveal(slot: TextureButton, rarity: String) -> void:
-	if _rarity_rank(rarity) < 2:
+	if _rarity_rank(rarity) < 2 or _reduced_motion_enabled(slot):
 		return
 
 	var base_position := slot.position
@@ -388,6 +420,10 @@ func _animate_reveal(slot: TextureButton, rarity: String) -> void:
 	tween.tween_property(slot, "position", base_position - Vector2(strength, 0), 0.05)
 	tween.tween_property(slot, "position", base_position, 0.05)
 	tween.parallel().tween_property(slot, "scale", Vector2.ONE, 0.12)
+
+
+func _reduced_motion_enabled(node: Node) -> bool:
+	return bool(node.get_tree().root.get_meta("reduced_motion", false))
 
 
 func _slot_index(slot: TextureButton) -> int:

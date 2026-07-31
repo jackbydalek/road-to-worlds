@@ -60,7 +60,13 @@ static func format_requirements(requirements: Array) -> String:
 	var formatted: Array[String] = []
 	for requirement in requirements:
 		var archetype_id := String(requirement)
-		formatted.append(label(archetype_id))
+		if archetype_id == "any":
+			formatted.append("Anything")
+			continue
+		var options: Array[String] = []
+		for option in archetype_id.split("|"):
+			options.append(label(String(option)))
+		formatted.append(" or ".join(options))
 	return " + ".join(formatted)
 
 

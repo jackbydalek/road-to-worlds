@@ -38,8 +38,13 @@ func _run() -> void:
 	_expect(tutorial.state.player.prep.size() == 1 and String(tutorial.state.player.prep[0].card_id) == "spicy_sriracharrow", "The recipe did not sacrifice the fixed Ingredient and serve the Meal.")
 
 	var meal_id := int(tutorial.state.player.prep[0].instance_id)
-	tutorial._tutorial_complete_action("select_field", {"card_id": "spicy_sriracharrow", "instance_id": meal_id})
-	await tutorial._move_unit(meal_id, "plated", 0)
+	var meal_card := tutorial.find_child("PlayerPrepCard*", true, false) as Node3D
+	if meal_card != null:
+		tutorial._handle_card_click(meal_card)
+	_expect(tutorial.pending_move_instance_id == meal_id, "Selecting the Meal did not immediately arm physical-slot movement.")
+	tutorial._choose_pending_move_destination("plated", 0)
+	while tutorial.animation_busy:
+		await process_frame
 	_expect(tutorial.tutorial_step_index == 12 and tutorial.state.player.plated.size() == 1, "The zone lesson did not advance to the support-card checkpoint.")
 
 	meal_id = int(tutorial.state.player.plated[0].instance_id)

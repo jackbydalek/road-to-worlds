@@ -8,7 +8,7 @@ The season shell reads this same catalog and derives campaign-only rarity, value
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "cards": [],
   "decks": {
     "deck_id": {
@@ -61,7 +61,7 @@ Meals replace `ingredient_types` with a recipe:
 }
 ```
 
-A Meal may also define `required_meal_archetype`. Serving it sacrifices one matching Meal in addition to the listed Ingredients. `can_attack_from_prep` permits the unit to attack from Prep.
+A pipe-delimited recipe entry such as `"spicy|funky"` accepts either affinity. A dual-type Ingredient can satisfy one recipe requirement, never two requirements at once. A Meal may also define `required_meal_archetype`; serving it sacrifices one matching Meal in addition to the listed Ingredients. `can_attack_from_prep` permits the unit to attack from Prep.
 
 Optional responses use `hand_trap` with an opposing-action trigger or `hand_trigger` with a friendly-event trigger. The combat service opens a response window and enforces the once-per-turn Hand Trap limit.
 

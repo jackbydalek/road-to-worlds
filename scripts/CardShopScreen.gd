@@ -1,12 +1,17 @@
 extends RefCounted
 class_name CardShopScreen
 
+const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
+
 const CARD_SHOP_SCENE := preload("res://scenes/CardShopScene.tscn")
 const BOOSTER_ID := "base_standard_pack"
 const DEFAULT_HOVER_TEXT := ""
 const SCENE_SIZE := Vector2(1440, 900)
 const HOVER_TEXT_SIZE := Vector2(360, 58)
 const HOVER_TEXT_OFFSET := Vector2(18, 18)
+
+var selected_single_id := ""
 
 
 func show(host, debug_scene_test: bool = false) -> void:
@@ -35,7 +40,7 @@ func show(host, debug_scene_test: bool = false) -> void:
 		hover_label.custom_minimum_size = HOVER_TEXT_SIZE
 		hover_label.size = HOVER_TEXT_SIZE
 		hover_label.add_theme_font_size_override("font_size", 15)
-		hover_label.add_theme_color_override("font_color", Color("#eef3ff"))
+		hover_label.add_theme_color_override("font_color", SKETCH_UI.INK)
 	_connect_scene_hotspots(host, scene_root, hover_label, event, legal)
 	_add_singles_counter(host, hover_label)
 
@@ -52,30 +57,37 @@ func show_singles(host) -> void:
 	host._render_nav()
 	host._clear(host.content)
 	host._update_status()
+	selected_single_id = ""
 	if not host.run.has("shop") or not (host.run.shop is Array):
 		host._generate_shop_inventory()
 
-	var intro: VBoxContainer = host._add_panel(host.content, "Shopkeeper — Singles Case", "#1d2933")
+	var intro_section: Dictionary = WORKSPACE_UI.make_section(
+		"SINGLES CASE",
+		SKETCH_UI.TEAL,
+		Vector2(0, 86)
+	)
+	host.content.add_child(intro_section.panel)
+	var intro: VBoxContainer = intro_section.body
 	host._add_body_text(intro, "Buy exact cards from the current case. Sold cards stay gone until the case restocks after a tournament round.")
 	var hover_label := Label.new()
 	hover_label.name = "SinglesHoverText"
 	hover_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hover_label.add_theme_color_override("font_color", Color("#eef3ff"))
+	hover_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 	intro.add_child(hover_label)
 	_add_singles_counter(host, hover_label)
-	host._add_exit_to_store_button(host.content)
+	var exit_button: Button = host._add_exit_to_store_button(host.content)
+	WORKSPACE_UI.style_button(exit_button)
 
 
 func _add_status_strip(host, event: Dictionary, metrics: Dictionary, legal: Dictionary, debug_scene_test: bool) -> void:
 	var title := "Card Shop Scene Test" if debug_scene_test else "Card Shop"
-	var panel: VBoxContainer = host._add_bordered_panel(host.content, title, "#1b222d", "#7da7ff", 1)
+	var panel: VBoxContainer = host._add_bordered_panel(host.content, title, "#173B39", "#78AAA3", 2)
 	panel.name = "CardShopStatusStrip"
 	panel.custom_minimum_size = Vector2(0, 86)
-	host._add_body_text(panel, "$%d | Prize packs %d | Next event: %s | Entry $%d | Deck %s" % [
+	host._add_body_text(panel, "$%d | Prize packs %d | Next event: %s | Free entry | Deck %s" % [
 		int(host.run.get("money", 0)),
 		int(host.run.get("prize_packs", 0)),
 		String(event.get("name", "Weekly Locals")),
-		int(event.get("entryFee", 0)),
 		"ready" if bool(legal.get("ok", false)) else String(legal.get("reason", "needs work"))
 	])
 	host._add_body_text(panel, host._format_metrics_short(metrics))
@@ -86,7 +98,15 @@ func _add_authored_scene(host, event: Dictionary, legal: Dictionary) -> Node:
 	frame.name = "CardShopSceneFrame"
 	frame.custom_minimum_size = SCENE_SIZE
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	frame.add_theme_stylebox_override("panel", _style("#11141a", "#3a4352", 1, 6))
+	frame.add_theme_stylebox_override(
+		"panel",
+		SKETCH_UI.texture_style(
+			SKETCH_UI.PANEL_PAPER,
+			Color("#FFF8E9"),
+			Vector4(24, 24, 24, 24),
+			Vector4(8, 8, 8, 8)
+		)
+	)
 	host.content.add_child(frame)
 
 	var margin := MarginContainer.new()
@@ -126,7 +146,7 @@ func _update_authored_button_labels(host, scene_root: Node, event: Dictionary, l
 
 	var menu := _find_node_by_name(scene_root, "MenuButton") as Button
 	if menu != null:
-		menu.text = "Save"
+		menu.text = "Settings"
 
 	var singles := _find_node_by_name(scene_root, "BoosterDisplayButton") as Button
 	if singles != null:
@@ -187,9 +207,9 @@ func _connect_scene_hotspots(host, scene_root: Node, hover_label: Label, event: 
 		host,
 		scene_root,
 		"MenuButton",
-		host._save_run,
+		host._show_settings,
 		hover_label,
-		"Menu: save the current run for now."
+		"Settings: adjust display, audio, and accessibility."
 	)
 	_connect_button(
 		host,
@@ -222,6 +242,8 @@ func _connect_button(host, scene_root: Node, node_name: String, callback: Callab
 	var button := _find_node_by_name(scene_root, node_name) as Button
 	if button == null:
 		return
+	button.theme = host.theme
+	host._style_button(button, "action" if node_name in ["BoosterDisplayButton2", "TournamentPersonButton"] else "default")
 	_wire_hover(button, hover_label, hover_text)
 	host._connect_pressed(button, callback)
 
@@ -263,7 +285,14 @@ func _add_tournament_person_hotspot(host, scene_root: Node, hover_label: Label, 
 
 
 func _add_singles_counter(host, hover_label: Label) -> void:
-	var counter: VBoxContainer = host._add_bordered_panel(host.content, "Live Singles Case", "#171b22", "#cfd6df", 1)
+	var counter_section: Dictionary = WORKSPACE_UI.make_section(
+		"LIVE SINGLES CASE",
+		SKETCH_UI.ORANGE,
+		Vector2.ZERO,
+		true
+	)
+	host.content.add_child(counter_section.panel)
+	var counter: VBoxContainer = counter_section.body
 	counter.name = "CardShopSinglesCounter"
 	_wire_hover(counter, hover_label, "Singles case: buy exact cards instead of gambling on boosters.")
 	host._add_body_text(counter, "Click the singles area in the shop art, then buy exact cards here.")
@@ -283,6 +312,7 @@ func _add_singles_counter(host, hover_label: Label) -> void:
 
 	for card_id_value in inventory:
 		_add_single_tile(host, grid, String(card_id_value), hover_label)
+	_update_single_selection(host)
 
 
 func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -> void:
@@ -296,9 +326,12 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 	var tile := PanelContainer.new()
 	tile.name = "CardShopSingleTile_%s" % card_id
 	tile.set_meta("card_id", card_id)
-	tile.custom_minimum_size = Vector2(220, 344 if authored_face else 126)
+	tile.custom_minimum_size = Vector2(210, 276 if authored_face else 156)
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tile.add_theme_stylebox_override("panel", _style("#" + host._rarity_line_color(rarity).to_html(false), "#" + host._rarity_text_color(rarity).to_html(false), 1, 6))
+	var tile_fill: Color = WORKSPACE_UI.SURFACE.lerp(host._rarity_line_color(rarity), 0.07)
+	var tile_accent: Color = host._rarity_text_color(rarity).darkened(0.28)
+	tile.set_meta("tile_fill", tile_fill)
+	tile.set_meta("tile_accent", tile_accent)
 	_wire_hover(tile, hover_label, "%s: buy this single for $%d." % [String(card.get("name", card_id)), price])
 	parent.add_child(tile)
 
@@ -310,13 +343,44 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 		var face_center := CenterContainer.new()
 		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.add_child(face_center)
-		face_center.add_child(host._make_card_face(card, Vector2(190, 270), true))
+		var card_stack := Control.new()
+		card_stack.custom_minimum_size = Vector2(150, 213)
+		face_center.add_child(card_stack)
+
+		var face: Control = host._make_card_face(card, Vector2(150, 213), false)
+		face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_stack.add_child(face)
+
+		var sticker: PanelContainer = WORKSPACE_UI.make_price_sticker(price)
+		sticker.position = Vector2(77, 48)
+		card_stack.add_child(sticker)
+
+		var select_button := Button.new()
+		select_button.name = "CardShopSingleSelectButton_%s" % card_id
+		select_button.text = ""
+		select_button.tooltip_text = "Select %s to reveal its Buy button." % String(card.get("name", card_id))
+		select_button.focus_mode = Control.FOCUS_ALL
+		select_button.set_anchors_preset(Control.PRESET_FULL_RECT)
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			select_button.add_theme_stylebox_override(
+				state,
+				WORKSPACE_UI.clean_style(
+					Color("#FFFFFF08") if state == "hover" else Color.TRANSPARENT,
+					Color("#FFFFFF00"),
+					0,
+					5
+				)
+			)
+		var selected_id := card_id
+		host._connect_pressed(select_button, func() -> void: _select_single(host, selected_id))
+		card_stack.add_child(select_button)
 	else:
 		var name_label := Label.new()
 		name_label.text = host._card_display_name(card)
 		name_label.clip_text = true
 		name_label.add_theme_font_size_override("font_size", 13)
-		name_label.add_theme_color_override("font_color", host._rarity_text_color(rarity))
+		name_label.add_theme_color_override("font_color", SKETCH_UI.INK)
 		box.add_child(name_label)
 		host._add_body_text(box, "%s | %s | cost %d" % [
 			rarity.capitalize(),
@@ -329,18 +393,62 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 		host._deck_limit(card_id)
 	])
 
-	var buy_button: Button = host._make_button("Buy $%d" % price)
+	var buy_button: Button = host._make_button("Buy")
 	buy_button.name = "CardShopSingleBuyButton_%s" % card_id
 	buy_button.set_meta("card_id", card_id)
 	buy_button.disabled = int(host.run.get("money", 0)) < price
+	buy_button.visible = false
+	buy_button.tooltip_text = "Buy %s for $%d." % [String(card.get("name", card_id)), price]
+	WORKSPACE_UI.style_button(buy_button, "primary")
 	_wire_hover(buy_button, hover_label, "Buy %s for $%d and add it to your collection." % [String(card.get("name", card_id)), price])
 	var selected_id := card_id
 	host._connect_pressed(buy_button, func() -> void: host._buy_single(selected_id))
 	box.add_child(buy_button)
 
 
+func _select_single(host, card_id: String) -> void:
+	selected_single_id = card_id
+	_update_single_selection(host)
+	var card: Dictionary = host.cards_by_id.get(card_id, {})
+	var price: int = host._card_price(card_id)
+	var message := "%s selected — $%d. Click Buy to add it to your collection." % [
+		String(card.get("name", card_id)),
+		price,
+	]
+	var hover_label := host.find_child("SinglesHoverText", true, false) as Label
+	if hover_label != null:
+		hover_label.text = message
+	host._set_footer(message)
+
+
+func _update_single_selection(host) -> void:
+	for candidate in host.find_children("CardShopSingleTile_*", "PanelContainer", true, false):
+		var tile := candidate as PanelContainer
+		if tile == null:
+			continue
+		var card_id := String(tile.get_meta("card_id", ""))
+		var selected := card_id == selected_single_id
+		var fill: Color = tile.get_meta("tile_fill", WORKSPACE_UI.SURFACE)
+		var accent: Color = tile.get_meta("tile_accent", WORKSPACE_UI.BORDER_SOFT)
+		tile.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI.clean_style(
+				fill,
+				WORKSPACE_UI.MUSTARD if selected else accent,
+				3 if selected else 1,
+				8 if selected else 7,
+				Vector4(9, 8, 9, 9),
+				4 if selected else 3,
+				selected
+			)
+		)
+		var buy_button := tile.find_child("CardShopSingleBuyButton_*", true, false) as Button
+		if buy_button != null:
+			buy_button.visible = selected
+
+
 func _can_register(host, event: Dictionary, legal: Dictionary) -> bool:
-	var can_register := bool(legal.get("ok", false)) and int(host.run.get("money", 0)) >= int(event.get("entryFee", 0))
+	var can_register := bool(legal.get("ok", false))
 	if host._run_mode() == "season":
 		can_register = can_register and host._season_event_selectable(String(event.get("id", "")))
 	return can_register

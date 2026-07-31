@@ -11,22 +11,30 @@ GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
 "$GODOT_BIN" --editor --path .
 ```
 
-The opening screen has three options:
+Development-only menus are hidden during normal play. Launch with `--dev` (after
+Godot's `--` separator) when you need the Debug Sandbox:
+
+```sh
+"$GODOT_BIN" --path . -- --dev
+```
+
+The opening screen separates the two run starts into tabs:
 
 - **Continue** — resume the latest autosave on its saved campaign screen. An interrupted Kitchen Match restarts the same round and opponent.
 - **New Run** — choose a difficulty card frame and the Spicy, Hearty, or Sweet starter deck.
 - **How to Play** — follow a seven-step visual walkthrough of recipes, zones, combat, and the turn sequence.
+- **Draft Mode** — choose one of three dual-type signpost Meals, then draft one card from each random three-card offer until you have a 20-card starting deck. The drafted-deck menu can be sorted by name, card type, or affinity.
 
-The title screen also keeps a direct **Debug Menu** entry for development access to all five starters and isolated test surfaces.
+The title screen also keeps a direct **Debug Menu** entry for development access to the three starters and isolated test surfaces.
 
 Runs autosave after progression changes and navigation, as well as before returning to the title or closing the game. Saves are versioned and retain a known-good backup for recovery.
 
 ## Season Loop
 
-1. Choose the Spicy, Hearty, or Sweet 30-card starter and a difficulty-linked card frame.
+1. Choose the Spicy, Hearty, or Sweet 20-card starter and a difficulty-linked card frame, or draft a custom 20-card deck.
 2. Select a difficulty border that changes money, opponent strength, or opening-player rules.
 3. Explore the mouse-driven 3D card store and click the shopkeeper, trading table, metagame board, or deck box.
-4. Browse and buy exact singles inside the 3D shop scene, or open six-card boosters.
+4. Browse and buy exact singles inside the 3D shop scene, or open five-card boosters.
 5. Register through the shopkeeper and play three rounds on the angled 3D Living Table.
 6. Win all three rounds to earn money and prize packs. One round loss ends the run.
 7. Clear Weekly Locals and the League Cup, open the final prizes, and reach Thanks for Playing.
@@ -43,7 +51,7 @@ See [Season Loop](docs/season-loop.md) and [Kitchen Match Rules](docs/game-rules
 - `scripts/RunStateService.gd`, `SeasonFlowService.gd`, and `TournamentService.gd` — campaign progression
 - `scripts/ShopEconomyService.gd` — packs, singles, prices, and collection rewards
 - `scripts/CardShopScreen.gd`, `PackOpeningScreen.gd`, `DeckbuilderScreen.gd`, and `SeasonHubScreen.gd` — campaign screens
-- `data/cards.json` — 89 Kitchen Table cards and five 30-card starter decks
+- `data/cards.json` — 58 Kitchen Table cards and three 20-card starter decks
 - `data/content/boosters.json` and `tournaments.json` — campaign content
 
 The old fish combat, fish card catalog, mana/threat renderer, and animal artwork are not part of the runtime.
@@ -55,6 +63,14 @@ GODOT_BIN="${GODOT_BIN:-/Applications/Godot.app/Contents/MacOS/Godot}"
 "$GODOT_BIN" --headless --path . --import
 "$GODOT_BIN" --headless --path . \
   --script res://scripts/cooking/KitchenGameSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/cooking/RebalancedCardPoolSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/DraftModeSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/DualCardFrameSmokeTest.gd
+"$GODOT_BIN" --headless --path . \
+  --script res://scripts/PackRewardSmokeTest.gd
 "$GODOT_BIN" --headless --path . \
   --script res://scripts/SeasonShellSmokeTest.gd
 "$GODOT_BIN" --headless --path . \

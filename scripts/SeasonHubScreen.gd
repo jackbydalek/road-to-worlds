@@ -1,6 +1,8 @@
 extends RefCounted
 class_name SeasonHubScreen
 
+const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+
 
 func show(host) -> void:
 	if host._guard_run_over():
@@ -54,13 +56,12 @@ func _add_header(host, parent: Node, event: Dictionary, event_id: String, metric
 		String(difficulty.get("name", "Black")),
 		String(difficulty.get("summary", "Base season rules."))
 	])
-	host._add_body_text(season_summary, "Next event: %s | %d rounds | Need %d wins | Entry $%d" % [
+	host._add_body_text(season_summary, "Next event: %s | %d rounds | Need %d wins | Free entry" % [
 		String(event.get("name", event_id)),
 		int(event.get("rounds", 0)),
-		int(event.get("requiredWins", 0)),
-		int(event.get("entryFee", 0))
+		int(event.get("requiredWins", 0))
 	])
-	host._add_body_text(season_summary, "Click the next available event to head into shop prep for that tournament.")
+	host._add_body_text(season_summary, "Choose your next event when your deck is ready.")
 
 	var deck_summary := VBoxContainer.new()
 	deck_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -85,11 +86,11 @@ func _add_next_step(host, parent: Node, event: Dictionary, event_id: String, leg
 		button_text = "Start New Run"
 		callback = host._show_start
 	elif host._current_pack_needs_attention():
-		message = "Finish opening the pack already on the table before making the next season decision."
+		message = "Finish the pack on the table before moving on."
 		button_text = "Continue Pack"
 		callback = host._show_packs
 	elif int(host.run.get("prize_packs", 0)) > 0:
-		message = "Open your prize pack rewards, then use the new cards before registering again."
+		message = "Your prize packs are ready."
 		button_text = "Open Prize Packs"
 		callback = host._open_reward_pack_flow
 	elif not active.is_empty():
@@ -105,22 +106,15 @@ func _add_next_step(host, parent: Node, event: Dictionary, event_id: String, leg
 			button_text = "Start Round %d" % int(active.get("round", 1))
 			callback = host._start_season_tournament_round
 	elif not bool(legal.get("ok", false)):
-		message = "Your deck needs work before registration: %s" % String(legal.get("reason", "deck is not legal"))
+		message = "Tune your deck before registration: %s" % String(legal.get("reason", "deck is not legal"))
 		button_text = "Tune Deck"
 		callback = host._show_deckbuilder
-	elif int(host.run.get("money", 0)) < int(event.get("entryFee", 0)):
-		message = "You need $%d more for %s entry. Work a shop shift to cover exactly the missing fee." % [
-			host._season_entry_fee_missing(event),
-			String(event.get("name", event_id))
-		]
-		button_text = "Work Shop Shift"
-		callback = host._season_work_shop_shift
 	elif not host._season_event_selectable(event_id):
 		message = "Choose an available calendar event before registering."
 		button_text = "View Calendar"
 		callback = host._show_season_run
 	else:
-		message = "Your deck is registered-ready for %s." % String(event.get("name", event_id))
+		message = "Your deck is ready for %s." % String(event.get("name", event_id))
 		button_text = "Register"
 		callback = host._show_tournament
 
@@ -159,10 +153,15 @@ func _add_pack_wall(host, parent: Node) -> void:
 	pack_row.add_theme_constant_override("separation", 6)
 	panel.add_child(pack_row)
 	for index in range(5):
-		var pack := ColorRect.new()
+		var pack := SKETCH_UI.make_rough_panel(
+			Vector2(34, 72),
+			Color("#FFF4D6").lerp(SKETCH_UI.MUSTARD, float(index) * 0.08),
+			SKETCH_UI.INK,
+			SKETCH_UI.TEAL if index % 2 == 0 else SKETCH_UI.ORANGE,
+			Vector4(3, 3, 3, 3),
+			index % 2
+		)
 		pack.name = "SeasonHubBoosterPack_%d" % index
-		pack.color = Color("#25384a").lerp(Color("#6ec6d9"), float(index) * 0.08)
-		pack.custom_minimum_size = Vector2(34, 72)
 		pack_row.add_child(pack)
 
 	host._add_body_text(panel, "Prize packs waiting: %d" % int(host.run.get("prize_packs", 0)))
@@ -196,25 +195,27 @@ func _add_singles_case(host, parent: Node) -> void:
 		var tile := PanelContainer.new()
 		tile.name = "SeasonHubSingleTile"
 		tile.custom_minimum_size = Vector2(78, 54)
-		var style := StyleBoxFlat.new()
-		style.bg_color = host._rarity_line_color(String(card.get("rarity", "common")))
-		style.border_color = host._rarity_text_color(String(card.get("rarity", "common"))).darkened(0.18)
-		style.border_width_left = 1
-		style.border_width_right = 1
-		style.border_width_top = 1
-		style.border_width_bottom = 1
-		style.corner_radius_top_left = 4
-		style.corner_radius_top_right = 4
-		style.corner_radius_bottom_left = 4
-		style.corner_radius_bottom_right = 4
-		tile.add_theme_stylebox_override("panel", style)
+		var rarity_fill := SKETCH_UI.PAPER.lerp(
+			host._rarity_line_color(String(card.get("rarity", "common"))),
+			0.16
+		)
+		tile.add_theme_stylebox_override(
+			"panel",
+			SKETCH_UI.texture_style(
+				SKETCH_UI.BUTTON_PAPER_B if index % 2 else SKETCH_UI.BUTTON_PAPER_A,
+				rarity_fill,
+				Vector4(24, 22, 24, 22),
+				Vector4(7, 6, 7, 7)
+			)
+		)
 		case_grid.add_child(tile)
 
 		var label := Label.new()
 		label.text = String(card.get("name", card_id))
 		label.clip_text = true
+		label.add_theme_font_override("font", SKETCH_UI.body_font(0.22))
 		label.add_theme_font_size_override("font_size", 10)
-		label.add_theme_color_override("font_color", Color("#eef3ff"))
+		label.add_theme_color_override("font_color", SKETCH_UI.INK)
 		tile.add_child(label)
 
 	if preview_count == 0:
@@ -233,25 +234,17 @@ func _add_register_desk(host, parent: Node, event: Dictionary, event_id: String,
 		String(event.get("name", event_id)),
 		String(event.get("stage", "Tournament"))
 	])
-	host._add_body_text(panel, "%d rounds | Need %d wins | Entry $%d" % [
+	host._add_body_text(panel, "%d rounds | Need %d wins | Free entry" % [
 		int(event.get("rounds", 0)),
-		int(event.get("requiredWins", 0)),
-		int(event.get("entryFee", 0))
+		int(event.get("requiredWins", 0))
 	])
 	host._add_body_text(panel, String(event.get("summary", "")))
 	var button: Button = host._make_button("Register")
 	button.name = "SeasonHubRegisterButton"
-	button.disabled = not bool(legal.get("ok", false)) or int(host.run.get("money", 0)) < int(event.get("entryFee", 0)) or not host._season_event_selectable(event_id)
+	button.disabled = not bool(legal.get("ok", false)) or not host._season_event_selectable(event_id)
 	host._style_button(button, "action")
 	host._connect_pressed(button, host._show_tournament)
 	panel.add_child(button)
-
-	if bool(legal.get("ok", false)) and host._season_event_selectable(event_id) and host._season_entry_fee_missing(event) > 0:
-		var work_button: Button = host._make_button("Work Shop Shift")
-		work_button.name = "SeasonHubWorkShiftButton"
-		host._connect_pressed(work_button, host._season_work_shop_shift)
-		panel.add_child(work_button)
-
 
 func _add_deckbuilder_table(host, parent: Node, metrics: Dictionary, legal: Dictionary) -> void:
 	var panel: VBoxContainer = host._add_bordered_panel(parent, "Deckbuilder Table", "#1f2b24", "#9ee66e", 2)
@@ -345,10 +338,9 @@ func _add_event_calendar(host, parent: Node, selected_event_id: String) -> void:
 		var event_box: VBoxContainer = host._add_bordered_panel(row, "%s" % status, accent, border, 2)
 		event_box.name = "SeasonHubCalendarEvent_%s" % event_id
 		event_box.custom_minimum_size = Vector2(176, 136)
-		host._add_body_text(event_box, "%s\nWeek %d | $%d" % [
+		host._add_body_text(event_box, "%s\nWeek %d | Free entry" % [
 			String(event.get("name", event_id)),
-			int(event.get("calendarWeek", index + 1)),
-			int(event.get("entryFee", 0))
+			int(event.get("calendarWeek", index + 1))
 		])
 		host._add_body_text(event_box, "Need %d/%d" % [
 			int(event.get("requiredWins", 0)),

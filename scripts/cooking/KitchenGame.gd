@@ -11,6 +11,7 @@ const COMBAT_ARENA_SCENE := preload("res://scenes/CombatArena.tscn")
 const CHEF_LIFE_HEART := preload("res://assets/ui/chef_life_heart.svg")
 const FONT_PATH := "res://assets/fonts/ArchivoNarrow-Regular.ttf"
 const OPPONENT_ACTION_DELAY := 1.05
+const DEFENSE_POSITION_ANIMATION_SECONDS := 0.52
 
 @export var use_authored_arena := false
 
@@ -165,8 +166,15 @@ func _run_opponent_turn_sequence(generation: int) -> void:
 
 
 func _end_player_turn_with_sequence() -> void:
+	var has_defense_animation := false
+	for unit in state.player.plated:
+		if bool(unit.get("ready", false)) and not bool(unit.get("defending", false)):
+			has_defense_animation = true
+			break
 	service.end_player_turn(state, true)
 	_refresh()
+	if has_defense_animation:
+		await get_tree().create_timer(DEFENSE_POSITION_ANIMATION_SECONDS).timeout
 	_start_opponent_turn_sequence()
 
 
@@ -515,6 +523,9 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 	var authored_face: bool = not data.is_empty() and CARD_FACE_SCRIPT.supports_card(data)
 	panel.name = "Cooking%s%sSlot_%d" % [side_label, zone_label, slot_index]
 	panel.custom_minimum_size = Vector2(180 if zone_name == "plated" else 176, 86) if authored_face else Vector2(154 if zone_name == "plated" else 142, 72)
+	panel.pivot_offset = panel.custom_minimum_size * 0.5
+	if zone_name == "plated" and bool(unit.get("defending", false)):
+		panel.rotation = -PI * 0.5
 	var zone_color := Color("#ec7130")
 	var choice_targets: Array[int] = service.choice_target_ids(state)
 	var selected: bool = not unit.is_empty() and (
@@ -565,6 +576,8 @@ func _add_unit_slot(parent: Node, unit: Dictionary, zone_name: String, is_player
 	box.add_child(_label(meta, 10, Color("#fff2cf")))
 	if not unit.get("spices", []).is_empty():
 		box.add_child(_label("Spice: " + String(service.card(String(unit.spices[0])).get("name", unit.spices[0])), 10, Color("#ffe58a")))
+	if zone_name == "plated" and bool(unit.get("defending", false)):
+		box.add_child(_label("◆ DEFENDING", 11, Color("#9edcff")))
 	if legal_target:
 		var target_badge := _label("◆ LEGAL TARGET", 11, Color("#fff3a3"))
 		target_badge.name = "CookingLegalTarget_%d" % int(unit.instance_id)
@@ -715,6 +728,14 @@ func _build_piles(parent: Node, combatant: Dictionary, is_player: bool) -> void:
 		var pile := _zone_container(column, String(pile_name).to_upper(), Vector2(132, 68), Color("#ec7130"))
 		pile.name = "Cooking%s%sPile" % [("Player" if is_player else "Opponent"), String(pile_name).capitalize()]
 		pile.add_child(_center_label(str(combatant[pile_name].size()), 22, Color.WHITE))
+		if is_player and pile_name == "discard" and service.can_play_discard_ingredient(state):
+			var play_discard := _button("Play Eggplant", true)
+			play_discard.name = "CookingPlayDiscardIngredient"
+			play_discard.pressed.connect(func() -> void:
+				service.play_discard_ingredient(state)
+				call_deferred("_refresh")
+			, CONNECT_DEFERRED)
+			pile.add_child(play_discard)
 
 
 func _build_message_strip(parent: Control) -> void:
@@ -1274,7 +1295,7 @@ func _build_action_bar(parent: Control) -> void:
 	row.add_child(status)
 	if int(state.get("selected_attacker", -1)) >= 0:
 		var attacker: Dictionary = service._find_unit(state.player, int(state.selected_attacker))
-		var has_stalwart: bool = not attacker.is_empty() and service.card(String(attacker.card_id)).get("keywords", []).has("stalwart")
+		var has_stalwart: bool = not attacker.is_empty() and service._unit_has_keyword(attacker, "stalwart")
 		var blocked: bool = not service.can_attack_opposing_chef(state)
 		var face_label := "Clear Plated Cards First" if blocked else ("Attack Opposing Chef — Stalwart" if has_stalwart and not state.opponent.plated.is_empty() else "Attack Opposing Chef")
 		var face := _button(face_label)
@@ -1421,7 +1442,7 @@ func _can_drop_on_unit_slot(data: Variant, target_unit: Dictionary, zone_name: S
 			if zone_name != "plated" or target_unit.is_empty() or from_zone != "plated" or not bool(source.get("ready", false)) or service._opening_attack_lock(state, "player"):
 				return false
 			var taunt_unit: Dictionary = service._first_plated_with_keyword(state.opponent, "taunt")
-			return taunt_unit.is_empty() or int(taunt_unit.instance_id) == int(target_unit.instance_id)
+			return taunt_unit.is_empty() or service._unit_has_keyword(target_unit, "taunt")
 	return false
 
 
@@ -1519,7 +1540,7 @@ func _is_obvious_legal_target(unit: Dictionary, zone_name: String, is_player: bo
 	if attacker.is_empty() or not bool(attacker.get("ready", false)):
 		return false
 	var taunt_unit: Dictionary = service._first_plated_with_keyword(state.opponent, "taunt")
-	return taunt_unit.is_empty() or int(taunt_unit.instance_id) == instance_id
+	return taunt_unit.is_empty() or service._unit_has_keyword(service._find_unit_in_zone(state.opponent, "plated", instance_id), "taunt")
 
 
 func _capture_visual_snapshot() -> Dictionary:
@@ -1550,7 +1571,8 @@ func _capture_side_visual_snapshot(side: String) -> Dictionary:
 				"card_type": String(unit.get("card_type", "")),
 				"zone": zone_name,
 				"health": int(unit.get("health", 0)),
-				"attack": int(unit.get("attack", 0))
+				"attack": int(unit.get("attack", 0)),
+				"defending": bool(unit.get("defending", false))
 			}
 	return {
 		"life": int(combatant.get("life", 0)),
@@ -1586,6 +1608,13 @@ func _collect_visual_events(previous: Dictionary, current: Dictionary) -> Array[
 				events.append({"type": "enter", "side": side, "instance_id": instance_id, "unit": entered, "opponent_hand_play": is_opponent_hand_play})
 				meal_entered = meal_entered or String(entered.get("card_type", "")) == "meal"
 			else:
+				if bool(new_units[instance_id].get("defending", false)) != bool(old_units[instance_id].get("defending", false)):
+					events.append({
+						"type": "defense_position",
+						"side": side,
+						"instance_id": instance_id,
+						"defending": bool(new_units[instance_id].get("defending", false))
+					})
 				if String(new_units[instance_id].get("zone", "")) != String(old_units[instance_id].get("zone", "")):
 					events.append({
 						"type": "move",
@@ -1698,6 +1727,8 @@ func _play_visual_events(events: Array[Dictionary]) -> void:
 				_animate_card_draw(hand_visual_nodes.get(int(event.get("hand_index", -1))))
 			"move":
 				_animate_card_zone_move(event)
+			"defense_position":
+				_animate_defense_position(event)
 			"damage":
 				_animate_damage(unit_visual_nodes.get(int(event.get("instance_id", -1))), int(event.get("amount", 0)))
 			"life_damage":
@@ -1710,6 +1741,31 @@ func _play_visual_events(events: Array[Dictionary]) -> void:
 			"turn":
 				var player_turn := String(event.get("phase", "")) == "player_main"
 				_show_floating_feedback("YOUR TURN • TURN %d" % int(event.get("turn", 0)) if player_turn else "OPPONENT'S TURN", Color("#238052") if player_turn else Color("#8c4338"), 1.2)
+
+
+func _animate_defense_position(event: Dictionary) -> void:
+	var target: Control = unit_visual_nodes.get(int(event.get("instance_id", -1)))
+	if not is_instance_valid(target):
+		return
+	target.pivot_offset = target.size * 0.5
+	var landing_position := target.position
+	var landing_scale := target.scale
+	var target_rotation := -PI * 0.5 if bool(event.get("defending", false)) else 0.0
+	target.rotation = 0.0 if bool(event.get("defending", false)) else -PI * 0.5
+	var lift_tween := create_tween()
+	lift_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	lift_tween.tween_property(target, "position", landing_position + Vector2(0.0, -22.0), 0.18)
+	lift_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	lift_tween.tween_property(target, "position", landing_position, 0.32)
+	var turn_tween := create_tween()
+	turn_tween.tween_interval(0.08)
+	turn_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
+	turn_tween.tween_property(target, "rotation", target_rotation, 0.30)
+	var scale_tween := create_tween()
+	scale_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	scale_tween.tween_property(target, "scale", landing_scale * 1.06, 0.18)
+	scale_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	scale_tween.tween_property(target, "scale", landing_scale, 0.32)
 
 
 func _animate_card_zone_move(event: Dictionary) -> void:
@@ -2297,8 +2353,6 @@ func _build_inspect_overlay(parent: Control, authored_layout: bool) -> void:
 		_add_inspect_section(details, "INGREDIENT", ingredient_text, "CookingInspectRecipe")
 
 	var rules_text := String(data.get("text", "")).strip_edges()
-	if rules_text == "":
-		rules_text = "No printed ability."
 	_add_inspect_section(details, "CARD TEXT", rules_text, "CookingInspectRules")
 	_add_inspect_section(details, "ZONE EFFECTS", "\n".join(_inspect_zone_effects(data, zone_name, unit, side)), "CookingInspectZoneEffects")
 
@@ -2384,10 +2438,13 @@ func _inspect_zone_effects(data: Dictionary, zone_name: String, unit: Dictionary
 		lines.append("%s — Activated ability" % status)
 	if not data.get("on_move_to_plated", []).is_empty():
 		var already_triggered := false
+		var used_this_turn := false
 		for effect in data.get("on_move_to_plated", []):
 			if bool(effect.get("first_time_only", false)) and unit.get("triggered_effects", []).has(String(effect.get("type", ""))):
 				already_triggered = true
-		var movement_status := "ALREADY TRIGGERED" if already_triggered else ("READY — MOVE TO PLATED" if zone_name == "prep" else "TRIGGERS ON PREP → PLATED")
+			if bool(effect.get("once_per_turn", false)) and unit.get("used_abilities", []).has("trigger_%s" % String(effect.get("type", "effect"))):
+				used_this_turn = true
+		var movement_status := "ALREADY TRIGGERED" if already_triggered else ("USED THIS TURN" if used_this_turn else ("READY — MOVE TO PLATED" if zone_name == "prep" else "TRIGGERS ON PREP → PLATED"))
 		lines.append("%s — Movement effect" % movement_status)
 	if not data.get("on_attack", []).is_empty():
 		lines.append("%s — Triggers when this card attacks" % ("ACTIVE IN PLATED" if zone_name == "plated" else "INACTIVE — REQUIRES PLATED"))
@@ -2405,6 +2462,12 @@ func _inspect_zone_effects(data: Dictionary, zone_name: String, unit: Dictionary
 		if String(keyword) == "stalwart":
 			keyword_description += ": can attack the opposing chef even while they control Plated cards"
 		lines.append("%s — %s" % ["ACTIVE IN PLATED" if zone_name == "plated" else "INACTIVE — REQUIRES PLATED", keyword_description])
+	if not unit.is_empty() and service._unit_has_keyword(unit, "piercing"):
+		lines.append("ACTIVE IN PLATED — Piercing: excess combat damage reaches the opposing Chef through a Defending unit")
+	if not unit.is_empty() and service._unit_has_keyword(unit, "stalwart"):
+		lines.append("ACTIVE IN PLATED — Stalwart: can attack the opposing Chef through Plated cards")
+	if zone_name == "plated" and bool(unit.get("defending", false)):
+		lines.append("ACTIVE — Defending: stops excess combat damage unless struck by Piercing")
 	if String(data.get("card_type", "")) == "environment":
 		lines.append("%s — %s" % ["ACTIVE" if zone_name == "environment" else "INACTIVE — PLAY TO ENVIRONMENT", String(data.get("text", "Environment effect."))])
 	if String(data.get("card_type", "")) == "ingredient" and not unit.is_empty():

@@ -6,7 +6,8 @@ const SAVE_VERSION := 1
 var cards_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var archetype_order: Array = []
-var main_deck_size := 30
+var main_deck_size := 20
+var max_main_deck_size := 20
 var sideboard_size := 6
 var starting_money := 20
 var save_path := ""
@@ -22,12 +23,14 @@ func setup(
 	main_size: int,
 	side_size: int,
 	initial_money: int,
-	run_save_path: String
+	run_save_path: String,
+	maximum_main_size: int = -1
 ) -> void:
 	cards_by_id = card_database
 	archetypes_by_id = archetype_database
 	archetype_order = ordered_archetypes
 	main_deck_size = main_size
+	max_main_deck_size = maxi(main_size, maximum_main_size)
 	sideboard_size = side_size
 	starting_money = initial_money
 	save_path = run_save_path
@@ -106,8 +109,11 @@ func starting_lives_for_difficulty(difficulty_id: String) -> int:
 
 
 func deck_is_legal(target_run: Dictionary) -> Dictionary:
-	if deck_total(target_run.get("deck", {})) != main_deck_size:
-		return { "ok": false, "reason": "Main deck must contain exactly %d cards." % main_deck_size }
+	var main_total := deck_total(target_run.get("deck", {}))
+	if main_total < main_deck_size:
+		return { "ok": false, "reason": "Main deck must contain at least %d cards." % main_deck_size }
+	if main_total > max_main_deck_size:
+		return { "ok": false, "reason": "Main deck cannot contain more than %d cards." % max_main_deck_size }
 	if deck_total(target_run.get("sideboard", {})) > sideboard_size:
 		return { "ok": false, "reason": "Sideboard cannot exceed %d cards." % sideboard_size }
 	for card_id in target_run.get("deck", {}).keys():
@@ -157,8 +163,8 @@ func add_to_collection(target_run: Dictionary, card_id: String, count: int) -> v
 func add_to_deck(target_run: Dictionary, card_id: String) -> Dictionary:
 	if available_count(target_run, card_id) <= 0:
 		return { "ok": false, "message": "No available copies of " + _card_name(card_id) + "." }
-	if deck_total(target_run.deck) >= main_deck_size:
-		return { "ok": false, "message": "Main deck is already full." }
+	if deck_total(target_run.deck) >= max_main_deck_size:
+		return { "ok": false, "message": "Main deck is full at %d cards." % max_main_deck_size }
 	if deck_count(target_run, card_id) >= deck_limit(card_id):
 		return { "ok": false, "message": "Deck copy limit reached for " + _card_name(card_id) + "." }
 	target_run.deck[card_id] = deck_count(target_run, card_id) + 1

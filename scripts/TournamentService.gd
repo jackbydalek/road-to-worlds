@@ -11,21 +11,29 @@ func create_active_tournament(host, event: Dictionary, deck_metrics: Dictionary)
 		"round": 1,
 		"rounds": int(event.get("rounds", 3)),
 		"required_wins": int(event.get("requiredWins", 2)),
-		"entry_fee": int(event.get("entryFee", 0)),
+		"entry_fee": 0,
+		"round_cash_earned": 0,
+		"last_round_cash": 0,
+		"round_results": [],
 		"wins": 0,
 		"losses": 0,
 		"deck_primary": String(deck_metrics.primary),
 		"logs": [
-			"Entered %s with %s. Entry paid: $%d." % [
+			"Entered %s with %s. Entry was free." % [
 				String(event.get("name", event_id)),
-				host.archetypes_by_id[String(deck_metrics.primary)].name,
-				int(event.get("entryFee", 0))
+				host.archetypes_by_id[String(deck_metrics.primary)].name
 			]
 		],
 		"current_opponent": {},
 		"current_seed": 0,
 		"round_result_recorded": false
 	}
+
+
+func round_cash_reward(event: Dictionary, round_number: int) -> int:
+	var base_cash := maxi(0, int(event.get("roundCashBase", 2)))
+	var step_cash := maxi(0, int(event.get("roundCashStep", 1)))
+	return base_cash + maxi(0, round_number - 1) * step_cash
 
 
 func should_finish(active: Dictionary) -> bool:
@@ -49,6 +57,7 @@ func build_event_result_summary(
 	made_record: bool,
 	reward_money: int,
 	reward_packs: int,
+	round_cash_earned: int,
 	lives_lost: int,
 	run_continues: bool
 ) -> Dictionary:
@@ -66,6 +75,7 @@ func build_event_result_summary(
 		"made_record": made_record,
 		"reward_money": reward_money,
 		"reward_packs": reward_packs,
+		"round_cash_earned": round_cash_earned,
 		"lives_lost": lives_lost,
 		"lives_remaining": int(host.run.get("season_lives", 0)),
 		"max_lives": int(host.run.get("max_season_lives", 0)),
@@ -153,12 +163,12 @@ func opponent_deck_for_round(
 func _deck_upgrade_count_for_ai(ai_difficulty: String) -> int:
 	match ai_difficulty:
 		"expert":
-			return 8
+			return 9
 		"hard":
-			return 6
+			return 7
 		"medium":
-			return 3
-	return 0
+			return 4
+	return 1
 
 
 func _upgrade_opponent_deck_for_difficulty(host, opponent_deck: Dictionary, opponent_archetype: String, upgrade_count: int) -> void:

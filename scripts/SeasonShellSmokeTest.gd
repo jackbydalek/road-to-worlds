@@ -16,9 +16,9 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	_expect(main.cards_by_id.size() == 89, "Season shell did not load all 89 kitchen cards.")
+	_expect(main.cards_by_id.size() == 58, "Season shell did not load all 58 kitchen cards.")
 	_expect(String(main._difficulty_data("white").get("name", "")) == "Black" and String(main._difficulty_data("white").get("border_color", "")) == "#090909", "The standard difficulty did not display the new Black border.")
-	_expect(main.archetypes_by_id.size() == 5, "Season shell did not build the five kitchen archetypes.")
+	_expect(main.archetypes_by_id.size() == 3, "Season shell did not build the three starter archetypes.")
 	_expect(main._affinity_symbol("fresh") == "🍋‍🟩" and main._affinity_symbol("spicy") == "🌶️", "Fresh or Spicy affinity symbols were not configured.")
 	_expect(main._affinity_symbol("funky") == "🥒" and main._affinity_symbol("sweet") == "🍬" and main._affinity_symbol("hearty") == "🍲", "Funky, Sweet, or Hearty affinity symbols were not configured.")
 	_expect(main._affinity_symbol("neutral") == "🧊" and main._affinity_label("neutral") == "🧊 Typeless", "Typeless cards did not use the ice-cube symbol.")
@@ -43,16 +43,19 @@ func _run() -> void:
 	_expect(main.boosters_by_id.size() == 2, "Season shell did not load booster definitions.")
 	_expect(main.tournaments_by_id.size() == 5, "Season shell did not load the tournament calendar.")
 	_expect(String(main.tournaments_by_id.monthly_regionals.get("name", "")) == "League Cup" and bool(main.tournaments_by_id.monthly_regionals.get("demoEndpoint", false)), "League Cup is not marked as the demo endpoint.")
-	_expect(main.current_screen == "start", "Season shell did not open on the season/debug menu.")
-	_expect(main.find_child("ContinueRunButton", true, false) != null, "The title screen did not offer Continue.")
+	_expect(main.current_screen == "start", "Season shell did not open on the boot landing.")
+	_expect(main.find_child("GameStartButton", true, false) != null, "The boot landing did not offer Game Start.")
 	_expect(main.find_child("OpenDebugMenuButton", true, false) != null, "The title screen did not preserve the direct Debug Menu link.")
+	main._show_game_start()
+	await process_frame
+	_expect(main.find_child("ContinueRunButton", true, false) != null, "Game Start did not offer Continue.")
 	var new_game := main.find_child("NewGameButton", true, false) as Button
-	_expect(new_game != null, "The title screen did not offer New Run.")
+	_expect(new_game != null, "Game Start did not offer New Game.")
 	if new_game != null:
 		new_game.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	_expect(main.current_screen == "season_setup" and main.DEMO_STARTER_ORDER == ["spicy", "hearty", "sweet"], "New Run did not open the three-starter frame selection.")
+	_expect(main.current_screen == "season_setup" and main.DEMO_STARTER_ORDER == ["spicy", "hearty", "sweet", "draft_night"], "New Game did not open the starter / Draft Night wheel.")
 	main._show_start()
 	await process_frame
 	var start_tutorial := main.find_child("StartTutorialButton", true, false) as Button
@@ -72,7 +75,7 @@ func _run() -> void:
 	main._start_new_run_with_mode("spicy", "debug", "white")
 	await process_frame
 	_expect(main.current_screen == "shop", "Debug run did not open the shop.")
-	_expect(main._deck_total(main.run.deck) == 30, "Kitchen starter deck is not 30 cards.")
+	_expect(main._deck_total(main.run.deck) == main.MAIN_DECK_SIZE, "Kitchen starter deck is not 20 cards.")
 	_expect(main.run.shop.size() == 8, "Shop did not generate eight singles.")
 
 	var collection_before: int = main._deck_total(main.run.collection)
@@ -111,10 +114,13 @@ func _run() -> void:
 	var pack_frame := main.find_child("PackOpeningSceneFrame", true, false) as Control
 	var pack_canvas := main.find_child("PackOpeningSceneHost", true, false) as Control
 	var pack_card_fan := main.find_child("CardFan", true, false) as Control
+	var pack_done_button := main.find_child("DoneButton", true, false) as Button
+	var pack_reveal_all_button := main.find_child("RevealAllButton", true, false) as Button
 	if pack_frame != null and pack_canvas != null and pack_card_fan != null:
 		var authored_fan_midpoint: float = pack_card_fan.position.x + float(main.pack_opening_screen.FAN_CENTER_X) + float(main.pack_opening_screen.CARD_SLOT_SIZE.x) * 0.5
 		_expect(absf(authored_fan_midpoint - pack_canvas.size.x * 0.5) <= 1.0, "The opened card fan was not centered in the pack table.")
 		_expect(absf(pack_frame.get_global_rect().get_center().x - pack_scroll.get_global_rect().get_center().x) <= 1.0, "The pack table was not centered in the available viewport.")
+	_expect(pack_done_button != null and pack_reveal_all_button != null and pack_done_button.position == pack_reveal_all_button.position and pack_done_button.size == pack_reveal_all_button.size, "Done and Reveal All did not share the same pack-table action slot.")
 	var opened_exit := main.find_child("PackExitToStoreButton", true, false) as Button
 	if opened_exit != null:
 		opened_exit.emit_signal("pressed")
@@ -126,10 +132,10 @@ func _run() -> void:
 
 	collection_before = main._deck_total(main.run.collection)
 	var pack: Array = main._generate_pack("base_standard_pack")
-	_expect(pack.size() == 6, "Base booster did not generate six cards.")
+	_expect(pack.size() == 5, "Base booster did not generate five cards.")
 	main._start_pack(pack)
 	main.shop_economy_service.reveal_all_cards(main.run, main._current_primary_archetype())
-	_expect(main._deck_total(main.run.collection) == collection_before + 6, "Revealed booster cards did not enter the collection.")
+	_expect(main._deck_total(main.run.collection) == collection_before + 5, "Revealed booster cards did not enter the collection.")
 
 	main._show_deckbuilder()
 	await process_frame
@@ -178,7 +184,7 @@ func _run() -> void:
 	_expect(main.current_screen == "kitchen_match" and tabletop_prototype != null, "The Debug Sandbox did not launch the production Living Table match.")
 	if tabletop_prototype != null:
 		_expect(bool(tabletop_prototype.production_match) and tabletop_prototype.configured_player_deck == main.run.deck, "The Living Table practice match did not receive the selected run deck.")
-		_expect(_deck_total(tabletop_prototype.configured_opponent_deck) == 30 and String(tabletop_prototype.configured_ai_difficulty) == "easy", "The Living Table practice match did not receive its generated opponent deck and AI tier.")
+		_expect(_deck_total(tabletop_prototype.configured_opponent_deck) == main.MAIN_DECK_SIZE and String(tabletop_prototype.configured_ai_difficulty) == "easy", "The Living Table practice match did not receive its generated opponent deck and AI tier.")
 		_expect(not bool(tabletop_prototype.configured_match_context.get("tournament_round", true)) and String(tabletop_prototype.configured_match_context.get("event_name", "")) == "Practice Match", "The Living Table practice match received incorrect production context.")
 		var player_hand_card := tabletop_prototype.find_child("PlayerHandCard_0", true, false) as Node3D
 		var opponent_hand_card := tabletop_prototype.find_child("OpponentHandCard_0", true, false) as Node3D
@@ -348,12 +354,12 @@ func _run() -> void:
 		tabletop_prototype.state.player.plated = []
 		tabletop_prototype.state.player.environment = ""
 		tabletop_prototype.state.player.discard = []
-		tabletop_prototype.state.opponent.life = 25
+		tabletop_prototype.state.opponent.life = 20
 		tabletop_prototype._render_match()
 		tabletop_prototype._play_hand_card(0, "prep", 2)
 		await create_timer(0.08).timeout
 		var arriving_bee := tabletop_prototype.find_child("PlayerPrepCard_*", true, false) as Node3D
-		_expect(bool(tabletop_prototype.animation_busy) and arriving_bee != null and tabletop_prototype.effect_layer.get_child_count() > 0 and int(tabletop_prototype.state.opponent.life) == 24, "Hot Honey Bee animation state was busy=%s card=%s effects=%d rival_life=%d." % [str(tabletop_prototype.animation_busy), str(arriving_bee != null), tabletop_prototype.effect_layer.get_child_count(), int(tabletop_prototype.state.opponent.life)])
+		_expect(bool(tabletop_prototype.animation_busy) and arriving_bee != null and tabletop_prototype.effect_layer.get_child_count() > 0 and int(tabletop_prototype.state.opponent.life) == 19, "Hot Honey Bee animation state was busy=%s card=%s effects=%d rival_life=%d." % [str(tabletop_prototype.animation_busy), str(arriving_bee != null), tabletop_prototype.effect_layer.get_child_count(), int(tabletop_prototype.state.opponent.life)])
 		await create_timer(1.2).timeout
 		for unused_wait in range(30):
 			if not bool(tabletop_prototype.animation_busy):
@@ -420,7 +426,7 @@ func _run() -> void:
 		_expect(shop_overworld.find_children("CounterDisplayCard*", "Node3D", true, false).size() >= 6, "The card-store overworld counters did not display their individual 3D card props.")
 		_expect(shop_overworld.find_children("CardBody", "MeshInstance3D", true, false).size() >= 6, "The counter card props did not include physical rectangular bodies.")
 	var shop_environment := main.find_child("WorldEnvironment", true, false) as WorldEnvironment
-	_expect(shop_environment != null and shop_environment.environment.background_color.is_equal_approx(Color("#b0cece")), "The card-store diorama void is not using #b0cece.")
+	_expect(shop_environment != null and shop_environment.environment.background_color.is_equal_approx(Color("#e9dfc9")), "The card-store diorama void is not using the menu's #e9dfc9 background.")
 	var shop_floor := main.find_child("Floor", true, false) as MeshInstance3D
 	var shop_floor_material := shop_floor.mesh.material as StandardMaterial3D if shop_floor != null and shop_floor.mesh != null else null
 	_expect(shop_floor_material != null and shop_floor_material.albedo_texture != null and shop_floor_material.albedo_texture.resource_path.ends_with("grey_low_poly_carpet.png"), "The card-store floor is not using the grey low-poly carpet texture.")
@@ -450,8 +456,6 @@ func _run() -> void:
 	var settings_hud := main.find_child("ShopHudSettingsButton", true, false) as Button
 	_expect(cash_hud != null and cash_hud.text == "$%d" % int(main.run.money), "The store HUD does not display the player's current cash.")
 	_expect(deck_hud != null and deck_hud.icon != null and save_hud != null and save_hud.icon != null and settings_hud != null and settings_hud.icon != null, "The Deck Edit, Save, or Settings icon is missing from the store HUD.")
-	var hud_background := cash_hud.get_theme_stylebox("normal") as StyleBoxFlat if cash_hud != null else null
-	_expect(hud_background != null and hud_background.bg_color.r == 1.0 and hud_background.bg_color.a > 0.0 and hud_background.bg_color.a < 1.0, "The top-right HUD does not use a translucent white background.")
 	var shopkeeper_meta_button := main.find_child("Meta", true, false) as Button
 	_expect(main.find_child("Trade", true, false) == null and main.find_child("Deck", true, false) == null and main.find_child("Settings", true, false) == null, "The redundant Trade, Deck, or Settings option is still in the shopkeeper menu.")
 	_expect(shopkeeper_meta_button != null, "The shopkeeper menu is missing Meta Analysis.")
@@ -522,7 +526,7 @@ func _run() -> void:
 	var in_scene_meta_entries = main.find_child("InSceneMetaEntries", true, false)
 	var in_scene_meta_reports = main.find_child("InSceneMetaReports", true, false)
 	_expect(in_scene_meta != null and in_scene_meta.visible and main.find_child("CardShopOverworld", true, false) == shop_overworld, "Meta Analysis did not open inside the existing 3D store.")
-	_expect(in_scene_meta_entries != null and in_scene_meta_entries.get_child_count() == 5, "The in-scene Meta Analysis did not render all five archetype shares.")
+	_expect(in_scene_meta_entries != null and in_scene_meta_entries.get_child_count() == 3, "The in-scene Meta Analysis did not render all three archetype shares.")
 	_expect(in_scene_meta_reports != null and in_scene_meta_reports.get_child_count() == main.run.reports.size(), "The in-scene Meta Analysis did not render the current shop reports.")
 	main._show_deckbuilder()
 	await process_frame
@@ -554,11 +558,11 @@ func _run() -> void:
 		var medium_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "medium")
 		var hard_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "hard")
 		var expert_deck: Dictionary = main._opponent_deck_for_round(archetype_id, 1, {}, "expert")
-		_expect(easy_deck == starter_deck, "%s Easy AI did not keep the starter deck." % archetype_id.capitalize())
-		_expect(_deck_total(medium_deck) == 30 and _deck_total(hard_deck) == 30 and _deck_total(expert_deck) == 30, "%s upgraded AI deck changed size." % archetype_id.capitalize())
-		_expect(_deck_change_count(starter_deck, medium_deck) >= 3, "%s Medium AI did not receive three deck upgrades." % archetype_id.capitalize())
-		_expect(_deck_change_count(starter_deck, hard_deck) >= 6, "%s Hard AI did not receive six deck upgrades." % archetype_id.capitalize())
-		_expect(_deck_change_count(starter_deck, expert_deck) >= 7, "%s Expert AI did not receive at least seven deck upgrades." % archetype_id.capitalize())
+		_expect(_deck_total(easy_deck) == main.MAIN_DECK_SIZE and _opponent_deck_score(main, easy_deck) > _opponent_deck_score(main, starter_deck), "%s Easy AI did not receive its deck upgrade." % archetype_id.capitalize())
+		_expect(_deck_total(medium_deck) == main.MAIN_DECK_SIZE and _deck_total(hard_deck) == main.MAIN_DECK_SIZE and _deck_total(expert_deck) == main.MAIN_DECK_SIZE, "%s upgraded AI deck changed size." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, medium_deck) >= 4, "%s Medium AI did not receive four deck upgrades." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, hard_deck) >= 7, "%s Hard AI did not receive seven deck upgrades." % archetype_id.capitalize())
+		_expect(_deck_change_count(starter_deck, expert_deck) >= 8, "%s Expert AI did not receive at least eight deck upgrades." % archetype_id.capitalize())
 		var starter_score := _opponent_deck_score(main, starter_deck)
 		_expect(_opponent_deck_score(main, medium_deck) > starter_score and _opponent_deck_score(main, hard_deck) > _opponent_deck_score(main, medium_deck) and _opponent_deck_score(main, expert_deck) > _opponent_deck_score(main, hard_deck), "%s opponent decks do not improve with each AI tier." % archetype_id.capitalize())
 		_expect(_deck_respects_copy_limits(main, medium_deck) and _deck_respects_copy_limits(main, hard_deck) and _deck_respects_copy_limits(main, expert_deck), "%s upgraded AI deck exceeded a copy limit." % archetype_id.capitalize())
@@ -571,7 +575,7 @@ func _run() -> void:
 	_expect(main._season_tournament_active(), "Tournament state was not created.")
 	var opening_kitchen_game = main.find_child("Tabletop3DPrototype", true, false)
 	_expect(opening_kitchen_game != null and bool(opening_kitchen_game.production_match), "The opening Locals match did not use the production Living Table view.")
-	_expect(opening_kitchen_game != null and opening_kitchen_game.configured_player_deck == main.run.deck and _deck_total(opening_kitchen_game.configured_opponent_deck) == 30, "The opening Locals match did not receive the selected and generated tournament decks.")
+	_expect(opening_kitchen_game != null and opening_kitchen_game.configured_player_deck == main.run.deck and _deck_total(opening_kitchen_game.configured_opponent_deck) == main.MAIN_DECK_SIZE, "The opening Locals match did not receive the selected and generated tournament decks.")
 	_expect(opening_kitchen_game != null and String(opening_kitchen_game.state.get("ai_difficulty", "")) == "easy", "The opening Locals match did not receive its Easy AI tier.")
 	_expect(opening_kitchen_game != null and bool(opening_kitchen_game.configured_match_context.get("tournament_round", false)) and int(opening_kitchen_game.configured_match_context.get("round", 0)) == 1 and String(opening_kitchen_game.configured_match_context.get("event_name", "")) == "Weekly Locals", "The Living Table did not receive its tournament event and round configuration.")
 	_expect(String(main.run.get("kitchen_match", {}).get("presentation", "")) == "living_table", "The active tournament match did not persist its Living Table presentation configuration.")
@@ -621,17 +625,13 @@ func _run() -> void:
 			_expect(main.current_screen == "shop" and main._season_tournament_active() and int(main.run.active_tournament.round) == 2 and main.run.get("kitchen_match_result", {}).is_empty(), "Returning to the shop did not pause the active tournament before round 2.")
 			_expect(main.run.shop.size() == 8, "Returning between rounds did not expose the freshly restocked singles case.")
 			shop_overworld = main.find_child("CardShopOverworld", true, false)
-			var between_round_shopkeeper := main.find_child("ShopkeeperHotspot", true, false) as Button
-			if between_round_shopkeeper != null:
-				between_round_shopkeeper.emit_signal("pressed")
-			await create_timer(0.8).timeout
-			var clerk_next_round := main.find_child("Tournament", true, false) as Button
-			_expect(clerk_next_round != null and clerk_next_round.text == "Start Tournament Round 2", "The clerk did not offer the pending next round.")
-			if clerk_next_round != null:
-				clerk_next_round.emit_signal("pressed")
+			var overview_next_round := main.find_child("StoreOverviewRoundButton", true, false) as Button
+			_expect(overview_next_round != null and overview_next_round.visible and overview_next_round.text == "Start Round 2", "The store overview did not offer the pending next round.")
+			if overview_next_round != null:
+				overview_next_round.emit_signal("pressed")
 			await process_frame
 			await process_frame
-			_expect(main.current_screen == "kitchen_match" and int(main.run.active_tournament.round) == 2, "The clerk did not launch the pending tournament round.")
+			_expect(main.current_screen == "kitchen_match" and int(main.run.active_tournament.round) == 2, "The store overview did not launch the pending tournament round.")
 		elif continue_action != null:
 			continue_action.emit_signal("pressed")
 		await process_frame
@@ -673,7 +673,14 @@ func _run() -> void:
 		main._finish_pack_opening()
 		await process_frame
 		await process_frame
-	_expect(main.current_screen == "thanks" and main.find_child("ThanksMainMenuButton", true, false) != null, "Opening the League Cup prizes did not reach Thanks for Playing.")
+	_expect(
+		main.current_screen == "thanks"
+		and main.find_child("ThanksMainMenuButton", true, false) != null
+		and main.find_child("FinaleChampionTitle", true, false) != null
+		and main.find_child("FinaleTeaser", true, false) != null
+		and main.find_child("FinaleDeckButton", true, false) != null,
+		"Opening the League Cup prizes did not reach the composed season finale."
+	)
 
 	main.queue_free()
 	await process_frame

@@ -37,7 +37,7 @@ func _test_card_costs_and_stats() -> void:
 	_assert_card("sweet_bottomless_trifle_tern", "meal", 4, 5)
 	_assert_card("funky_trap_jam_tapir", "meal", 3, 4)
 	var hydra: Dictionary = service.card("fresh_harvest_hydra")
-	_expect(hydra.get("recipe", []) == ["fresh"] and String(hydra.get("required_meal_archetype", "")) == "fresh", "Harvest Hydra does not require a Fresh Ingredient plus a Fresh Meal.")
+	_expect(hydra.get("recipe", []) == ["fresh", "fresh", "any"] and String(hydra.get("required_meal_archetype", "")) == "", "Harvest Hydra does not require two Fresh Ingredients plus any Ingredient.")
 	var tern: Dictionary = service.card("sweet_bottomless_trifle_tern")
 	_expect(tern.get("recipe", []) == ["sweet"] and String(tern.get("required_meal_archetype", "")) == "sweet", "Bottomless Trifle Tern does not require a Sweet Ingredient plus a Sweet Meal.")
 	_expect(service.card("funky_remix_raccoon").get("recipe", []).size() == 3, "Relish Raccoon is not a three-Ingredient Meal.")
@@ -78,7 +78,7 @@ func _test_board_effects() -> void:
 	_add_unit(state, "player", "fresh_crisp_capybara", "prep")
 	_add_unit(state, "player", "fresh_salad_shield_skunk", "prep")
 	service._refresh_stat_auras(state)
-	_expect(int(gorilla.attack) == 7, "Garden Gorilla did not gain +2 Attack per other Fresh card in Prep.")
+	_expect(int(gorilla.attack) == 4, "Garden Gorilla did not gain +1 Attack per other Fresh card in Prep.")
 
 	state = _fresh_state()
 	var pike := _add_unit(state, "player", "spicy_pepper_pike", "plated")
@@ -179,7 +179,7 @@ func _test_hand_responses() -> void:
 	state.opponent.hand = ["hearty_macaroni_manatee"]
 	service._play_ingredient(state, "opponent", 0, "prep")
 	service.resolve_reaction(state, 0)
-	_expect(state.opponent.prep.is_empty() and state.opponent.discard.has("hearty_macaroni_manatee"), "Pantry Pouncer did not destroy the played Ingredient.")
+	_expect(state.opponent.prep.is_empty() and state.opponent.discard.has("hearty_macaroni_manatee"), "Quinoa Fly Trap did not destroy the played Ingredient.")
 
 	state = _fresh_state()
 	state.player.hand = ["funky_toolbox_toad"]
@@ -234,14 +234,16 @@ func _test_stepwise_opponent_turn() -> void:
 func _test_ai_difficulty_decisions() -> void:
 	var easy_state := _fresh_state()
 	easy_state.ai_difficulty = "easy"
+	easy_state.opponent.deck = ["hearty_bagver", "hearty_bagver", "hearty_bagver", "hearty_bagver"]
 	var easy_recipe_piece := _add_unit(easy_state, "opponent", "spicy_hot_honey_bee", "prep")
 	easy_recipe_piece.recipe_ready_on_turn = 3
 	easy_state.opponent.hand = ["spicy_sriracharrow", "hearty_bagver"]
 	service._ai_play_one_hand_card(easy_state)
-	_expect(_has_card(easy_state.opponent.prep, "hearty_bagver") and not _has_card(easy_state.opponent.plated, "spicy_sriracharrow"), "Easy AI no longer preserves the original first-legal-play behavior.")
+	_expect(_has_card(easy_state.opponent.plated, "spicy_sriracharrow") and not _has_card(easy_state.opponent.prep, "spicy_hot_honey_bee"), "Easy AI did not prioritize a ready Meal over a filler Ingredient.")
 
 	var hard_state := _fresh_state()
 	hard_state.ai_difficulty = "hard"
+	hard_state.opponent.deck = ["hearty_bagver", "hearty_bagver", "hearty_bagver", "hearty_bagver"]
 	var hard_recipe_piece := _add_unit(hard_state, "opponent", "spicy_hot_honey_bee", "prep")
 	hard_recipe_piece.recipe_ready_on_turn = 3
 	hard_state.opponent.hand = ["spicy_sriracharrow", "hearty_bagver"]
@@ -254,7 +256,7 @@ func _test_ai_difficulty_decisions() -> void:
 	var threat_target := _add_unit(target_state, "player", "spicy_firecracker_shrimp", "plated")
 	threat_target.health = 4
 	target_state.ai_difficulty = "easy"
-	_expect(int(service._ai_attack_target(target_state, attacker).instance_id) == int(weak_target.instance_id), "Easy AI stopped choosing the lowest-health defender.")
+	_expect(int(service._ai_attack_target(target_state, attacker).instance_id) == int(threat_target.instance_id), "Easy AI did not remove the more dangerous KO-able defender.")
 	target_state.ai_difficulty = "hard"
 	_expect(int(service._ai_attack_target(target_state, attacker).instance_id) == int(threat_target.instance_id), "Hard AI did not remove the more dangerous KO-able defender.")
 
@@ -279,6 +281,13 @@ func _test_ai_difficulty_decisions() -> void:
 	expert_search_state.opponent.deck = ["spicy_sriracharrow", "hearty_bagver"]
 	service._search_deck(expert_search_state, "opponent", {})
 	_expect(expert_search_state.opponent.hand.has("spicy_sriracharrow"), "Expert AI did not use lookahead context to search for its ready Meal.")
+
+	var deck_safety_state := _fresh_state()
+	deck_safety_state.ai_difficulty = "easy"
+	deck_safety_state.opponent.deck = ["hearty_bagver"]
+	deck_safety_state.opponent.hand = ["item_wooden_spoon"]
+	_expect(not service._ai_play_one_hand_card(deck_safety_state), "Easy AI used an optional draw card that would empty its deck.")
+	_expect(deck_safety_state.opponent.deck.size() == 1, "AI deck preservation changed the remaining deck.")
 
 
 func _test_all_starter_pairings_progress() -> void:
@@ -330,7 +339,7 @@ func _fresh_state() -> Dictionary:
 		state[side].discard = []
 		state[side].prep = []
 		state[side].plated = []
-		state[side].life = 25
+		state[side].life = service.STARTING_LIFE
 		state[side].fatigue = 0
 		state[side].turns_started = 3
 		state[side].chef_used = false

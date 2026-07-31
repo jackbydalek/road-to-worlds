@@ -7,20 +7,38 @@ const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
 const CARD_BACK := preload("res://assets/cards/card_backs/living_table.png")
 const ART_PENDING := preload("res://assets/cards/art_pending.png")
+const ABILITY_READY_AURA := preload("res://assets/ui/ability_ready_aura.svg")
+const STAT_BADGE_BACKING := preload("res://assets/ui/field_stat_badge.svg")
+const READABLE_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
+const UI_THEME_SCRIPT := preload("res://scripts/ui/KitchenGlassTheme.gd")
 
 const TABLE_Y := 0.235
 const DRAG_Y := 0.82
 const FIELD_CARD_SIZE := Vector2(1.08, 1.54)
-const PLAYER_HAND_Z := 4.25
-const OPPONENT_HAND_Z := -5.18
+const PLAYER_HAND_Z := 3.3
+const OPPONENT_HAND_Z := -5.5
 const PLAYER_HAND_MAX_WIDTH := 8.8
 const OPPONENT_HAND_MAX_WIDTH := 6.6
 const HAND_CARD_GAP := 0.14
 const CARD_FACE_TEXTURE_SIZE := Vector2i(320, 455)
 const FLOATING_ART_HEIGHT := 0.62
 const REACTION_WINDOW_SECONDS := 5.0
+const READABILITY_SETTINGS_PATH := "user://road_to_worlds_readability.cfg"
+const RIVAL_PACING_OPTIONS := [
+	{"id": "fast", "label": "FAST", "base_seconds": 0.7, "seconds_per_word": 0.08, "max_seconds": 1.8, "action_gap": 0.22},
+	{"id": "normal", "label": "NORMAL", "base_seconds": 1.2, "seconds_per_word": 0.16, "max_seconds": 3.5, "action_gap": 0.42},
+	{"id": "slow", "label": "SLOW", "base_seconds": 1.8, "seconds_per_word": 0.22, "max_seconds": 5.0, "action_gap": 0.7}
+]
+const TEXT_SCALE_OPTIONS := [1.0, 1.25, 1.5]
+const KEYWORD_TOOLTIPS := {
+	"stalwart": {"title": "Stalwart", "body": "This card can attack the opposing Chef even while they control Plated cards."},
+	"piercing": {"title": "Piercing", "body": "When this card overpowers a Defending unit, excess combat damage reaches the opposing Chef."},
+	"defending": {"title": "Defending", "body": "This unit did not attack last turn. It stops excess combat damage unless struck by Piercing; units that attacked remain exposed to normal overflow."},
+	"taunt": {"title": "Taunt", "body": "While any Taunt unit is Plated, attackers must target a Taunt before other cards or the Chef. If there are multiple Taunt units, the attacker chooses among them."},
+	"hand_trap": {"title": "Handtrap", "body": "Discard this card from your hand to perform its action in response to an opponent's action."}
+}
 const TUTORIAL_STEPS := [
-	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 25 life. Ingredients and Meals occupy Prep or Plated. Prep is protected; Plated is where combat happens.", "prompt": "Press Begin to learn by playing a fixed practice hand.", "action": "continue", "scenario": "opening"},
+	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 20 life. The first player skips their opening draw; the second player draws normally. On later turns, draw one card, then draw up to two if your hand is still smaller. Ingredients and Meals occupy Prep or Plated.", "prompt": "Press Begin to learn by playing a fixed practice hand.", "action": "continue", "scenario": "opening"},
 	{"lesson": 2, "title": "Play an Ingredient", "body": "Ingredients build recipes. New Ingredients are PREPARING until the start of your next turn.", "prompt": "Click the glowing Hot Honey Bee in your hand.", "action": "select_hand", "card_id": "spicy_hot_honey_bee"},
 	{"lesson": 2, "title": "Choose a Safe Zone", "body": "Prep protects a card from normal attacks while it matures. Plated cards can fight, but can also be attacked.", "prompt": "In Card Info, choose Play → Prep 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
 	{"lesson": 2, "title": "Let It Mature", "body": "At the start of your next turn, the Ingredient becomes RECIPE READY. Normal matches give the rival a full turn in between.", "prompt": "Press END TURN. The lesson will fast-forward the scripted rival turn.", "action": "end_turn"},
@@ -31,7 +49,7 @@ const TUTORIAL_STEPS := [
 	{"lesson": 4, "title": "Pay the Recipe", "body": "The cyan glow marks legal recipe Ingredients. The selected Ingredient will be sacrificed to your discard pile.", "prompt": "Click the glowing Hot Honey Bee on your table.", "action": "select_recipe", "card_id": "spicy_hot_honey_bee"},
 	{"lesson": 4, "title": "Confirm the Meal", "body": "Sriracharrow needs one Spicy Ingredient. The selected Bee satisfies the full recipe.", "prompt": "Press Serve Meal in the message strip.", "action": "confirm_meal"},
 	{"lesson": 5, "title": "Prep Versus Plated", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Click your glowing Sriracharrow.", "action": "select_field", "card_id": "spicy_sriracharrow"},
-	{"lesson": 5, "title": "Move Into Combat", "body": "Moving into Plated makes a unit available for combat immediately, unless another rule says otherwise.", "prompt": "Choose Move → Plated 1.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
+	{"lesson": 5, "title": "Move Into Combat", "body": "Moving into Plated makes a unit available for combat immediately, unless another rule says otherwise.", "prompt": "Click the glowing Plated 1 slot.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
 	{"lesson": 6, "title": "Support Cards", "body": "Spices attach to a unit. Tools resolve once and go to discard. Chef cards are powerful actions limited to one per turn.", "prompt": "Click your glowing Sriracharrow first.", "action": "select_field", "card_id": "spicy_sriracharrow", "scenario": "support"},
 	{"lesson": 6, "title": "Choose a Spice Target", "body": "A Spice needs a friendly unit selected before it can be played.", "prompt": "Choose Season This Card.", "action": "select_spice_target", "card_id": "spicy_sriracharrow"},
 	{"lesson": 6, "title": "Play a Spice", "body": "Cayenne Crunch stays attached and gives the selected Meal +1 Attack.", "prompt": "Click the glowing Cayenne Crunch in your hand.", "action": "select_hand", "card_id": "spice_cayenne_crunch"},
@@ -42,7 +60,7 @@ const TUTORIAL_STEPS := [
 	{"lesson": 6, "title": "Resolve the Chef", "body": "Chef cards also resolve immediately and go to your discard pile.", "prompt": "Choose Use Chef.", "action": "play_hand", "card_id": "chef_mary"},
 	{"lesson": 7, "title": "Choose an Attacker", "body": "Only ready Plated units can normally attack. Each attacker can attack once per turn.", "prompt": "Click the glowing left Sriracharrow.", "action": "select_field", "instance_id": 1, "scenario": "combat"},
 	{"lesson": 7, "title": "Declare the Attack", "body": "Selecting an attacker makes legal defenders glow.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 1},
-	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "If the rival has a Plated unit, you must attack a legal defender before attacking their Chef. Combat damage is simultaneous.", "prompt": "Click the glowing opposing Bagver.", "action": "attack_unit", "target_instance_id": 3},
+	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "If the rival has a Plated unit, you must attack a legal defender before attacking their Chef. A unit that skips attacking ends the turn Defending and stops overflow unless hit by Piercing. A unit that attacked is exposed to normal overflow. Stalwart can attack the Chef through Plated cards.", "prompt": "Click the glowing opposing Bagver.", "action": "attack_unit", "target_instance_id": 3},
 	{"lesson": 7, "title": "Choose Your Second Attacker", "body": "Your first Meal is spent, but the second is still ready.", "prompt": "Click the glowing right Sriracharrow.", "action": "select_field", "instance_id": 2},
 	{"lesson": 7, "title": "Declare the Final Attack", "body": "The rival Plated zone is empty, so a direct Chef attack is now legal.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 2},
 	{"lesson": 7, "title": "Attack the Rival Chef", "body": "Reducing the opposing Chef to 0 life wins the match.", "prompt": "Click the glowing rival Chef.", "action": "attack_chef"},
@@ -78,6 +96,8 @@ const AUX_ZONE_POSITIONS := {
 @onready var player_chef: Node3D = $ViewportContainer/WorldViewport/World/PlayerChef
 @onready var opponent_chef: Node3D = $ViewportContainer/WorldViewport/World/OpponentChef
 @onready var status_label: Label = $Interface/StatusPanel/Margin/StatusRow/StatusLabel
+@onready var status_context_label: Label = $Interface/StatusPanel/Margin/StatusRow/StatusContext
+@onready var status_panel: PanelContainer = $Interface/StatusPanel
 @onready var title_label: Label = $Interface/TopBar/Margin/TopRow/Title
 @onready var confirm_choice_button: Button = $Interface/StatusPanel/Margin/StatusRow/ConfirmChoiceButton
 @onready var cancel_choice_button: Button = $Interface/StatusPanel/Margin/StatusRow/CancelChoiceButton
@@ -111,6 +131,7 @@ var state: Dictionary = {}
 var face_materials: Dictionary = {}
 var interactive_cards: Array[Node3D] = []
 var floating_arts: Array[MeshInstance3D] = []
+var pulsing_field_auras: Array[MeshInstance3D] = []
 var highlighted_bodies: Array[MeshInstance3D] = []
 var animation_ghost_nodes: Dictionary = {}
 var zone_materials: Dictionary = {}
@@ -165,6 +186,46 @@ var tutorial_body_label: Label
 var tutorial_prompt_label: Label
 var tutorial_progress_label: Label
 var tutorial_action_button: Button
+var rival_action_panel: PanelContainer
+var rival_action_face: TextureRect
+var rival_action_name_label: Label
+var rival_action_meta_label: Label
+var rival_action_rules_label: Label
+var rival_action_outcome_label: Label
+var rival_recent_actions_label: RichTextLabel
+var game_breakdown_button: Button
+var rival_pacing_button: Button
+var text_scale_button: Button
+var match_options_button: Button
+var readability_controls_panel: PanelContainer
+var board_info_button: Button
+var board_info_visible := false
+var invalid_action_visible := false
+var invalid_action_timer: Timer
+var rival_recent_actions: Array[String] = []
+var latest_rival_card_id := ""
+var latest_rival_card_data: Dictionary = {}
+var latest_rival_summary: Dictionary = {}
+var game_breakdown_active := false
+var rival_pacing_index := 1
+var text_scale_index := 0
+var reveal_active := false
+var reveal_skip_requested := false
+var fullscreen_action_reveal_count := 0
+var last_fullscreen_action_reveal_card_id := ""
+var last_fullscreen_action_reveal_type := ""
+var last_fullscreen_action_reveal_hold_seconds := 0.0
+var field_activation_indicator_count := 0
+var last_field_activation_card_id := ""
+var last_field_activation_kind := ""
+var swap_move_animation_count := 0
+var token_evaporation_animation_count := 0
+var action_highlight_zone := ""
+var action_highlight_slot := -1
+var action_highlight_slots: Array[Dictionary] = []
+var pending_hand_play_index := -1
+var pending_move_instance_id := -1
+var keyword_popout: PanelContainer
 
 
 func configure_match(
@@ -201,10 +262,14 @@ func configure_tutorial() -> void:
 
 
 func _ready() -> void:
-	camera.look_at(Vector3(0.0, 0.25, -1.15), Vector3.UP)
+	theme = UI_THEME_SCRIPT.build(READABLE_FONT)
+	_apply_glass_surface_styles()
+	_load_readability_settings()
+	camera.look_at(Vector3(0.0, 0.25, -0.75), Vector3.UP)
 	camera_home_transform = camera.global_transform
 	camera_home_fov = camera.fov
 	_build_pacing_interface()
+	_build_readability_interface()
 	viewport_container.gui_input.connect(_on_table_gui_input)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	reset_button.pressed.connect(_start_match)
@@ -219,7 +284,14 @@ func _ready() -> void:
 	_apply_rounded_button_style(confirm_choice_button)
 	_apply_rounded_button_style(cancel_choice_button)
 	_apply_rounded_button_style(end_turn_button)
+	_apply_high_contrast_button_text(end_turn_button)
+	_apply_current_ui_button_style(end_turn_button, true)
+	_apply_rounded_button_style(reset_button)
+	_apply_high_contrast_button_text(reset_button)
+	_apply_rounded_button_style(exit_button)
+	_apply_high_contrast_button_text(exit_button)
 	_apply_rounded_button_style(battle_log_button)
+	_apply_high_contrast_button_text(battle_log_button)
 	_apply_rounded_button_style(battle_log_close_button)
 	_apply_rounded_button_style(card_tray_close_button)
 	_apply_rounded_button_style(card_tray_skip_button)
@@ -230,16 +302,57 @@ func _ready() -> void:
 		service.decks["configured_player"] = {"name": configured_player_name, "archetype": "", "cards": configured_player_deck}
 		service.decks["configured_opponent"] = {"name": configured_opponent_name, "archetype": "", "cards": configured_opponent_deck}
 		reset_button.visible = false
-		exit_button.text = configured_exit_label
+		exit_button.text = "LEAVE MATCH"
+		exit_button.custom_minimum_size.x = 126
+		exit_button.tooltip_text = configured_exit_label
 	if tutorial_mode:
 		reset_button.visible = false
-		exit_button.text = configured_exit_label
+		exit_button.text = "EXIT TUTORIAL"
+		exit_button.custom_minimum_size.x = 132
+		exit_button.tooltip_text = configured_exit_label
 		battle_log_button.visible = false
 		_build_tutorial_interface()
 	_load_reference_art()
 	_prepare_zone_materials()
 	_start_match()
 	set_process(true)
+
+
+func _apply_glass_surface_styles() -> void:
+	($Interface/TopBar as PanelContainer).add_theme_stylebox_override(
+		"panel",
+		UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+	)
+	($Interface/StatusPanel as PanelContainer).add_theme_stylebox_override(
+		"panel",
+		UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+	)
+	prompt_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.OAK, 1))
+	battle_log_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1))
+	_apply_match_hud_styles()
+
+
+func _apply_match_hud_styles() -> void:
+	var player_style := UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+	player_style.content_margin_left = 10
+	player_style.content_margin_right = 10
+	player_life.add_theme_stylebox_override("normal", player_style)
+	var rival_style := UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.ORANGE, 1)
+	rival_style.content_margin_left = 10
+	rival_style.content_margin_right = 10
+	opponent_life.add_theme_stylebox_override("normal", rival_style)
+	_refresh_turn_badge_style()
+
+
+func _refresh_turn_badge_style() -> void:
+	if state.is_empty() or turn_label == null:
+		return
+	var player_turn := String(state.get("phase", "")) == "player_main"
+	var accent := UI_THEME_SCRIPT.TEAL_LIGHT if player_turn else UI_THEME_SCRIPT.ORANGE
+	var turn_style := UI_THEME_SCRIPT.dark_glass_style(accent, 2)
+	turn_style.content_margin_left = 12
+	turn_style.content_margin_right = 12
+	turn_label.add_theme_stylebox_override("normal", turn_style)
 
 
 func _start_match() -> void:
@@ -253,6 +366,23 @@ func _start_match() -> void:
 		outcome_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	if turn_banner_panel != null:
 		turn_banner_panel.visible = false
+	if rival_action_panel != null:
+		rival_action_panel.visible = false
+	if battle_log_panel != null:
+		_set_battle_log_visible(false)
+	rival_recent_actions.clear()
+	latest_rival_card_id = ""
+	latest_rival_card_data = {}
+	latest_rival_summary = {}
+	game_breakdown_active = false
+	if is_instance_valid(game_breakdown_button):
+		game_breakdown_button.disabled = true
+	action_highlight_zone = ""
+	action_highlight_slot = -1
+	action_highlight_slots.clear()
+	pending_hand_play_index = -1
+	pending_move_instance_id = -1
+	_clear_keyword_popout()
 	_clear_animation_ghosts()
 	manual_discard_tray_side = ""
 	if tutorial_mode:
@@ -459,7 +589,7 @@ func _reset_tutorial_state() -> void:
 	state.log = []
 	for side in ["player", "opponent"]:
 		var who: Dictionary = state[side]
-		who.life = 25
+		who.life = service.STARTING_LIFE
 		who.deck = []
 		who.hand = []
 		who.prep = []
@@ -500,6 +630,7 @@ func _render_match() -> void:
 		child.free()
 	interactive_cards.clear()
 	floating_arts.clear()
+	pulsing_field_auras.clear()
 	highlighted_bodies.clear()
 	hovered_card = null
 	if state.is_empty():
@@ -513,18 +644,23 @@ func _render_match() -> void:
 	_build_field_cards("opponent", "prep")
 	_build_environment_card("player")
 	_build_environment_card("opponent")
-	player_life.text = "YOU  %d" % int(state.player.life)
-	opponent_life.text = "RIVAL  %d" % int(state.opponent.life)
-	turn_label.text = "TURN %d  •  %s" % [int(state.turn), "YOU" if String(state.phase) == "player_main" else "RIVAL"]
+	player_life.text = "YOU  •  %d LIFE" % int(state.player.life)
+	opponent_life.text = "RIVAL  •  %d LIFE" % int(state.opponent.life)
+	var player_turn := String(state.phase) == "player_main"
+	turn_label.text = "%s  •  TURN %d" % ["YOUR TURN" if player_turn else "RIVAL TURN", int(state.turn)]
+	_refresh_turn_badge_style()
 	_update_match_title()
 	end_turn_button.disabled = animation_busy or String(state.phase) != "player_main" or _has_blocking_prompt() or bool(state.game_over)
 	if tutorial_mode:
 		end_turn_button.disabled = String(_tutorial_step().get("action", "")) != "end_turn"
+	_refresh_end_turn_button()
 	_update_chef_labels()
 	_refresh_action_panel()
 	_refresh_prompt()
 	_refresh_card_tray()
 	_refresh_bottom_status()
+	_refresh_status_context()
+	_refresh_status_panel_visibility()
 	_refresh_battle_log()
 	if tutorial_mode:
 		_refresh_tutorial_panel()
@@ -534,18 +670,110 @@ func _render_match() -> void:
 
 func _update_match_title() -> void:
 	if tutorial_mode:
-		title_label.text = "HOW TO PLAY  •  GUIDED PRACTICE"
+		title_label.text = "GUIDED PRACTICE"
 		return
 	if not production_match:
-		title_label.text = "LIVING TABLE  •  PLAYABLE MATCH"
+		title_label.text = "PRACTICE MATCH"
 		return
 	var event_name := String(configured_match_context.get("event_name", ""))
 	var round_number := int(configured_match_context.get("round", 0))
 	var total_rounds := int(configured_match_context.get("rounds", 0))
 	if bool(configured_match_context.get("tournament_round", false)) and round_number > 0:
-		title_label.text = "%s  •  ROUND %d/%d  •  %s AI" % [event_name if event_name != "" else "TOURNAMENT", round_number, maxi(round_number, total_rounds), configured_ai_difficulty.to_upper()]
+		title_label.text = "%s  •  ROUND %d OF %d" % [event_name if event_name != "" else "TOURNAMENT", round_number, maxi(round_number, total_rounds)]
 	else:
-		title_label.text = "%s  vs  %s  •  %s AI" % [configured_player_name, configured_opponent_name, configured_ai_difficulty.to_upper()]
+		title_label.text = "%s  vs  %s" % [configured_player_name, configured_opponent_name]
+
+
+func _refresh_end_turn_button() -> void:
+	if bool(state.get("game_over", false)):
+		end_turn_button.text = "MATCH COMPLETE"
+	elif _has_blocking_prompt():
+		end_turn_button.text = "FINISH CHOICE"
+	elif String(state.get("phase", "")) != "player_main":
+		end_turn_button.text = "RIVAL THINKING…"
+	else:
+		end_turn_button.text = "END TURN  →"
+
+
+func _refresh_status_context() -> void:
+	if status_context_label == null or state.is_empty():
+		return
+	if invalid_action_visible:
+		status_context_label.text = "NOT ALLOWED"
+		status_context_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.ORANGE)
+	elif bool(state.get("game_over", false)):
+		status_context_label.text = "MATCH END"
+		status_context_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.OAK)
+	elif _has_blocking_prompt():
+		status_context_label.text = "CHOOSE"
+		status_context_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.ORANGE)
+	elif String(state.get("phase", "")) == "player_main":
+		status_context_label.text = "YOUR MOVE"
+		status_context_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.TEAL_LIGHT)
+	else:
+		status_context_label.text = "RIVAL MOVE"
+		status_context_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.ORANGE)
+
+
+func _refresh_status_panel_visibility() -> void:
+	if status_panel == null or state.is_empty():
+		return
+	status_panel.visible = invalid_action_visible or confirm_choice_button.visible or cancel_choice_button.visible
+
+
+func _show_invalid_action(message: String) -> void:
+	if message.strip_edges() == "":
+		message = "That action is not available right now."
+	invalid_action_visible = true
+	status_label.text = message
+	_refresh_status_context()
+	_refresh_status_panel_visibility()
+	if not is_instance_valid(invalid_action_timer):
+		invalid_action_timer = Timer.new()
+		invalid_action_timer.name = "InvalidActionTimer"
+		invalid_action_timer.one_shot = true
+		invalid_action_timer.wait_time = 2.6
+		invalid_action_timer.timeout.connect(_dismiss_invalid_action)
+		add_child(invalid_action_timer)
+	invalid_action_timer.start()
+
+
+func _dismiss_invalid_action() -> void:
+	if is_instance_valid(invalid_action_timer):
+		invalid_action_timer.stop()
+	invalid_action_visible = false
+	if not state.is_empty():
+		_refresh_bottom_status()
+		_refresh_status_context()
+	_refresh_status_panel_visibility()
+
+
+func _action_attempt_marker() -> Dictionary:
+	return {
+		"hand_size": state.get("player", {}).get("hand", []).size(),
+		"log_size": state.get("log", []).size(),
+		"animation_size": state.get("animation_events", []).size(),
+		"pending_meal": not state.get("pending_meal", {}).is_empty(),
+		"pending_discard": not state.get("pending_discard", {}).is_empty(),
+		"pending_ability": not state.get("pending_ability", {}).is_empty(),
+		"pending_search": not state.get("pending_search", {}).is_empty(),
+		"pending_choice": not state.get("pending_choice", {}).is_empty(),
+		"pending_reaction": not state.get("pending_reaction", {}).is_empty(),
+	}
+
+
+func _action_attempt_progressed(marker: Dictionary) -> bool:
+	return (
+		state.get("player", {}).get("hand", []).size() != int(marker.get("hand_size", 0))
+		or state.get("log", []).size() != int(marker.get("log_size", 0))
+		or state.get("animation_events", []).size() != int(marker.get("animation_size", 0))
+		or (not state.get("pending_meal", {}).is_empty()) != bool(marker.get("pending_meal", false))
+		or (not state.get("pending_discard", {}).is_empty()) != bool(marker.get("pending_discard", false))
+		or (not state.get("pending_ability", {}).is_empty()) != bool(marker.get("pending_ability", false))
+		or (not state.get("pending_search", {}).is_empty()) != bool(marker.get("pending_search", false))
+		or (not state.get("pending_choice", {}).is_empty()) != bool(marker.get("pending_choice", false))
+		or (not state.get("pending_reaction", {}).is_empty()) != bool(marker.get("pending_reaction", false))
+	)
 
 
 func _emit_match_finished_once() -> void:
@@ -622,6 +850,264 @@ func _build_pacing_interface() -> void:
 	outcome_subtitle = _label("THE COOK-OFF IS YOURS", 21, Color.WHITE)
 	outcome_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outcome_content.add_child(outcome_subtitle)
+
+
+func _build_readability_interface() -> void:
+	rival_action_panel = PanelContainer.new()
+	rival_action_panel.name = "RivalActionPanel"
+	rival_action_panel.visible = false
+	rival_action_panel.z_index = 18
+	rival_action_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	rival_action_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	rival_action_panel.offset_left = -508.0
+	rival_action_panel.offset_top = 84.0
+	rival_action_panel.offset_right = -18.0
+	rival_action_panel.offset_bottom = 404.0
+	var action_style := StyleBoxFlat.new()
+	action_style.bg_color = Color(0.025, 0.065, 0.085, 0.97)
+	action_style.border_color = Color("#e66da5")
+	action_style.set_border_width_all(2)
+	action_style.set_corner_radius_all(16)
+	action_style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+	action_style.shadow_size = 12
+	rival_action_panel.add_theme_stylebox_override("panel", action_style)
+	$Interface.add_child(rival_action_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	rival_action_panel.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 7)
+	margin.add_child(content)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	content.add_child(header)
+	var heading := _label("RIVAL ACTION", 17, Color("#ffd0e5"))
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	header.add_child(heading)
+	game_breakdown_button = _styled_button("Game Breakdown")
+	game_breakdown_button.name = "GameBreakdownButton"
+	game_breakdown_button.custom_minimum_size = Vector2(148, 30)
+	game_breakdown_button.disabled = true
+	game_breakdown_button.pressed.connect(_open_game_breakdown)
+	header.add_child(game_breakdown_button)
+	var close_button := _styled_button("Hide")
+	close_button.name = "RivalActionCloseButton"
+	close_button.custom_minimum_size = Vector2(68, 30)
+	close_button.pressed.connect(func() -> void: rival_action_panel.visible = false)
+	header.add_child(close_button)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 14)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(body)
+	rival_action_face = TextureRect.new()
+	rival_action_face.name = "RivalActionCard"
+	rival_action_face.custom_minimum_size = Vector2(110, 156)
+	rival_action_face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rival_action_face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rival_action_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body.add_child(rival_action_face)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.add_theme_constant_override("separation", 4)
+	body.add_child(details)
+	rival_action_name_label = _label("Card name", 23, Color("#fff3cf"))
+	rival_action_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details.add_child(rival_action_name_label)
+	rival_action_meta_label = _label("Card type", 14, Color("#f1c66e"))
+	details.add_child(rival_action_meta_label)
+	rival_action_rules_label = _label("Printed rules", 16, Color("#edf4f6"))
+	rival_action_rules_label.custom_minimum_size = Vector2(0, 60)
+	rival_action_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rival_action_rules_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	rival_action_rules_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	rival_action_rules_label.add_theme_constant_override("line_spacing", 3)
+	details.add_child(rival_action_rules_label)
+	rival_action_outcome_label = _label("What resolved", 15, Color("#8fddf5"))
+	rival_action_outcome_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rival_action_outcome_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	rival_action_outcome_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	details.add_child(rival_action_outcome_label)
+
+	var recent_heading := _label("RECENT RIVAL MOVES", 12, Color("#f2a0c5"))
+	content.add_child(recent_heading)
+	rival_recent_actions_label = RichTextLabel.new()
+	rival_recent_actions_label.name = "RivalRecentActions"
+	rival_recent_actions_label.custom_minimum_size = Vector2(0, 48)
+	rival_recent_actions_label.bbcode_enabled = true
+	rival_recent_actions_label.fit_content = false
+	rival_recent_actions_label.scroll_active = false
+	rival_recent_actions_label.add_theme_font_override("normal_font", READABLE_FONT)
+	rival_recent_actions_label.add_theme_font_size_override("normal_font_size", _scaled_font_size(13))
+	rival_recent_actions_label.set_meta("readability_base_font_normal_font_size", 13)
+	content.add_child(rival_recent_actions_label)
+
+	readability_controls_panel = PanelContainer.new()
+	readability_controls_panel.name = "ReadabilityControls"
+	readability_controls_panel.visible = false
+	readability_controls_panel.z_index = 21
+	readability_controls_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	readability_controls_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	readability_controls_panel.offset_left = -372.0
+	readability_controls_panel.offset_top = 82.0
+	readability_controls_panel.offset_right = -18.0
+	readability_controls_panel.offset_bottom = 136.0
+	readability_controls_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1))
+	$Interface.add_child(readability_controls_panel)
+	var controls_margin := MarginContainer.new()
+	controls_margin.add_theme_constant_override("margin_left", 7)
+	controls_margin.add_theme_constant_override("margin_top", 6)
+	controls_margin.add_theme_constant_override("margin_right", 7)
+	controls_margin.add_theme_constant_override("margin_bottom", 6)
+	readability_controls_panel.add_child(controls_margin)
+	var controls_row := HBoxContainer.new()
+	controls_row.add_theme_constant_override("separation", 7)
+	controls_margin.add_child(controls_row)
+	rival_pacing_button = _styled_button("")
+	rival_pacing_button.name = "RivalPacingButton"
+	rival_pacing_button.custom_minimum_size = Vector2(170, 36)
+	_apply_high_contrast_button_text(rival_pacing_button)
+	rival_pacing_button.pressed.connect(_cycle_rival_pacing)
+	controls_row.add_child(rival_pacing_button)
+	text_scale_button = _styled_button("")
+	text_scale_button.name = "TextScaleButton"
+	text_scale_button.custom_minimum_size = Vector2(146, 36)
+	_apply_high_contrast_button_text(text_scale_button)
+	text_scale_button.pressed.connect(_cycle_text_scale)
+	controls_row.add_child(text_scale_button)
+
+	var top_row := $Interface/TopBar/Margin/TopRow as HBoxContainer
+	battle_log_button.reparent(top_row)
+	battle_log_button.custom_minimum_size = Vector2(118, 42)
+	battle_log_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	match_options_button = _styled_button("OPTIONS")
+	match_options_button.name = "MatchOptionsButton"
+	match_options_button.custom_minimum_size = Vector2(106, 42)
+	_apply_high_contrast_button_text(match_options_button)
+	match_options_button.tooltip_text = "Rival speed and text size"
+	match_options_button.pressed.connect(_toggle_readability_options)
+	top_row.add_child(match_options_button)
+	top_row.move_child(battle_log_button, maxi(0, top_row.get_child_count() - 4))
+	top_row.move_child(match_options_button, maxi(0, top_row.get_child_count() - 3))
+	board_info_button = _styled_button("i")
+	board_info_button.name = "BoardInfoButton"
+	board_info_button.custom_minimum_size = Vector2(42, 42)
+	board_info_button.toggle_mode = true
+	board_info_button.tooltip_text = "Show table labels and pile counts"
+	board_info_button.add_theme_font_size_override("font_size", _scaled_font_size(18))
+	board_info_button.set_meta("readability_base_font_font_size", 18)
+	_apply_high_contrast_button_text(board_info_button)
+	board_info_button.pressed.connect(_toggle_board_info)
+	top_row.add_child(board_info_button)
+	top_row.move_child(board_info_button, mini(4, top_row.get_child_count() - 1))
+
+	_refresh_readability_control_labels()
+	_apply_text_scale()
+	_refresh_board_info_visibility()
+
+
+func _toggle_readability_options() -> void:
+	if not is_instance_valid(readability_controls_panel):
+		return
+	readability_controls_panel.visible = not readability_controls_panel.visible
+	match_options_button.text = "CLOSE" if readability_controls_panel.visible else "OPTIONS"
+	if readability_controls_panel.visible:
+		_set_battle_log_visible(false)
+
+
+func _toggle_board_info() -> void:
+	board_info_visible = not board_info_visible
+	if is_instance_valid(board_info_button):
+		board_info_button.set_pressed_no_signal(board_info_visible)
+		board_info_button.tooltip_text = "Hide table labels and pile counts" if board_info_visible else "Show table labels and pile counts"
+	_refresh_board_info_visibility()
+
+
+func _refresh_board_info_visibility() -> void:
+	var zones := $ViewportContainer/WorldViewport/World/Zones
+	for zone in zones.get_children():
+		var zone_label := zone.get_node_or_null("Label3D") as Label3D
+		if zone_label != null:
+			zone_label.visible = board_info_visible
+	for node in card_layer.find_children("*", "Label3D", true, false):
+		if bool(node.get_meta("board_info_label", false)):
+			(node as Label3D).visible = board_info_visible
+
+
+func _load_readability_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load(READABILITY_SETTINGS_PATH) != OK:
+		return
+	var pacing_id := String(config.get_value("readability", "rival_pacing", "normal"))
+	for option_index in range(RIVAL_PACING_OPTIONS.size()):
+		if String(RIVAL_PACING_OPTIONS[option_index].id) == pacing_id:
+			rival_pacing_index = option_index
+			break
+	var saved_scale := float(config.get_value("readability", "text_scale", 1.0))
+	var closest_distance := INF
+	for option_index in range(TEXT_SCALE_OPTIONS.size()):
+		var distance := absf(float(TEXT_SCALE_OPTIONS[option_index]) - saved_scale)
+		if distance < closest_distance:
+			closest_distance = distance
+			text_scale_index = option_index
+
+
+func _save_readability_settings() -> void:
+	var config := ConfigFile.new()
+	config.set_value("readability", "rival_pacing", String(RIVAL_PACING_OPTIONS[rival_pacing_index].id))
+	config.set_value("readability", "text_scale", float(TEXT_SCALE_OPTIONS[text_scale_index]))
+	config.save(READABILITY_SETTINGS_PATH)
+
+
+func _cycle_rival_pacing() -> void:
+	rival_pacing_index = (rival_pacing_index + 1) % RIVAL_PACING_OPTIONS.size()
+	_refresh_readability_control_labels()
+	_save_readability_settings()
+
+
+func _cycle_text_scale() -> void:
+	text_scale_index = (text_scale_index + 1) % TEXT_SCALE_OPTIONS.size()
+	_apply_text_scale()
+	_refresh_readability_control_labels()
+	_save_readability_settings()
+
+
+func _refresh_readability_control_labels() -> void:
+	if is_instance_valid(rival_pacing_button):
+		rival_pacing_button.text = "RIVAL SPEED  •  %s" % String(RIVAL_PACING_OPTIONS[rival_pacing_index].label)
+	if is_instance_valid(text_scale_button):
+		text_scale_button.text = "TEXT SIZE  •  %d%%" % int(round(float(TEXT_SCALE_OPTIONS[text_scale_index]) * 100.0))
+
+
+func _scaled_font_size(base_size: int) -> int:
+	return maxi(1, int(round(float(base_size) * float(TEXT_SCALE_OPTIONS[text_scale_index]))))
+
+
+func _apply_text_scale() -> void:
+	_apply_text_scale_to_control($Interface)
+
+
+func _apply_text_scale_to_control(control: Control) -> void:
+	var font_size_names: Array[String] = ["font_size"]
+	if control is RichTextLabel:
+		font_size_names = ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size", "mono_font_size"]
+	for font_size_name in font_size_names:
+		var meta_name := "readability_base_font_%s" % font_size_name
+		if control.has_meta(meta_name):
+			control.add_theme_font_size_override(font_size_name, _scaled_font_size(int(control.get_meta(meta_name))))
+		elif control.has_theme_font_size_override(font_size_name):
+			var base_size := control.get_theme_font_size(font_size_name)
+			control.set_meta(meta_name, base_size)
+			control.add_theme_font_size_override(font_size_name, _scaled_font_size(base_size))
+	for child in control.get_children():
+		if child is Control:
+			_apply_text_scale_to_control(child)
 
 
 func _show_turn_banner(phase: String) -> void:
@@ -726,7 +1212,7 @@ func _build_hand_cards(side: String) -> void:
 		var root := _make_card(String(hand[hand_index]), is_player)
 		root.name = "%sHandCard_%d" % [side.capitalize(), hand_index]
 		root.position = Vector3(offset * spacing, (0.62 + absf(offset) * 0.025) if is_player else (0.72 + absf(offset) * 0.012), PLAYER_HAND_Z + absf(offset) * 0.045 if is_player else OPPONENT_HAND_Z - absf(offset) * 0.025)
-		root.rotation_degrees = Vector3(63.0 if is_player else 69.0, 0.0, -offset * (1.8 if is_player else 1.2))
+		root.rotation_degrees = Vector3(20.0 if is_player else 69.0, 0.0, -offset * (1.8 if is_player else 1.2))
 		root.scale = Vector3.ONE * scale_factor
 		root.set_meta("kind", "hand")
 		root.set_meta("side", side)
@@ -759,9 +1245,15 @@ func _build_field_cards(side: String, zone: String) -> void:
 		root.set_meta("instance_id", int(unit.instance_id))
 		root.set_meta("card_id", String(unit.card_id))
 		root.set_meta("ready", bool(unit.get("ready", false)))
+		root.set_meta("upright_rotation_degrees", root.rotation_degrees)
+		if zone == "plated" and bool(unit.get("defending", false)):
+			root.rotation_degrees.y += 90.0
 		_store_card_pose(root, float(int(unit.instance_id)) * 0.31)
 		card_layer.add_child(root)
 		interactive_cards.append(root)
+		_add_taunt_aura(root, unit, zone)
+		_add_meal_selection_aura(root, unit, side)
+		_add_ability_ready_aura(root, unit, side, zone)
 		_apply_card_highlight(root, unit, side)
 		_apply_tutorial_card_highlight(root, "field", side, String(unit.card_id), int(unit.instance_id))
 		_add_spice_attachments(root, unit, side)
@@ -827,6 +1319,8 @@ func _build_zone_marker(side: String, zone_kind: String, display_name: String) -
 	label.outline_size = 7
 	label.modulate = Color("#9cecff") if side == "player" else Color("#e1b5f5")
 	label.text = display_name
+	label.visible = board_info_visible
+	label.set_meta("board_info_label", true)
 	root.add_child(label)
 	card_layer.add_child(root)
 
@@ -865,6 +1359,8 @@ func _build_card_pile(side: String, pile_kind: String) -> void:
 	count_label.font_size = 32
 	count_label.outline_size = 9
 	count_label.text = str(cards.size())
+	count_label.visible = board_info_visible
+	count_label.set_meta("board_info_label", true)
 	card_layer.add_child(count_label)
 
 
@@ -888,9 +1384,8 @@ func _slot_can_receive_hand_card(card_data: Dictionary, side: String, zone: Stri
 			continue
 		if String(unit.get("card_type", "")) != "ingredient" or not service._ingredient_is_recipe_ready(state.player, unit):
 			return false
-		var ingredient_types: Array = service.card(String(unit.get("card_id", ""))).get("ingredient_types", [])
 		for requirement in service._effective_recipe(state, "player", card_data):
-			if String(requirement) == "any" or ingredient_types.has(requirement):
+			if service._ingredient_matches_requirement(service.card(String(unit.get("card_id", ""))), String(requirement)):
 				return true
 		return false
 	return false
@@ -934,6 +1429,135 @@ func _add_spice_attachments(root: Node3D, unit: Dictionary, side: String) -> voi
 		spice_card.set_meta("side", side)
 		spice_card.set_meta("card_id", spice_id)
 		root.add_child(spice_card)
+
+
+func _add_taunt_aura(root: Node3D, unit: Dictionary, zone: String) -> void:
+	if zone != "plated":
+		return
+	var data: Dictionary = service.card(String(unit.get("card_id", "")))
+	if not data.get("keywords", []).has("taunt"):
+		return
+	var aura := MeshInstance3D.new()
+	aura.name = "TauntAura"
+	aura.position = Vector3(0.0, 0.031, 0.0)
+	aura.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mesh := QuadMesh.new()
+	mesh.size = Vector2(1.46, 2.0)
+	aura.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_texture = ABILITY_READY_AURA
+	material.albedo_color = Color("#ff304d")
+	material.emission_enabled = true
+	material.emission = Color("#ff1838")
+	material.emission_texture = ABILITY_READY_AURA
+	material.emission_energy_multiplier = 1.65
+	aura.material_override = material
+	aura.set_meta("pulse_seed", float(int(unit.get("instance_id", 0))) * 0.37)
+	aura.set_meta("pulse_energy_min", 1.35)
+	aura.set_meta("pulse_energy_max", 2.15)
+	root.add_child(aura)
+	pulsing_field_auras.append(aura)
+
+
+func _add_ability_ready_aura(root: Node3D, unit: Dictionary, side: String, zone: String) -> void:
+	if not _unit_has_ready_activated_ability(unit, side, zone):
+		return
+	_add_pulsing_card_aura(
+		root,
+		"AbilityReadyAura",
+		int(unit.get("instance_id", 0)),
+		Color("#ffd84d"),
+		Color.WHITE,
+		Vector2(1.36, 1.9),
+		1.35,
+		1.05,
+		1.8
+	)
+
+
+func _add_meal_selection_aura(root: Node3D, unit: Dictionary, side: String) -> void:
+	if side != "player":
+		return
+	var instance_id := int(unit.get("instance_id", -1))
+	var selectable: bool = service.meal_selectable_ingredient_ids(state).has(instance_id)
+	var selected: bool = state.get("selected_ingredients", []).has(instance_id)
+	if not selectable and not selected:
+		return
+	var aura_color := Color("#ffb547") if selected else Color("#53dff5")
+	var albedo_tint := Color(aura_color.r, aura_color.g, aura_color.b, 0.96 if selected else 0.72)
+	_add_pulsing_card_aura(
+		root,
+		"MealIngredientSelectedAura" if selected else "MealIngredientCandidateAura",
+		instance_id,
+		aura_color,
+		albedo_tint,
+		Vector2(1.40, 1.96),
+		1.55 if selected else 1.05,
+		1.35 if selected else 0.85,
+		2.15 if selected else 1.45
+	)
+
+
+func _add_pulsing_card_aura(
+	root: Node3D,
+	aura_name: String,
+	instance_id: int,
+	emission_color: Color,
+	albedo_tint: Color,
+	mesh_size: Vector2,
+	initial_energy: float,
+	energy_min: float,
+	energy_max: float
+) -> void:
+	var aura := MeshInstance3D.new()
+	aura.name = aura_name
+	aura.position = Vector3(0.0, 0.032, 0.0)
+	aura.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mesh := QuadMesh.new()
+	mesh.size = mesh_size
+	aura.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_texture = ABILITY_READY_AURA
+	material.albedo_color = albedo_tint
+	material.emission_enabled = true
+	material.emission = emission_color
+	material.emission_texture = ABILITY_READY_AURA
+	material.emission_energy_multiplier = initial_energy
+	aura.material_override = material
+	aura.set_meta("pulse_seed", float(instance_id) * 0.37)
+	aura.set_meta("pulse_energy_min", energy_min)
+	aura.set_meta("pulse_energy_max", energy_max)
+	root.add_child(aura)
+	pulsing_field_auras.append(aura)
+
+
+func _unit_has_ready_activated_ability(unit: Dictionary, side: String, zone: String) -> bool:
+	if side != "player" or tutorial_mode or not service._can_player_act(state) or _has_blocking_prompt():
+		return false
+	var data: Dictionary = service.card(String(unit.get("card_id", "")))
+	for ability in data.get("abilities", []):
+		if String(ability.get("timing", "")) != "activated":
+			continue
+		var active_zone := String(ability.get("active_zone", ""))
+		if active_zone != "" and active_zone != zone:
+			continue
+		var ability_id := String(ability.get("id", "activated"))
+		if bool(ability.get("once_per_turn", false)) and unit.get("used_abilities", []).has(ability_id):
+			continue
+		if service._ability_needs_target(ability):
+			var target_spec: Dictionary = ability.get("target", {})
+			if service._first_ability_target_id(state, "player", unit, target_spec) < 0:
+				continue
+		return true
+	return false
 
 
 func _make_card(card_id: String, face_up: bool, show_art: bool = true) -> Node3D:
@@ -1037,7 +1661,7 @@ func _make_fallback_card_face(data: Dictionary, face_size: Vector2i, show_art: b
 	var type_label := _label(card_type.capitalize(), 22, Color("#fff0cf"))
 	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(type_label)
-	var rules := _label(String(data.get("text", "No printed ability.")), 18, Color.WHITE)
+	var rules := _label(String(data.get("text", "")), 18, Color.WHITE)
 	rules.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rules.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1091,15 +1715,68 @@ func _add_floating_art(root: Node3D, data: Dictionary, _side: String) -> void:
 
 
 func _add_stat_badge(root: Node3D, unit: Dictionary, side: String) -> void:
+	var is_defending := bool(unit.get("defending", false))
+	var is_ready := bool(unit.get("ready", false))
+	var stat_text := "%d/%d" % [int(unit.attack), int(unit.health)]
+	if not is_defending and side == "player" and is_ready:
+		stat_text += " READY"
+	_add_fitted_field_badge(
+		root,
+		"Stats",
+		stat_text,
+		Vector3(0.0, 0.18, 0.59),
+		Color("#fff3c4") if is_ready else Color("#c7c9cf")
+	)
+	if not is_defending:
+		return
+	_add_fitted_field_badge(
+		root,
+		"Status",
+		"DEFENDING",
+		_player_facing_badge_position(root, 0.67),
+		Color("#9edcff")
+	)
+
+
+func _add_fitted_field_badge(root: Node3D, badge_name: String, text: String, position: Vector3, text_color: Color) -> void:
+	var backing := Sprite3D.new()
+	backing.name = badge_name + "Backing"
+	backing.position = position + Vector3(0.0, -0.02, 0.0)
+	backing.texture = STAT_BADGE_BACKING
+	backing.pixel_size = 0.003
+	backing.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	var font_size := 42
+	var label_pixel_size := 0.005
+	var text_size := READABLE_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var desired_width := text_size.x * label_pixel_size + 0.18
+	var desired_height := text_size.y * label_pixel_size + 0.08
+	var natural_width := float(STAT_BADGE_BACKING.get_width()) * backing.pixel_size
+	var natural_height := float(STAT_BADGE_BACKING.get_height()) * backing.pixel_size
+	backing.scale = Vector3(
+		desired_width / maxf(0.001, natural_width),
+		desired_height / maxf(0.001, natural_height),
+		1.0
+	)
+	root.add_child(backing)
 	var label := Label3D.new()
-	label.name = "Stats"
-	label.position = Vector3(0.0, 0.18, 0.59)
+	label.name = badge_name
+	label.position = position
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 42
+	label.font = READABLE_FONT
+	label.font_size = font_size
+	label.pixel_size = label_pixel_size
 	label.outline_size = 10
-	label.modulate = Color("#fff3c4") if bool(unit.get("ready", false)) else Color("#c7c9cf")
-	label.text = "%d / %d%s" % [int(unit.attack), int(unit.health), "  READY" if side == "player" and bool(unit.get("ready", false)) else ""]
+	label.modulate = text_color
+	label.text = text
 	root.add_child(label)
+
+
+func _player_facing_badge_position(root: Node3D, distance: float) -> Vector3:
+	var toward_player_world := Vector3(0.0, 0.0, 1.0)
+	var toward_player_local := root.global_transform.basis.inverse() * toward_player_world
+	toward_player_local.y = 0.0
+	toward_player_local = toward_player_local.normalized()
+	return Vector3(toward_player_local.x * distance, 0.20, toward_player_local.z * distance)
 
 
 func _apply_card_highlight(root: Node3D, unit: Dictionary, side: String) -> void:
@@ -1118,11 +1795,13 @@ func _apply_card_highlight(root: Node3D, unit: Dictionary, side: String) -> void
 			highlighted = highlighted or service._ability_target_is_valid(state, "player", source, instance_id, pending_ability.get("target_spec", {}))
 	if not highlighted:
 		return
+	if meal_candidate or selected_recipe_ingredient:
+		return
 	var body := root.get_node("CardBody") as MeshInstance3D
 	var material := body.get_active_material(0).duplicate() as StandardMaterial3D
-	material.albedo_color = Color("#e9a93b") if not meal_candidate or selected_recipe_ingredient else Color("#2eb7d7")
+	material.albedo_color = Color("#e9a93b")
 	material.emission_enabled = true
-	material.emission = Color("#ffd45b") if not meal_candidate or selected_recipe_ingredient else Color("#63e6ff")
+	material.emission = Color("#ffd45b")
 	material.emission_energy_multiplier = 2.1
 	body.material_override = material
 	highlighted_bodies.append(body)
@@ -1240,6 +1919,18 @@ func _process(delta: float) -> void:
 			(art.material_override as StandardMaterial3D).albedo_texture = frames[frame_index]
 		art.set_meta("elapsed", elapsed)
 		art.set_meta("frame_index", frame_index)
+	for aura in pulsing_field_auras:
+		if not is_instance_valid(aura):
+			continue
+		var pulse := (sin(time * 4.2 + float(aura.get_meta("pulse_seed", 0.0))) + 1.0) * 0.5
+		aura.scale = Vector3.ONE * lerpf(0.985, 1.025, pulse)
+		var aura_material := aura.material_override as StandardMaterial3D
+		if aura_material != null:
+			aura_material.emission_energy_multiplier = lerpf(
+				float(aura.get_meta("pulse_energy_min", 1.05)),
+				float(aura.get_meta("pulse_energy_max", 1.8)),
+				pulse
+			)
 	_animate_physical_cards(delta, time)
 	_update_zone_flair(time)
 	for body in highlighted_bodies:
@@ -1278,11 +1969,20 @@ func _update_zone_flair(time: float) -> void:
 		for slot_index in range(materials.size()):
 			var material_variant = materials[slot_index]
 			var material := material_variant as StandardMaterial3D
-			var active := String(zone_id) == highlighted_zone and (highlighted_slot < 0 or highlighted_slot == slot_index)
+			var drag_active := String(zone_id) == highlighted_zone and (highlighted_slot < 0 or highlighted_slot == slot_index)
+			var action_active := (String(zone_id) == action_highlight_zone and (action_highlight_slot < 0 or action_highlight_slot == slot_index)) or _is_action_slot_highlighted(String(zone_id), slot_index)
+			var active := drag_active or action_active
 			material.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.48 if active else idle_alpha)
 			material.emission_enabled = active
 			material.emission = base_color
 			material.emission_energy_multiplier = 1.8 + sin(time * 5.0) * 0.35 if active else 0.0
+
+
+func _is_action_slot_highlighted(zone_id: String, slot_index: int) -> bool:
+	for choice in action_highlight_slots:
+		if String(choice.get("zone", "")) == zone_id and int(choice.get("slot", -1)) == slot_index:
+			return true
+	return false
 
 
 func _zone_color(zone_id: String) -> Color:
@@ -1294,10 +1994,32 @@ func _zone_color(zone_id: String) -> Color:
 
 
 func _on_table_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and String(state.get("phase", "")) == "player_main" and is_instance_valid(rival_action_panel):
+		rival_action_panel.visible = false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			if pending_hand_play_index >= 0 or pending_move_instance_id >= 0:
+				var choice_point: Variant = _mouse_to_table(event.position)
+				if choice_point != null:
+					var choice_slot: Dictionary = _slot_at_point(choice_point as Vector3)
+					if String(choice_slot.get("zone", "")) in ["player_prep", "player_plated"]:
+						if pending_hand_play_index >= 0:
+							_choose_pending_hand_destination(String(choice_slot.zone).trim_prefix("player_"), int(choice_slot.slot))
+						else:
+							_choose_pending_move_destination(String(choice_slot.zone).trim_prefix("player_"), int(choice_slot.slot))
+						pressed_card = null
+						viewport_container.accept_event()
+						return
+				pressed_card = null
+				viewport_container.accept_event()
+				return
 			pressed_card = _pick_card(event.position)
 			press_screen_position = event.position
+			if pressed_card != null and String(state.get("phase", "")) == "opponent_turn":
+				_inspect_card(pressed_card)
+				pressed_card = null
+				viewport_container.accept_event()
+				return
 			if pressed_card == null:
 				if _screen_hits_auxiliary_zone(event.position, "player_discard"):
 					_open_discard_tray("player")
@@ -1308,9 +2030,12 @@ func _on_table_gui_input(event: InputEvent) -> void:
 				elif _screen_hits_opponent_chef(event.position):
 					_on_opponent_chef_clicked()
 					viewport_container.accept_event()
+				elif _screen_hits_opponent_hand(event.position):
+					_on_opponent_chef_clicked()
+					viewport_container.accept_event()
 		elif pressed_card != null:
 			if dragging:
-				_finish_drag(_mouse_to_table(event.position))
+				_finish_drag(_mouse_to_table(event.position), event.position)
 			else:
 				_handle_card_click(pressed_card)
 			pressed_card = null
@@ -1331,17 +2056,69 @@ func _on_table_gui_input(event: InputEvent) -> void:
 
 func _pick_card(screen_position: Vector2) -> Node3D:
 	var best: Node3D
-	var best_distance := 100000.0
+	var best_depth := INF
+	var padded_best: Node3D
+	var padded_best_distance := 100000.0
+	for candidate in interactive_cards:
+		if not is_instance_valid(candidate):
+			continue
+		var polygon := _card_screen_polygon(candidate)
+		var card_rect := _card_screen_rect_from_polygon(polygon)
+		var visible_rect := card_rect.intersection(Rect2(Vector2.ZERO, viewport_container.size))
+		var target_center := visible_rect.get_center() if visible_rect.has_area() else card_rect.get_center()
+		var rect_distance := target_center.distance_to(screen_position)
+		if polygon.size() == 4 and Geometry2D.is_point_in_polygon(screen_position, polygon):
+			var camera_depth := candidate.global_position.distance_squared_to(camera.global_position)
+			if camera_depth < best_depth:
+				best = candidate
+				best_depth = camera_depth
+			continue
+		if card_rect.grow(10.0).has_point(screen_position) and rect_distance < padded_best_distance:
+			padded_best = candidate
+			padded_best_distance = rect_distance
+	if best != null:
+		return best
+	if padded_best != null:
+		return padded_best
 	for candidate in interactive_cards:
 		if not is_instance_valid(candidate):
 			continue
 		var projected := _world_to_container(candidate.global_position + Vector3(0.0, 0.22, 0.0))
 		var threshold := 78.0 if String(candidate.get_meta("kind", "")) == "hand" else 62.0
 		var distance := projected.distance_to(screen_position)
-		if distance < threshold and distance < best_distance:
+		if distance < threshold and distance < padded_best_distance:
 			best = candidate
-			best_distance = distance
+			padded_best_distance = distance
 	return best
+
+
+func _card_screen_polygon(card_node: Node3D) -> PackedVector2Array:
+	var half_size := FIELD_CARD_SIZE * 0.5
+	var local_corners := [
+		Vector3(-half_size.x, 0.05, -half_size.y),
+		Vector3(half_size.x, 0.05, -half_size.y),
+		Vector3(half_size.x, 0.05, half_size.y),
+		Vector3(-half_size.x, 0.05, half_size.y),
+	]
+	var polygon := PackedVector2Array()
+	for local_corner in local_corners:
+		polygon.append(_world_to_container(card_node.global_transform * local_corner))
+	return polygon
+
+
+func _card_screen_rect(card_node: Node3D) -> Rect2:
+	return _card_screen_rect_from_polygon(_card_screen_polygon(card_node))
+
+
+func _card_screen_rect_from_polygon(polygon: PackedVector2Array) -> Rect2:
+	if polygon.is_empty():
+		return Rect2()
+	var minimum := polygon[0]
+	var maximum := polygon[0]
+	for point in polygon:
+		minimum = minimum.min(point)
+		maximum = maximum.max(point)
+	return Rect2(minimum, maximum - minimum)
 
 
 func _world_to_container(world_position: Vector3) -> Vector2:
@@ -1351,6 +2128,26 @@ func _world_to_container(world_position: Vector3) -> Vector2:
 
 func _screen_hits_opponent_chef(screen_position: Vector2) -> bool:
 	return _world_to_container(opponent_chef.global_position + Vector3(0.0, 0.35, 0.0)).distance_to(screen_position) < 74.0
+
+
+func _screen_hits_opponent_hand(screen_position: Vector2) -> bool:
+	var found_hand_card := false
+	var hand_rect := Rect2()
+	for child in card_layer.get_children():
+		var card_node := child as Node3D
+		if (
+			card_node == null
+			or card_node.is_queued_for_deletion()
+			or String(card_node.get_meta("kind", "")) != "hand"
+			or String(card_node.get_meta("side", "")) != "opponent"
+		):
+			continue
+		var card_rect := _card_screen_rect(card_node)
+		if not card_rect.has_area():
+			continue
+		hand_rect = card_rect if not found_hand_card else hand_rect.merge(card_rect)
+		found_hand_card = true
+	return found_hand_card and hand_rect.grow(10.0).has_point(screen_position)
 
 
 func _screen_hits_auxiliary_zone(screen_position: Vector2, zone_key: String) -> bool:
@@ -1395,6 +2192,8 @@ func _begin_drag(point: Vector3) -> void:
 	pressed_card.position.y = DRAG_Y
 	current_zone = String(pressed_card.get_meta("zone", "hand"))
 	status_label.text = "Drag to your Prep or Plated lane. Drag an attacker onto a rival defender or chef."
+	_refresh_status_context()
+	_refresh_status_panel_visibility()
 
 
 func _update_drag(point: Vector3) -> void:
@@ -1407,7 +2206,7 @@ func _update_drag(point: Vector3) -> void:
 	highlighted_slot = int(hovered_slot.get("slot", -1))
 
 
-func _finish_drag(point: Variant) -> void:
+func _finish_drag(point: Variant, screen_position: Vector2 = Vector2(-10000.0, -10000.0)) -> void:
 	if pressed_card == null:
 		return
 	dragging = false
@@ -1439,7 +2238,13 @@ func _finish_drag(point: Variant) -> void:
 		elif destination == "opponent_plated":
 			requested_attacker = instance_id
 			requested_attack_target = _field_target_near(drop_point as Vector3, "opponent", "plated")
-		elif drop_point != null and _point_near_chef(drop_point as Vector3, opponent_chef.position):
+		elif (
+			drop_point != null
+			and (
+				_point_near_chef(drop_point as Vector3, opponent_chef.position)
+				or _screen_hits_opponent_hand(screen_position)
+			)
+		):
 			requested_attacker = instance_id
 			requested_attack_target = -1
 	highlighted_zone = ""
@@ -1510,6 +2315,9 @@ func _point_near_chef(point: Vector3, chef_position: Vector3) -> bool:
 
 
 func _handle_card_click(card_node: Node3D) -> void:
+	if String(state.get("phase", "")) == "opponent_turn":
+		_inspect_card(card_node)
+		return
 	if animation_busy:
 		return
 	var kind := String(card_node.get_meta("kind", ""))
@@ -1558,6 +2366,7 @@ func _handle_card_click(card_node: Node3D) -> void:
 		}
 		_refresh_action_panel()
 		_refresh_bottom_status()
+		_continue_tutorial_after_physical_selection()
 		return
 	if side == "opponent" and String(card_node.get_meta("zone", "")) == "plated" and int(state.get("selected_attacker", -1)) >= 0:
 		selected_ref = {}
@@ -1566,11 +2375,32 @@ func _handle_card_click(card_node: Node3D) -> void:
 	if tutorial_mode:
 		_tutorial_reject_action()
 		return
+	_inspect_card(card_node)
+
+
+func _continue_tutorial_after_physical_selection() -> void:
+	if not tutorial_mode or selected_ref.is_empty():
+		return
+	var next_action := String(_tutorial_step().get("action", ""))
+	var instance_id := int(selected_ref.get("instance_id", -1))
+	if String(selected_ref.get("kind", "")) == "field":
+		match next_action:
+			"move_unit":
+				_begin_move_selection(instance_id)
+			"select_spice_target":
+				_select_spice_target(instance_id)
+			"select_attacker":
+				_select_attacker(instance_id)
+
+
+func _inspect_card(card_node: Node3D) -> void:
+	if not is_instance_valid(card_node):
+		return
 	selected_ref = {
-		"kind": kind,
-		"side": side,
+		"kind": String(card_node.get_meta("kind", "")),
+		"side": String(card_node.get_meta("side", "")),
 		"hand_index": int(card_node.get_meta("hand_index", -1)),
-		"instance_id": instance_id,
+		"instance_id": int(card_node.get_meta("instance_id", -1)),
 		"zone": String(card_node.get_meta("zone", "")),
 		"card_id": String(card_node.get_meta("card_id", ""))
 	}
@@ -1590,55 +2420,126 @@ func _on_opponent_chef_clicked() -> void:
 
 func _refresh_action_panel() -> void:
 	_clear_children(action_list)
+	_clear_keyword_popout()
 	action_panel.visible = not selected_ref.is_empty()
 	if selected_ref.is_empty():
 		return
+	var inspector_accent := UI_THEME_SCRIPT.TEAL if String(selected_ref.side) == "player" else UI_THEME_SCRIPT.ORANGE
+	var inspector_style := UI_THEME_SCRIPT.light_glass_style(inspector_accent, 2)
+	action_panel.add_theme_stylebox_override("panel", inspector_style)
 	var data := service.card(String(selected_ref.card_id))
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
 	action_list.add_child(header)
-	var info_heading := _label("CARD INFO", 13, Color("#8fcce5"))
+	var info_heading := _label("CARD INSPECTOR", 13, UI_THEME_SCRIPT.TEAL_DEEP)
 	info_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(info_heading)
 	var close_button := _styled_button("Close")
 	close_button.name = "LivingTableInfoClose"
 	close_button.custom_minimum_size = Vector2(72, 32)
+	_apply_current_ui_button_style(close_button, false)
 	close_button.pressed.connect(_close_info_window)
 	header.add_child(close_button)
 	if CARD_FACE_SCRIPT.supports_card(data):
 		var face_center := CenterContainer.new()
-		face_center.custom_minimum_size = Vector2(0, 220)
+		face_center.custom_minimum_size = Vector2(0, 268)
 		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		action_list.add_child(face_center)
 		var info_face := CARD_FACE_SCRIPT.new()
 		info_face.name = "LivingTableInfoCardFace"
 		info_face.configure(data, "black", true, false)
-		info_face.custom_minimum_size = Vector2(150, 213)
+		info_face.custom_minimum_size = Vector2(188, 267)
 		face_center.add_child(info_face)
-	var title := _label(String(data.get("name", "Card")), 22, Color("#fff3cf"))
+	var title := _label(String(data.get("name", "Card")), 22, UI_THEME_SCRIPT.INK)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	action_list.add_child(title)
 	var location := "%s • %s" % [String(data.get("card_type", "card")).capitalize(), String(selected_ref.zone if String(selected_ref.zone) != "" else selected_ref.kind).capitalize()]
-	action_list.add_child(_label(location, 13, Color("#f1c66e")))
+	action_list.add_child(_label(location, 13, UI_THEME_SCRIPT.INK_MUTED))
 	if int(selected_ref.instance_id) >= 0:
 		var unit := service._find_unit(state[String(selected_ref.side)], int(selected_ref.instance_id))
 		if not unit.is_empty():
-			action_list.add_child(_label("%d Attack  •  %d/%d Health%s" % [int(unit.attack), int(unit.health), int(unit.max_health), "  •  Ready" if bool(unit.get("ready", false)) else ""], 14, Color("#fff0c2")))
-	var rules := _label(String(data.get("text", "")), 13, Color("#d9e2e8"))
-	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	action_list.add_child(rules)
-	if String(selected_ref.side) != "player" or String(state.phase) != "player_main" or _has_blocking_prompt():
+			action_list.add_child(_label("%d Attack  •  %d/%d Health%s" % [int(unit.attack), int(unit.health), int(unit.max_health), "  •  Ready" if bool(unit.get("ready", false)) else ""], 14, UI_THEME_SCRIPT.TEAL_DEEP))
+	var keywords: Array = data.get("keywords", [])
+	if not keywords.is_empty():
+		action_list.add_child(_label("KEYWORDS", 12, UI_THEME_SCRIPT.TEAL_DEEP))
+		var keyword_row := HFlowContainer.new()
+		keyword_row.add_theme_constant_override("h_separation", 5)
+		keyword_row.add_theme_constant_override("v_separation", 5)
+		action_list.add_child(keyword_row)
+		for keyword_value in keywords:
+			var keyword_id := String(keyword_value)
+			var keyword_button := _styled_button(_keyword_title(keyword_id))
+			keyword_button.custom_minimum_size = Vector2(0, 30)
+			_apply_current_ui_button_style(keyword_button, false)
+			keyword_button.mouse_entered.connect(func() -> void: _show_keyword_popout(keyword_id))
+			keyword_button.focus_entered.connect(func() -> void: _show_keyword_popout(keyword_id))
+			keyword_button.pressed.connect(func() -> void: _show_keyword_popout(keyword_id))
+			keyword_row.add_child(keyword_button)
+		_show_keyword_popout(String(keywords[0]))
+	if String(selected_ref.side) != "player" or String(state.phase) != "player_main":
+		return
+	if _has_blocking_prompt() and pending_hand_play_index != int(selected_ref.get("hand_index", -1)) and pending_move_instance_id != int(selected_ref.get("instance_id", -1)):
 		return
 	if String(selected_ref.kind) == "hand":
-		_build_hand_actions(data, int(selected_ref.hand_index))
+		if pending_hand_play_index == int(selected_ref.hand_index):
+			action_list.add_child(_label("CHOOSE A DESTINATION ON THE TABLE", 13, UI_THEME_SCRIPT.ORANGE))
+			_add_action_button("Cancel", _cancel_pending_hand_play)
+		else:
+			_build_hand_actions(data, int(selected_ref.hand_index))
 	else:
-		_build_field_actions(data, int(selected_ref.instance_id), String(selected_ref.zone))
+		if pending_move_instance_id == int(selected_ref.instance_id):
+			action_list.add_child(_label("CHOOSE A GLOWING DESTINATION SLOT", 13, UI_THEME_SCRIPT.ORANGE))
+			_add_action_button("Cancel", _cancel_pending_move)
+		else:
+			_build_field_actions(data, int(selected_ref.instance_id), String(selected_ref.zone))
 
 
 func _close_info_window() -> void:
+	_cancel_pending_hand_play(false)
+	_cancel_pending_move(false)
 	selected_ref = {}
 	_refresh_action_panel()
+
+
+func _keyword_title(keyword_id: String) -> String:
+	var tooltip: Dictionary = KEYWORD_TOOLTIPS.get(keyword_id, {})
+	return String(tooltip.get("title", keyword_id.replace("_", " ").capitalize()))
+
+
+func _clear_keyword_popout() -> void:
+	if is_instance_valid(keyword_popout):
+		keyword_popout.queue_free()
+	keyword_popout = null
+
+
+func _show_keyword_popout(keyword_id: String) -> void:
+	var tooltip: Dictionary = KEYWORD_TOOLTIPS.get(keyword_id, {})
+	if tooltip.is_empty() or selected_ref.is_empty():
+		return
+	_clear_keyword_popout()
+	keyword_popout = PanelContainer.new()
+	keyword_popout.name = "KeywordPopout"
+	keyword_popout.z_index = 19
+	keyword_popout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	keyword_popout.position = Vector2(350.0, clampf(action_panel.position.y + 120.0, 92.0, maxf(92.0, size.y - 180.0)))
+	keyword_popout.size = Vector2(292.0, 118.0)
+	var popout_style := UI_THEME_SCRIPT.tinted_paper_style(UI_THEME_SCRIPT.OAK, 2)
+	keyword_popout.add_theme_stylebox_override("panel", popout_style)
+	$Interface.add_child(keyword_popout)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	keyword_popout.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 3)
+	margin.add_child(content)
+	content.add_child(_label(String(tooltip.title), 17, UI_THEME_SCRIPT.TEAL_DEEP))
+	var body := _label(String(tooltip.body), 13, UI_THEME_SCRIPT.INK)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(body)
 
 
 func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> void:
@@ -1652,14 +2553,22 @@ func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> vo
 		service.select_attacker(state, attacker_override)
 	var attacker_id := int(state.get("selected_attacker", -1))
 	if attacker_id < 0:
+		var selection_feedback := String(state.message)
 		_render_match()
+		_show_invalid_action(selection_feedback)
 		return
+	var attempt_marker := _action_attempt_marker()
 	animation_busy = true
 	service.attack(state, target_instance_id)
+	var attack_succeeded: bool = _action_attempt_progressed(attempt_marker)
+	var attack_feedback := String(state.message)
 	await _drain_animation_event_queue()
 	animation_busy = false
-	_tutorial_complete_action(tutorial_action, {"target_instance_id": target_instance_id})
+	if attack_succeeded:
+		_tutorial_complete_action(tutorial_action, {"target_instance_id": target_instance_id})
 	_render_match()
+	if not attack_succeeded:
+		_show_invalid_action(attack_feedback)
 
 
 func _choose_effect_target_animated(target_instance_id: int) -> void:
@@ -1723,7 +2632,7 @@ func _drain_animation_event_queue(play_origin_pose: Dictionary = {}) -> void:
 func _prepare_animation_ghosts(events: Array[Dictionary]) -> void:
 	var removed_ids: Array[int] = []
 	for event in events:
-		if String(event.get("type", "")) not in ["sacrifice", "destroy"]:
+		if String(event.get("type", "")) not in ["sacrifice", "destroy", "evaporate"]:
 			continue
 		var instance_id := int(event.get("instance_id", -1))
 		if instance_id >= 0 and not removed_ids.has(instance_id):
@@ -1749,8 +2658,12 @@ func _clear_animation_ghosts() -> void:
 
 func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionary) -> void:
 	for event in events:
-		if String(event.get("type", "")) == "play" and String(event.get("side", "")) == "opponent":
-			await _show_opponent_reveal(event)
+		if String(event.get("type", "")) == "play":
+			if String(event.get("side", "")) == "opponent":
+				await _show_opponent_reveal(event, events)
+			var played_card_type := String(event.get("card_type", service.card(String(event.get("card_id", ""))).get("card_type", "")))
+			if played_card_type in ["tool", "chef"]:
+				await _show_action_card_fullscreen_reveal(event)
 		elif String(event.get("type", "")) == "move":
 			var moving_node := _card_node_for_instance(int(event.get("instance_id", -1)))
 			if moving_node != null:
@@ -1766,9 +2679,51 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 			break
 	if needs_destination_render:
 		_render_match()
+	var activation_events: Array[Dictionary] = []
+	for event in events:
+		if _uses_field_activation_indicator(event):
+			activation_events.append(event)
+	if not activation_events.is_empty():
+		var staged_transfer_cards := _stage_activation_result_transfers(events)
+		var arrival_duration := 0.0
+		for event in events:
+			if String(event.get("type", "")) in ["play", "move"]:
+				arrival_duration = maxf(arrival_duration, _start_animation_event(event, play_origin_pose))
+		if arrival_duration > 0.0:
+			await get_tree().create_timer(arrival_duration).timeout
+		for activation_event in activation_events:
+			await _show_field_activation_indicator(activation_event)
+		var result_duration := 0.0
+		for event in events:
+			var event_type := String(event.get("type", ""))
+			if event_type in ["play", "move", "ability_activation", "card_text_activation"]:
+				continue
+			if event_type == "attack":
+				await _animate_attack_motion(
+					int(event.get("source_instance_id", -1)),
+					int(event.get("target_instance_id", -1)),
+					String(event.get("target_kind", "unit"))
+				)
+				continue
+			if event_type in ["draw", "search"]:
+				_release_staged_transfer_card(event, staged_transfer_cards)
+			result_duration = maxf(result_duration, _start_animation_event(event, play_origin_pose))
+		if result_duration > 0.0:
+			await get_tree().create_timer(result_duration).timeout
+		for staged_card in staged_transfer_cards:
+			if is_instance_valid(staged_card):
+				staged_card.visible = true
+		action_highlight_zone = ""
+		action_highlight_slot = -1
+		return
 	var longest_duration := 0.0
+	var swap_move_events := _paired_swap_move_events(events)
+	if not swap_move_events.is_empty():
+		longest_duration = _start_swap_move_animation(swap_move_events[0], swap_move_events[1])
 	for event in events:
 		var event_type := String(event.get("type", ""))
+		if event_type == "move" and not swap_move_events.is_empty():
+			continue
 		if event_type == "attack":
 			await _animate_attack_motion(
 				int(event.get("source_instance_id", -1)),
@@ -1779,6 +2734,64 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 		longest_duration = maxf(longest_duration, _start_animation_event(event, play_origin_pose))
 	if longest_duration > 0.0:
 		await get_tree().create_timer(longest_duration).timeout
+	action_highlight_zone = ""
+	action_highlight_slot = -1
+
+
+func _uses_field_activation_indicator(event: Dictionary) -> bool:
+	if String(event.get("type", "")) == "ability_activation":
+		return true
+	if String(event.get("type", "")) != "card_text_activation":
+		return false
+	# Action cards have already received a full-screen spin reveal before they
+	# resolve. Since they go straight to discard, a second field pulse only
+	# highlights the discard pile and adds a redundant pause.
+	return String(event.get("card_type", "")) not in ["tool", "chef", "reaction"]
+
+
+func _paired_swap_move_events(events: Array[Dictionary]) -> Array[Dictionary]:
+	var move_events: Array[Dictionary] = []
+	for event in events:
+		if String(event.get("type", "")) == "move":
+			move_events.append(event)
+	if move_events.size() != 2:
+		return []
+	var first: Dictionary = move_events[0]
+	var second: Dictionary = move_events[1]
+	if String(first.get("side", "")) != String(second.get("side", "")):
+		return []
+	if String(first.get("from", "")) != String(second.get("to", "")) or String(first.get("to", "")) != String(second.get("from", "")):
+		return []
+	return move_events
+
+
+func _stage_activation_result_transfers(events: Array[Dictionary]) -> Array[Node3D]:
+	var staged_cards: Array[Node3D] = []
+	for event in events:
+		if String(event.get("type", "")) not in ["draw", "search"] or String(event.get("to", "hand")) != "hand":
+			continue
+		var destination_card := _hand_card_node(
+			String(event.get("side", "player")),
+			int(event.get("hand_index", -1)),
+			String(event.get("card_id", ""))
+		)
+		if destination_card == null or staged_cards.has(destination_card):
+			continue
+		destination_card.visible = false
+		staged_cards.append(destination_card)
+	return staged_cards
+
+
+func _release_staged_transfer_card(event: Dictionary, staged_cards: Array[Node3D]) -> void:
+	var destination_card := _hand_card_node(
+		String(event.get("side", "player")),
+		int(event.get("hand_index", -1)),
+		String(event.get("card_id", ""))
+	)
+	if destination_card == null:
+		return
+	destination_card.visible = true
+	staged_cards.erase(destination_card)
 
 
 func _start_animation_event(event: Dictionary, play_origin_pose: Dictionary) -> float:
@@ -1795,13 +2808,49 @@ func _start_animation_event(event: Dictionary, play_origin_pose: Dictionary) -> 
 			return _start_heal_event_animation(event)
 		"buff":
 			return _start_buff_event_animation(event)
+		"defense_position":
+			return _start_defense_position_animation(event)
 		"sacrifice", "destroy":
 			return _start_removal_event_animation(event)
+		"evaporate":
+			return _start_token_evaporation_animation(event)
 	return 0.0
+
+
+func _start_defense_position_animation(event: Dictionary) -> float:
+	var card_node := _card_node_for_instance(int(event.get("instance_id", -1)))
+	if card_node == null:
+		return 0.0
+	var landing_position: Vector3 = card_node.get_meta("base_position", card_node.position)
+	var landing_scale: Vector3 = card_node.get_meta("base_scale", card_node.scale)
+	var lifted_position := landing_position + Vector3(0.0, 0.72, 0.0)
+	var upright_rotation: Vector3 = card_node.get_meta("upright_rotation_degrees", card_node.rotation_degrees)
+	var target_rotation := upright_rotation
+	if bool(event.get("defending", false)):
+		target_rotation.y += 90.0
+	card_node.set_meta("base_position", landing_position)
+	card_node.set_meta("base_rotation_degrees", target_rotation)
+	card_node.set_meta("base_scale", landing_scale)
+	var lift_tween := create_tween()
+	lift_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	lift_tween.tween_property(card_node, "position", lifted_position, 0.18)
+	lift_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	lift_tween.tween_property(card_node, "position", landing_position, 0.32)
+	var turn_tween := create_tween()
+	turn_tween.tween_interval(0.08)
+	turn_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
+	turn_tween.tween_property(card_node, "rotation_degrees", target_rotation, 0.30)
+	var scale_tween := create_tween()
+	scale_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	scale_tween.tween_property(card_node, "scale", landing_scale * 1.08, 0.18)
+	scale_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	scale_tween.tween_property(card_node, "scale", landing_scale, 0.32)
+	return 0.52
 
 
 func _start_play_event_animation(event: Dictionary, play_origin_pose: Dictionary) -> float:
 	var side := String(event.get("side", "player"))
+	var card_type := String(event.get("card_type", service.card(String(event.get("card_id", ""))).get("card_type", "")))
 	var instance_id := int(event.get("instance_id", -1))
 	var card_node := _card_node_for_instance(instance_id) if instance_id >= 0 else null
 	if card_node == null and String(event.get("to", "")) == "environment":
@@ -1816,9 +2865,77 @@ func _start_play_event_animation(event: Dictionary, play_origin_pose: Dictionary
 		return 0.0
 	var origin_pose := play_origin_pose if side == "player" else {}
 	var hand_origin := Vector3(0.0, 0.9, PLAYER_HAND_Z if side == "player" else OPPONENT_HAND_Z)
+	if card_type == "meal":
+		card_node.set_meta("play_animation_style", "meal_power")
+		return _start_meal_power_arrival_animation(card_node, side, origin_pose, hand_origin)
+	if card_type in ["tool", "chef"]:
+		card_node.set_meta("play_animation_style", "action_fullscreen")
+		return _start_action_card_discard_landing(card_node, side, card_type)
+	card_node.set_meta("play_animation_style", "standard")
 	_start_node_arrival_animation(card_node, origin_pose, hand_origin)
 	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff") if side == "player" else Color("#e66da5"), 10, "◆")
 	return 0.44
+
+
+func _start_meal_power_arrival_animation(
+	card_node: Node3D,
+	side: String,
+	origin_pose: Dictionary,
+	hand_origin: Vector3
+) -> float:
+	var target_position: Vector3 = card_node.position
+	var target_rotation: Vector3 = card_node.rotation_degrees
+	var target_scale: Vector3 = card_node.scale
+	var reveal_position := target_position + Vector3(0.0, 2.25, 0.0)
+	card_node.position = origin_pose.get("position", hand_origin)
+	card_node.rotation_degrees = origin_pose.get("rotation_degrees", Vector3(64.0, 0.0, 0.0))
+	card_node.scale = origin_pose.get("scale", target_scale * 0.72)
+	var movement := create_tween()
+	movement.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	movement.tween_property(card_node, "position", reveal_position, 0.24)
+	movement.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	movement.tween_property(card_node, "position", target_position, 0.34)
+	var pose := create_tween()
+	pose.set_parallel(true)
+	pose.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	pose.tween_property(card_node, "scale", target_scale * 1.72, 0.24)
+	pose.tween_property(card_node, "rotation_degrees", target_rotation + Vector3(-18.0, -10.0 if side == "player" else 10.0, 0.0), 0.24)
+	pose.chain().set_parallel(true)
+	pose.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	pose.tween_property(card_node, "scale", target_scale, 0.48)
+	pose.tween_property(card_node, "rotation_degrees", target_rotation, 0.36)
+	var landing_position := target_position
+	var landing_accent := Color("#ffd84d") if side == "player" else Color("#f18bc0")
+	get_tree().create_timer(0.56).timeout.connect(func() -> void:
+		_spawn_impact_flash(landing_position + Vector3(0.0, 0.22, 0.0))
+		_spawn_particle_burst(landing_position + Vector3(0.0, 0.3, 0.0), landing_accent, 24, "✦")
+	)
+	return 0.74
+
+
+func _start_action_card_discard_landing(
+	card_node: Node3D,
+	side: String,
+	card_type: String
+) -> float:
+	var target_position: Vector3 = card_node.position
+	var target_rotation: Vector3 = card_node.rotation_degrees
+	var target_scale: Vector3 = card_node.scale
+	card_node.position = target_position + Vector3(0.0, 0.18, 0.0)
+	card_node.rotation_degrees = target_rotation
+	card_node.scale = target_scale * 0.68
+	var landing := create_tween().set_parallel(true)
+	landing.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	landing.tween_property(card_node, "position", target_position, 0.24)
+	landing.tween_property(card_node, "scale", target_scale, 0.24)
+	var landing_accent := Color("#65d7ff") if card_type == "tool" else Color("#ffd166")
+	if side == "opponent":
+		landing_accent = Color("#e58ac6")
+	var landing_position := target_position
+	get_tree().create_timer(0.2).timeout.connect(func() -> void:
+		_spawn_particle_burst(landing_position + Vector3(0.0, 0.18, 0.0), landing_accent, 9, "◆")
+	)
+	return 0.28
 
 
 func _start_card_transfer_event_animation(event: Dictionary) -> float:
@@ -1833,6 +2950,7 @@ func _start_card_transfer_event_animation(event: Dictionary) -> float:
 		card_node = find_child("%sDeckCard_*" % side.capitalize(), true, false) as Node3D
 	if card_node == null:
 		return 0.0
+	card_node.visible = true
 	var source_kind := String(event.get("from", "deck"))
 	var source_key := "%s_%s" % [side, "discard" if source_kind == "discard" else "deck"]
 	var source_position: Vector3 = AUX_ZONE_POSITIONS[source_key] + Vector3(0.0, 0.9, 0.0)
@@ -1860,6 +2978,65 @@ func _start_move_event_animation(event: Dictionary) -> float:
 	_start_node_arrival_animation(card_node, event.get("origin_pose", {}), fallback_position)
 	_spawn_particle_burst(fallback_position + Vector3(0.0, 0.22, 0.0), accent, 7, "•")
 	get_tree().create_timer(0.34).timeout.connect(func() -> void: _spawn_particle_burst(destination_position + Vector3(0.0, 0.28, 0.0), accent, 10, "◆"))
+	return 0.52
+
+
+func _start_swap_move_animation(first_event: Dictionary, second_event: Dictionary) -> float:
+	var first_card := _card_node_for_instance(int(first_event.get("instance_id", -1)))
+	var second_card := _card_node_for_instance(int(second_event.get("instance_id", -1)))
+	if first_card == null or second_card == null:
+		return 0.0
+	swap_move_animation_count += 1
+	var first_target_position := first_card.position
+	var second_target_position := second_card.position
+	var first_target_rotation := first_card.rotation_degrees
+	var second_target_rotation := second_card.rotation_degrees
+	var first_target_scale := first_card.scale
+	var second_target_scale := second_card.scale
+	var first_origin_pose: Dictionary = first_event.get("origin_pose", {})
+	var second_origin_pose: Dictionary = second_event.get("origin_pose", {})
+	var first_source_position: Vector3 = first_origin_pose.get("position", ZONE_CENTERS.get("%s_%s" % [String(first_event.get("side", "player")), String(first_event.get("from", "prep"))], first_target_position))
+	var second_source_position: Vector3 = second_origin_pose.get("position", ZONE_CENTERS.get("%s_%s" % [String(second_event.get("side", "player")), String(second_event.get("from", "prep"))], second_target_position))
+	first_card.position = first_source_position
+	second_card.position = second_source_position
+	first_card.rotation_degrees = first_origin_pose.get("rotation_degrees", first_target_rotation)
+	second_card.rotation_degrees = second_origin_pose.get("rotation_degrees", second_target_rotation)
+	first_card.scale = first_origin_pose.get("scale", first_target_scale)
+	second_card.scale = second_origin_pose.get("scale", second_target_scale)
+	var crossing_center := (first_source_position + second_source_position) * 0.5
+	var travel := second_target_position - first_source_position
+	var lateral := Vector3(-travel.z, 0.0, travel.x).normalized() * 0.52
+	if lateral.length_squared() < 0.01:
+		lateral = Vector3(0.52, 0.0, 0.0)
+	var first_midpoint := crossing_center + lateral + Vector3(0.0, 0.62, 0.0)
+	var second_midpoint := crossing_center - lateral + Vector3(0.0, 0.62, 0.0)
+	_spawn_particle_burst(first_source_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff"), 8, "•")
+	_spawn_particle_burst(second_source_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff"), 8, "•")
+	var first_motion := create_tween()
+	first_motion.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	first_motion.tween_property(first_card, "position", first_midpoint, 0.22)
+	first_motion.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	first_motion.tween_property(first_card, "position", first_target_position, 0.26)
+	var second_motion := create_tween()
+	second_motion.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	second_motion.tween_property(second_card, "position", second_midpoint, 0.22)
+	second_motion.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	second_motion.tween_property(second_card, "position", second_target_position, 0.26)
+	var first_pose := create_tween().set_parallel(true)
+	first_pose.tween_property(first_card, "scale", first_target_scale * 1.12, 0.2)
+	first_pose.tween_property(first_card, "rotation_degrees:y", first_target_rotation.y + 16.0, 0.2)
+	first_pose.chain().set_parallel(true)
+	first_pose.tween_property(first_card, "scale", first_target_scale, 0.28)
+	first_pose.tween_property(first_card, "rotation_degrees", first_target_rotation, 0.28)
+	var second_pose := create_tween().set_parallel(true)
+	second_pose.tween_property(second_card, "scale", second_target_scale * 1.12, 0.2)
+	second_pose.tween_property(second_card, "rotation_degrees:y", second_target_rotation.y - 16.0, 0.2)
+	second_pose.chain().set_parallel(true)
+	second_pose.tween_property(second_card, "scale", second_target_scale, 0.28)
+	second_pose.tween_property(second_card, "rotation_degrees", second_target_rotation, 0.28)
+	get_tree().create_timer(0.25).timeout.connect(func() -> void:
+		_spawn_particle_burst(crossing_center + Vector3(0.0, 0.5, 0.0), Color("#ffd166"), 16, "✦")
+	)
 	return 0.52
 
 
@@ -1974,14 +3151,101 @@ func _start_removal_event_animation(event: Dictionary) -> float:
 	var card_node := _card_node_for_instance(int(event.get("instance_id", -1)))
 	if card_node == null:
 		return 0.0
-	var target_position := card_node.position + Vector3(0.0, 0.7, 0.0)
+	var side := String(event.get("side", "player"))
+	var origin_position := card_node.position
+	var discard_position: Vector3 = AUX_ZONE_POSITIONS["%s_discard" % side] + Vector3(0.0, 0.24, 0.0)
+	var travel_midpoint := origin_position.lerp(discard_position, 0.42) + Vector3(0.0, 0.76, 0.0)
+	var discard_scale := Vector3.ONE * 0.54
 	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.3, 0.0), Color("#9aa7b1"), 10, "◆")
-	var tween := create_tween().set_parallel(true)
-	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	tween.tween_property(card_node, "position", target_position, 0.32)
-	tween.tween_property(card_node, "scale", Vector3.ZERO, 0.32)
-	tween.tween_property(card_node, "rotation_degrees:y", card_node.rotation_degrees.y + 24.0, 0.32)
-	return 0.34
+	var travel := create_tween()
+	travel.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	travel.tween_property(card_node, "position", travel_midpoint, 0.2)
+	travel.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	travel.tween_property(card_node, "position", discard_position, 0.38)
+	var pose := create_tween().set_parallel(true)
+	pose.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	pose.tween_property(card_node, "scale", discard_scale * 1.12, 0.2)
+	pose.tween_property(card_node, "rotation_degrees:y", card_node.rotation_degrees.y + 130.0, 0.2)
+	pose.chain().set_parallel(true)
+	pose.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	pose.tween_property(card_node, "scale", discard_scale, 0.38)
+	pose.tween_property(card_node, "rotation_degrees:y", card_node.rotation_degrees.y + 220.0, 0.38)
+	get_tree().create_timer(0.54).timeout.connect(func() -> void:
+		_spawn_particle_burst(discard_position + Vector3(0.0, 0.14, 0.0), Color("#9aa7b1"), 12, "✦")
+	)
+	var floating_art := card_node.find_child("FloatingArt", true, false) as MeshInstance3D
+	if floating_art != null:
+		pose.tween_property(floating_art, "scale", Vector3.ZERO, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		var art_material := floating_art.material_override as StandardMaterial3D
+		if art_material != null:
+			pose.tween_property(art_material, "albedo_color:a", 0.0, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	for badge_name in ["Stats", "Status"]:
+		var badge := card_node.find_child(badge_name, true, false) as Label3D
+		if badge != null:
+			pose.tween_property(badge, "scale", Vector3.ZERO, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			pose.tween_property(badge, "modulate:a", 0.0, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		var backing := card_node.find_child(badge_name + "Backing", true, false) as Sprite3D
+		if backing != null:
+			pose.tween_property(backing, "scale", Vector3.ZERO, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			pose.tween_property(backing, "modulate:a", 0.0, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	return 0.6
+
+
+func _start_token_evaporation_animation(event: Dictionary) -> float:
+	var card_node := _card_node_for_instance(int(event.get("instance_id", -1)))
+	if card_node == null:
+		return 0.0
+	token_evaporation_animation_count += 1
+	var origin_position := card_node.position
+	var origin_global_position := card_node.global_position
+	var origin_scale := card_node.scale
+	var origin_rotation_y := card_node.rotation_degrees.y
+	var vapor_color := Color("#8FE5C8")
+	_spawn_particle_burst(origin_global_position + Vector3(0.0, 0.28, 0.0), vapor_color, 14, "•")
+	_spawn_floating_number(origin_global_position + Vector3(0.0, 0.58, 0.0), "EVAPORATES", vapor_color)
+
+	var rise := create_tween()
+	rise.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	rise.tween_property(card_node, "position", origin_position + Vector3(0.0, 0.32, 0.0), 0.18)
+	rise.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	rise.tween_property(card_node, "position", origin_position + Vector3(0.0, 1.12, 0.0), 0.46)
+
+	var dissolve := create_tween().set_parallel(true)
+	dissolve.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	dissolve.tween_property(card_node, "scale", origin_scale * 1.08, 0.16)
+	dissolve.tween_property(card_node, "rotation_degrees:y", origin_rotation_y + 32.0, 0.16)
+	dissolve.chain().set_parallel(true)
+	dissolve.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	dissolve.tween_property(
+		card_node,
+		"scale",
+		Vector3(origin_scale.x * 0.06, origin_scale.y * 1.2, origin_scale.z * 0.06),
+		0.48
+	)
+	dissolve.tween_property(card_node, "rotation_degrees:y", origin_rotation_y + 210.0, 0.48)
+
+	var floating_art := card_node.find_child("FloatingArt", true, false) as MeshInstance3D
+	if floating_art != null:
+		var art_fade := create_tween()
+		art_fade.tween_interval(0.16)
+		art_fade.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+		art_fade.tween_property(floating_art, "scale", Vector3.ZERO, 0.36)
+	for badge_name in ["Stats", "Status"]:
+		var badge := card_node.find_child(badge_name, true, false) as Label3D
+		if badge != null:
+			var badge_fade := create_tween()
+			badge_fade.tween_interval(0.14)
+			badge_fade.tween_property(badge, "modulate:a", 0.0, 0.3)
+		var backing := card_node.find_child(badge_name + "Backing", true, false) as Sprite3D
+		if backing != null:
+			var backing_fade := create_tween()
+			backing_fade.tween_interval(0.14)
+			backing_fade.tween_property(backing, "modulate:a", 0.0, 0.3)
+
+	get_tree().create_timer(0.3).timeout.connect(func() -> void:
+		_spawn_particle_burst(origin_global_position + Vector3(0.0, 0.72, 0.0), vapor_color.lightened(0.12), 20, "✦")
+	)
+	return 0.66
 
 
 func _animate_hit_reaction(card_node: Node3D) -> void:
@@ -2047,39 +3311,328 @@ func _spawn_impact_flash(world_position: Vector3) -> void:
 	tween.finished.connect(flash.queue_free)
 
 
-func _show_opponent_reveal(event: Dictionary) -> void:
+func _show_field_activation_indicator(event: Dictionary) -> void:
 	var card_id := String(event.get("card_id", ""))
 	if card_id == "":
 		return
+	var activation_kind := String(event.get("type", "card_text_activation"))
+	field_activation_indicator_count += 1
+	last_field_activation_card_id = card_id
+	last_field_activation_kind = activation_kind
+	var source_instance_id := int(event.get("source_instance_id", event.get("instance_id", -1)))
+	var card_node := _card_node_for_instance(source_instance_id) if source_instance_id >= 0 else null
+	var side := String(event.get("side", "player"))
+	if card_node == null and String(event.get("card_type", "")) in ["tool", "chef", "reaction"]:
+		card_node = find_child("%sDiscardTop" % side.capitalize(), true, false) as Node3D
+	if card_node == null and String(event.get("card_type", "")) == "environment":
+		card_node = find_child("%sEnvironmentCard" % side.capitalize(), true, false) as Node3D
+	var accent := Color("#ffd84d") if side == "player" else Color("#ee8ac6")
+	var source_screen := effect_layer.size * 0.5
+	if card_node != null:
+		source_screen = _world_to_container(card_node.global_position + Vector3(0.0, 0.34, 0.0))
+		_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.22, 0.0), accent, 16, "✦")
+	var indicator := PanelContainer.new()
+	indicator.name = "FieldActivationIndicator"
+	indicator.custom_minimum_size = Vector2(410.0, 78.0)
+	indicator.size = indicator.custom_minimum_size
+	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	indicator.z_index = 238
+	var indicator_style := StyleBoxFlat.new()
+	indicator_style.bg_color = Color(0.025, 0.045, 0.06, 0.94)
+	indicator_style.border_color = Color(accent.r, accent.g, accent.b, 0.96)
+	indicator_style.set_border_width_all(3)
+	indicator_style.set_corner_radius_all(20)
+	indicator_style.shadow_color = Color(accent.r, accent.g, accent.b, 0.28)
+	indicator_style.shadow_size = 12
+	indicator.add_theme_stylebox_override("panel", indicator_style)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	var copy := VBoxContainer.new()
+	copy.add_theme_constant_override("separation", 0)
+	var header := _label(String(event.get("activation_label", "ABILITY")), 14, accent)
+	header.text = "✦  %s" % header.text
+	var card_name := _label(String(service.card(card_id).get("name", card_id)), 22, Color("#f5fbff"))
+	card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	copy.add_child(header)
+	copy.add_child(card_name)
+	margin.add_child(copy)
+	indicator.add_child(margin)
+	var panel_size := indicator.custom_minimum_size
+	indicator.position = Vector2(
+		clampf(source_screen.x - panel_size.x * 0.5, 18.0, maxf(18.0, effect_layer.size.x - panel_size.x - 18.0)),
+		clampf(source_screen.y - panel_size.y - 72.0, 92.0, maxf(92.0, effect_layer.size.y - panel_size.y - 120.0))
+	)
+	indicator.pivot_offset = panel_size * 0.5
+	indicator.scale = Vector2(0.78, 0.78)
+	indicator.modulate.a = 0.0
+	effect_layer.add_child(indicator)
+	var card_origin_position := card_node.position if card_node != null else Vector3.ZERO
+	var card_origin_scale := card_node.scale if card_node != null else Vector3.ONE
+	var aura: MeshInstance3D
+	var aura_material: StandardMaterial3D
+	if card_node != null:
+		aura = MeshInstance3D.new()
+		aura.name = "ActivationPulseAura"
+		aura.position = Vector3(0.0, 0.025, 0.0)
+		aura.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+		aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var aura_mesh := QuadMesh.new()
+		aura_mesh.size = Vector2(1.48, 2.04)
+		aura.mesh = aura_mesh
+		aura_material = StandardMaterial3D.new()
+		aura_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		aura_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		aura_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		aura_material.albedo_texture = ABILITY_READY_AURA
+		aura_material.albedo_color = Color(accent.r, accent.g, accent.b, 0.0)
+		aura_material.emission_enabled = true
+		aura_material.emission = accent
+		aura_material.emission_texture = ABILITY_READY_AURA
+		aura_material.emission_energy_multiplier = 1.8
+		aura.material_override = aura_material
+		aura.scale = Vector3(0.72, 0.72, 0.72)
+		card_node.add_child(aura)
+	var entrance := create_tween().set_parallel(true)
+	entrance.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	entrance.tween_property(indicator, "scale", Vector2.ONE, 0.18)
+	entrance.tween_property(indicator, "modulate:a", 1.0, 0.12)
+	if card_node != null:
+		entrance.tween_property(card_node, "position", card_origin_position + Vector3(0.0, 0.3, 0.0), 0.18)
+		entrance.tween_property(card_node, "scale", card_origin_scale * 1.12, 0.18)
+		entrance.tween_property(aura, "scale", Vector3.ONE * 1.18, 0.22)
+		entrance.tween_property(aura_material, "albedo_color:a", 0.9, 0.12)
+	await entrance.finished
+	await get_tree().create_timer(0.36).timeout
+	var leave := create_tween().set_parallel(true)
+	leave.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	leave.tween_property(indicator, "scale", Vector2(1.04, 1.04), 0.18)
+	leave.tween_property(indicator, "modulate:a", 0.0, 0.16)
+	if card_node != null and is_instance_valid(card_node):
+		leave.tween_property(card_node, "position", card_origin_position, 0.2)
+		leave.tween_property(card_node, "scale", card_origin_scale, 0.2)
+	if aura != null and is_instance_valid(aura):
+		leave.tween_property(aura, "scale", Vector3.ONE * 1.42, 0.18)
+		leave.tween_property(aura_material, "albedo_color:a", 0.0, 0.16)
+	await leave.finished
+	indicator.queue_free()
+	if aura != null and is_instance_valid(aura):
+		aura.queue_free()
+
+
+func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
+	var card_id := String(event.get("card_id", ""))
+	if card_id == "":
+		return
+	var card_type := String(event.get("card_type", service.card(card_id).get("card_type", "")))
+	if card_type not in ["tool", "chef"]:
+		return
+	fullscreen_action_reveal_count += 1
+	last_fullscreen_action_reveal_card_id = card_id
+	last_fullscreen_action_reveal_type = card_type
+	var side := String(event.get("side", "player"))
+	var hold_seconds := _action_card_reveal_hold_seconds(side, service.card(card_id))
+	last_fullscreen_action_reveal_hold_seconds = hold_seconds
+	var accent := Color("#65d7ff") if card_type == "tool" else Color("#ffd166")
+	if side == "opponent":
+		accent = Color("#e58ac6")
+	var dimmer := ColorRect.new()
+	dimmer.name = "ActionCardRevealDimmer"
+	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dimmer.color = Color(0.005, 0.012, 0.018, 0.0)
+	dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dimmer.z_index = 242
+	effect_layer.add_child(dimmer)
+	var reveal_card := TextureRect.new()
+	reveal_card.name = "ActionCardFullscreenReveal"
+	reveal_card.texture = CARD_BACK
+	reveal_card.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	reveal_card.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	reveal_card.size = Vector2(286.0, 407.0)
+	reveal_card.pivot_offset = reveal_card.size * 0.5
+	var source_world := Vector3(0.0, 0.9, PLAYER_HAND_Z if side == "player" else OPPONENT_HAND_Z)
+	reveal_card.position = _world_to_container(source_world) - reveal_card.pivot_offset
+	reveal_card.scale = Vector2(0.42, 0.42)
+	reveal_card.rotation = -TAU if side == "player" else TAU
+	reveal_card.modulate.a = 0.0
+	reveal_card.z_index = 244
+	reveal_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	effect_layer.add_child(reveal_card)
+	var type_name := "ITEM" if card_type == "tool" else "CHEF"
+	var type_label := _label("%s • %s" % ["RIVAL PLAYS" if side == "opponent" else "YOU PLAY", type_name], 18, accent)
+	type_label.name = "ActionCardRevealType"
+	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	type_label.add_theme_color_override("font_outline_color", Color("#080d12"))
+	type_label.add_theme_constant_override("outline_size", 8)
+	type_label.size = Vector2(360.0, 40.0)
+	type_label.position = Vector2(effect_layer.size.x * 0.5 - 180.0, effect_layer.size.y * 0.5 - 258.0)
+	type_label.modulate.a = 0.0
+	type_label.z_index = 245
+	type_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	effect_layer.add_child(type_label)
+	var center_position := effect_layer.size * 0.5 - reveal_card.pivot_offset
+	var approach := create_tween().set_parallel(true)
+	approach.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	approach.tween_property(dimmer, "color:a", 0.42, 0.24)
+	approach.tween_property(reveal_card, "position", center_position, 0.3)
+	approach.tween_property(reveal_card, "scale", Vector2.ONE, 0.3)
+	approach.tween_property(reveal_card, "rotation", 0.0, 0.3)
+	approach.tween_property(reveal_card, "modulate:a", 1.0, 0.16)
+	approach.tween_property(type_label, "modulate:a", 1.0, 0.18)
+	await approach.finished
+	var close_flip := create_tween()
+	close_flip.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	close_flip.tween_property(reveal_card, "scale:x", 0.04, 0.09)
+	await close_flip.finished
+	reveal_card.texture = _face_material(card_id).albedo_texture
+	var open_flip := create_tween()
+	open_flip.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	open_flip.tween_property(reveal_card, "scale:x", 1.0, 0.18)
+	await open_flip.finished
+	_spawn_screen_particle_burst(effect_layer.size * 0.5, accent, 18, "✦")
+	await get_tree().create_timer(hold_seconds).timeout
+	var leave := create_tween().set_parallel(true)
+	leave.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	leave.tween_property(dimmer, "color:a", 0.0, 0.16)
+	leave.tween_property(reveal_card, "modulate:a", 0.0, 0.16)
+	leave.tween_property(reveal_card, "scale", Vector2(1.08, 1.08), 0.16)
+	leave.tween_property(type_label, "modulate:a", 0.0, 0.12)
+	await leave.finished
+	reveal_card.queue_free()
+	type_label.queue_free()
+	dimmer.queue_free()
+
+
+func _action_card_reveal_hold_seconds(side: String, _data: Dictionary) -> float:
+	if side != "opponent":
+		return 0.35
+	match String(RIVAL_PACING_OPTIONS[rival_pacing_index].id):
+		"fast":
+			return 0.55
+		"slow":
+			return 1.1
+	return 0.8
+
+
+func _show_opponent_reveal(event: Dictionary, event_batch: Array[Dictionary] = []) -> void:
+	var card_id := String(event.get("card_id", ""))
+	if card_id == "":
+		return
+	var data: Dictionary = service.card(card_id)
+	var summary := _rival_action_summary(event, event_batch)
+	latest_rival_card_id = card_id
+	latest_rival_card_data = data.duplicate(true)
+	latest_rival_summary = summary.duplicate(true)
+	_present_rival_action(card_id, data, summary)
+	_set_action_highlight(event)
+
+
+func _open_game_breakdown() -> void:
+	if game_breakdown_active or latest_rival_card_id == "":
+		return
+	game_breakdown_active = true
+	if is_instance_valid(game_breakdown_button):
+		game_breakdown_button.disabled = true
+	await _show_game_breakdown(latest_rival_card_id, latest_rival_card_data, latest_rival_summary)
+	game_breakdown_active = false
+	if is_instance_valid(game_breakdown_button):
+		game_breakdown_button.disabled = false
+
+
+func _show_game_breakdown(card_id: String, data: Dictionary, summary: Dictionary) -> void:
+	var dimmer := ColorRect.new()
+	dimmer.name = "OpponentRevealDimmer"
+	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dimmer.color = Color(0.005, 0.012, 0.018, 0.0)
+	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	dimmer.z_index = 244
+	effect_layer.add_child(dimmer)
+
+	var reveal_panel := PanelContainer.new()
+	reveal_panel.name = "OpponentRevealPanel"
+	reveal_panel.size = Vector2(720.0, 478.0)
+	reveal_panel.position = effect_layer.size * 0.5 - reveal_panel.size * 0.5
+	reveal_panel.pivot_offset = reveal_panel.size * 0.5
+	reveal_panel.scale = Vector2(0.86, 0.86)
+	reveal_panel.modulate.a = 0.0
+	reveal_panel.z_index = 245
+	reveal_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.025, 0.065, 0.085, 0.985)
+	panel_style.border_color = Color("#e66da5")
+	panel_style.set_border_width_all(3)
+	panel_style.set_corner_radius_all(20)
+	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.65)
+	panel_style.shadow_size = 20
+	reveal_panel.add_theme_stylebox_override("panel", panel_style)
+	effect_layer.add_child(reveal_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	reveal_panel.add_child(margin)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 24)
+	margin.add_child(body)
+	var card_center := CenterContainer.new()
+	card_center.custom_minimum_size = Vector2(308, 438)
+	body.add_child(card_center)
 	var reveal_card := TextureRect.new()
 	reveal_card.name = "OpponentRevealCard"
 	reveal_card.texture = CARD_BACK
 	reveal_card.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	reveal_card.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	reveal_card.size = Vector2(182.0, 259.0)
-	reveal_card.pivot_offset = reveal_card.size * 0.5
-	reveal_card.position = _world_to_container(Vector3(0.0, 0.95, OPPONENT_HAND_Z)) - reveal_card.pivot_offset
-	reveal_card.scale = Vector2(0.72, 0.72)
-	reveal_card.z_index = 245
+	reveal_card.custom_minimum_size = Vector2(300.0, 426.0)
+	reveal_card.pivot_offset = Vector2(150.0, 213.0)
 	reveal_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	effect_layer.add_child(reveal_card)
-	var reveal_label := _label("RIVAL PLAYS", 18, Color("#ffd0e5"))
-	reveal_label.name = "OpponentRevealLabel"
-	reveal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reveal_label.add_theme_color_override("font_outline_color", Color("#120711"))
-	reveal_label.add_theme_constant_override("outline_size", 7)
-	reveal_label.size = Vector2(260.0, 38.0)
-	reveal_label.position = Vector2(effect_layer.size.x * 0.5 - 130.0, effect_layer.size.y * 0.5 - 192.0)
-	reveal_label.modulate.a = 0.0
-	reveal_label.z_index = 246
-	reveal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	effect_layer.add_child(reveal_label)
-	var center_position := effect_layer.size * 0.5 - reveal_card.pivot_offset
+	card_center.add_child(reveal_card)
+
+	var explanation := VBoxContainer.new()
+	explanation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	explanation.add_theme_constant_override("separation", 8)
+	body.add_child(explanation)
+	var reveal_label := _label("RIVAL PLAYS", 17, Color("#ffd0e5"))
+	explanation.add_child(reveal_label)
+	var name_label := _label(String(data.get("name", card_id)), 30, Color("#fff3cf"))
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	explanation.add_child(name_label)
+	var meta_label := _label(String(summary.meta), 16, Color("#f1c66e"))
+	meta_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	explanation.add_child(meta_label)
+	var rules_heading := _label("PRINTED EFFECT", 12, Color("#8fcce5"))
+	explanation.add_child(rules_heading)
+	var rules_label := _label(String(data.get("text", "")), 18, Color("#edf4f6"))
+	rules_label.custom_minimum_size = Vector2(0, 122)
+	rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rules_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	rules_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	rules_label.add_theme_constant_override("line_spacing", 4)
+	explanation.add_child(rules_label)
+	var outcome_heading := _label("WHAT HAPPENED", 12, Color("#f2a0c5"))
+	explanation.add_child(outcome_heading)
+	var outcome_label := _label(String(summary.outcome), 17, Color("#8fddf5"))
+	outcome_label.custom_minimum_size = Vector2(0, 78)
+	outcome_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	outcome_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	outcome_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	explanation.add_child(outcome_label)
+	var continue_button := _styled_button("Resume Game  •  Space")
+	continue_button.name = "OpponentRevealContinueButton"
+	continue_button.custom_minimum_size = Vector2(0, 42)
+	continue_button.pressed.connect(func() -> void: reveal_skip_requested = true)
+	explanation.add_child(continue_button)
+
+	reveal_active = true
+	reveal_skip_requested = false
 	var approach := create_tween().set_parallel(true)
 	approach.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	approach.tween_property(reveal_card, "position", center_position, 0.24)
-	approach.tween_property(reveal_card, "scale", Vector2.ONE, 0.24)
-	approach.tween_property(reveal_label, "modulate:a", 1.0, 0.18)
+	approach.tween_property(dimmer, "color:a", 0.56, 0.2)
+	approach.tween_property(reveal_panel, "modulate:a", 1.0, 0.2)
+	approach.tween_property(reveal_panel, "scale", Vector2.ONE, 0.26)
 	await approach.finished
 	var close_flip := create_tween()
 	close_flip.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -2091,14 +3644,157 @@ func _show_opponent_reveal(event: Dictionary) -> void:
 	open_flip.tween_property(reveal_card, "scale:x", 1.0, 0.2)
 	await open_flip.finished
 	_spawn_screen_particle_burst(effect_layer.size * 0.5, Color("#e66da5"), 14, "✦")
-	await get_tree().create_timer(0.28).timeout
+	while not reveal_skip_requested:
+		await get_tree().process_frame
+	reveal_active = false
 	var leave := create_tween().set_parallel(true)
-	leave.tween_property(reveal_card, "modulate:a", 0.0, 0.16)
-	leave.tween_property(reveal_card, "scale", Vector2(1.08, 1.08), 0.16)
-	leave.tween_property(reveal_label, "modulate:a", 0.0, 0.12)
+	leave.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	leave.tween_property(dimmer, "color:a", 0.0, 0.16)
+	leave.tween_property(reveal_panel, "modulate:a", 0.0, 0.16)
+	leave.tween_property(reveal_panel, "scale", Vector2(1.04, 1.04), 0.16)
 	await leave.finished
-	reveal_card.queue_free()
-	reveal_label.queue_free()
+	reveal_panel.queue_free()
+	dimmer.queue_free()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not reveal_active or not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
+		reveal_skip_requested = true
+		get_viewport().set_input_as_handled()
+
+
+func _present_rival_action(card_id: String, data: Dictionary, summary: Dictionary) -> void:
+	if not is_instance_valid(rival_action_panel):
+		return
+	game_breakdown_button.disabled = false
+	rival_action_face.texture = _face_material(card_id).albedo_texture
+	rival_action_name_label.text = String(data.get("name", card_id))
+	rival_action_meta_label.text = String(summary.meta)
+	rival_action_rules_label.text = String(data.get("text", ""))
+	rival_action_outcome_label.text = String(summary.outcome)
+	var recent_line := "%s — %s" % [String(data.get("name", card_id)), String(summary.outcome)]
+	rival_recent_actions.push_front(recent_line)
+	if rival_recent_actions.size() > 3:
+		rival_recent_actions.resize(3)
+	var recent_lines: Array[String] = []
+	for action_index in range(rival_recent_actions.size()):
+		recent_lines.append("[color=#f2a0c5]%d[/color]  %s" % [action_index + 1, rival_recent_actions[action_index]])
+	rival_recent_actions_label.text = "\n".join(recent_lines)
+	rival_action_panel.visible = false
+
+
+func _rival_action_summary(event: Dictionary, event_batch: Array[Dictionary]) -> Dictionary:
+	var card_type := String(event.get("card_type", service.card(String(event.get("card_id", ""))).get("card_type", "card")))
+	var destination := String(event.get("zone", ""))
+	if destination == "":
+		destination = String(event.get("to", ""))
+	var destination_label := ""
+	match destination:
+		"prep", "plated":
+			destination_label = destination.capitalize()
+		"attachment":
+			destination_label = "Attached to a unit"
+		"environment":
+			destination_label = "Environment slot"
+		"discard":
+			destination_label = "Resolved, then discarded"
+		_:
+			destination_label = destination.capitalize()
+	var outcome_parts: Array[String] = []
+	var opponent_draws := 0
+	for effect_event in event_batch:
+		var effect_type := String(effect_event.get("type", ""))
+		if effect_type == "play":
+			continue
+		if effect_type == "draw" and String(effect_event.get("side", "")) == "opponent":
+			opponent_draws += 1
+			continue
+		var phrase := _readable_event_phrase(effect_event)
+		if phrase != "" and not outcome_parts.has(phrase):
+			outcome_parts.append(phrase)
+	if opponent_draws > 0:
+		outcome_parts.push_front("Drew %d card%s." % [opponent_draws, "" if opponent_draws == 1 else "s"])
+	if outcome_parts.is_empty():
+		outcome_parts.append("The card resolved with no additional visible change.")
+	return {
+		"meta": "%s  •  %s" % [card_type.capitalize(), destination_label],
+		"outcome": " ".join(outcome_parts)
+	}
+
+
+func _readable_event_phrase(event: Dictionary) -> String:
+	var event_type := String(event.get("type", ""))
+	match event_type:
+		"damage":
+			return "Dealt %d damage to %s." % [int(event.get("amount", 0)), _readable_event_target(event)]
+		"heal":
+			return "Healed %s for %d." % [_readable_event_target(event), int(event.get("amount", 0))]
+		"buff":
+			var changes: Array[String] = []
+			var attack_delta := int(event.get("attack_delta", 0))
+			var health_delta := int(event.get("health_delta", 0))
+			if attack_delta != 0:
+				changes.append("%+d Attack" % attack_delta)
+			if health_delta != 0:
+				changes.append("%+d Health" % health_delta)
+			return "Changed %s by %s." % [_readable_event_target(event), " and ".join(changes)]
+		"destroy":
+			return "Destroyed %s." % _event_card_name(event)
+		"sacrifice":
+			return "Sacrificed %s." % _event_card_name(event)
+		"evaporate":
+			return "%s evaporated instead of entering %s." % [
+				_event_card_name(event),
+				String(event.get("attempted_destination", "another zone")).capitalize()
+			]
+		"move":
+			return "Moved %s to %s." % [_event_card_name(event), String(event.get("to", "a new zone")).capitalize()]
+		"defense_position":
+			return "%s entered Defense." % _event_card_name(event) if bool(event.get("defending", false)) else "%s returned upright." % _event_card_name(event)
+		"search":
+			return "Searched their deck."
+	return ""
+
+
+func _readable_event_target(event: Dictionary) -> String:
+	var target_side := String(event.get("target_side", event.get("side", "opponent")))
+	var target_kind := String(event.get("target_kind", "unit"))
+	if target_kind in ["player", "chef"]:
+		return "your Chef" if target_side == "player" else "their Chef"
+	var target_instance_id := int(event.get("target_instance_id", event.get("instance_id", -1)))
+	for side in ["player", "opponent"]:
+		var unit: Dictionary = service._find_unit(state[side], target_instance_id)
+		if not unit.is_empty():
+			return String(unit.get("name", "a unit"))
+	return "a unit"
+
+
+func _event_card_name(event: Dictionary) -> String:
+	var card_id := String(event.get("card_id", ""))
+	if card_id != "":
+		return String(service.card(card_id).get("name", card_id))
+	var instance_id := int(event.get("instance_id", event.get("target_instance_id", -1)))
+	for side in ["player", "opponent"]:
+		var unit: Dictionary = service._find_unit(state[side], instance_id)
+		if not unit.is_empty():
+			return String(unit.get("name", "a card"))
+	return "a card"
+
+
+func _set_action_highlight(event: Dictionary) -> void:
+	var zone := String(event.get("zone", ""))
+	if zone not in ["prep", "plated"]:
+		action_highlight_zone = ""
+		action_highlight_slot = -1
+		return
+	action_highlight_zone = "opponent_%s" % zone
+	action_highlight_slot = -1
+	var instance_id := int(event.get("instance_id", -1))
+	var unit: Dictionary = service._find_unit(state.opponent, instance_id)
+	if not unit.is_empty():
+		action_highlight_slot = int(unit.get("table_slot", -1))
 
 
 func _spawn_particle_burst(world_position: Vector3, color: Color, count: int = 10, glyph: String = "•") -> void:
@@ -2192,23 +3888,57 @@ func _build_hand_actions(data: Dictionary, hand_index: int) -> void:
 	var card_type := String(data.get("card_type", ""))
 	var card_id := String(data.get("id", ""))
 	if card_type in ["ingredient", "meal"]:
-		for zone in ["prep", "plated"]:
-			var capacity: int = service.PREP_SLOTS if zone == "prep" else service.PLATED_SLOTS
-			for slot_index in range(capacity):
-				var chosen_zone: String = zone
-				var chosen_slot: int = slot_index
-				var replacing_ingredient := card_type == "meal" and not _slot_is_open("player", zone, slot_index) and _slot_can_receive_hand_card(data, "player", zone, slot_index)
-				var action_text := "%s → %s %d%s" % ["Serve" if card_type == "meal" else "Play", zone.capitalize(), slot_index + 1, " (Sacrifice)" if replacing_ingredient else ""]
-				var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
-				var tutorial_locked := tutorial_mode and not _tutorial_action_matches(tutorial_action, {"card_id": card_id, "zone": zone, "slot": slot_index})
-				_add_action_button(action_text, func() -> void: _play_hand_card(hand_index, chosen_zone, chosen_slot), not _slot_can_receive_hand_card(data, "player", zone, slot_index) or tutorial_locked)
+		var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
+		var tutorial_locked := tutorial_mode and (String(_tutorial_step().get("action", "")) != tutorial_action or String(_tutorial_step().get("card_id", "")) != card_id)
+		_add_action_button("Play Card", func() -> void: _begin_hand_play_selection(hand_index), tutorial_locked)
 	elif card_type == "spice":
 		var target_id := int(state.get("selected_spice_target", -1))
-		var tutorial_locked := tutorial_mode and not _tutorial_action_matches("play_hand", {"card_id": card_id})
-		_add_action_button("Season Selected" if target_id >= 0 else "Select a Field Card First", func() -> void: _play_hand_card(hand_index, "prep"), target_id < 0 or tutorial_locked)
+		var tutorial_locked := tutorial_mode and (String(_tutorial_step().get("action", "")) != "play_hand" or String(_tutorial_step().get("card_id", "")) != card_id)
+		_add_action_button("Play Card" if target_id >= 0 else "Choose a Card to Season", func() -> void: _play_hand_card(hand_index, "prep"), target_id < 0 or tutorial_locked)
 	else:
-		var tutorial_locked := tutorial_mode and not _tutorial_action_matches("play_hand", {"card_id": card_id})
-		_add_action_button("Use %s" % card_type.capitalize(), func() -> void: _play_hand_card(hand_index, "prep"), tutorial_locked)
+		var tutorial_locked := tutorial_mode and (String(_tutorial_step().get("action", "")) != "play_hand" or String(_tutorial_step().get("card_id", "")) != card_id)
+		_add_action_button("Play Card", func() -> void: _play_hand_card(hand_index, "prep"), tutorial_locked)
+
+
+func _begin_hand_play_selection(hand_index: int) -> void:
+	if animation_busy or hand_index < 0 or hand_index >= state.player.hand.size():
+		return
+	var card_data: Dictionary = service.card(String(state.player.hand[hand_index]))
+	if String(card_data.get("card_type", "")) not in ["ingredient", "meal"]:
+		_play_hand_card(hand_index, "prep")
+		return
+	pending_hand_play_index = hand_index
+	action_highlight_slots.clear()
+	for zone in ["prep", "plated"]:
+		var capacity: int = service.PREP_SLOTS if zone == "prep" else service.PLATED_SLOTS
+		for slot_index in range(capacity):
+			if _slot_can_receive_hand_card(card_data, "player", zone, slot_index):
+				action_highlight_slots.append({"zone": "player_%s" % zone, "slot": slot_index})
+	state.message = "Choose a glowing Prep or Plated slot for %s, or Cancel." % String(card_data.get("name", "this card"))
+	_refresh_action_panel()
+	_refresh_bottom_status()
+
+
+func _choose_pending_hand_destination(destination: String, destination_slot: int) -> void:
+	if pending_hand_play_index < 0:
+		return
+	var hand_index := pending_hand_play_index
+	var card_data: Dictionary = service.card(String(state.player.hand[hand_index])) if hand_index < state.player.hand.size() else {}
+	if card_data.is_empty() or not _slot_can_receive_hand_card(card_data, "player", destination, destination_slot):
+		return
+	pending_hand_play_index = -1
+	action_highlight_slots.clear()
+	_play_hand_card(hand_index, destination, destination_slot)
+
+
+func _cancel_pending_hand_play(refresh_ui := true) -> void:
+	pending_hand_play_index = -1
+	action_highlight_slots.clear()
+	action_highlight_zone = ""
+	action_highlight_slot = -1
+	if refresh_ui and not state.is_empty():
+		_refresh_bottom_status()
+		_refresh_action_panel()
 
 
 func _build_field_actions(data: Dictionary, instance_id: int, zone: String) -> void:
@@ -2232,12 +3962,8 @@ func _build_field_actions(data: Dictionary, instance_id: int, zone: String) -> v
 		_add_action_button("Choose Attacker", func() -> void: _select_attacker(instance_id), not bool(unit.get("ready", false)) or attacker_locked)
 	var spice_locked := tutorial_mode and not _tutorial_action_matches("select_spice_target", {"card_id": String(data.get("id", "")), "instance_id": instance_id})
 	_add_action_button("Season This Card", func() -> void: _select_spice_target(instance_id), not unit.get("spices", []).is_empty() or spice_locked)
-	var destination := "prep" if zone == "plated" else "plated"
-	var destination_capacity: int = service.PREP_SLOTS if destination == "prep" else service.PLATED_SLOTS
-	for slot_index in range(destination_capacity):
-		var chosen_slot := slot_index
-		var move_locked := tutorial_mode and not _tutorial_action_matches("move_unit", {"card_id": String(data.get("id", "")), "instance_id": instance_id, "zone": destination, "slot": slot_index})
-		_add_action_button("Move → %s %d" % [destination.capitalize(), slot_index + 1], func() -> void: _move_unit(instance_id, destination, chosen_slot), bool(state.player.zone_move_used) or not _slot_is_open("player", destination, slot_index) or move_locked)
+	var move_locked := tutorial_mode and (String(_tutorial_step().get("action", "")) != "move_unit" or int(_tutorial_step().get("instance_id", -1)) != instance_id)
+	_add_action_button("Move", func() -> void: _begin_move_selection(instance_id), bool(state.player.zone_move_used) or move_locked)
 
 
 func _play_hand_card(hand_index: int, destination: String, destination_slot: int = -1) -> void:
@@ -2246,6 +3972,7 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 	if hand_index < 0 or hand_index >= state.player.hand.size():
 		return
 	var played_card_id := String(state.player.hand[hand_index])
+	_cancel_pending_hand_play(false)
 	var card_data: Dictionary = service.card(played_card_id)
 	var card_type := String(card_data.get("card_type", ""))
 	var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
@@ -2257,30 +3984,43 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 		if destination_slot < 0:
 			state.message = "Choose an exact %s slot." % destination.capitalize()
 			_render_match()
+			_show_invalid_action(String(state.message))
 			return
 		if not _slot_can_receive_hand_card(card_data, "player", destination, destination_slot):
 			state.message = "%s slot %d is occupied." % [destination.capitalize(), destination_slot + 1]
 			_render_match()
+			_show_invalid_action(String(state.message))
 			return
 	if card_type == "meal":
 		service.begin_meal_play(state, hand_index, destination, destination_slot)
+		var meal_started: bool = not state.get("pending_meal", {}).is_empty()
+		var meal_feedback := String(state.message)
 		selected_ref = {}
-		_tutorial_complete_action("begin_meal", tutorial_details)
+		if meal_started:
+			_tutorial_complete_action("begin_meal", tutorial_details)
 		_render_match()
+		if not meal_started:
+			_show_invalid_action(meal_feedback)
 		return
 	var previous_ids: Array[int] = []
 	for unit in state.player.get(destination, []):
 		previous_ids.append(int(unit.instance_id))
 	var hand_pose := _hand_card_pose(hand_index)
+	var attempt_marker := _action_attempt_marker()
 	animation_busy = true
 	service.play_card(state, hand_index, destination, int(state.get("selected_spice_target", -1)))
+	var action_succeeded: bool = _action_attempt_progressed(attempt_marker)
+	var action_feedback := String(state.message)
 	if card_type in ["ingredient", "meal"]:
 		_assign_new_unit_to_slot("player", destination, previous_ids, destination_slot)
 	selected_ref = {}
 	await _drain_animation_event_queue(hand_pose)
 	animation_busy = false
-	_tutorial_complete_action("play_hand", tutorial_details)
+	if action_succeeded:
+		_tutorial_complete_action("play_hand", tutorial_details)
 	_render_match()
+	if not action_succeeded:
+		_show_invalid_action(action_feedback)
 
 
 func _hand_card_pose(hand_index: int) -> Dictionary:
@@ -2297,12 +4037,17 @@ func _hand_card_pose(hand_index: int) -> Dictionary:
 func _activate_ability(instance_id: int, ability_id: String) -> void:
 	if animation_busy:
 		return
+	var attempt_marker := _action_attempt_marker()
 	animation_busy = true
 	service.activate_ability(state, instance_id, ability_id)
+	var action_succeeded: bool = _action_attempt_progressed(attempt_marker)
+	var action_feedback := String(state.message)
 	selected_ref = {}
 	await _drain_animation_event_queue()
 	animation_busy = false
 	_render_match()
+	if not action_succeeded:
+		_show_invalid_action(action_feedback)
 
 
 func _select_recipe_ingredient(instance_id: int) -> void:
@@ -2318,9 +4063,14 @@ func _select_attacker(instance_id: int) -> void:
 		_tutorial_reject_action()
 		return
 	service.select_attacker(state, instance_id)
+	var attacker_selected: bool = int(state.get("selected_attacker", -1)) == instance_id
+	var action_feedback := String(state.message)
 	selected_ref = {}
-	_tutorial_complete_action("select_attacker", details)
+	if attacker_selected:
+		_tutorial_complete_action("select_attacker", details)
 	_render_match()
+	if not attacker_selected:
+		_show_invalid_action(action_feedback)
 
 
 func _select_spice_target(instance_id: int) -> void:
@@ -2335,9 +4085,45 @@ func _select_spice_target(instance_id: int) -> void:
 	_render_match()
 
 
+func _begin_move_selection(instance_id: int) -> void:
+	if animation_busy or bool(state.player.zone_move_used):
+		return
+	var unit := service._find_unit(state.player, instance_id)
+	if unit.is_empty():
+		return
+	var source_zone := "plated" if not service._find_unit_in_zone(state.player, "plated", instance_id).is_empty() else "prep"
+	var destination := "prep" if source_zone == "plated" else "plated"
+	pending_move_instance_id = instance_id
+	action_highlight_slots.clear()
+	var capacity: int = service.PREP_SLOTS if destination == "prep" else service.PLATED_SLOTS
+	for slot_index in range(capacity):
+		action_highlight_slots.append({"zone": "player_%s" % destination, "slot": slot_index})
+	state.message = "Choose a glowing %s slot. An occupied slot swaps cards and uses your move for the turn." % destination.capitalize()
+	_refresh_bottom_status()
+	_refresh_action_panel()
+
+
+func _choose_pending_move_destination(destination: String, destination_slot: int) -> void:
+	if pending_move_instance_id < 0:
+		return
+	var instance_id := pending_move_instance_id
+	pending_move_instance_id = -1
+	action_highlight_slots.clear()
+	_move_unit(instance_id, destination, destination_slot)
+
+
+func _cancel_pending_move(refresh_ui := true) -> void:
+	pending_move_instance_id = -1
+	action_highlight_slots.clear()
+	if refresh_ui and not state.is_empty():
+		_refresh_bottom_status()
+		_refresh_action_panel()
+
+
 func _move_unit(instance_id: int, destination: String, destination_slot: int = -1) -> void:
 	if animation_busy:
 		return
+	_cancel_pending_move(false)
 	var unit := service._find_unit(state.player, instance_id)
 	if unit.is_empty():
 		return
@@ -2345,20 +4131,30 @@ func _move_unit(instance_id: int, destination: String, destination_slot: int = -
 	if tutorial_mode and not _tutorial_action_matches("move_unit", tutorial_details):
 		_tutorial_reject_action()
 		return
-	if destination_slot < 0 or not _slot_is_open("player", destination, destination_slot, instance_id):
-		state.message = "%s slot %d is occupied." % [destination.capitalize(), destination_slot + 1]
+	if destination_slot < 0:
+		state.message = "Choose an exact %s slot." % destination.capitalize()
 		_render_match()
+		_show_invalid_action(String(state.message))
 		return
 	var source_zone := "plated" if not service._find_unit_in_zone(state.player, "plated", instance_id).is_empty() else "prep"
 	if source_zone == destination:
 		unit.table_slot = destination_slot
 		state.message = "%s is repositioned in %s slot %d." % [String(unit.name), destination.capitalize(), destination_slot + 1]
 	else:
+		var attempt_marker := _action_attempt_marker()
 		animation_busy = true
-		service.move_unit(state, instance_id, destination)
+		service.move_unit(state, instance_id, destination, destination_slot)
+		var move_succeeded: bool = _action_attempt_progressed(attempt_marker)
+		var move_feedback := String(state.message)
 		var moved_unit := service._find_unit(state.player, instance_id)
 		if not moved_unit.is_empty() and service._unit_zone(state.player, instance_id) == destination:
 			moved_unit.table_slot = destination_slot
+		if not move_succeeded:
+			animation_busy = false
+			selected_ref = {}
+			_render_match()
+			_show_invalid_action(move_feedback)
+			return
 	selected_ref = {}
 	if animation_busy:
 		await _drain_animation_event_queue()
@@ -2631,14 +4427,7 @@ func _apply_card_tray_card_style(button: Button, selected: bool) -> void:
 
 
 func _apply_card_tray_panel_style() -> void:
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.035, 0.16, 0.21, 0.94)
-	panel_style.border_color = Color(0.18, 0.49, 0.62, 0.95)
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(28)
-	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.55)
-	panel_style.shadow_size = 18
-	card_tray_panel.add_theme_stylebox_override("panel", panel_style)
+	card_tray_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 2))
 
 
 func _refresh_bottom_status() -> void:
@@ -2658,6 +4447,7 @@ func _refresh_bottom_status() -> void:
 		cancel_choice_button.visible = not tutorial_mode
 		if tutorial_mode:
 			highlighted_zone = "player_prep"
+		_refresh_status_panel_visibility()
 		return
 	var pending_discard: Dictionary = state.get("pending_discard", {})
 	if not pending_discard.is_empty():
@@ -2667,6 +4457,7 @@ func _refresh_bottom_status() -> void:
 		confirm_choice_button.visible = true
 		confirm_choice_button.disabled = selected_count != required
 		cancel_choice_button.visible = true
+		_refresh_status_panel_visibility()
 		return
 	var pending_choice: Dictionary = state.get("pending_choice", {})
 	if String(pending_choice.get("choice_kind", "")) == "board":
@@ -2679,12 +4470,14 @@ func _refresh_bottom_status() -> void:
 		highlighted_zone = _choice_target_zone(service.choice_target_ids(state))
 		cancel_choice_button.visible = true
 		cancel_choice_button.text = "Cancel Attack" if String(state.get("pending_resume", {}).get("type", "")) == "player_attack" else "Skip Effect"
+		_refresh_status_panel_visibility()
 		return
 	var pending_ability: Dictionary = state.get("pending_ability", {})
 	if not pending_ability.is_empty():
 		status_label.text = String(state.message)
 		highlighted_zone = _pending_ability_zone(pending_ability)
 		cancel_choice_button.visible = true
+		_refresh_status_panel_visibility()
 		return
 	status_label.text = String(state.message)
 	if tutorial_mode:
@@ -2693,6 +4486,7 @@ func _refresh_bottom_status() -> void:
 		if action in ["play_hand", "begin_meal", "move_unit"] and step.has("zone"):
 			highlighted_zone = "player_%s" % String(step.zone)
 			highlighted_slot = int(step.get("slot", -1))
+	_refresh_status_panel_visibility()
 
 
 func _toggle_battle_log() -> void:
@@ -2702,20 +4496,25 @@ func _toggle_battle_log() -> void:
 func _set_battle_log_visible(visible: bool) -> void:
 	battle_log_panel.visible = visible
 	if visible:
+		if is_instance_valid(readability_controls_panel):
+			readability_controls_panel.visible = false
+		if is_instance_valid(match_options_button):
+			match_options_button.text = "OPTIONS"
 		_refresh_battle_log()
 
 
 func _refresh_battle_log() -> void:
 	if state.is_empty():
-		battle_log_button.text = "BATTLE LOG"
+		battle_log_button.text = "MATCH LOG"
 		battle_log_text.text = "The battle log will appear here."
 		return
 	var entries: Array = state.get("log", [])
-	battle_log_button.text = "BATTLE LOG  %d" % entries.size()
+	battle_log_button.text = "LOG  •  %d" % entries.size()
+	var lines: Array[String] = [
+		"[color=#f1c66e]CURRENT[/color]  %s" % String(state.get("message", "Choose a card or end your turn."))
+	]
 	if entries.is_empty():
-		battle_log_text.text = "No actions have been recorded yet."
-		return
-	var lines: Array[String] = []
+		lines.append("[color=#71848d]No actions recorded yet.[/color]")
 	for entry_index in range(entries.size()):
 		lines.append("[color=#8fcce5]%02d[/color]  %s" % [entry_index + 1, String(entries[entry_index])])
 	battle_log_text.text = "\n\n".join(lines)
@@ -2762,7 +4561,7 @@ func _cancel_bottom_choice() -> void:
 
 
 func _has_blocking_prompt() -> bool:
-	return not state.get("pending_meal", {}).is_empty() or not state.get("pending_discard", {}).is_empty() or not state.get("pending_ability", {}).is_empty() or not state.get("pending_search", {}).is_empty() or not state.get("pending_choice", {}).is_empty() or not state.get("pending_reaction", {}).is_empty()
+	return pending_hand_play_index >= 0 or pending_move_instance_id >= 0 or not state.get("pending_meal", {}).is_empty() or not state.get("pending_discard", {}).is_empty() or not state.get("pending_ability", {}).is_empty() or not state.get("pending_search", {}).is_empty() or not state.get("pending_choice", {}).is_empty() or not state.get("pending_reaction", {}).is_empty()
 
 
 func _confirm_bottom_choice() -> void:
@@ -2911,25 +4710,31 @@ func _run_opponent_sequence() -> void:
 		return
 	opponent_running = true
 	while String(state.phase) == "opponent_turn" and state.get("pending_reaction", {}).is_empty() and not bool(state.game_over):
-		await get_tree().create_timer(0.42).timeout
+		await _wait_for_game_breakdown()
+		await get_tree().create_timer(float(RIVAL_PACING_OPTIONS[rival_pacing_index].action_gap)).timeout
+		await _wait_for_game_breakdown()
 		animation_busy = true
 		var phase_before_action := String(state.get("phase", ""))
 		service.advance_opponent_turn(state)
 		var phase_after_action := String(state.get("phase", ""))
 		if phase_before_action != phase_after_action and phase_after_action == "player_main":
+			await _drain_animation_event_queue()
 			await _show_turn_banner("player_main")
-		await _drain_animation_event_queue()
+		else:
+			await _drain_animation_event_queue()
 		animation_busy = false
 		_render_match()
 	opponent_running = false
 
 
+func _wait_for_game_breakdown() -> void:
+	while game_breakdown_active:
+		await get_tree().process_frame
+
+
 func _update_chef_labels() -> void:
-	(player_chef.get_node("Label") as Label3D).text = "YOU\n%d" % int(state.player.life)
-	var rival_text := "RIVAL\n%d" % int(state.opponent.life)
-	if tutorial_mode and String(_tutorial_step().get("action", "")) == "attack_chef":
-		rival_text += "\nCLICK TO ATTACK"
-	(opponent_chef.get_node("Label") as Label3D).text = rival_text
+	(player_chef.get_node("Label") as Label3D).text = str(int(state.player.life))
+	(opponent_chef.get_node("Label") as Label3D).text = str(int(state.opponent.life))
 
 
 func _clear_children(parent: Node) -> void:
@@ -2940,13 +4745,16 @@ func _clear_children(parent: Node) -> void:
 func _label(text_value: String, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text_value
-	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_font_override("font", READABLE_FONT)
+	label.add_theme_font_size_override("font_size", _scaled_font_size(font_size))
+	label.set_meta("readability_base_font_font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	return label
 
 
 func _add_action_button(text_value: String, callback: Callable, disabled := false) -> void:
 	var button := _styled_button(text_value)
+	_apply_current_ui_button_style(button, true)
 	button.disabled = disabled
 	button.pressed.connect(callback)
 	action_list.add_child(button)
@@ -2976,7 +4784,9 @@ func _styled_button(text_value: String) -> Button:
 	var button := Button.new()
 	button.text = text_value
 	button.custom_minimum_size = Vector2(0, 35)
-	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_font_override("font", READABLE_FONT)
+	button.add_theme_font_size_override("font_size", _scaled_font_size(14))
+	button.set_meta("readability_base_font_font_size", 14)
 	_apply_rounded_button_style(button)
 	return button
 
@@ -2998,3 +4808,19 @@ func _apply_rounded_button_style(button: Button) -> void:
 	disabled.bg_color = Color("#111b21")
 	disabled.border_color = Color("#6f654f")
 	button.add_theme_stylebox_override("disabled", disabled)
+	_apply_high_contrast_button_text(button)
+
+
+func _apply_high_contrast_button_text(button: Button) -> void:
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(color_name, Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", Color("#F2E7D5"))
+
+
+func _apply_current_ui_button_style(button: Button, primary: bool) -> void:
+	var variant := "action" if primary else "default"
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		button.remove_theme_stylebox_override(state)
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:
+		button.remove_theme_color_override(color_name)
+	button.theme_type_variation = UI_THEME_SCRIPT.button_variation(variant)

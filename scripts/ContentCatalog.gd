@@ -86,7 +86,7 @@ func load_all() -> bool:
 	for tournament in tournament_data.get("tournaments", []):
 		tournaments_by_id[String(tournament.get("id", ""))] = tournament
 
-	return cards.size() > 0 and archetypes_by_id.size() == ARCHETYPE_DATA.size()
+	return cards.size() > 0 and not archetypes_by_id.is_empty()
 
 
 func deck_entries_to_dict(entries: Array) -> Dictionary:
@@ -167,6 +167,9 @@ func _card_tags(card: Dictionary) -> Array:
 	var archetype := String(card.get("archetype", "neutral"))
 	if archetype != "neutral":
 		tags.append(archetype)
+	for secondary_archetype in card.get("archetypes", []):
+		if not tags.has(String(secondary_archetype)):
+			tags.append(String(secondary_archetype))
 	for keyword in card.get("keywords", []):
 		tags.append(String(keyword))
 	return tags

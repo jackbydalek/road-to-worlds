@@ -13,7 +13,7 @@ func _run() -> void:
 	var service: RefCounted = SERVICE_SCRIPT.new()
 	service.setup_content(_fixture_cards(), _fixture_decks())
 	var state: Dictionary = service.start_game("test_a", "test_b", 12345)
-	if state.player.hand.size() != 5 or int(state.player.turns_started) != 1 or int(state.player.life) != 25 or int(state.opponent.life) != 25:
+	if state.player.hand.size() != 5 or int(state.player.turns_started) != 1 or int(state.player.life) != 20 or int(state.opponent.life) != 20:
 		_fail("Two-zone combat did not deal an opening hand and begin turn one.")
 		return
 
@@ -83,19 +83,29 @@ func _run() -> void:
 		_fail("A multi-hit effect did not give its damage events one shared animation group.")
 		return
 
-	# Turn draws are always exactly one card, even when the hand starts below five.
+	# Turn draws provide a two-card floor without refilling hands that already have options.
 	var draw_state: Dictionary = service.start_game("test_a", "test_b", 12346)
 	draw_state.player.hand = []
 	draw_state.player.deck = ["test_veg", "test_protein"]
 	service._start_turn(draw_state, "player")
-	if draw_state.player.hand.size() != 1 or draw_state.player.deck.size() != 1:
-		_fail("A low hand refilled instead of drawing exactly one card.")
+	var floor_draw_events := _events_of_type(service.take_animation_events(draw_state), "draw")
+	if draw_state.player.hand.size() != 2 or not draw_state.player.deck.is_empty() or floor_draw_events.size() != 2:
+		_fail("An empty hand did not draw up to the two-card turn floor.")
 		return
 	draw_state.player.hand = ["test_veg", "test_veg", "test_veg", "test_veg", "test_veg"]
 	draw_state.player.deck = ["test_protein"]
 	service._start_turn(draw_state, "player")
-	if draw_state.player.hand.size() != 6 or not draw_state.player.deck.is_empty():
+	var normal_draw_events := _events_of_type(service.take_animation_events(draw_state), "draw")
+	if draw_state.player.hand.size() != 6 or not draw_state.player.deck.is_empty() or normal_draw_events.size() != 1:
 		_fail("A five-card hand did not draw exactly one card for the turn.")
+		return
+	var empty_draw_life := int(draw_state.player.life)
+	var empty_draw_fatigue := int(draw_state.player.fatigue)
+	service._draw(draw_state, "player")
+	service._draw(draw_state, "player")
+	var empty_draw_events: Array[Dictionary] = service.take_animation_events(draw_state)
+	if int(draw_state.player.life) != empty_draw_life or int(draw_state.player.fatigue) != empty_draw_fatigue or not _events_of_type(empty_draw_events, "damage").is_empty():
+		_fail("Drawing from an empty deck still caused fatigue or Chef damage.")
 		return
 
 	# The first player can Plate a card, but cannot attack with it on turn one.
@@ -285,7 +295,7 @@ func _run() -> void:
 		_fail("A selected Stalwart attacker was not allowed to attack through Plated cards.")
 		return
 	production_service.attack(stalwart_state, -1)
-	if int(stalwart_state.opponent.life) != 24 or int(stalwart_state.opponent.plated[0].health) != 2 or bool(stalwart_state.player.plated[0].ready):
+	if int(stalwart_state.opponent.life) != 19 or int(stalwart_state.opponent.plated[0].health) != 2 or bool(stalwart_state.player.plated[0].ready):
 		_fail("Stalwart did not damage the opposing chef directly while leaving its Plated card untouched.")
 		return
 	var ai_stalwart_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 6981)
@@ -294,8 +304,38 @@ func _run() -> void:
 	ai_stalwart_state.opponent.hand = []
 	ai_stalwart_state.opponent.deck = []
 	production_service._ai_turn(ai_stalwart_state)
-	if int(ai_stalwart_state.player.life) != 24 or int(ai_stalwart_state.player.plated[0].health) != 2:
+	if int(ai_stalwart_state.player.life) != 19 or int(ai_stalwart_state.player.plated[0].health) != 2:
 		_fail("The opponent AI did not use Stalwart to bypass the player's Plated card.")
+		return
+
+	# Multiple Taunt units are all legal mandatory targets; non-Taunt units stay protected.
+	var multi_taunt_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69811)
+	multi_taunt_state.player.turns_started = 2
+	multi_taunt_state.player.plated = [_test_unit(940, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 3, true, 2)]
+	multi_taunt_state.opponent.plated = [
+		_test_unit(941, "hearty_french_bread_dog", "First French Bread Dog", "ingredient", 1, 2, false, 2),
+		_test_unit(942, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2),
+		_test_unit(943, "hearty_french_bread_dog", "Second French Bread Dog", "ingredient", 1, 2, false, 2)
+	]
+	production_service.select_attacker(multi_taunt_state, 940)
+	production_service.attack(multi_taunt_state, 942)
+	if not bool(multi_taunt_state.player.plated[0].ready) or int(multi_taunt_state.opponent.plated[1].health) != 2:
+		_fail("A non-Taunt unit was attackable while Taunt units remained Plated.")
+		return
+	production_service.attack(multi_taunt_state, 943)
+	if bool(multi_taunt_state.player.plated[0].ready) or int(multi_taunt_state.opponent.plated[2].health) != 1 or int(multi_taunt_state.opponent.plated[0].health) != 2:
+		_fail("The player could not choose either of multiple Plated Taunt units.")
+		return
+	var ai_multi_taunt_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 69812)
+	var ai_multi_taunt_attacker := _test_unit(944, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 3, 3, true, 3)
+	ai_multi_taunt_state.opponent.plated = [ai_multi_taunt_attacker]
+	ai_multi_taunt_state.player.plated = [
+		_test_unit(945, "hearty_french_bread_dog", "Tough French Bread Dog", "ingredient", 1, 5, false, 5),
+		_test_unit(946, "hearty_bagver", "Bagver", "ingredient", 5, 1, false, 1),
+		_test_unit(947, "hearty_french_bread_dog", "Vulnerable French Bread Dog", "ingredient", 4, 1, false, 1)
+	]
+	if int(production_service._ai_attack_target(ai_multi_taunt_state, ai_multi_taunt_attacker).instance_id) != 947:
+		_fail("The opponent AI did not choose among the available Taunt targets.")
 		return
 
 	# Single-target on-play effects let the player choose among only legal board cards.
@@ -635,6 +675,24 @@ func _run() -> void:
 	production_service.select_search_card(chef_bill_state, "spicy_sriracharrow")
 	if not chef_bill_state.pending_search.is_empty() or not chef_bill_state.search_queue.is_empty() or chef_bill_state.player.hand != ["spicy_hot_honey_bee", "spicy_sriracharrow"]:
 		_fail("Chef Rachel's queued searches did not add both selected cards.")
+		return
+
+	# Chef Carmy discards the remaining hand, then draws four cards.
+	var carmy_empty_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 70011)
+	carmy_empty_state.player.hand = ["chef_john"]
+	carmy_empty_state.player.deck = ["item_wooden_spoon", "spicy_sriracharrow", "spicy_hot_honey_bee", "hearty_bagver", "sweet_pup_tart"]
+	carmy_empty_state.opponent.hand = ["spicy_hot_honey_bee", "spicy_jalapeno_jackal", "spicy_wasabi_wasp"]
+	production_service.play_card(carmy_empty_state, 0)
+	if carmy_empty_state.player.hand.size() != 4 or carmy_empty_state.player.deck.size() != 1 or carmy_empty_state.player.discard != ["chef_john"]:
+		_fail("Chef Carmy did not draw four cards after discarding the played Chef.")
+		return
+	var carmy_discard_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 70012)
+	carmy_discard_state.player.hand = ["chef_john", "hearty_bagver", "sweet_pup_tart"]
+	carmy_discard_state.player.deck = ["item_wooden_spoon", "spicy_sriracharrow", "spicy_hot_honey_bee", "sweet_sugar_glider", "sweet_caramel_camel", "spicy_jalapeno_panther"]
+	carmy_discard_state.opponent.hand = ["spicy_hot_honey_bee", "spicy_jalapeno_jackal"]
+	production_service.play_card(carmy_discard_state, 0)
+	if carmy_discard_state.player.hand.size() != 4 or carmy_discard_state.player.deck.size() != 2 or carmy_discard_state.player.discard != ["chef_john", "hearty_bagver", "sweet_pup_tart"]:
+		_fail("Chef Carmy did not discard the old hand and draw four cards.")
 		return
 
 	# Revised production stats and simple effect amounts load exactly as authored.
@@ -1059,10 +1117,11 @@ func _run() -> void:
 	var before_visual := {
 		"turn": 1, "phase": "player_main", "selected_ingredients": [501],
 		"visual_action_serial": 3, "last_visual_action": {},
-		"player": {"life": 25, "hand": ["spicy_hot_honey_bee"], "environment": "", "units": {
-			501: {"instance_id": 501, "card_id": "spicy_hot_honey_bee", "name": "Hot Honey Bee", "card_type": "ingredient", "zone": "prep", "health": 2, "attack": 1}
+		"player": {"life": 20, "hand": ["spicy_hot_honey_bee"], "environment": "", "units": {
+			501: {"instance_id": 501, "card_id": "spicy_hot_honey_bee", "name": "Hot Honey Bee", "card_type": "ingredient", "zone": "prep", "health": 2, "attack": 1, "defending": false},
+			503: {"instance_id": 503, "card_id": "hearty_french_bread_dog", "name": "French Bread Dog", "card_type": "ingredient", "zone": "plated", "health": 2, "attack": 1, "defending": false}
 		}},
-		"opponent": {"life": 25, "hand": ["hearty_bagver"], "environment": "", "units": {
+		"opponent": {"life": 20, "hand": ["hearty_bagver"], "environment": "", "units": {
 			601: {"instance_id": 601, "card_id": "hearty_bagver", "name": "Bagver", "card_type": "ingredient", "zone": "plated", "health": 2, "attack": 1}
 		}}
 	}
@@ -1070,6 +1129,7 @@ func _run() -> void:
 	after_visual.turn = 2
 	after_visual.player.hand.append("spice_cayenne_crunch")
 	after_visual.player.units.erase(501)
+	after_visual.player.units[503].defending = true
 	after_visual.player.units[502] = {"instance_id": 502, "card_id": "spicy_sriracharrow", "name": "Sriracharrow", "card_type": "meal", "zone": "plated", "health": 4, "attack": 5}
 	after_visual.visual_action_serial = 4
 	after_visual.last_visual_action = {"side": "opponent", "card_id": "hearty_bagver", "action_kind": "ingredient", "target_instance_id": 602}
@@ -1077,9 +1137,9 @@ func _run() -> void:
 	after_visual.opponent.units[602] = {"instance_id": 602, "card_id": "hearty_bagver", "name": "Bagver", "card_type": "ingredient", "zone": "prep", "health": 2, "attack": 1}
 	after_visual.opponent.units[601].zone = "prep"
 	after_visual.opponent.units[601].health = 1
-	after_visual.opponent.life = 23
+	after_visual.opponent.life = 18
 	var visual_events: Array[Dictionary] = prototype._collect_visual_events(before_visual, after_visual)
-	if not _has_visual_event(visual_events, "opponent_hand_play") or not _has_visual_event(visual_events, "enter", 602) or not _has_visual_event(visual_events, "move", 601) or not _has_visual_event(visual_events, "draw") or not _has_visual_event(visual_events, "enter", 502) or not _has_visual_event(visual_events, "sacrifice", 501) or not _has_visual_event(visual_events, "damage", 601) or not _has_visual_event(visual_events, "life_damage") or not _has_visual_event(visual_events, "turn"):
+	if not _has_visual_event(visual_events, "opponent_hand_play") or not _has_visual_event(visual_events, "enter", 602) or not _has_visual_event(visual_events, "move", 601) or not _has_visual_event(visual_events, "defense_position", 503) or not _has_visual_event(visual_events, "draw") or not _has_visual_event(visual_events, "enter", 502) or not _has_visual_event(visual_events, "sacrifice", 501) or not _has_visual_event(visual_events, "damage", 601) or not _has_visual_event(visual_events, "life_damage") or not _has_visual_event(visual_events, "turn"):
 		_fail("The presentation layer did not recognize every required combat animation event.")
 		return
 
@@ -1090,7 +1150,7 @@ func _run() -> void:
 	prototype.state.player.prep = []
 	prototype.state.player.plated = []
 	prototype.state.player.hand = ["spicy_hot_honey_bee"]
-	prototype.state.opponent.life = 25
+	prototype.state.opponent.life = 20
 	var ingredient_drag := {"kind": "hand_card", "hand_index": 0, "card_id": "spicy_hot_honey_bee"}
 	if not prototype._can_drop_on_unit_slot(ingredient_drag, {}, "prep", true):
 		_fail("A hand Ingredient was not accepted by an open Prep drag target.")
@@ -1167,7 +1227,7 @@ func _run() -> void:
 		return
 
 	# The rendered face-attack action recognizes Stalwart while defenders remain Plated.
-	prototype.state.opponent.life = 25
+	prototype.state.opponent.life = 20
 	prototype.state.player.turns_started = 2
 	prototype.state.player.plated = [_test_unit(939, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 2)]
 	prototype.state.opponent.plated = [_test_unit(938, "hearty_french_bread_dog", "French Bread Dog", "ingredient", 1, 2, false, 2)]
@@ -1186,7 +1246,7 @@ func _run() -> void:
 	prototype._drop_on_opponent_face(stalwart_drag)
 	await process_frame
 	await process_frame
-	if int(prototype.state.opponent.life) != 24 or int(prototype.state.opponent.plated[0].health) != 2:
+	if int(prototype.state.opponent.life) != 19 or int(prototype.state.opponent.plated[0].health) != 2:
 		_fail("The rendered Stalwart attack did not bypass the opposing Plated card.")
 		return
 

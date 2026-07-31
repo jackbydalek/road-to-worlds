@@ -6,8 +6,13 @@ signal tournament_requested
 signal deck_requested
 signal calendar_requested
 signal save_requested
+signal settings_requested
 signal single_purchase_requested(card_id: String)
 signal trade_extras_requested
+
+const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
+const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 
 const OVERVIEW_SIZE := 11.5
 const SHOPKEEPER_SIZE := 4.0
@@ -23,11 +28,14 @@ const TRANSITION_SECONDS := 0.75
 @onready var overview_target: Marker3D = $ViewportContainer/SubViewport/World/CameraTargets/OverviewTarget
 @onready var menu_target: Marker3D = $ViewportContainer/SubViewport/World/CameraTargets/MenuTarget
 @onready var shot_label: Label = $Interface/TopBar/TopMargin/TopContent/ShotLabel
+@onready var top_bar: PanelContainer = $Interface/TopBar
 @onready var cash_hud_button: Button = $Interface/ShopHud/CashButton
 @onready var deck_hud_button: Button = $Interface/ShopHud/DeckButton
 @onready var save_hud_button: Button = $Interface/ShopHud/SaveButton
 @onready var settings_hud_button: Button = $Interface/ShopHud/SettingsButton
 @onready var menu_panel: PanelContainer = $Interface/MenuPanel
+@onready var menu_content: VBoxContainer = $Interface/MenuPanel/Margin/Content
+@onready var menu_heading: Label = $Interface/MenuPanel/Margin/Content/Heading
 @onready var menu_description: Label = $Interface/MenuPanel/Margin/Content/Description
 @onready var station_panel: PanelContainer = $Interface/CombatPanel
 @onready var station_heading: Label = $Interface/CombatPanel/Margin/Content/Heading
@@ -36,8 +44,8 @@ const TRANSITION_SECONDS := 0.75
 @onready var buy_pack_button: Button = $Interface/MenuPanel/Margin/Content/BuyPack
 @onready var meta_menu_button: Button = $Interface/MenuPanel/Margin/Content/Meta
 @onready var calendar_menu_button: Button = $Interface/MenuPanel/Margin/Content/Calendar
-@onready var tournament_menu_button: Button = $Interface/MenuPanel/Margin/Content/Tournament
 @onready var leave_menu_button: Button = $Interface/MenuPanel/Margin/Content/Leave
+@onready var overview_round_button: Button = $Interface/OverviewRoundButton
 
 var camera_tween: Tween
 var overlay_tween: Tween
@@ -63,6 +71,9 @@ var shopkeeper_highlight_material: StandardMaterial3D
 var shopkeeper_original_overlays: Dictionary = {}
 var shopkeeper_hover_enabled := true
 var overview_active := true
+var selected_single_id := ""
+var menu_cash_status_label: Label
+var menu_prize_status_label: Label
 
 
 func _ready() -> void:
@@ -70,18 +81,21 @@ func _ready() -> void:
 	deck_hud_button.name = "ShopHudDeckButton"
 	save_hud_button.name = "ShopHudSaveButton"
 	settings_hud_button.name = "ShopHudSettingsButton"
+	_style_store_top_bar()
 	_style_shop_hud_buttons()
+	_style_shopkeeper_menu()
 	cash_hud_button.pressed.connect(func() -> void: trade_extras_requested.emit())
 	deck_hud_button.pressed.connect(func() -> void: deck_requested.emit())
 	save_hud_button.pressed.connect(func() -> void: save_requested.emit())
-	settings_hud_button.pressed.connect(_show_settings_menu)
+	settings_hud_button.pressed.connect(func() -> void: settings_requested.emit())
 	buy_singles_button.pressed.connect(_show_singles_case)
 	buy_pack_button.pressed.connect(func() -> void: packs_requested.emit())
 	meta_menu_button.pressed.connect(_show_meta_analysis)
 	calendar_menu_button.pressed.connect(func() -> void: calendar_requested.emit())
-	tournament_menu_button.pressed.connect(func() -> void: tournament_requested.emit())
 	leave_menu_button.text = "Back to Store"
 	leave_menu_button.pressed.connect(_show_overview)
+	overview_round_button.name = "StoreOverviewRoundButton"
+	overview_round_button.pressed.connect(func() -> void: tournament_requested.emit())
 	_add_station_actions_container()
 	_add_singles_panel()
 	_add_trade_panel()
@@ -102,31 +116,226 @@ func _ready() -> void:
 
 
 func _style_shop_hud_buttons() -> void:
-	var normal_style := _shop_hud_button_style(0.34)
-	var hover_style := _shop_hud_button_style(0.52)
-	var pressed_style := _shop_hud_button_style(0.68)
-	var focus_style := _shop_hud_button_style(0.46, 2)
 	for button in [cash_hud_button, deck_hud_button, save_hud_button, settings_hud_button]:
-		button.add_theme_stylebox_override("normal", normal_style)
-		button.add_theme_stylebox_override("hover", hover_style)
-		button.add_theme_stylebox_override("pressed", pressed_style)
-		button.add_theme_stylebox_override("focus", focus_style)
+		button.add_theme_stylebox_override(
+			"normal",
+			WORKSPACE_UI.clean_style(
+				WORKSPACE_UI.TEAL_SOFT if button == cash_hud_button else WORKSPACE_UI.SURFACE,
+				WORKSPACE_UI.TEAL if button == cash_hud_button else WORKSPACE_UI.BORDER_SOFT,
+				1,
+				7,
+				Vector4(10, 7, 10, 7)
+			)
+		)
+		button.add_theme_stylebox_override(
+			"hover",
+			WORKSPACE_UI.clean_style(
+				WORKSPACE_UI.MUSTARD_SOFT,
+				WORKSPACE_UI.MUSTARD.darkened(0.18),
+				1,
+				7,
+				Vector4(10, 7, 10, 7)
+			)
+		)
+		button.add_theme_stylebox_override(
+			"pressed",
+			WORKSPACE_UI.clean_style(
+				WORKSPACE_UI.MUSTARD_SOFT.darkened(0.06),
+				WORKSPACE_UI.TEAL,
+				2,
+				7,
+				Vector4(10, 8, 10, 6)
+			)
+		)
+		button.add_theme_stylebox_override(
+			"focus",
+			WORKSPACE_UI.clean_style(Color.TRANSPARENT, WORKSPACE_UI.TEAL, 2, 7)
+		)
 		button.add_theme_color_override("font_color", Color("#10141b"))
 		button.add_theme_color_override("font_hover_color", Color("#10141b"))
 		button.add_theme_color_override("font_pressed_color", Color("#10141b"))
+		button.add_theme_font_override("font", SKETCH_UI.body_font(0.56))
+	for icon_button in [deck_hud_button, save_hud_button, settings_hud_button]:
+		icon_button.add_theme_constant_override("icon_max_width", 24)
 
 
-func _shop_hud_button_style(alpha: float, border_width: int = 1) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(1, 1, 1, alpha)
-	style.border_color = Color(1, 1, 1, minf(1.0, alpha + 0.28))
-	style.set_border_width_all(border_width)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 8
-	style.content_margin_right = 8
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
-	return style
+func _style_store_top_bar() -> void:
+	top_bar.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			Color("#FFFCF6F2"),
+			WORKSPACE_UI.BORDER_SOFT,
+			1,
+			8,
+			Vector4.ZERO,
+			4,
+			true
+		)
+	)
+	shot_label.add_theme_font_override("font", SKETCH_UI.body_font(0.48))
+	shot_label.add_theme_font_size_override("font_size", 16)
+	shot_label.add_theme_color_override("font_color", SKETCH_UI.INK)
+
+
+func _style_shopkeeper_menu() -> void:
+	menu_panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			WORKSPACE_UI.SURFACE,
+			SKETCH_UI.TEAL,
+			1,
+			12,
+			Vector4.ZERO,
+			5,
+			true
+		)
+	)
+	menu_content.add_theme_constant_override("separation", 10)
+	menu_heading.add_theme_font_override("font", SKETCH_UI.body_font(0.72))
+	menu_heading.add_theme_font_size_override("font_size", 30)
+	menu_heading.add_theme_color_override("font_color", SKETCH_UI.INK)
+	menu_description.add_theme_font_override("font", SKETCH_UI.body_font(0.3))
+	menu_description.add_theme_font_size_override("font_size", 14)
+	menu_description.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
+
+	var status_row := HBoxContainer.new()
+	status_row.name = "ShopkeeperStatus"
+	status_row.add_theme_constant_override("separation", 8)
+	menu_content.add_child(status_row)
+	menu_content.move_child(status_row, menu_description.get_index() + 1)
+	menu_cash_status_label = _add_shopkeeper_status_badge(status_row, "Cash")
+	menu_prize_status_label = _add_shopkeeper_status_badge(status_row, "Prize packs")
+
+	var buy_section := _make_shopkeeper_section_label("BUY CARDS")
+	menu_content.add_child(buy_section)
+	menu_content.move_child(buy_section, buy_singles_button.get_index())
+
+	var plan_section := _make_shopkeeper_section_label("PLAN YOUR WEEK")
+	menu_content.add_child(plan_section)
+	menu_content.move_child(plan_section, meta_menu_button.get_index())
+
+	var exit_separator := HSeparator.new()
+	exit_separator.name = "ShopkeeperExitSeparator"
+	exit_separator.add_theme_constant_override("separation", 4)
+	exit_separator.add_theme_stylebox_override(
+		"separator",
+		WORKSPACE_UI.clean_style(Color("#DDD3C4"), Color.TRANSPARENT, 0, 0)
+	)
+	menu_content.add_child(exit_separator)
+	menu_content.move_child(exit_separator, leave_menu_button.get_index())
+
+	_style_shopkeeper_action(buy_singles_button, "primary", "Choose from eight individual cards")
+	_style_shopkeeper_action(buy_pack_button, "target", "Open a sealed booster pack")
+	_style_shopkeeper_action(meta_menu_button, "secondary", "Review the local archetype field")
+	_style_shopkeeper_action(calendar_menu_button, "secondary", "See this season's upcoming events")
+	_style_shopkeeper_action(leave_menu_button, "secondary", "Return to the store floor")
+	_style_overview_round_button()
+
+
+func _add_shopkeeper_status_badge(parent: HBoxContainer, title: String) -> Label:
+	var badge := PanelContainer.new()
+	badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	badge.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			WORKSPACE_UI.TEAL_SOFT,
+			SKETCH_UI.TEAL,
+			1,
+			6,
+			Vector4(10, 6, 10, 6)
+		)
+	)
+	parent.add_child(badge)
+	var label := Label.new()
+	label.text = title
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", SKETCH_UI.body_font(0.5))
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", SKETCH_UI.TEAL.darkened(0.22))
+	badge.add_child(label)
+	return label
+
+
+func _make_shopkeeper_section_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", SKETCH_UI.TEAL)
+	return label
+
+
+func _style_shopkeeper_action(button: Button, variant: String, tooltip: String) -> void:
+	WORKSPACE_UI.style_button(button, variant)
+	button.custom_minimum_size = Vector2(0, 46)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_font_override("font", SKETCH_UI.body_font(0.56))
+	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_constant_override("outline_size", 0)
+	button.tooltip_text = tooltip
+
+
+func _style_overview_round_button() -> void:
+	overview_round_button.add_theme_font_override("font", SKETCH_UI.body_font(0.7))
+	overview_round_button.add_theme_font_size_override("font_size", 24)
+	overview_round_button.add_theme_color_override("font_color", Color.WHITE)
+	overview_round_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	overview_round_button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	overview_round_button.add_theme_stylebox_override(
+		"normal",
+		WORKSPACE_UI.clean_style(
+			SKETCH_UI.TEAL,
+			SKETCH_UI.TEAL.darkened(0.24),
+			2,
+			12,
+			Vector4(28, 15, 28, 16),
+			0,
+			true
+		)
+	)
+	overview_round_button.add_theme_stylebox_override(
+		"hover",
+		WORKSPACE_UI.clean_style(
+			SKETCH_UI.TEAL.lightened(0.08),
+			SKETCH_UI.MUSTARD,
+			3,
+			12,
+			Vector4(28, 15, 28, 16),
+			0,
+			true
+		)
+	)
+	overview_round_button.add_theme_stylebox_override(
+		"pressed",
+		WORKSPACE_UI.clean_style(
+			SKETCH_UI.TEAL.darkened(0.08),
+			SKETCH_UI.MUSTARD.darkened(0.12),
+			3,
+			12,
+			Vector4(28, 17, 28, 14),
+			0,
+			true
+		)
+	)
+	overview_round_button.add_theme_stylebox_override(
+		"focus",
+		WORKSPACE_UI.clean_style(Color.TRANSPARENT, SKETCH_UI.MUSTARD, 3, 12)
+	)
+	overview_round_button.tooltip_text = "Start the next tournament match."
+
+
+func _update_overview_round_button() -> void:
+	if overview_round_button == null:
+		return
+	var tournament_active := bool(shop_context.get("tournament_active", false))
+	var tournament_round := int(shop_context.get("tournament_round", 1))
+	overview_round_button.text = "Start Round %d" % tournament_round
+	overview_round_button.tooltip_text = (
+		"Start the next tournament match."
+		if tournament_active
+		else "Register for the selected tournament and start Round 1."
+	)
+	overview_round_button.visible = overview_active
 
 
 func _start_shopkeeper_idle() -> void:
@@ -169,11 +378,13 @@ func _apply_shop_context() -> void:
 	var money := int(shop_context.get("money", 0))
 	var prize_packs := int(shop_context.get("prize_packs", 0))
 	var difficulty := String(shop_context.get("difficulty_name", "Black"))
-	var tournament_active := bool(shop_context.get("tournament_active", false))
-	var tournament_round := int(shop_context.get("tournament_round", 1))
 	cash_hud_button.text = "$%d" % money
-	tournament_menu_button.text = "Start Tournament Round %d" % tournament_round if tournament_active else "Register for Tournament"
-	menu_description.text = "$%d cash  •  %d prize pack(s)\n%s frame  •  %s" % [money, prize_packs, difficulty, event_name]
+	_update_overview_round_button()
+	menu_description.text = "%s  •  %s frame" % [event_name, difficulty]
+	if menu_cash_status_label != null:
+		menu_cash_status_label.text = "$%d cash" % money
+	if menu_prize_status_label != null:
+		menu_prize_status_label.text = "%d prize pack%s" % [prize_packs, "" if prize_packs == 1 else "s"]
 	if not menu_panel.visible and not station_panel.visible and (singles_panel == null or not singles_panel.visible) and (trade_panel == null or not trade_panel.visible) and (meta_panel == null or not meta_panel.visible):
 		shot_label.text = "CARD STORE  •  %s frame  •  %s  •  %d prize pack(s)" % [difficulty, event_name, prize_packs]
 
@@ -195,16 +406,22 @@ func _add_singles_panel() -> void:
 	singles_panel.visible = false
 	singles_panel.set_anchors_preset(Control.PRESET_CENTER)
 	singles_panel.offset_left = -540.0
-	singles_panel.offset_top = -310.0
+	singles_panel.offset_top = -350.0
 	singles_panel.offset_right = 540.0
-	singles_panel.offset_bottom = 310.0
+	singles_panel.offset_bottom = 350.0
 	singles_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color("#121923ee")
-	panel_style.border_color = Color("#d6b866")
-	panel_style.set_border_width_all(3)
-	panel_style.set_corner_radius_all(12)
-	singles_panel.add_theme_stylebox_override("panel", panel_style)
+	singles_panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			Color("#FFFCF6F7"),
+			SKETCH_UI.TEAL,
+			1,
+			10,
+			Vector4.ZERO,
+			4,
+			true
+		)
+	)
 	$Interface.add_child(singles_panel)
 
 	var margin := MarginContainer.new()
@@ -223,17 +440,19 @@ func _add_singles_panel() -> void:
 	content.add_child(header)
 	var heading := Label.new()
 	heading.text = "SHOPKEEPER'S SINGLES CASE"
-	heading.add_theme_font_size_override("font_size", 28)
+	heading.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	heading.add_theme_font_size_override("font_size", 24)
+	heading.add_theme_color_override("font_color", SKETCH_UI.INK)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(heading)
 	singles_wallet_label = Label.new()
 	singles_wallet_label.add_theme_font_size_override("font_size", 22)
-	singles_wallet_label.add_theme_color_override("font_color", Color("#f2d478"))
+	singles_wallet_label.add_theme_color_override("font_color", SKETCH_UI.ORANGE)
 	header.add_child(singles_wallet_label)
 
 	singles_message_label = Label.new()
 	singles_message_label.text = "Click a card to buy a copy. The store stays visible behind the case."
-	singles_message_label.add_theme_color_override("font_color", Color("#cbd5e3"))
+	singles_message_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 	singles_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(singles_message_label)
 
@@ -255,6 +474,7 @@ func _add_singles_panel() -> void:
 	var back_button := Button.new()
 	back_button.name = "InSceneSinglesCaseBack"
 	back_button.text = "Back to Shopkeeper"
+	WORKSPACE_UI.style_button(back_button)
 	back_button.pressed.connect(_return_to_shopkeeper_menu)
 	actions.add_child(back_button)
 	var spacer := Control.new()
@@ -262,6 +482,7 @@ func _add_singles_panel() -> void:
 	actions.add_child(spacer)
 	var store_button := Button.new()
 	store_button.text = "Exit to Card Store"
+	WORKSPACE_UI.style_button(store_button)
 	store_button.pressed.connect(_show_overview)
 	actions.add_child(store_button)
 
@@ -304,12 +525,15 @@ func _create_detail_overlay(node_name: String, accent_hex: String) -> Dictionary
 	panel.offset_right = 500.0
 	panel.offset_bottom = 300.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color("#121923ee")
-	panel_style.border_color = Color(accent_hex)
-	panel_style.set_border_width_all(3)
-	panel_style.set_corner_radius_all(12)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	panel.add_theme_stylebox_override(
+		"panel",
+		SKETCH_UI.texture_style(
+			SKETCH_UI.PANEL_PAPER,
+			Color("#FFFAF0F7"),
+			Vector4(24, 24, 24, 24),
+			Vector4.ZERO
+		)
+	)
 	$Interface.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -327,19 +551,21 @@ func _create_detail_overlay(node_name: String, accent_hex: String) -> Dictionary
 	content.add_child(header)
 	var heading := Label.new()
 	heading.name = node_name + "Heading"
+	heading.add_theme_font_override("font", SKETCH_UI.display_font(0.88))
 	heading.add_theme_font_size_override("font_size", 28)
+	heading.add_theme_color_override("font_color", SKETCH_UI.INK)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(heading)
 	var status := Label.new()
 	status.name = node_name + "Status"
 	status.add_theme_font_size_override("font_size", 22)
-	status.add_theme_color_override("font_color", Color(accent_hex))
+	status.add_theme_color_override("font_color", Color(accent_hex).darkened(0.28))
 	header.add_child(status)
 
 	var message := Label.new()
 	message.name = node_name + "Message"
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	message.add_theme_color_override("font_color", Color("#cbd5e3"))
+	message.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 	content.add_child(message)
 
 	var scroll := ScrollContainer.new()
@@ -379,6 +605,10 @@ func _render_singles_case(message: String = "") -> void:
 	else:
 		singles_message_label.text = "Click a card to buy a copy. The store stays visible behind the case."
 	var singles: Array = shop_context.get("singles", [])
+	if not singles.any(func(entry_value) -> bool:
+		return String((entry_value as Dictionary).get("id", "")) == selected_single_id
+	):
+		selected_single_id = ""
 	if singles.is_empty():
 		var empty_label := Label.new()
 		empty_label.text = "The singles case is sold out. New cards arrive after the next tournament round."
@@ -386,6 +616,7 @@ func _render_singles_case(message: String = "") -> void:
 		return
 	for entry_value in singles:
 		_add_single_card_tile(entry_value)
+	_update_in_scene_single_selection()
 
 
 func _render_trade_binder(message: String = "") -> void:
@@ -413,12 +644,12 @@ func _render_trade_binder(message: String = "") -> void:
 		var label := Label.new()
 		label.text = "%s  •  %d extra cop%s  •  $%d offer" % [String(entry.get("name", "Card")), copies, "y" if copies == 1 else "ies", value]
 		label.add_theme_font_size_override("font_size", 17)
-		label.add_theme_color_override("font_color", Color("#e2f3eb"))
+		label.add_theme_color_override("font_color", SKETCH_UI.INK)
 		row.add_child(label)
 	if entries.is_empty():
 		var empty := Label.new()
 		empty.text = "No safe extra copies are available to trade right now."
-		empty.add_theme_color_override("font_color", Color("#aeb9c8"))
+		empty.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 		trade_list.add_child(empty)
 	trade_action_button.text = "Trade %d Extra Card%s  •  Receive $%d" % [total_cards, "" if total_cards == 1 else "s", total_value]
 	trade_action_button.disabled = total_cards <= 0
@@ -440,7 +671,7 @@ func _render_meta_analysis() -> void:
 	var entries_heading := Label.new()
 	entries_heading.text = "EXPECTED FIELD"
 	entries_heading.add_theme_font_size_override("font_size", 18)
-	entries_heading.add_theme_color_override("font_color", Color("#9fd0ff"))
+	entries_heading.add_theme_color_override("font_color", SKETCH_UI.TEAL)
 	meta_list.add_child(entries_heading)
 	var entries := VBoxContainer.new()
 	entries.name = "InSceneMetaEntries"
@@ -465,7 +696,7 @@ func _render_meta_analysis() -> void:
 	var reports_heading := Label.new()
 	reports_heading.text = "SHOP TALK"
 	reports_heading.add_theme_font_size_override("font_size", 18)
-	reports_heading.add_theme_color_override("font_color", Color("#9fd0ff"))
+	reports_heading.add_theme_color_override("font_color", SKETCH_UI.TEAL)
 	meta_list.add_child(reports_heading)
 	meta_report_list = VBoxContainer.new()
 	meta_report_list.name = "InSceneMetaReports"
@@ -475,7 +706,7 @@ func _render_meta_analysis() -> void:
 		var report := Label.new()
 		report.text = "• " + String(report_value)
 		report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		report.add_theme_color_override("font_color", Color("#cbd5e3"))
+		report.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 		meta_report_list.add_child(report)
 
 
@@ -486,16 +717,12 @@ func _clear_dynamic_list(list: VBoxContainer) -> void:
 
 
 func _overlay_row_style(background_hex: String, border_hex: String) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(background_hex)
-	style.border_color = Color(border_hex)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	return style
+	return SKETCH_UI.flat_style(
+		SKETCH_UI.PAPER.lerp(Color(background_hex), 0.08),
+		Color(border_hex).darkened(0.24),
+		2,
+		Vector4(12, 8, 12, 8)
+	)
 
 
 func _add_single_card_tile(entry_value: Variant) -> void:
@@ -503,16 +730,14 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 	var card_id := String(entry.get("id", ""))
 	var rarity := String(entry.get("rarity", "common"))
 	var price := int(entry.get("price", 0))
+	var card: Dictionary = entry.get("card", {})
 	var tile := PanelContainer.new()
 	tile.name = "InSceneSingle_%s" % card_id
-	tile.custom_minimum_size = Vector2(245, 190)
+	tile.set_meta("card_id", card_id)
+	tile.custom_minimum_size = Vector2(245, 270)
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tile_style := StyleBoxFlat.new()
-	tile_style.bg_color = _rarity_background(rarity)
-	tile_style.border_color = _rarity_accent(rarity)
-	tile_style.set_border_width_all(2)
-	tile_style.set_corner_radius_all(8)
-	tile.add_theme_stylebox_override("panel", tile_style)
+	tile.set_meta("tile_fill", WORKSPACE_UI.SURFACE.lerp(_rarity_background(rarity), 0.07))
+	tile.set_meta("tile_accent", _rarity_accent(rarity).darkened(0.32))
 	singles_grid.add_child(tile)
 
 	var margin := MarginContainer.new()
@@ -524,34 +749,105 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
-	var name_label := Label.new()
-	name_label.text = String(entry.get("name", card_id))
-	name_label.add_theme_font_size_override("font_size", 17)
-	name_label.add_theme_color_override("font_color", _rarity_accent(rarity))
-	name_label.clip_text = true
-	box.add_child(name_label)
-	var type_label := Label.new()
-	type_label.text = "%s  •  %s" % [rarity.capitalize(), String(entry.get("descriptor", "Card"))]
-	type_label.add_theme_color_override("font_color", Color("#d7deea"))
-	box.add_child(type_label)
-	var rules_label := Label.new()
-	rules_label.text = String(entry.get("text", ""))
-	rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rules_label.max_lines_visible = 2
-	rules_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rules_label.add_theme_font_size_override("font_size", 12)
-	rules_label.add_theme_color_override("font_color", Color("#aeb9c8"))
-	box.add_child(rules_label)
+
+	var face_center := CenterContainer.new()
+	face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(face_center)
+	var card_stack := Control.new()
+	card_stack.custom_minimum_size = Vector2(145, 206)
+	face_center.add_child(card_stack)
+	if not card.is_empty() and CARD_FACE_SCRIPT.supports_card(card):
+		var face := CARD_FACE_SCRIPT.new()
+		face.configure(card, String(entry.get("difficulty", "white")), false)
+		face.custom_minimum_size = Vector2(145, 206)
+		face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_stack.add_child(face)
+	else:
+		var fallback := Label.new()
+		fallback.text = String(entry.get("name", card_id))
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fallback.set_anchors_preset(Control.PRESET_FULL_RECT)
+		card_stack.add_child(fallback)
+
+	var sticker: PanelContainer = WORKSPACE_UI.make_price_sticker(price, Vector2(66, 44))
+	sticker.position = Vector2(74, 45)
+	card_stack.add_child(sticker)
+	var select_button := Button.new()
+	select_button.name = "InSceneSingleSelect_%s" % card_id
+	select_button.text = ""
+	select_button.tooltip_text = "Select %s to reveal its Buy button." % String(entry.get("name", card_id))
+	select_button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		select_button.add_theme_stylebox_override(
+			state,
+			WORKSPACE_UI.clean_style(
+				Color("#FFFFFF08") if state == "hover" else Color.TRANSPARENT,
+				Color.TRANSPARENT,
+				0,
+				5
+			)
+		)
+	select_button.pressed.connect(func() -> void: _select_in_scene_single(card_id))
+	card_stack.add_child(select_button)
+
 	var owned_label := Label.new()
 	owned_label.text = "Owned %d  •  Deck %d" % [int(entry.get("owned", 0)), int(entry.get("deck", 0))]
-	owned_label.add_theme_color_override("font_color", Color("#cbd5e3"))
+	owned_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 	box.add_child(owned_label)
 	var buy_button := Button.new()
 	buy_button.name = "BuyInScene_%s" % card_id
-	buy_button.text = "Buy  $%d" % price
+	buy_button.text = "Buy"
 	buy_button.disabled = int(shop_context.get("money", 0)) < price
+	buy_button.visible = false
+	buy_button.tooltip_text = "Buy %s for $%d." % [String(entry.get("name", card_id)), price]
+	WORKSPACE_UI.style_button(buy_button, "primary")
 	buy_button.pressed.connect(func() -> void: single_purchase_requested.emit(card_id))
 	box.add_child(buy_button)
+
+
+func _select_in_scene_single(card_id: String) -> void:
+	selected_single_id = card_id
+	_update_in_scene_single_selection()
+	for entry_value in shop_context.get("singles", []):
+		var entry: Dictionary = entry_value
+		if String(entry.get("id", "")) != card_id:
+			continue
+		singles_message_label.text = "%s selected — $%d. Click Buy to add it to your collection." % [
+			String(entry.get("name", card_id)),
+			int(entry.get("price", 0)),
+		]
+		break
+
+
+func _update_in_scene_single_selection() -> void:
+	if singles_grid == null:
+		return
+	for candidate in singles_grid.get_children():
+		var tile := candidate as PanelContainer
+		if tile == null:
+			continue
+		var card_id := String(tile.get_meta("card_id", ""))
+		var selected := card_id == selected_single_id
+		var fill: Color = tile.get_meta("tile_fill", WORKSPACE_UI.SURFACE)
+		var accent: Color = tile.get_meta("tile_accent", WORKSPACE_UI.BORDER_SOFT)
+		tile.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI.clean_style(
+				fill,
+				WORKSPACE_UI.MUSTARD if selected else accent,
+				3 if selected else 1,
+				8 if selected else 7,
+				Vector4.ZERO,
+				4 if selected else 3,
+				selected
+			)
+		)
+		var buy_button := tile.find_child("BuyInScene_*", true, false) as Button
+		if buy_button != null:
+			buy_button.visible = selected
 
 
 func _rarity_background(rarity: String) -> Color:
@@ -622,6 +918,9 @@ func _start_shopkeeper_arrow_bob() -> void:
 	if shopkeeper_arrow_tween != null and shopkeeper_arrow_tween.is_valid():
 		shopkeeper_arrow_tween.kill()
 	var rest_y := shopkeeper_arrow.position.y
+	if bool(get_tree().root.get_meta("reduced_motion", false)):
+		shopkeeper_arrow.position.y = rest_y
+		return
 	shopkeeper_arrow_tween = create_tween().set_loops()
 	shopkeeper_arrow_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	shopkeeper_arrow_tween.tween_property(
@@ -698,6 +997,7 @@ func _position_shopkeeper_hotspot() -> void:
 
 func _show_overview() -> void:
 	overview_active = false
+	_update_overview_round_button()
 	if shopkeeper_arrow != null:
 		shopkeeper_arrow.visible = false
 	shopkeeper_hover_enabled = false
@@ -707,6 +1007,7 @@ func _show_overview() -> void:
 	if transition_generation != overview_generation:
 		return
 	overview_active = true
+	_update_overview_round_button()
 	_position_shopkeeper_hotspot()
 	shopkeeper_hover_enabled = true
 	if shopkeeper_hotspot != null and shopkeeper_hotspot.is_hovered():
@@ -729,6 +1030,7 @@ func _show_settings_menu() -> void:
 
 func _show_menu() -> void:
 	overview_active = false
+	_update_overview_round_button()
 	if shopkeeper_arrow != null:
 		shopkeeper_arrow.visible = false
 	shopkeeper_hover_enabled = false
@@ -740,6 +1042,8 @@ func _show_menu() -> void:
 
 
 func _return_to_shopkeeper_menu() -> void:
+	overview_active = false
+	_update_overview_round_button()
 	transition_generation += 1
 	if camera_tween != null and camera_tween.is_valid():
 		camera_tween.kill()
@@ -788,6 +1092,7 @@ func _show_meta_analysis() -> void:
 
 func _show_station(target: Marker3D, target_size: float, description: String, heading: String, body: String, actions: Array) -> void:
 	overview_active = false
+	_update_overview_round_button()
 	if shopkeeper_arrow != null:
 		shopkeeper_arrow.visible = false
 	station_heading.text = heading

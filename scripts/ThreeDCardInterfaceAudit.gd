@@ -14,7 +14,7 @@ const SUPPORTED_EFFECT_TYPES := [
 	"damage_all_enemy_units", "damage_all_plated_units", "damage_enemy_plated", "damage_enemy_player",
 	"damage_enemy_prep", "damage_enemy_unit", "deploy_enemy_hand_unit", "destroy_enemy_unit",
 	"disable_enemy_chefs_next_turn", "disable_enemy_items_next_turn", "discard_hand",
-	"discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw",
+	"discard_hand_then_draw", "discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw",
 	"draw_for_friendly_archetype", "draw_to_hand_size", "heal_all_friendly_units", "heal_player",
 	"heal_self", "heal_unit", "look_and_take", "move_friendly_to_prep", "recover", "recycle",
 	"remove_enemy_spice", "return_enemy_ingredient", "search", "swap_attack_health",

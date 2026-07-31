@@ -5,12 +5,28 @@ signal visual_changed
 
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const ART_PENDING := preload("res://assets/cards/art_pending.png")
+const CARD_FONT := preload("res://assets/fonts/Roboto.ttf")
 
 const DEFAULT_SIZE := Vector2(250, 355)
 const DEFAULT_FRAME_DURATION := 0.1
+const MAX_RULE_LINES := 3
 const SUPPORTED_ARCHETYPES := ["spicy", "sweet", "hearty", "fresh", "funky"]
 const AFFINITY_CARD_TYPES := ["ingredient", "meal"]
-const NEUTRAL_CARD_TYPES := ["chef", "tool"]
+const NEUTRAL_CARD_TYPES := ["chef", "tool", "spice", "environment"]
+const DUAL_FRAME_KEYS := {
+	"funky|spicy": "spicy_funky",
+	"fresh|spicy": "spicy_fresh",
+	"hearty|sweet": "hearty_sweet",
+	"fresh|hearty": "hearty_fresh",
+	"funky|sweet": "sweet_funky",
+}
+const DUAL_FRAME_AFFINITY_ORDER := {
+	"spicy_funky": ["spicy", "funky"],
+	"spicy_fresh": ["spicy", "fresh"],
+	"hearty_sweet": ["hearty", "sweet"],
+	"hearty_fresh": ["hearty", "fresh"],
+	"sweet_funky": ["sweet", "funky"],
+}
 
 var _card: Dictionary = {}
 var _animation_frames: Array[Texture2D] = []
@@ -27,6 +43,7 @@ var _title_label: Label
 var _icon_label: Label
 var _type_label: Label
 var _requirements_label: Label
+var _rules_backdrop: Panel
 var _rules_label: Label
 var _stats_label: Label
 
@@ -78,8 +95,7 @@ func _build_face(difficulty_id: String) -> void:
 
 	var card_type := String(_card.get("card_type", "ingredient"))
 	var uses_neutral_frame := card_type in NEUTRAL_CARD_TYPES
-	var archetype_id := String(_card.get("archetype", "spicy"))
-	_icon_label = _add_label("CardAffinityIcon", AFFINITY_VISUALS.symbol(archetype_id), Color("#111111"))
+	_icon_label = _add_label("CardAffinityIcon", _affinity_icon_text(), Color("#111111"))
 	_icon_label.add_theme_font_override("font", AFFINITY_VISUALS.monochrome_symbol_font())
 	_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_icon_label.visible = not uses_neutral_frame
@@ -87,7 +103,7 @@ func _build_face(difficulty_id: String) -> void:
 
 	_title_label = _add_label("CardTitle", String(_card.get("name", "Card")), Color.WHITE)
 	var bold_title_font := FontVariation.new()
-	bold_title_font.base_font = ThemeDB.fallback_font
+	bold_title_font.base_font = CARD_FONT
 	bold_title_font.variation_embolden = 0.7
 	_title_label.add_theme_font_override("font", bold_title_font)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -106,14 +122,27 @@ func _build_face(difficulty_id: String) -> void:
 	_requirements_label.visible = is_meal and not _compact_visual
 	_set_relative_rect(_requirements_label, 0.09, 0.635, 0.92, 0.705)
 
-	var rules_text := String(_card.get("text", "")).strip_edges()
-	if rules_text == "":
-		rules_text = "No printed ability."
+	var rules_text := _rules_text()
+	var rules_top := 0.60 if uses_neutral_frame else (0.72 if is_meal else 0.68)
+	var rules_bottom := 0.94 if uses_neutral_frame else 0.91
+	_rules_backdrop = Panel.new()
+	_rules_backdrop.name = "CardRulesBackdrop"
+	_rules_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rules_style := StyleBoxFlat.new()
+	rules_style.bg_color = Color.TRANSPARENT
+	rules_style.border_color = Color.TRANSPARENT
+	rules_style.set_border_width_all(0)
+	_rules_backdrop.add_theme_stylebox_override("panel", rules_style)
+	_set_relative_rect(_rules_backdrop, 0.09, rules_top, 0.91, rules_bottom)
+	add_child(_rules_backdrop)
 	_rules_label = _add_label("CardRules", rules_text, Color("#111111"))
 	_rules_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rules_label.max_lines_visible = MAX_RULE_LINES
+	_rules_label.add_theme_constant_override("line_spacing", 2)
 	_rules_label.visible = not _compact_visual
-	_set_relative_rect(_rules_label, 0.105, 0.60 if uses_neutral_frame else (0.72 if is_meal else 0.68), 0.90, 0.94 if uses_neutral_frame else 0.91)
+	_rules_backdrop.visible = not _compact_visual
+	_set_relative_rect(_rules_label, 0.12, rules_top, 0.88, rules_bottom)
 
 	_stats_label = _add_label("CardStats", "%d / %d" % [int(_card.get("attack", 0)), int(_card.get("health", 0))], Color("#111111"))
 	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -123,13 +152,52 @@ func _build_face(difficulty_id: String) -> void:
 	_update_typography()
 
 
+func _rules_text() -> String:
+	return String(_card.get("text", "")).strip_edges()
+
+
 func _frame_path(difficulty_id: String) -> String:
 	var card_type := String(_card.get("card_type", "ingredient"))
 	if card_type in NEUTRAL_CARD_TYPES:
 		return "res://assets/cards/frames/%s/black.png" % card_type
+	var dual_frame_key := _dual_frame_key()
+	if dual_frame_key != "":
+		return "res://assets/cards/frames/dual/%s_%s.png" % [dual_frame_key, card_type]
 	var border_color := difficulty_id if difficulty_id in ["black", "blue", "yellow", "silver", "gold"] else "black"
 	var archetype_id := String(_card.get("archetype", "spicy"))
 	return "res://assets/cards/frames/%s_%s/%s.png" % [archetype_id, card_type, border_color]
+
+
+func _card_affinity_ids() -> Array[String]:
+	var result: Array[String] = []
+	var authored_affinities: Array = _card.get("archetypes", [])
+	if authored_affinities.is_empty() and String(_card.get("card_type", "")) == "ingredient":
+		authored_affinities = _card.get("ingredient_types", [])
+	for affinity_value in authored_affinities:
+		var affinity_id := String(affinity_value)
+		if affinity_id in SUPPORTED_ARCHETYPES and not result.has(affinity_id):
+			result.append(affinity_id)
+	if result.is_empty():
+		var primary_affinity := String(_card.get("archetype", ""))
+		if primary_affinity in SUPPORTED_ARCHETYPES:
+			result.append(primary_affinity)
+	return result
+
+
+func _dual_frame_key() -> String:
+	var affinities := _card_affinity_ids()
+	if affinities.size() != 2:
+		return ""
+	affinities.sort()
+	return String(DUAL_FRAME_KEYS.get("|".join(affinities), ""))
+
+
+func _affinity_icon_text() -> String:
+	var symbols: Array[String] = []
+	var display_affinities: Array = DUAL_FRAME_AFFINITY_ORDER.get(_dual_frame_key(), _card_affinity_ids())
+	for affinity_id in display_affinities:
+		symbols.append(AFFINITY_VISUALS.symbol(String(affinity_id)))
+	return "".join(symbols)
 
 
 func _meal_requirements_text() -> String:
@@ -149,7 +217,12 @@ func _meal_requirements_text() -> String:
 	if required_meal_archetype != "":
 		parts.append("%s Meal" % required_meal_archetype.capitalize())
 	for requirement in requirement_order:
-		var display_name := "Any" if requirement == "any" else requirement.capitalize()
+		var display_name := "Anything"
+		if requirement != "any":
+			var option_names: Array[String] = []
+			for option in requirement.split("|"):
+				option_names.append(String(option).capitalize())
+			display_name = " or ".join(option_names)
 		var count := int(requirement_counts[requirement])
 		parts.append("%s Ingredient%s" % [display_name if count == 1 else "%d× %s" % [count, display_name], "" if count == 1 else "s"])
 	if parts.is_empty():
@@ -209,29 +282,63 @@ func _notification(what: int) -> void:
 
 func _update_typography() -> void:
 	var display_width := size.x if size.x > 0.0 else custom_minimum_size.x
+	var dual_affinity := _card_affinity_ids().size() == 2
+	var preferred_rules_size := 9
 	if _compact_visual:
-		_icon_label.add_theme_font_size_override("font_size", maxi(12, int(round(display_width / 5.0))))
+		_icon_label.add_theme_font_size_override("font_size", maxi(10, int(round(display_width / (12.0 if dual_affinity else 5.0)))))
 		_title_label.add_theme_font_size_override("font_size", maxi(8, int(round(display_width / 9.0))))
 		_type_label.add_theme_font_size_override("font_size", 8)
 		_requirements_label.add_theme_font_size_override("font_size", 8)
-		_rules_label.add_theme_font_size_override("font_size", 8)
 		_stats_label.add_theme_font_size_override("font_size", maxi(8, int(round(display_width / 8.0))))
+		_fit_rules_text(preferred_rules_size)
 		return
 	if display_width < 160.0:
-		_icon_label.add_theme_font_size_override("font_size", maxi(11, int(round(display_width / 8.5))))
+		_icon_label.add_theme_font_size_override("font_size", maxi(9, int(round(display_width / (13.0 if dual_affinity else 8.5)))))
 		_title_label.add_theme_font_size_override("font_size", maxi(9, int(round(display_width / 11.0))))
 		_type_label.add_theme_font_size_override("font_size", maxi(7, int(round(display_width / 17.0))))
 		_requirements_label.add_theme_font_size_override("font_size", maxi(5, int(round(display_width / 24.0))))
-		_rules_label.add_theme_font_size_override("font_size", maxi(6, int(round(display_width / 19.0))))
+		preferred_rules_size = maxi(10, int(round(display_width / 17.5)))
 		_stats_label.add_theme_font_size_override("font_size", maxi(10, int(round(display_width / 11.0))))
+		_fit_rules_text(preferred_rules_size)
 		return
 	var title_size := maxi(13, int(round(display_width / 11.0)))
-	_icon_label.add_theme_font_size_override("font_size", maxi(16, int(round(display_width / 8.5))))
+	_icon_label.add_theme_font_size_override("font_size", maxi(14, int(round(display_width / (12.5 if dual_affinity else 8.5)))))
 	_title_label.add_theme_font_size_override("font_size", title_size)
 	_type_label.add_theme_font_size_override("font_size", maxi(11, int(round(display_width / 17.0))))
 	_requirements_label.add_theme_font_size_override("font_size", maxi(9, int(round(display_width / 24.0))))
-	_rules_label.add_theme_font_size_override("font_size", maxi(10, int(round(display_width / 19.0))))
+	preferred_rules_size = maxi(12, int(round(display_width / 17.5)))
 	_stats_label.add_theme_font_size_override("font_size", maxi(14, int(round(display_width / 11.0))))
+	_fit_rules_text(preferred_rules_size)
+
+
+func _fit_rules_text(preferred_font_size: int) -> void:
+	if not is_instance_valid(_rules_label):
+		return
+	var display_width := size.x if size.x > 0.0 else custom_minimum_size.x
+	var display_height := size.y if size.y > 0.0 else custom_minimum_size.y
+	var available_width := maxf(1.0, display_width * 0.76)
+	var card_type := String(_card.get("card_type", "ingredient"))
+	var rules_top := 0.60 if card_type in NEUTRAL_CARD_TYPES else (0.72 if card_type == "meal" else 0.68)
+	var rules_bottom := 0.94 if card_type in NEUTRAL_CARD_TYPES else 0.91
+	var available_height := maxf(1.0, display_height * (rules_bottom - rules_top))
+	var rules_font := _rules_label.get_theme_font("font")
+	var break_flags := TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND | TextServer.BREAK_ADAPTIVE
+	var fitted_size := maxi(1, preferred_font_size)
+	while fitted_size > 1:
+		var measured_size := rules_font.get_multiline_string_size(
+			_rules_label.text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			available_width,
+			fitted_size,
+			-1,
+			break_flags
+		)
+		var three_line_height := rules_font.get_height(fitted_size) * MAX_RULE_LINES
+		var spacing_height := _rules_label.get_theme_constant("line_spacing") * (MAX_RULE_LINES - 1)
+		if measured_size.y <= three_line_height + 0.5 and measured_size.y + spacing_height <= available_height:
+			break
+		fitted_size -= 1
+	_rules_label.add_theme_font_size_override("font_size", fitted_size)
 
 
 func _add_label(node_name: String, value: String, color: Color) -> Label:
@@ -239,6 +346,7 @@ func _add_label(node_name: String, value: String, color: Color) -> Label:
 	label.name = node_name
 	label.text = value
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", CARD_FONT)
 	label.add_theme_color_override("font_color", color)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(label)

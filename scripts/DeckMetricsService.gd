@@ -4,7 +4,7 @@ class_name DeckMetricsService
 var cards_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var archetype_order: Array = []
-var main_deck_size := 30
+var main_deck_size := 20
 
 
 func setup(card_database: Dictionary, archetype_database: Dictionary, ordered_archetypes: Array, main_size: int) -> void:
@@ -73,9 +73,10 @@ func calculate(deck: Dictionary, _sideboard: Dictionary) -> Dictionary:
 	var fit := float(archetype_counts[primary]) / float(total)
 	var desired: Dictionary = archetype.get("desiredRoles", {})
 	var role_error := 0.0
+	var target_scale := float(total) / float(maxi(1, main_deck_size))
 	for role in desired.keys():
-		role_error += abs(float(role_counts.get(role, 0)) - float(desired[role]))
-	var role_score: float = clamp(1.0 - (role_error / float(main_deck_size * 1.4)), 0.0, 1.0)
+		role_error += abs(float(role_counts.get(role, 0)) - float(desired[role]) * target_scale)
+	var role_score: float = clamp(1.0 - (role_error / maxf(float(total) * 1.4, 1.0)), 0.0, 1.0)
 
 	var averages := {}
 	for key in stat_totals.keys():
@@ -89,15 +90,17 @@ func calculate(deck: Dictionary, _sideboard: Dictionary) -> Dictionary:
 	weighted_stats += float(averages.resilience) * float(weights.get("resilience", 0.2))
 	weighted_stats += float(averages.advantage) * float(weights.get("advantage", 0.2))
 
+	var minimum_low_cost := ceili(float(total) * 0.72)
+	var maximum_high_cost := floori(float(total) * 0.24)
 	var curve_warning := "Curve looks playable."
 	var curve_bonus := 0.0
-	if low_cost < 18:
+	if low_cost < minimum_low_cost:
 		curve_warning = "Add more Ingredients or one-Ingredient Meals for reliable recipes."
 		curve_bonus -= 2.0
 	elif high_cost < 1:
 		curve_warning = "The deck has no three-Ingredient Meal payoff."
 		curve_bonus -= 1.5
-	elif high_cost > 6:
+	elif high_cost > maximum_high_cost:
 		curve_warning = "Too many three-Ingredient Meals may clog the opening hand."
 		curve_bonus -= 2.0
 

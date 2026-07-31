@@ -5,10 +5,12 @@ const STEPS := [
 	{
 		"title": "Welcome to the Cook-Off",
 		"subtitle": "Your goal",
-		"body": "Both Chefs begin with 25 life. Build your board, serve Meals, and reduce the opposing Chef to 0 life before they do the same to you.",
+		"body": "Both Chefs begin with 20 life. Build your board, serve Meals, and reduce the opposing Chef to 0 life before they do the same to you.",
 		"tips": [
 			"Your deck, hand, discard pile, and two board zones are always visible.",
-			"The first player cannot attack on their opening turn. Use it to set up."
+			"The first player skips their opening draw. The second player draws normally on their first turn.",
+			"After that, draw one card at the start of your turn; if you still have fewer than two cards in hand, keep drawing until you have two.",
+			"The first player also cannot attack on their opening turn. Use it to set up."
 		],
 		"focus": "goal"
 	},
@@ -58,11 +60,11 @@ const STEPS := [
 	{
 		"title": "Attack and Defend",
 		"subtitle": "Clear the plate, then hit the Chef",
-		"body": "Select a ready Plated attacker, then choose an opposing Plated unit. Both units deal their Attack as damage at the same time. When the opposing Plated zone is empty, you can attack their Chef directly.",
+		"body": "Select a ready Plated attacker, then choose an opposing Plated unit. Both units deal their Attack as damage at the same time. A Plated unit that does not attack ends the turn Defending and stops excess damage unless struck by Piercing. A unit that attacked is exposed, so damage beyond its remaining Health reaches its Chef.",
 		"tips": [
 			"Damage remains on a unit until it is healed or KO'd.",
 			"A unit is KO'd when damage reduces its Health to 0.",
-			"Keywords such as Taunt and Stalwart can change legal targets."
+			"Piercing cards deal excess damage through Defending units. Stalwart cards can attack the Chef through Plated defenders."
 		],
 		"focus": "combat"
 	},
@@ -166,7 +168,7 @@ func _change_step(delta: int) -> void:
 
 
 func _build_table_preview(parent: Node, focus: String) -> void:
-	var opponent_chef := _banner("OPPOSING CHEF  •  25 LIFE", focus == "goal", Color("#a9413b"))
+	var opponent_chef := _banner("OPPOSING CHEF  •  20 LIFE", focus == "goal", Color("#a9413b"))
 	parent.add_child(opponent_chef)
 
 	var opponent_zones := HBoxContainer.new()

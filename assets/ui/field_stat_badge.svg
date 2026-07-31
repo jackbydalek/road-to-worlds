@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="90" viewBox="0 0 420 90">
+  <defs>
+    <linearGradient id="badge-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#172b35" stop-opacity=".82"/>
+      <stop offset="1" stop-color="#091219" stop-opacity=".68"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="412" height="82" rx="22" fill="url(#badge-fill)" stroke="#f1bd57" stroke-opacity=".78" stroke-width="4"/>
+  <path d="M26 14h368" fill="none" stroke="#fff1c4" stroke-linecap="round" stroke-opacity=".22" stroke-width="3"/>
+</svg>
