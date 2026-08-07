@@ -90,7 +90,7 @@ func _run() -> void:
 	pup_state.player.plated = [_unit(200, "sweet_pup_tart", "Pup Tart", "meal", 3, 4)]
 	pup_state.player.prep = [
 		_unit(201, "sweet_caramel_camel", "Choco Bat", "ingredient", 1, 1),
-		_unit(202, "sweet_soft_serve_crab", "Soft Serve Crab", "ingredient", 1, 2)
+		_unit(202, "sweet_soft_serve_crab", "Soft Serve Crab", "ingredient", 1, 4)
 	]
 	pup_state.player.hand = ["sweet_strawberry_sharkcake", "sweet_strawberry_sharkcake"]
 	service._serve_meal(pup_state, "player", 0, [201], "prep")
@@ -165,8 +165,8 @@ func _run() -> void:
 		return
 
 	var bodyguard_data: Dictionary = service.card("sweet_soft_serve_crab")
-	if not bodyguard_data.get("keywords", []).has("bodyguard") or int(bodyguard_data.health) != 2:
-		_fail("Soft Serve Crab did not load its canonical Bodyguard rule and 1/2 stats.")
+	if not bodyguard_data.get("keywords", []).has("bodyguard") or int(bodyguard_data.health) != 4:
+		_fail("Soft Serve Crab did not load its canonical Bodyguard rule and 1/4 stats.")
 		return
 	print("Rebalanced card pool smoke test passed.")
 	quit(0)
