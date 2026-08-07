@@ -41,6 +41,13 @@ func _run() -> void:
 	if shop_world == null:
 		quit(1)
 		return
+	_expect(
+		int(shop_world.shop_view_render_counts.singles) == 0
+		and int(shop_world.shop_view_render_counts.trade) == 0
+		and int(shop_world.shop_view_render_counts.meta) == 0
+		and int(shop_world.shop_view_render_counts.set_list) == 0,
+		"The storefront eagerly rendered hidden shop overlays during initial load."
+	)
 	var top_bar := main.find_child("TopBar", true, false) as PanelContainer
 	var cash_hud := main.find_child("ShopHudCashButton", true, false) as Button
 	var deck_hud := main.find_child("ShopHudDeckButton", true, false) as Button
@@ -217,6 +224,7 @@ func _run() -> void:
 	var set_list_rows := main.find_children("InSceneSetListCard_*", "PanelContainer", true, false)
 	var set_list_faces := main.find_children("InSceneSetListCardFace_*", "Control", true, false)
 	_expect(set_list_panel != null and set_list_panel.visible, "View Set List did not open its in-store overlay.")
+	_expect(int(shop_world.shop_view_render_counts.set_list) == 1, "Opening the set list did not render it exactly once.")
 	_expect(shop_world.current_menu_view() == "set_list", "The storefront did not preserve the set-list view state.")
 	_expect(
 		core_section != null
@@ -277,6 +285,15 @@ func _run() -> void:
 	shop_world.call("_layout_set_list_panel")
 	shop_world.call("_return_to_shopkeeper_menu")
 	await process_frame
+	if set_list_action != null:
+		set_list_action.emit_signal("pressed")
+	await process_frame
+	_expect(
+		int(shop_world.shop_view_render_counts.set_list) == 1,
+		"Reopening the unchanged set list rebuilt every card face."
+	)
+	shop_world.call("_return_to_shopkeeper_menu")
+	await process_frame
 
 	main.run.active_tournament = {
 		"active": true,
@@ -306,15 +323,30 @@ func _run() -> void:
 	await process_frame
 	var singles_case := main.find_child("InSceneSinglesCase", true, false) as PanelContainer
 	_expect(singles_case != null and singles_case.visible, "The cleaned Browse Singles action no longer opened the in-store case.")
+	_expect(int(shop_world.shop_view_render_counts.singles) == 1, "Opening Singles did not lazily render the case exactly once.")
 
 	var shop_music := main.find_child("CardShopMusic", true, false) as AudioStreamPlayer
 	_expect(shop_music != null and shop_music.playing, "The card-store soundtrack was not playing in the shop.")
 	main._show_deckbuilder()
 	await process_frame
 	_expect(shop_music != null and shop_music.playing, "Opening Deck Edit stopped the card-store soundtrack.")
+	_expect(
+		main.cached_shop_overworld == shop_world
+		and is_instance_valid(main.cached_shop_overworld)
+		and not main.cached_shop_overworld.visible,
+		"Opening Deck Edit discarded the live 3D storefront instead of caching it."
+	)
 	main._show_settings()
 	await process_frame
 	_expect(shop_music != null and shop_music.playing, "Opening Settings from Deck Edit stopped the card-store soundtrack.")
+	main._show_shop()
+	await process_frame
+	await process_frame
+	_expect(
+		main.find_child("CardShopOverworld", true, false) == shop_world
+		and int(shop_world.shop_view_render_counts.set_list) == 1,
+		"Returning from a utility screen rebuilt the 3D store or its cached set list."
+	)
 
 	main.run.active_tournament = {}
 	main.run.money = 0

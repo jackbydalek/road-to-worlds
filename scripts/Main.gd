@@ -189,6 +189,8 @@ var settings_return_screen := "start"
 var settings_path := SETTINGS_PATH
 var deckbuilder_return_screen := ""
 var deckbuilder_return_shop_view := ""
+var cached_shop_overworld: Control
+var cached_shop_menu_view := "overview"
 
 
 func _ready() -> void:
@@ -1350,6 +1352,7 @@ func _connect_pressed(button: Button, callback: Callable) -> void:
 
 
 func _show_start() -> void:
+	_dispose_cached_shop_overworld()
 	if not run.is_empty():
 		_autosave_now(current_screen)
 	current_screen = "start"
@@ -1489,6 +1492,8 @@ func _show_new_game_menu() -> void:
 func _show_settings() -> void:
 	if current_screen != "settings":
 		settings_return_screen = current_screen
+	if current_screen == "shop":
+		_cache_active_shop_overworld()
 	current_screen = "settings"
 	_apply_screen_chrome()
 	_clear(nav)
@@ -3253,6 +3258,8 @@ func _set_calendar_prep_notice(event_id: String) -> void:
 
 
 func _show_season_run() -> void:
+	if current_screen == "shop":
+		_cache_active_shop_overworld()
 	season_hub_screen.show(self)
 
 
@@ -3273,36 +3280,74 @@ func _show_shop() -> void:
 func _show_shop_overworld() -> void:
 	if _guard_run_over():
 		return
+	_cache_active_shop_overworld()
 	current_screen = "shop"
 	_render_nav()
 	_clear(content)
 	_update_status()
 	_set_footer("Your next round is waiting. Stock up, tune your deck, or talk to the clerk.")
 
-	var shop_world := _instantiate_scene(GREYBOX_CAMERA_DEMO_SCENE_PATH) as Control
-	shop_world.name = "CardShopOverworld"
-	shop_world.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_world.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shop_world.connect("single_purchase_requested", _buy_single_from_overworld)
-	shop_world.connect("trade_extras_requested", _trade_extra_copies_from_overworld)
-	shop_world.connect("packs_requested", _show_packs)
-	shop_world.connect("tournament_requested", _on_shop_tournament_requested)
-	shop_world.connect("deck_requested", _show_deckbuilder)
-	shop_world.connect("calendar_requested", _show_season_run)
-	shop_world.connect("save_requested", _save_run)
-	shop_world.connect("settings_requested", _show_settings)
-	shop_world.connect("exit_requested", _show_start)
-	content.add_child(shop_world)
-	shop_world.call("configure_shop", _shop_overworld_context())
+	var shop_world := cached_shop_overworld
+	if not is_instance_valid(shop_world):
+		shop_world = _instantiate_scene(GREYBOX_CAMERA_DEMO_SCENE_PATH) as Control
+		shop_world.name = "CardShopOverworld"
+		shop_world.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		shop_world.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		shop_world.connect("single_purchase_requested", _buy_single_from_overworld)
+		shop_world.connect("trade_extras_requested", _trade_extra_copies_from_overworld)
+		shop_world.connect("packs_requested", _show_packs)
+		shop_world.connect("tournament_requested", _on_shop_tournament_requested)
+		shop_world.connect("deck_requested", _show_deckbuilder)
+		shop_world.connect("calendar_requested", _show_season_run)
+		shop_world.connect("save_requested", _save_run)
+		shop_world.connect("settings_requested", _show_settings)
+		shop_world.connect("exit_requested", _show_start)
+		cached_shop_overworld = shop_world
+	if shop_world.get_parent() != null:
+		shop_world.reparent(content)
+	else:
+		content.add_child(shop_world)
+	shop_world.visible = true
+	shop_world.process_mode = Node.PROCESS_MODE_INHERIT
+	if bool(shop_world.get_meta("shop_configured", false)):
+		shop_world.call("update_shop_context", _shop_overworld_context(false))
+		shop_world.call("restore_menu_view", cached_shop_menu_view)
+	else:
+		shop_world.call("configure_shop", _shop_overworld_context())
+		shop_world.set_meta("shop_configured", true)
 	_play_card_shop_music()
 
 
-func _shop_overworld_context() -> Dictionary:
+func _cache_active_shop_overworld() -> void:
+	var shop_world := content.find_child("CardShopOverworld", true, false) as Control if content != null else null
+	if shop_world == null:
+		return
+	if shop_world.has_method("current_menu_view"):
+		cached_shop_menu_view = String(shop_world.call("current_menu_view"))
+	content.remove_child(shop_world)
+	add_child(shop_world)
+	shop_world.visible = false
+	shop_world.process_mode = Node.PROCESS_MODE_DISABLED
+	cached_shop_overworld = shop_world
+
+
+func _dispose_cached_shop_overworld() -> void:
+	if not is_instance_valid(cached_shop_overworld):
+		cached_shop_overworld = null
+		cached_shop_menu_view = "overview"
+		return
+	if cached_shop_overworld.get_parent() != content:
+		cached_shop_overworld.queue_free()
+	cached_shop_overworld = null
+	cached_shop_menu_view = "overview"
+
+
+func _shop_overworld_context(include_set_entries: bool = true) -> Dictionary:
 	var active: Dictionary = run.get("active_tournament", {})
 	var booster_price := 0
 	if boosters_by_id.has(BASE_BOOSTER_ID):
 		booster_price = int(boosters_by_id[BASE_BOOSTER_ID].get("price", 0))
-	return {
+	var context := {
 		"money": int(run.get("money", 0)),
 		"prize_packs": int(run.get("prize_packs", 0)),
 		"booster_price": booster_price,
@@ -3312,11 +3357,13 @@ func _shop_overworld_context() -> Dictionary:
 		"tournament_active": _season_tournament_active(),
 		"tournament_round": int(active.get("round", 1)),
 		"singles": _shop_overworld_single_entries(),
-		"set_entries": _shop_overworld_set_entries(),
 		"trade_entries": _shop_overworld_trade_entries(),
 		"meta_entries": _shop_overworld_meta_entries(),
 		"reports": run.get("reports", []).duplicate(true)
 	}
+	if include_set_entries:
+		context.set_entries = _shop_overworld_set_entries()
+	return context
 
 
 func _on_shop_tournament_requested() -> void:
@@ -3453,7 +3500,7 @@ func _buy_single_from_overworld(card_id: String) -> void:
 	_update_status()
 	var shop_world := content.find_child("CardShopOverworld", true, false)
 	if shop_world != null:
-		shop_world.call("update_shop_context", _shop_overworld_context(), message)
+		shop_world.call("update_shop_context", _shop_overworld_context(false), message)
 
 
 func _shop_overworld_trade_entries() -> Array:
@@ -3499,7 +3546,7 @@ func _trade_extra_copies_from_overworld() -> void:
 	_update_status()
 	var shop_world := content.find_child("CardShopOverworld", true, false)
 	if shop_world != null:
-		shop_world.call("update_shop_context", _shop_overworld_context(), message, "trade")
+		shop_world.call("update_shop_context", _shop_overworld_context(false), message, "trade")
 
 
 func _show_singles_shop() -> void:
@@ -3667,6 +3714,8 @@ func _show_deckbuilder() -> void:
 			var shop_world := content.find_child("CardShopOverworld", true, false)
 			if shop_world != null and shop_world.has_method("current_menu_view"):
 				deckbuilder_return_shop_view = String(shop_world.call("current_menu_view"))
+	if current_screen == "shop":
+		_cache_active_shop_overworld()
 	deckbuilder_screen.show(self)
 	if rebuilding_deckbuilder:
 		_restore_deckbuilder_scroll_positions()

@@ -136,6 +136,18 @@ var button_sparkles: Array[Polygon2D] = []
 var button_sparkle_phase: Array[float] = []
 var ambient_time := 0.0
 var case_glint_elapsed := 4.7
+var shop_view_dirty := {
+	"singles": true,
+	"trade": true,
+	"meta": true,
+	"set_list": true,
+}
+var shop_view_render_counts := {
+	"singles": 0,
+	"trade": 0,
+	"meta": 0,
+	"set_list": 0,
+}
 
 
 func _ready() -> void:
@@ -174,10 +186,6 @@ func _ready() -> void:
 	station_panel.visible = false
 	shot_label.text = _overview_description()
 	_apply_shop_context()
-	_render_singles_case()
-	_render_trade_binder()
-	_render_meta_analysis()
-	_render_set_list()
 	resized.connect(_position_shopkeeper_hotspot)
 	resized.connect(_layout_set_list_panel)
 	call_deferred("_position_shopkeeper_hotspot")
@@ -555,22 +563,71 @@ func _start_shopkeeper_idle() -> void:
 
 
 func configure_shop(context: Dictionary) -> void:
-	shop_context = context.duplicate(true)
+	shop_context = context.duplicate(false)
+	_mark_all_shop_views_dirty()
 	if is_node_ready():
 		_apply_shop_context()
-		_render_singles_case()
-		_render_trade_binder()
-		_render_meta_analysis()
-		_render_set_list()
 
 
 func update_shop_context(context: Dictionary, message: String = "", message_target: String = "singles") -> void:
-	shop_context = context.duplicate(true)
+	var merged_context := shop_context.duplicate(false)
+	for key in context:
+		merged_context[key] = context[key]
+	_mark_changed_shop_views_dirty(shop_context, merged_context)
+	shop_context = merged_context
 	_apply_shop_context()
-	_render_singles_case(message if message_target == "singles" else "")
-	_render_trade_binder(message if message_target == "trade" else "")
-	_render_meta_analysis()
-	_render_set_list()
+	_refresh_visible_shop_view(message, message_target)
+
+
+func _mark_all_shop_views_dirty() -> void:
+	for view_name in shop_view_dirty:
+		shop_view_dirty[view_name] = true
+
+
+func _mark_changed_shop_views_dirty(previous: Dictionary, incoming: Dictionary) -> void:
+	var view_keys := {
+		"singles": "singles",
+		"trade": "trade_entries",
+		"meta": "meta_entries",
+		"set_list": "set_entries",
+	}
+	for view_name in view_keys:
+		var context_key := String(view_keys[view_name])
+		if hash(previous.get(context_key, [])) != hash(incoming.get(context_key, [])):
+			shop_view_dirty[view_name] = true
+	if int(previous.get("money", -1)) != int(incoming.get("money", -1)):
+		shop_view_dirty.singles = true
+		shop_view_dirty.trade = true
+	if (
+		String(previous.get("event_name", "")) != String(incoming.get("event_name", ""))
+		or hash(previous.get("reports", [])) != hash(incoming.get("reports", []))
+	):
+		shop_view_dirty.meta = true
+
+
+func _refresh_visible_shop_view(message: String, message_target: String) -> void:
+	if singles_panel != null and singles_panel.visible:
+		_ensure_shop_view_rendered("singles", message if message_target == "singles" else "")
+	elif trade_panel != null and trade_panel.visible:
+		_ensure_shop_view_rendered("trade", message if message_target == "trade" else "")
+	elif meta_panel != null and meta_panel.visible:
+		_ensure_shop_view_rendered("meta")
+	elif set_list_panel != null and set_list_panel.visible:
+		_ensure_shop_view_rendered("set_list")
+
+
+func _ensure_shop_view_rendered(view_name: String, message: String = "") -> void:
+	if not bool(shop_view_dirty.get(view_name, true)) and message == "":
+		return
+	match view_name:
+		"singles":
+			_render_singles_case(message)
+		"trade":
+			_render_trade_binder(message)
+		"meta":
+			_render_meta_analysis()
+		"set_list":
+			_render_set_list()
 
 
 func current_menu_view() -> String:
@@ -612,21 +669,22 @@ func restore_menu_view(view: String) -> void:
 
 	match view:
 		"singles":
+			_ensure_shop_view_rendered("singles")
 			shot_label.text = "SINGLES CASE — buy cards without leaving the store"
 			singles_panel.visible = true
 			singles_panel.modulate.a = 1.0
 		"trade":
-			_render_trade_binder()
+			_ensure_shop_view_rendered("trade")
 			shot_label.text = "TRADE BINDER — review safe extras without leaving the store"
 			trade_panel.visible = true
 			trade_panel.modulate.a = 1.0
 		"meta":
-			_render_meta_analysis()
+			_ensure_shop_view_rendered("meta")
 			shot_label.text = "META ANALYSIS — local field shares and shop talk"
 			meta_panel.visible = true
 			meta_panel.modulate.a = 1.0
 		"set_list":
-			_render_set_list()
+			_ensure_shop_view_rendered("set_list")
 			shot_label.text = "SET LIST — every released card, grouped by expansion"
 			set_list_panel.visible = true
 			set_list_panel.modulate.a = 1.0
@@ -1007,6 +1065,8 @@ func _create_detail_overlay(node_name: String, accent_hex: String) -> Dictionary
 func _render_singles_case(message: String = "") -> void:
 	if singles_grid == null:
 		return
+	shop_view_dirty.singles = false
+	shop_view_render_counts.singles = int(shop_view_render_counts.singles) + 1
 	for child in singles_grid.get_children():
 		singles_grid.remove_child(child)
 		child.queue_free()
@@ -1033,6 +1093,8 @@ func _render_singles_case(message: String = "") -> void:
 func _render_trade_binder(message: String = "") -> void:
 	if trade_list == null:
 		return
+	shop_view_dirty.trade = false
+	shop_view_render_counts.trade = int(shop_view_render_counts.trade) + 1
 	_clear_dynamic_list(trade_list)
 	var heading := trade_panel.find_child("InSceneTradeBinderHeading", true, false) as Label
 	if heading != null:
@@ -1069,6 +1131,8 @@ func _render_trade_binder(message: String = "") -> void:
 func _render_meta_analysis() -> void:
 	if meta_list == null:
 		return
+	shop_view_dirty.meta = false
+	shop_view_render_counts.meta = int(shop_view_render_counts.meta) + 1
 	_clear_dynamic_list(meta_list)
 	var heading := meta_panel.find_child("InSceneMetaAnalysisHeading", true, false) as Label
 	if heading != null:
@@ -1123,6 +1187,8 @@ func _render_meta_analysis() -> void:
 func _render_set_list() -> void:
 	if set_list_body == null:
 		return
+	shop_view_dirty.set_list = false
+	shop_view_render_counts.set_list = int(shop_view_render_counts.set_list) + 1
 	_clear_dynamic_list(set_list_body)
 	set_list_grids.clear()
 	var heading := set_list_panel.find_child("InSceneSetListHeading", true, false) as Label
@@ -1952,27 +2018,28 @@ func _return_to_shopkeeper_menu() -> void:
 
 func _show_singles_case() -> void:
 	_hide_overlays()
+	_ensure_shop_view_rendered("singles")
 	shot_label.text = "SINGLES CASE — buy cards without leaving the store"
 	_fade_in_overlay(singles_panel)
 
 
 func _show_trade_binder() -> void:
 	_hide_overlays()
-	_render_trade_binder()
+	_ensure_shop_view_rendered("trade")
 	shot_label.text = "TRADE BINDER — review safe extras without leaving the store"
 	_fade_in_overlay(trade_panel)
 
 
 func _show_meta_analysis() -> void:
 	_hide_overlays()
-	_render_meta_analysis()
+	_ensure_shop_view_rendered("meta")
 	shot_label.text = "META ANALYSIS — local field shares and shop talk"
 	_fade_in_overlay(meta_panel)
 
 
 func _show_set_list() -> void:
 	_hide_overlays()
-	_render_set_list()
+	_ensure_shop_view_rendered("set_list")
 	shot_label.text = "SET LIST — every released card, grouped by expansion"
 	_fade_in_overlay(set_list_panel)
 

@@ -204,8 +204,42 @@ func _run() -> void:
 	_expect(main.current_screen == "tutorial", "Title-screen How to Play did not open the guided match.")
 	main._show_game_start()
 	await process_frame
+	game_status_scene = main.find_child("GameStartGateway", true, false) as Control
 	var continue_button := main.find_child("ContinueRunButton", true, false) as Button
 	_expect(continue_button != null and not continue_button.disabled, "Continue did not enable for a valid autosave.")
+	var saved_product_art := main.find_child("SavedStarterProductArt", true, false) as TextureRect
+	var saved_product_viewport := main.find_child("SavedProductViewportContainer", true, false) as SubViewportContainer
+	_expect(
+		saved_product_art != null
+		and saved_product_art.visible
+		and saved_product_art.texture is AtlasTexture
+		and saved_product_viewport != null
+		and not saved_product_viewport.visible,
+		"The saved-season gateway did not replace the edge-on 3D starter with its front-facing product art."
+	)
+	if "--capture-gateway" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		var gateway_preview := root.get_texture().get_image()
+		_expect(
+			gateway_preview != null and gateway_preview.save_png("/tmp/road-to-worlds-saved-season.png") == OK,
+			"The saved-season visual QA capture could not be written."
+		)
+	game_status_scene.call("_layout_gateway", Vector2(540, 640))
+	await process_frame
+	await process_frame
+	var compact_viewport := Rect2(Vector2.ZERO, Vector2(540, 640))
+	for node_name in ["DoorDisplay", "ActionColumn", "GameStartOptionsButton"]:
+		var gateway_control := main.find_child(node_name, true, false) as Control
+		_expect(
+			gateway_control != null and compact_viewport.encloses(Rect2(gateway_control.position, gateway_control.size)),
+			"%s overflowed the compact saved-season gateway: %s within %s." % [
+				node_name,
+				Rect2(gateway_control.position, gateway_control.size) if gateway_control != null else Rect2(),
+				compact_viewport,
+			]
+		)
+	game_status_scene.call("_layout_gateway")
+	await process_frame
 	if continue_button != null:
 		continue_button.emit_signal("pressed")
 	await process_frame

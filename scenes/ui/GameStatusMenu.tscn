@@ -118,7 +118,7 @@ content_margin_bottom = 8.0
 [sub_resource type="StyleBoxEmpty" id="Style_empty"]
 
 [node name="GameStatusMenu" type="Control"]
-custom_minimum_size = Vector2(0, 840)
+custom_minimum_size = Vector2(0, 540)
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
