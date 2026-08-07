@@ -120,16 +120,16 @@ const KEYWORD_TOOLTIPS := {
 }
 const TUTORIAL_STEPS := [
 	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 20 life. The first player skips their opening draw; the second player draws normally. On later turns, draw one card, then draw up to two if your hand is still smaller. Most play happens by dragging cards directly where you want them to go.", "prompt": "Press Begin to practice with a fixed hand.", "action": "continue", "scenario": "opening"},
-	{"lesson": 2, "title": "Drag an Ingredient", "body": "Ingredients build recipes. Prep protects a card from normal attacks while it matures; Plated cards can fight, but can also be attacked.", "prompt": "Drag the glowing Hot Honey Bee from your hand to glowing Prep slot 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
+	{"lesson": 2, "title": "Drag an Ingredient", "body": "Ingredients build recipes. Prep protects a card from normal attacks while it matures; Plated cards can fight, but can also be attacked.", "prompt": "Drag the glowing Hot Honey Bee into the middle Prep slot marked DROP HERE.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
 	{"lesson": 2, "title": "Let It Mature", "body": "At the start of your next turn, the Ingredient becomes RECIPE READY. Normal matches give the rival a full turn in between.", "prompt": "Press END TURN. The lesson will fast-forward the scripted rival turn.", "action": "end_turn"},
 	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. spicy taquería gives each Spicy food you serve +2 Attack.", "prompt": "Drag the glowing spicy taquería from your hand to your Environment slot on the left.", "action": "play_hand", "card_id": "environment_spicy_taqueria", "scenario": "recipe"},
-	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe. You may serve one Meal each turn.", "prompt": "Drag the glowing Sriracharrow from your hand to glowing Prep slot 2.", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
+	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe. You may serve one Meal each turn.", "prompt": "Drag the glowing Sriracharrow into the middle Prep slot marked DROP HERE.", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
 	{"lesson": 4, "title": "Pay the Recipe", "body": "The cyan glow marks legal recipe Ingredients. The selected Ingredient will be sacrificed to your discard pile.", "prompt": "Click the glowing Hot Honey Bee on your table.", "action": "select_recipe", "card_id": "spicy_hot_honey_bee"},
 	{"lesson": 4, "title": "Confirm the Meal", "body": "Sriracharrow needs one Spicy Ingredient. The selected Bee satisfies the full recipe.", "prompt": "Press Serve Meal in the message strip.", "action": "confirm_meal"},
-	{"lesson": 5, "title": "Move Into Combat", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Drag your glowing Sriracharrow from Prep to glowing Plated slot 1.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
+	{"lesson": 5, "title": "Move Into Combat", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Drag your glowing Sriracharrow into the left Plated slot marked DROP HERE.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
 	{"lesson": 6, "title": "Attach a Spice", "body": "Spices attach to a unit and stay with it. Cayenne Crunch gives the Meal +1 Attack.", "prompt": "Drag the glowing Cayenne Crunch from your hand directly onto Sriracharrow.", "action": "play_hand", "card_id": "spice_cayenne_crunch", "target_instance_id": 1, "scenario": "support"},
-	{"lesson": 6, "title": "Use a Tool", "body": "Tools are one-shot effects. Wooden Spoon draws one card, then goes to your discard pile.", "prompt": "Drag the glowing Wooden Spoon from your hand onto the open table.", "action": "play_hand", "card_id": "item_wooden_spoon"},
-	{"lesson": 6, "title": "Use a Chef", "body": "Chef Giada draws three cards. Chef cards resolve immediately and you may use only one each turn.", "prompt": "Drag the glowing Chef Giada from your hand onto the open table.", "action": "play_hand", "card_id": "chef_mary"},
+	{"lesson": 6, "title": "Use a Tool", "body": "Tools are one-shot effects, and you may use as many Tools as you want each turn. Wooden Spoon draws one card, then goes to your discard pile.", "prompt": "Drag the glowing Wooden Spoon from your hand onto the open table.", "action": "play_hand", "card_id": "item_wooden_spoon"},
+	{"lesson": 6, "title": "Use a Chef", "body": "Chef Giada draws three cards. Unlike Tools, you may use only one Chef each turn.", "prompt": "Drag the glowing Chef Giada from your hand onto the open table.", "action": "play_hand", "card_id": "chef_mary"},
 	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "Only ready Plated units can normally attack. If the rival has a Plated unit, attack a legal defender before attacking their Chef. Stalwart can bypass this rule.", "prompt": "Drag the glowing left Sriracharrow directly onto the opposing Bagver.", "action": "attack_unit", "attacker_instance_id": 1, "target_instance_id": 3, "scenario": "combat"},
 	{"lesson": 7, "title": "Attack the Rival Chef", "body": "Your first Meal is spent, but the second is ready. Reducing the opposing Chef to 0 life wins the match.", "prompt": "Drag the glowing right Sriracharrow directly onto the rival Chef.", "action": "attack_chef", "attacker_instance_id": 2},
 	{"lesson": 7, "title": "Tutorial Complete", "body": "You played an Ingredient, matured and sacrificed it, served and moved a Meal, used support cards, cleared a defender, and won with a direct attack.", "prompt": "Return to the title screen when you are ready.", "action": "finish"}
@@ -259,7 +259,9 @@ var tutorial_title_label: Label
 var tutorial_body_label: Label
 var tutorial_prompt_label: Label
 var tutorial_progress_label: Label
+var tutorial_turn_limits_label: Label
 var tutorial_action_button: Button
+var tutorial_target_marker: Label3D
 var rival_action_panel: PanelContainer
 var rival_action_face: TextureRect
 var rival_action_name_label: Label
@@ -585,7 +587,7 @@ func _build_tutorial_interface() -> void:
 	tutorial_panel.offset_left = 18.0
 	tutorial_panel.offset_top = 84.0
 	tutorial_panel.offset_right = 430.0
-	tutorial_panel.offset_bottom = 310.0
+	tutorial_panel.offset_bottom = 336.0
 	tutorial_panel.add_theme_stylebox_override(
 		"panel",
 		UI_THEME_SCRIPT.light_glass_style(PALETTE.PERIWINKLE, 2)
@@ -609,6 +611,11 @@ func _build_tutorial_interface() -> void:
 	tutorial_body_label = _label("", 14, PALETTE.NAVY_MUTED)
 	tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_body_label)
+	tutorial_turn_limits_label = _label("PER TURN  •  TOOLS: UNLIMITED  •  CHEF: ONE", 13, PALETTE.NAVY)
+	tutorial_turn_limits_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tutorial_turn_limits_label.add_theme_color_override("font_outline_color", PALETTE.CREAM)
+	tutorial_turn_limits_label.add_theme_constant_override("outline_size", 3)
+	content.add_child(tutorial_turn_limits_label)
 	tutorial_prompt_label = _label("", 15, PALETTE.CORAL)
 	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_prompt_label)
@@ -616,8 +623,21 @@ func _build_tutorial_interface() -> void:
 	tutorial_action_button.pressed.connect(_on_tutorial_action_pressed)
 	content.add_child(tutorial_action_button)
 
+	tutorial_target_marker = Label3D.new()
+	tutorial_target_marker.name = "TutorialDropMarker"
+	tutorial_target_marker.visible = false
+	tutorial_target_marker.text = "✦  DROP HERE  ✦"
+	tutorial_target_marker.font = READABLE_FONT
+	tutorial_target_marker.font_size = 32
+	tutorial_target_marker.outline_size = 10
+	tutorial_target_marker.modulate = PALETTE.CREAM
+	tutorial_target_marker.outline_modulate = PALETTE.NAVY
+	tutorial_target_marker.no_depth_test = true
+	tutorial_target_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	$ViewportContainer/WorldViewport/World/Zones.add_child(tutorial_target_marker)
+
 	# Keep Card Info visible below the written lesson instead of covering it.
-	action_panel.offset_top = 322.0
+	action_panel.offset_top = 348.0
 
 
 func _refresh_tutorial_panel() -> void:
@@ -635,7 +655,31 @@ func _refresh_tutorial_panel() -> void:
 	var action := String(step.get("action", ""))
 	tutorial_action_button.visible = action in ["continue", "finish"]
 	tutorial_action_button.text = "Begin Tutorial" if action == "continue" else "Return to Title"
+	_refresh_tutorial_action_cues()
 	title_label.text = "HOW TO PLAY  •  GUIDED PRACTICE"
+
+
+func _refresh_tutorial_action_cues() -> void:
+	if not tutorial_mode:
+		return
+	var step := _tutorial_step()
+	var action := String(step.get("action", ""))
+	var target_zone := ""
+	var target_slot := -1
+	if action in ["play_hand", "begin_meal", "move_unit"] and step.has("zone") and step.has("slot"):
+		target_zone = "player_%s" % String(step.zone)
+		target_slot = int(step.slot)
+	if is_instance_valid(tutorial_target_marker):
+		var show_marker := target_zone != "" and target_slot >= 0
+		tutorial_target_marker.visible = show_marker
+		tutorial_target_marker.set_meta("target_zone", target_zone)
+		tutorial_target_marker.set_meta("target_slot", target_slot)
+		if show_marker:
+			tutorial_target_marker.position = _slot_world_position(target_zone, target_slot) + Vector3(0.0, 0.55, 0.0)
+	end_turn_button.set_meta("tutorial_attention", action == "end_turn")
+	end_turn_button.pivot_offset = end_turn_button.size * 0.5
+	if action != "end_turn":
+		end_turn_button.scale = Vector2.ONE
 
 
 func _on_tutorial_action_pressed() -> void:
@@ -2220,6 +2264,19 @@ func _zone_node_name(zone_id: String) -> String:
 func _process(delta: float) -> void:
 	_update_reaction_countdown(delta)
 	var time := Time.get_ticks_msec() * 0.001
+	if tutorial_mode and is_instance_valid(end_turn_button):
+		var end_turn_attention := bool(end_turn_button.get_meta("tutorial_attention", false))
+		if end_turn_attention:
+			var end_turn_pulse := 0.5 if reduced_motion else (sin(time * 5.2) + 1.0) * 0.5
+			end_turn_button.scale = Vector2.ONE * lerpf(1.0, 1.055, end_turn_pulse)
+			end_turn_button.modulate = PALETTE.CREAM.lerp(PALETTE.SKY, lerpf(0.0, 0.14, end_turn_pulse))
+		else:
+			end_turn_button.scale = Vector2.ONE
+			end_turn_button.modulate = Color.WHITE
+	if is_instance_valid(tutorial_target_marker) and tutorial_target_marker.visible:
+		var marker_pulse := 0.65 if reduced_motion else (sin(time * 4.8) + 1.0) * 0.5
+		tutorial_target_marker.scale = Vector3.ONE * lerpf(0.96, 1.08, marker_pulse)
+		tutorial_target_marker.modulate = Color(PALETTE.CREAM, lerpf(0.72, 1.0, marker_pulse))
 	for art in floating_arts:
 		if not is_instance_valid(art):
 			continue
@@ -2293,11 +2350,27 @@ func _update_zone_flair(time: float) -> void:
 			var material := material_variant as StandardMaterial3D
 			var drag_active := String(zone_id) == highlighted_zone and (highlighted_slot < 0 or highlighted_slot == slot_index)
 			var action_active := (String(zone_id) == action_highlight_zone and (action_highlight_slot < 0 or action_highlight_slot == slot_index)) or _is_action_slot_highlighted(String(zone_id), slot_index)
-			var active := drag_active or action_active
-			material.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.48 if active else idle_alpha)
+			var tutorial_active := _tutorial_slot_is_target(String(zone_id), slot_index)
+			var active := drag_active or action_active or tutorial_active
+			var active_alpha := 0.72 if tutorial_active else 0.48
+			material.albedo_color = Color(base_color.r, base_color.g, base_color.b, active_alpha if active else idle_alpha)
 			material.emission_enabled = active
 			material.emission = base_color
-			material.emission_energy_multiplier = 1.8 + sin(time * 5.0) * 0.35 if active else 0.0
+			var pulse_energy := (2.65 + sin(time * 5.0) * 0.55) if tutorial_active else (1.8 + sin(time * 5.0) * 0.35)
+			material.emission_energy_multiplier = pulse_energy if active else 0.0
+
+
+func _tutorial_slot_is_target(zone_id: String, slot_index: int) -> bool:
+	if not tutorial_mode:
+		return false
+	var step := _tutorial_step()
+	return (
+		String(step.get("action", "")) in ["play_hand", "begin_meal", "move_unit"]
+		and step.has("zone")
+		and step.has("slot")
+		and zone_id == "player_%s" % String(step.zone)
+		and slot_index == int(step.slot)
+	)
 
 
 func _is_action_slot_highlighted(zone_id: String, slot_index: int) -> bool:
@@ -2680,6 +2753,18 @@ func _slot_at_point(point: Vector3) -> Dictionary:
 		if absf(point.x - (center.x + offset)) <= 0.79 and absf(point.z - center.z) <= float(ZONE_EXTENTS[zone_id].y):
 			return {"zone": zone_id, "slot": slot_index}
 	return {}
+
+
+func _slot_world_position(zone_id: String, slot_index: int) -> Vector3:
+	if not ZONE_CENTERS.has(zone_id):
+		return Vector3.ZERO
+	var zone_name := zone_id.trim_prefix("player_").trim_prefix("opponent_")
+	var capacity: int = service.PREP_SLOTS if zone_name == "prep" else service.PLATED_SLOTS
+	if slot_index < 0 or slot_index >= capacity:
+		return ZONE_CENTERS[zone_id]
+	var spacing := 1.72 if capacity == 3 else 1.8
+	var offset := (float(slot_index) - float(capacity - 1) * 0.5) * spacing
+	return ZONE_CENTERS[zone_id] + Vector3(offset, 0.0, 0.0)
 
 
 func _field_target_near(point: Vector3, side: String, zone: String) -> int:

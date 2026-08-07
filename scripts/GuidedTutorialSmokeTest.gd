@@ -19,6 +19,18 @@ func _run() -> void:
 	_expect(tutorial.tutorial_mode and tutorial.tutorial_step_index == 0, "The guided tutorial did not initialize.")
 	tutorial._tutorial_complete_action("continue")
 	tutorial._render_match()
+	_expect(
+		is_instance_valid(tutorial.tutorial_target_marker)
+		and tutorial.tutorial_target_marker.visible
+		and String(tutorial.tutorial_target_marker.get_meta("target_zone", "")) == "player_prep"
+		and int(tutorial.tutorial_target_marker.get_meta("target_slot", -1)) == 1,
+		"The Ingredient lesson did not identify the middle Prep slot with a visible drop marker."
+	)
+	_expect(
+		"TOOLS: UNLIMITED" in String(tutorial.tutorial_turn_limits_label.text)
+		and "CHEF: ONE" in String(tutorial.tutorial_turn_limits_label.text),
+		"The guided tutorial does not clearly explain the Tool and Chef turn limits."
+	)
 	var bee_card := _card_node(tutorial, "hand", "player", "spicy_hot_honey_bee")
 	var spoon_card := _card_node(tutorial, "hand", "player", "item_wooden_spoon")
 	_expect(bee_card != null and tutorial._can_drag_card(bee_card), "The tutorial Ingredient could not begin a drag.")
@@ -28,9 +40,15 @@ func _run() -> void:
 	bee_card = _card_node(tutorial, "hand", "player", "spicy_hot_honey_bee")
 	await _drag_card(tutorial, bee_card, _slot_point(tutorial, "player_prep", 1))
 	_expect(tutorial.state.player.prep.size() == 1, "The forced Ingredient was not played to Prep.")
+	_expect(
+		bool(tutorial.end_turn_button.get_meta("tutorial_attention", false))
+		and not tutorial.tutorial_target_marker.visible,
+		"The End Turn lesson did not replace the slot marker with an End Turn attention pulse."
+	)
 
 	tutorial._on_end_turn_pressed()
 	_expect(String(tutorial._tutorial_step().action) == "play_hand" and String(tutorial.state.player.prep[0].card_id) == "spicy_hot_honey_bee", "End Turn did not fast-forward to the fixed recipe hand.")
+	_expect(not bool(tutorial.end_turn_button.get_meta("tutorial_attention", false)), "The End Turn pulse remained active after the tutorial advanced.")
 
 	var environment_card := _card_node(tutorial, "hand", "player", "environment_spicy_taqueria")
 	_expect(environment_card != null and tutorial._can_drag_card(environment_card), "The Environment could not begin a drag.")
