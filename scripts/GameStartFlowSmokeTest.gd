@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const TEST_SAVE_PATH := "user://road_to_worlds_game_start_flow_test.json"
 
 var failed := false
@@ -97,6 +98,11 @@ func _run() -> void:
 	main.run = {}
 	var season_setup_scene := main.find_child("SeasonRegistration", true, false) as Control
 	_expect(season_setup_scene != null and season_setup_scene.scene_file_path == "res://scenes/ui/SeasonSetupMenu.tscn", "Deck Select was not instantiated from its editable scene.")
+	var select_background := main.find_child("PastelSelectBackground", true, false) as ColorRect
+	_expect(
+		select_background != null and select_background.material is ShaderMaterial,
+		"Deck Select did not use the shared pastel card-café background."
+	)
 	_expect(main.DEMO_STARTER_ORDER == ["spicy", "hearty", "sweet", "draft_night"], "The starter wheel did not include Draft Night.")
 	var starter_card := main.find_child("SeasonStarterCard", true, false)
 	var border_card := main.find_child("SeasonBorderCard", true, false)
@@ -114,6 +120,14 @@ func _run() -> void:
 	await process_frame
 	_expect(main.season_setup_archetype_index == starter_index_before_preview, "Opening the deck list unexpectedly changed the selected starter.")
 	_expect(main.find_child("StarterDeckPreview", true, false) != null, "The deck-contents icon did not open its popup.")
+	var preview_panel := main.find_child("StarterDeckPreviewPanel", true, false) as PanelContainer
+	var preview_style := preview_panel.get_theme_stylebox("panel") as StyleBoxFlat if preview_panel != null else null
+	_expect(
+		preview_style != null
+		and preview_style.bg_color.is_equal_approx(Color(PALETTE.CREAM, 0.985))
+		and preview_style.border_color.is_equal_approx(PALETTE.NAVY),
+		"The starter deck list did not use the cream-and-navy card-café panel."
+	)
 	var preview_summary := main.find_child("StarterDeckPreviewSummary", true, false) as Label
 	_expect(preview_summary != null and preview_summary.text.begins_with("20 cards"), "The starter deck popup did not report the complete 20-card list.")
 	var preview_entries := main.find_children("StarterDeckPreviewEntry_*", "", true, false)
@@ -135,6 +149,11 @@ func _run() -> void:
 	main.season_setup_archetype_index = main.DEMO_STARTER_ORDER.find(main.DRAFT_NIGHT_ID)
 	main._show_season_run_setup()
 	await process_frame
+	var draft_label := main.find_child("DraftNightLabel", true, false) as Label
+	_expect(
+		draft_label != null and draft_label.text.contains("DRAFT NIGHT") and draft_label.text.contains("BOOSTER BOX"),
+		"The starter shelf did not expose the redesigned Draft Night badge."
+	)
 	var draft_star := main.find_child("DraftNightStar", true, false) as TextureRect
 	_expect(draft_star != null and draft_star.texture.resource_path == "res://assets/ui/wired_title/draft_star.svg", "Draft Night did not use the sketch star.")
 	_expect(main.find_child("StarterDeckSymbol", true, false) == null, "Draft Night displayed a starter affinity symbol instead of its star.")

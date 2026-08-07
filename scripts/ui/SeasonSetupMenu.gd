@@ -166,9 +166,9 @@ func _apply_starter_selection(selected_index: int) -> void:
 	for index in range(STARTER_BUTTON_NAMES.size()):
 		var button := get_node("%%%s" % STARTER_BUTTON_NAMES[index]) as Button
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(PALETTE.APRICOT, 0.34) if index == selected_index else Color(0, 0, 0, 0)
-		style.border_color = PALETTE.TEAL if index == selected_index else Color(0, 0, 0, 0)
-		style.set_border_width_all(5 if index == selected_index else 0)
-		style.set_corner_radius_all(12)
+		style.bg_color = Color(PALETTE.LAVENDER_GLASS, 0.34) if index == selected_index else Color(0, 0, 0, 0)
+		style.border_color = PALETTE.SKY if index == selected_index else Color(0, 0, 0, 0)
+		style.set_border_width_all(4 if index == selected_index else 0)
+		style.set_corner_radius_all(16)
 		button.add_theme_stylebox_override("normal", style)
-		button.add_theme_color_override("font_color", PALETTE.TEAL if index == selected_index else PALETTE.INK)
+		button.add_theme_color_override("font_color", PALETTE.NAVY)

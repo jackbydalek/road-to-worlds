@@ -998,7 +998,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 
 	var dimmer := ColorRect.new()
 	dimmer.name = "StarterDeckPreviewDimmer"
-	dimmer.color = Color(0.16, 0.10, 0.07, 0.70)
+	dimmer.color = Color(PALETTE.NAVY, 0.46)
 	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	dimmer.gui_input.connect(func(event: InputEvent) -> void:
@@ -1017,10 +1017,10 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	panel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI_SCRIPT.clean_style(
-			WORKSPACE_UI_SCRIPT.SURFACE,
-			WORKSPACE_UI_SCRIPT.PALETTE.SLATE,
-			3,
-			14,
+			Color(PALETTE.CREAM, 0.985),
+			PALETTE.NAVY,
+			2,
+			18,
 			Vector4(46, 38, 46, 42),
 			0,
 			true
@@ -1043,8 +1043,19 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	)
 	var banner := banner_parts.panel as PanelContainer
 	var banner_heading := banner_parts.heading as Label
+	banner.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(
+			Color(PALETTE.LAVENDER_GLASS, 0.92),
+			PALETTE.PERIWINKLE,
+			2,
+			14,
+			Vector4.ZERO
+		)
+	)
 	banner_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_heading.add_theme_font_size_override("font_size", 28)
+	banner_heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	var banner_subtitle := Label.new()
 	banner_subtitle.text = (
 		"Build your season deck one pick at a time."
@@ -1052,7 +1063,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		else "Review the cards before committing to this season."
 	)
 	banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_subtitle.add_theme_color_override("font_color", WORKSPACE_UI_SCRIPT.MUTED_INK)
+	banner_subtitle.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	banner_parts.body.add_child(banner_subtitle)
 	banner.name = "StarterDeckPreviewBanner"
 	layout.add_child(banner)
@@ -1063,10 +1074,10 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		empty_panel.add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI_SCRIPT.clean_style(
-				WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT,
-				WORKSPACE_UI_SCRIPT.PALETTE.BRICK,
+				Color(PALETTE.LAVENDER_GLASS, 0.62),
+				PALETTE.PERIWINKLE,
 				2,
-				10,
+				14,
 				Vector4(42, 34, 42, 34)
 			)
 		)
@@ -1085,7 +1096,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
 		heading.add_theme_font_size_override("font_size", 27)
-		heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+		heading.add_theme_color_override("font_color", PALETTE.NAVY)
 		empty_copy.add_child(heading)
 		for line in [
 			"Choose an opening dual-flavor Meal.",
@@ -1097,7 +1108,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.14))
 			detail.add_theme_font_size_override("font_size", 19)
-			detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+			detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 			empty_copy.add_child(detail)
 	else:
 		var summary := Label.new()
@@ -1106,7 +1117,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
 		summary.add_theme_font_size_override("font_size", 18)
-		summary.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+		summary.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 		layout.add_child(summary)
 
 		var list_panel := PanelContainer.new()
@@ -1114,10 +1125,10 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		list_panel.add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI_SCRIPT.clean_style(
-				WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT,
-				WORKSPACE_UI_SCRIPT.PALETTE.BORDER_SOFT,
+				Color(PALETTE.LAVENDER_GLASS, 0.56),
+				PALETTE.PERIWINKLE,
 				2,
-				10,
+				14,
 				Vector4(22, 16, 22, 16)
 			)
 		)
@@ -1190,7 +1201,7 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	count.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.48))
 	count.add_theme_font_size_override("font_size", 19)
-	count.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.ORANGE)
+	count.add_theme_color_override("font_color", PALETTE.CORAL.darkened(0.18))
 	row.add_child(count)
 
 	var name := Label.new()
@@ -1199,7 +1210,7 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.12))
 	name.add_theme_font_size_override("font_size", 18)
-	name.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	name.add_theme_color_override("font_color", PALETTE.NAVY)
 	row.add_child(name)
 
 	var classification := Label.new()
@@ -1209,7 +1220,7 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 	classification.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	classification.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
 	classification.add_theme_font_size_override("font_size", 15)
-	classification.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+	classification.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	row.add_child(classification)
 	row.mouse_entered.connect(func() -> void: _queue_starter_deck_hover_preview(row, card_id))
 	row.mouse_exited.connect(_hide_starter_deck_hover_preview)
@@ -1222,10 +1233,10 @@ func _create_starter_deck_hover_preview(overlay: Control) -> void:
 	starter_deck_hover_preview.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI_SCRIPT.clean_style(
-			WORKSPACE_UI_SCRIPT.SURFACE,
-			WORKSPACE_UI_SCRIPT.TEAL,
+			Color(PALETTE.CREAM, 0.985),
+			PALETTE.PERIWINKLE,
 			2,
-			12,
+			14,
 			Vector4(16, 16, 16, 18),
 			0,
 			true
