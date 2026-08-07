@@ -29,6 +29,7 @@ func _run() -> void:
 	var title_primary := main.find_child("GameStartButton", true, false) as Button
 	var storefront_backdrop := main.find_child("StorefrontBackdrop", true, false) as Control
 	var storefront_shop := main.find_child("StorefrontShop", true, false) as Node3D
+	var storefront_viewport := storefront_backdrop.get_node_or_null("ViewportContainer/SubViewport") as SubViewport if storefront_backdrop != null else null
 	_expect(
 		title_menu != null
 		and title_menu.scene_file_path == "res://scenes/ui/TitleMenu.tscn"
@@ -36,6 +37,10 @@ func _run() -> void:
 		and storefront_backdrop != null
 		and storefront_shop != null,
 		"The landing screen did not use the editable 3D storefront title scene."
+	)
+	_expect(
+		storefront_viewport != null and storefront_viewport.render_target_update_mode == SubViewport.UPDATE_ONCE,
+		"The static title storefront is still rendering every frame."
 	)
 	_expect(main.find_child("TitleCollectionButton", true, false) == null, "The landing screen still offered Collection.")
 	var options_button := main.find_child("TitleOptionsButton", true, false) as Button
@@ -104,6 +109,17 @@ func _run() -> void:
 		"Deck Select did not use the shared pastel card-café background."
 	)
 	_expect(main.DEMO_STARTER_ORDER == ["spicy", "hearty", "sweet", "draft_night"], "The starter wheel did not include Draft Night.")
+	var shelf_viewport := main.find_child("ShelfViewport", true, false) as SubViewport
+	var product_viewport := main.find_child("SelectedProductViewport", true, false) as SubViewport
+	_expect(
+		shelf_viewport != null
+		and shelf_viewport.render_target_update_mode in [SubViewport.UPDATE_ONCE, SubViewport.UPDATE_DISABLED],
+		"The static starter shelf is still rendering every frame."
+	)
+	_expect(
+		product_viewport != null and product_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED,
+		"The hidden starter product preview is still rendering continuously."
+	)
 	var starter_card := main.find_child("SeasonStarterCard", true, false)
 	var border_card := main.find_child("SeasonBorderCard", true, false)
 	_expect(starter_card != null and String(starter_card.get_meta("starter_id", "")) == "spicy", "The setup screen did not expose its selected starter.")

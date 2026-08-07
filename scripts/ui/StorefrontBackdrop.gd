@@ -23,6 +23,7 @@ const VIEW_DATA := {
 @onready var camera_rig: Node3D = $ViewportContainer/SubViewport/World/CameraRig
 @onready var camera: Camera3D = $ViewportContainer/SubViewport/World/CameraRig/Camera3D
 @onready var shop_model: Node3D = $ViewportContainer/SubViewport/World/StorefrontShop
+@onready var storefront_viewport: SubViewport = $ViewportContainer/SubViewport
 
 var camera_tween: Tween
 var current_view := "overview"
@@ -50,6 +51,7 @@ func set_view_immediate(view_name: String) -> void:
 	else:
 		camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 		camera.fov = float(data.fov)
+	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func transition_to(view_name: String) -> void:
@@ -61,6 +63,7 @@ func transition_to(view_name: String) -> void:
 	if bool(get_tree().root.get_meta("reduced_motion", false)):
 		set_view_immediate(resolved)
 		return
+	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	if camera_tween != null and camera_tween.is_valid():
 		camera_tween.kill()
 	camera_tween = create_tween().set_parallel(true)
@@ -68,6 +71,7 @@ func transition_to(view_name: String) -> void:
 	camera_tween.tween_property(camera_rig, "transform", _view_transform(data), TRANSITION_SECONDS)
 	camera_tween.tween_property(camera, "fov", float(data.fov), TRANSITION_SECONDS)
 	await camera_tween.finished
+	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func _view_transform(data: Dictionary) -> Transform3D:

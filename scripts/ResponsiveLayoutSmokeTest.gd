@@ -17,6 +17,7 @@ func _init() -> void:
 
 
 func _run() -> void:
+	await _test_starter_deck_preview_layout()
 	await _test_pack_and_finale_layouts()
 	await _test_tutorial_inspector_layout()
 	if failures.is_empty():
@@ -26,6 +27,35 @@ func _run() -> void:
 	for failure in failures:
 		push_error(failure)
 	quit(1)
+
+
+func _test_starter_deck_preview_layout() -> void:
+	root.size = Vector2i(1280, 720)
+	var main = MAIN_SCENE.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+	main._show_game_start()
+	await process_frame
+	main.season_setup_archetype_index = 1
+	main._show_season_run_setup()
+	await process_frame
+	main._show_starter_deck_preview("hearty")
+	await process_frame
+	await process_frame
+	var overlay := main.find_child("StarterDeckPreview", true, false) as Control
+	var panel := main.find_child("StarterDeckPreviewPanel", true, false) as Control
+	_expect(overlay != null and panel != null, "The initial starter deck list did not render at 1280x720.")
+	if overlay != null and panel != null:
+		_expect(
+			overlay.get_global_rect().encloses(panel.get_global_rect()),
+			"The starter deck list extends beyond 1280x720 before the first window resize."
+		)
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
+	main.queue_free()
+	for unused_frame in range(4):
+		await process_frame
 
 
 func _test_pack_and_finale_layouts() -> void:

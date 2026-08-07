@@ -11,6 +11,7 @@ signal debug_requested
 
 @onready var deck_placeholder_mount: CenterContainer = %SavedDeckPlaceholderMount
 @onready var product_viewport_container: SubViewportContainer = %SavedProductViewportContainer
+@onready var product_viewport: SubViewport = $DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedDeckFrame/SavedDeckMount/SavedProductViewportContainer/SavedProductViewport
 @onready var product_pivot: Node3D = %SavedProductPivot
 @onready var status_lines: Array[Label] = [%StatusLine1, %StatusLine2, %StatusLine3, %StatusLine4]
 @onready var continue_button: Button = %ContinueRunButton
@@ -90,6 +91,7 @@ func _configure_saved_product(product_id: String) -> void:
 	product.rotation_degrees = Vector3(0, 180, 0) if product_id == "draft_night" else Vector3(0, -90, 0)
 	_flatten_product_lighting(product)
 	_fit_product(product)
+	product_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func _flatten_product_lighting(node: Node) -> void:

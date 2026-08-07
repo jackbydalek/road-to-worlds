@@ -16,6 +16,8 @@ signal difficulty_closed_requested
 @onready var difficulty_scrim: ColorRect = %DifficultyScrim
 @onready var border_frame_preview: TextureRect = %BorderFramePreview
 @onready var selected_product_pivot: Node3D = %SelectedProductPivot
+@onready var shelf_viewport: SubViewport = $ShelfViewportContainer/ShelfViewport
+@onready var selected_product_viewport: SubViewport = $DifficultyScrim/PreviewOverlay/PreviewColumn/SelectedProductViewportContainer/SelectedProductViewport
 
 const BORDER_FRAME_TEXTURES: Array[Texture2D] = [
 	preload("res://assets/season_setup/frames/black.png"),
@@ -44,6 +46,8 @@ const PRODUCT_PREVIEW_ROTATION_SPEED := 0.55
 
 func _ready() -> void:
 	_flatten_display_lighting($ShelfViewportContainer/ShelfViewport/World)
+	shelf_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	call_deferred("_freeze_static_shelf")
 	%SeasonSetupBackButton.pressed.connect(back_requested.emit)
 	%SpicyStarterButton.pressed.connect(func() -> void: starter_selected_requested.emit(0))
 	%HeartyStarterButton.pressed.connect(func() -> void: starter_selected_requested.emit(1))
@@ -54,6 +58,12 @@ func _ready() -> void:
 	%NextBorderButton.pressed.connect(next_border_requested.emit)
 	%ConfirmSeasonStartButton.pressed.connect(confirm_requested.emit)
 	%CloseDifficultyButton.pressed.connect(difficulty_closed_requested.emit)
+
+
+func _freeze_static_shelf() -> void:
+	await RenderingServer.frame_post_draw
+	if is_instance_valid(shelf_viewport):
+		shelf_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 func _process(_delta: float) -> void:
@@ -99,6 +109,9 @@ func configure(data: Dictionary, starter_art: Control) -> void:
 	var selected_starter := int(data.get("starter_index", 0))
 	_apply_starter_selection(selected_starter if difficulty_scrim.visible else -1)
 	_configure_product_preview(selected_starter if difficulty_scrim.visible else -1)
+	selected_product_viewport.render_target_update_mode = (
+		SubViewport.UPDATE_ALWAYS if difficulty_scrim.visible else SubViewport.UPDATE_DISABLED
+	)
 	var selected_difficulty := int(data.get("difficulty_index", 0))
 	border_frame_preview.texture = BORDER_FRAME_TEXTURES[clampi(selected_difficulty, 0, BORDER_FRAME_TEXTURES.size() - 1)]
 	for index in range(5):

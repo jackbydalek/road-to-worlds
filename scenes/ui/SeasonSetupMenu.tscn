@@ -225,7 +225,7 @@ stretch = true
 transparent_bg = true
 handle_input_locally = false
 size = Vector2i(1440, 900)
-render_target_update_mode = 4
+render_target_update_mode = 1
 
 [node name="World" type="Node3D" parent="ShelfViewportContainer/ShelfViewport" unique_id=493549260]
 
@@ -517,7 +517,7 @@ own_world_3d = true
 transparent_bg = true
 handle_input_locally = false
 size = Vector2i(460, 500)
-render_target_update_mode = 4
+render_target_update_mode = 0
 
 [node name="SelectedProductWorld" type="Node3D" parent="DifficultyScrim/PreviewOverlay/PreviewColumn/SelectedProductViewportContainer/SelectedProductViewport"]
 

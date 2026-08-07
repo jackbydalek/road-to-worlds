@@ -1068,6 +1068,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	banner.name = "StarterDeckPreviewBanner"
 	layout.add_child(banner)
 
+	var flexible_body: Control
 	if draft_night:
 		var empty_panel := PanelContainer.new()
 		empty_panel.custom_minimum_size = Vector2(0, 420)
@@ -1083,6 +1084,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		)
 		empty_panel.name = "DraftNightDeckPreviewEmptyState"
 		layout.add_child(empty_panel)
+		flexible_body = empty_panel
 		var empty_copy := VBoxContainer.new()
 		empty_copy.alignment = BoxContainer.ALIGNMENT_CENTER
 		empty_copy.add_theme_constant_override("separation", 16)
@@ -1133,6 +1135,7 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 			)
 		)
 		layout.add_child(list_panel)
+		flexible_body = list_panel
 		var list_scroll := ScrollContainer.new()
 		list_scroll.name = "StarterDeckPreviewScroll"
 		list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1156,6 +1159,25 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_connect_pressed(close_button, _close_starter_deck_preview)
 	layout.add_child(close_button)
+	overlay.resized.connect(_layout_starter_deck_preview.bind(panel, flexible_body))
+	_layout_starter_deck_preview(panel, flexible_body)
+	call_deferred("_layout_starter_deck_preview", panel, flexible_body)
+
+
+func _layout_starter_deck_preview(panel: PanelContainer, flexible_body: Control) -> void:
+	if not is_instance_valid(panel) or not is_instance_valid(flexible_body):
+		return
+	var viewport_size := get_viewport_rect().size
+	var panel_size := Vector2(
+		minf(780.0, maxf(520.0, viewport_size.x - 32.0)),
+		minf(690.0, maxf(480.0, viewport_size.y - 32.0))
+	)
+	panel.custom_minimum_size = panel_size
+	flexible_body.custom_minimum_size.y = clampf(panel_size.y - 310.0, 220.0, 380.0)
+	panel.reset_size()
+	var center := panel.get_parent() as Container
+	if center != null:
+		center.queue_sort()
 
 
 func _starter_deck_preview_entries(starter_id: String) -> Array[Dictionary]:
