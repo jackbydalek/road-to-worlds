@@ -227,6 +227,10 @@ func _opponent_card_upgrade_score(host, card_id: String) -> float:
 		return 0.0
 	var card: Dictionary = host.cards_by_id[card_id]
 	var stats: Dictionary = card.get("stats", {})
+	# Cinnamon Snail is Sweet's defining lock piece. Its global Meal tax and
+	# healing suppression are substantially stronger than its generic stat-line
+	# score suggests, so high-level opponents should prioritize a full set.
+	var strategic_bonus := 3.0 if card_id == "sweet_cinnamon_snail" else 0.0
 	return (
 		float(int(card.get("value", 0)))
 		+ float(host._rarity_rank(String(card.get("rarity", "common")))) * 6.0
@@ -234,6 +238,7 @@ func _opponent_card_upgrade_score(host, card_id: String) -> float:
 		+ float(int(card.get("health", 0))) * 0.55
 		+ float(int(stats.get("interaction", 0)) + int(stats.get("advantage", 0))) * 0.4
 		- float(int(card.get("cost", 0))) * 0.2
+		+ strategic_bonus
 	)
 
 

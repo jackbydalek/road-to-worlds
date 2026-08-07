@@ -38,6 +38,17 @@ const EXPECTED_DECKS := {
 		"item_recipe_prep": 2,
 		"chef_mary": 3,
 	},
+	"fresh_test_kitchen": {
+		"fresh_sprout_squirrel": 3,
+		"fresh_salad_shield_skunk": 3,
+		"fresh_crisp_capybara": 2,
+		"fresh_spicy_mexican_sweet_corino": 3,
+		"fresh_saladmander": 2,
+		"fresh_harvest_hydra": 1,
+		"item_fresh_shopping_list": 1,
+		"item_recipe_prep": 2,
+		"chef_mary": 3,
+	},
 }
 
 var failed := false
@@ -62,8 +73,8 @@ func _run() -> void:
 	var catalog: RefCounted = CONTENT_CATALOG_SCRIPT.new()
 	_expect(catalog.load_all(), "The season content catalog did not load the updated starters.")
 	var run_state: RefCounted = RUN_STATE_SCRIPT.new()
-	run_state.setup(catalog.cards_by_id, catalog.archetypes_by_id, ["spicy", "hearty", "sweet"], 20, 6, 20, "", 30)
-	for archetype_id in ["spicy", "sweet", "hearty"]:
+	run_state.setup(catalog.cards_by_id, catalog.archetypes_by_id, ["spicy", "hearty", "sweet", "fresh"], 20, 6, 20, "", 30)
+	for archetype_id in ["spicy", "sweet", "hearty", "fresh"]:
 		var season_deck := {}
 		for entry in catalog.archetypes_by_id[archetype_id].get("starterDeck", []):
 			season_deck[String(entry.get("cardId", ""))] = int(entry.get("count", 0))

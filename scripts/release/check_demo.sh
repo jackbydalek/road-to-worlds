@@ -50,6 +50,7 @@ tests=(
 	"scripts/CardEffectLabSmokeTest.gd"
 	"scripts/ThreeDCardInterfaceAudit.gd"
 	"scripts/GameStartFlowSmokeTest.gd"
+	"scripts/OpponentDeckTierSmokeTest.gd"
 	"scripts/RoundCashRewardSmokeTest.gd"
 	"scripts/GuidedTutorialSmokeTest.gd"
 	"scripts/DraftModeSmokeTest.gd"

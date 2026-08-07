@@ -52,7 +52,7 @@ if ! unzip -tq "$artifact" >/dev/null; then
 	printf 'ZIP integrity check failed: %s\n' "$artifact" >&2
 	exit 1
 fi
-if ! unzip -Z1 "$artifact" | grep -qx 'index.html'; then
+if ! unzip -Z1 "$artifact" | grep -x 'index.html' >/dev/null; then
 	printf 'itch ZIP must contain index.html at its root.\n' >&2
 	exit 1
 fi

@@ -16,8 +16,8 @@ func _run() -> void:
 	if service.cards_by_id.size() != 88:
 		_fail("Expected the canonical 87-card demo catalog plus the Fresh token.")
 		return
-	if service.decks.size() != 3:
-		_fail("Expected exactly the Spicy, Sweet, and Hearty starter decks.")
+	if service.decks.size() != 4:
+		_fail("Expected the Spicy, Sweet, Hearty, and Fresh prebuilt decks.")
 		return
 	for deck_id in service.decks:
 		var deck_total := 0

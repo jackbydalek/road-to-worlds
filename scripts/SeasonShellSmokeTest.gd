@@ -17,7 +17,7 @@ func _run() -> void:
 	await process_frame
 
 	_expect(main.cards_by_id.size() == 87, "Season shell did not load the canonical 87-card demo catalog.")
-	_expect(main.archetypes_by_id.size() == 3, "Season shell did not load the three starter archetypes.")
+	_expect(main.archetypes_by_id.size() == 4 and main.archetypes_by_id.has("fresh"), "Season shell did not load the Fresh opponent archetype.")
 	_expect(main.boosters_by_id.size() == 2, "Season shell did not load both booster definitions.")
 	_expect(main.tournaments_by_id.size() == 5, "Season shell did not load the tournament calendar.")
 	_expect(main.current_screen == "start", "The demo did not open on the title screen.")

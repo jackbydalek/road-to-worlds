@@ -152,6 +152,21 @@
         "item_recipe_prep": 2,
         "chef_mary": 3
       }
+    },
+    "fresh_test_kitchen": {
+      "name": "Fresh Starter",
+      "archetype": "fresh",
+      "cards": {
+        "fresh_sprout_squirrel": 3,
+        "fresh_salad_shield_skunk": 3,
+        "fresh_crisp_capybara": 2,
+        "fresh_spicy_mexican_sweet_corino": 3,
+        "fresh_saladmander": 2,
+        "fresh_harvest_hydra": 1,
+        "item_fresh_shopping_list": 1,
+        "item_recipe_prep": 2,
+        "chef_mary": 3
+      }
     }
   }
 }
