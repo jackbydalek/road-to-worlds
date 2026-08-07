@@ -78,14 +78,14 @@ Tokens are temporary units rather than collectible cards. If a token would leave
 
 ## Current Card Pool
 
-The focused data catalog contains 59 collectible cards:
+The public demo data catalog contains 87 collectible cards:
 
-- 25 Ingredients
-- 20 Meals
-- 5 Tools
-- 1 Spice
-- 3 Environments
-- 5 Chefs
+- 30 Ingredients
+- 23 Meals
+- 15 Tools
+- 5 Spices
+- 5 Environments
+- 9 Chefs
 
 Spicy, Hearty, and Sweet each have a deliberate 20-card starter deck. Fresh and Funky remain represented in the draft-ready card pool through mono- and dual-affinity cards.
 

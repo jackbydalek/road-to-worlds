@@ -1,0 +1,430 @@
+[gd_scene format=3 uid="uid://3517w4bnmwfk"]
+
+[ext_resource type="Script" uid="uid://ce6iocsg0v1ir" path="res://scripts/ui/TitleMenu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/StorefrontBackdrop.tscn" id="2_storefront"]
+[ext_resource type="FontFile" uid="uid://dnbvqa12yomhk" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="3_display"]
+[ext_resource type="FontFile" uid="uid://de6offqn05r66" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
+[ext_resource type="Texture2D" uid="uid://ca4gssd1b28wh" path="res://assets/logos/topdeck-to-worlds-pastel.png" id="5_temp_logo"]
+
+[sub_resource type="StyleBoxFlat" id="Style_sign"]
+bg_color = Color(0.160784, 0.211765, 0.372549, 0.97)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 8
+border_color = Color(0.556863, 0.662745, 0.901961, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.34)
+shadow_size = 16
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Style_start"]
+bg_color = Color(0.937255, 0.494118, 0.462745, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 7
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.28)
+shadow_size = 8
+shadow_offset = Vector2(2, 7)
+
+[sub_resource type="StyleBoxFlat" id="Style_start_hover"]
+bg_color = Color(0.94902, 0.643137, 0.721569, 1)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 8
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.34)
+shadow_size = 10
+shadow_offset = Vector2(2, 9)
+
+[sub_resource type="StyleBoxFlat" id="Style_poster"]
+bg_color = Color(0.909804, 0.890196, 0.960784, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 5
+border_color = Color(0.556863, 0.662745, 0.901961, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.24)
+shadow_size = 7
+shadow_offset = Vector2(2, 6)
+
+[sub_resource type="StyleBoxFlat" id="Style_poster_hover"]
+bg_color = Color(0.556863, 0.662745, 0.901961, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 6
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.30)
+shadow_size = 9
+shadow_offset = Vector2(2, 8)
+
+[sub_resource type="StyleBoxFlat" id="Style_credits"]
+bg_color = Color(0.94902, 0.643137, 0.721569, 0.96)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 5
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.24)
+shadow_size = 7
+shadow_offset = Vector2(2, 6)
+
+[sub_resource type="StyleBoxFlat" id="Style_credits_hover"]
+bg_color = Color(0.937255, 0.494118, 0.462745, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 6
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.30)
+shadow_size = 9
+shadow_offset = Vector2(2, 8)
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+content_margin_left = 22.0
+content_margin_top = 20.0
+content_margin_right = 22.0
+content_margin_bottom = 22.0
+bg_color = Color(1, 0.968627, 0.945098, 0.97)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 5
+border_color = Color(0.556863, 0.662745, 0.901961, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.26)
+shadow_size = 12
+shadow_offset = Vector2(0, 8)
+
+[sub_resource type="StyleBoxFlat" id="Style_compact"]
+bg_color = Color(0.909804, 0.890196, 0.960784, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(0.556863, 0.662745, 0.901961, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.22)
+shadow_size = 6
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxEmpty" id="Style_empty"]
+
+[node name="TitleMenu" type="Control" unique_id=459522630]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_script")
+
+[node name="StorefrontBackdrop" parent="." unique_id=1685170223 instance=ExtResource("2_storefront")]
+layout_mode = 1
+
+[node name="NightColorGrade" type="ColorRect" parent="." unique_id=1895277532]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="ShopSign" type="PanelContainer" parent="." unique_id=1532409553]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -491.0
+offset_right = 249.0
+offset_bottom = 332.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_sign")
+
+[node name="TitleLogo" type="TextureRect" parent="ShopSign" unique_id=1392392393]
+modulate = Color(1, 1, 1, 1)
+layout_mode = 2
+texture = ExtResource("5_temp_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PosterLayer" type="Control" parent="." unique_id=1163034413]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -48.0
+offset_top = 4.0
+offset_right = -48.0
+offset_bottom = 4.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="GameStartButton" type="Button" parent="PosterLayer" unique_id=753603324]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 243.0
+offset_top = 434.0
+offset_right = 455.0
+offset_bottom = 688.0
+rotation = -0.105
+pivot_offset = Vector2(106, 127)
+focus_neighbor_right = NodePath("../TitleHowToPlayButton")
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 42
+theme_override_styles/normal = SubResource("Style_start")
+theme_override_styles/pressed = SubResource("Style_start")
+theme_override_styles/hover = SubResource("Style_start_hover")
+theme_override_styles/focus = SubResource("Style_start_hover")
+text = "START
+GAME"
+
+[node name="TitleHowToPlayButton" type="Button" parent="PosterLayer" unique_id=500142525]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 664.0
+offset_top = 434.0
+offset_right = 846.0
+offset_bottom = 603.0
+rotation = 0.075
+pivot_offset = Vector2(91, 84)
+focus_neighbor_left = NodePath("../GameStartButton")
+focus_neighbor_right = NodePath("../CreditsPosterButton")
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("Style_poster")
+theme_override_styles/pressed = SubResource("Style_poster")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+theme_override_styles/focus = SubResource("Style_poster_hover")
+text = "HOW TO
+PLAY"
+
+[node name="CreditsPosterButton" type="Button" parent="PosterLayer" unique_id=957799565]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 875.0
+offset_top = 520.0
+offset_right = 1058.0
+offset_bottom = 666.0
+rotation = 0.13
+pivot_offset = Vector2(91, 73)
+focus_neighbor_left = NodePath("../TitleHowToPlayButton")
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("Style_credits")
+theme_override_styles/pressed = SubResource("Style_credits")
+theme_override_styles/hover = SubResource("Style_credits_hover")
+theme_override_styles/focus = SubResource("Style_credits_hover")
+text = "CREDITS"
+
+[node name="CreditsPanel" type="PanelContainer" parent="." unique_id=1927921375]
+visible = false
+z_index = 30
+custom_minimum_size = Vector2(820, 560)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -410.0
+offset_top = -280.0
+offset_right = 410.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="CreditsMargin" type="MarginContainer" parent="CreditsPanel" unique_id=1301450114]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="CreditsContent" type="VBoxContainer" parent="CreditsPanel/CreditsMargin" unique_id=531685788]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="CreditsPanel/CreditsMargin/CreditsContent" unique_id=1338904844]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.49, 0.71, 1)
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 42
+text = "CREDITS & ATTRIBUTIONS"
+horizontal_alignment = 1
+
+[node name="CreditsScroll" type="ScrollContainer" parent="CreditsPanel/CreditsMargin/CreditsContent"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Attribution" type="Label" parent="CreditsPanel/CreditsMargin/CreditsContent/CreditsScroll" unique_id=1608613723]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.29, 0.25, 0.4, 1)
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 16
+text = "Complete attribution details load here."
+autowrap_mode = 2
+
+[node name="DiscordCommunityButton" type="Button" parent="CreditsPanel/CreditsMargin/CreditsContent"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "JOIN THE DISCORD"
+
+[node name="CloseCreditsButton" type="Button" parent="CreditsPanel/CreditsMargin/CreditsContent" unique_id=1476452301]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "CLOSE"
+
+[node name="TitleOptionsPanel" type="PanelContainer" parent="." unique_id=1772339420]
+visible = false
+z_index = 20
+custom_minimum_size = Vector2(310, 238)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -390.0
+offset_top = -338.0
+offset_right = -66.0
+offset_bottom = -100.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="OptionsFrame" type="PanelContainer" parent="TitleOptionsPanel" unique_id=1028822622]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_empty")
+
+[node name="OptionsMargin" type="MarginContainer" parent="TitleOptionsPanel/OptionsFrame" unique_id=7198071]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Options" type="VBoxContainer" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin" unique_id=647682865]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleSettingsButton" type="Button" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin/Options" unique_id=420194348]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 58)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "SETTINGS"
+
+[node name="OpenDebugMenuButton" type="Button" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin/Options" unique_id=2064707407]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 58)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "DEBUG MENU"
+
+[node name="ExitGameButton" type="Button" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin/Options" unique_id=1557832062]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 58)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "EXIT GAME"
+
+[node name="TitleOptionsButton" type="Button" parent="." unique_id=1899868321]
+unique_name_in_owner = true
+z_index = 20
+custom_minimum_size = Vector2(158, 58)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -184.0
+offset_top = -84.0
+offset_right = -26.0
+offset_bottom = -26.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Style_compact")
+theme_override_styles/pressed = SubResource("Style_compact")
+theme_override_styles/hover = SubResource("Style_poster_hover")
+text = "SETTINGS"

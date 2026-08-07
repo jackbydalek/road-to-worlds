@@ -35,8 +35,20 @@ func _run() -> void:
 	await process_frame
 
 	_expect(main.current_screen == "draft", "Starting a draft did not open the draft screen.")
+	var draft_scene := main.find_child("DraftWorkspaceScreen", true, false) as Control
+	_expect(draft_scene != null and draft_scene.scene_file_path == "res://scenes/ui/DraftMenu.tscn", "Draft Night was not instantiated from its editable scene.")
 	_expect(main.draft_offer.size() == main.DRAFT_OFFER_SIZE, "The opening draft offer did not contain three cards.")
 	_expect(main.find_child("DraftOfferRow", true, false) != null, "The opening draft offer was not rendered.")
+	var offered_panel := _find_live(main, "DraftOffer_%s" % String(main.draft_offer[0])) as Control
+	_expect(offered_panel != null, "The first draft offer card was not rendered.")
+	if offered_panel != null:
+		_expect(offered_panel.mouse_entered.get_connections().size() > 0, "Draft offer cards were not wired to show their hover preview.")
+		main._show_draft_hover_preview(offered_panel, String(main.draft_offer[0]))
+		var offer_hover_preview := _find_live(main, "DraftHoverPreview") as Control
+		_expect(offer_hover_preview != null and offer_hover_preview.visible, "A draft offer card could not render its enlarged preview.")
+		offered_panel.mouse_exited.emit()
+		if offer_hover_preview != null:
+			_expect(not offer_hover_preview.visible, "Leaving a draft offer card did not hide its enlarged preview.")
 
 	var opening_pairs := {}
 	for card_id_value in main.draft_offer:
@@ -60,7 +72,7 @@ func _run() -> void:
 	_expect(_find_live(main, "ViewDraftedCardsButton") == null, "The redundant drafted-deck button was still visible.")
 	var opening_tile := _find_live(main, "DraftDeckCard_%s" % opening_pick) as Control
 	if opening_tile != null:
-		main._show_draft_hover_preview(opening_tile, "sweet_soft_serve_crab")
+		main._show_draft_hover_preview(opening_tile, "spicy_wasabi_wasp")
 		await process_frame
 	_expect(_find_live(main, "DraftKeyword_stalwart") != null, "A keyword card's draft preview did not show its keyword explanation.")
 	main._hide_draft_hover_preview()
@@ -103,8 +115,11 @@ func _run() -> void:
 	for card_id in main.run.get("deck", {}):
 		_expect(int(main.run.deck[card_id]) <= main._deck_limit(String(card_id)), "The draft exceeded the copy limit for %s." % String(card_id))
 
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
 	main.queue_free()
-	await process_frame
+	for unused_frame in range(4):
+		await process_frame
 	if failed:
 		quit(1)
 	else:

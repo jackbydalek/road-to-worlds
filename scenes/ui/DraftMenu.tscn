@@ -1,0 +1,106 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/DraftMenu.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="3_display"]
+[ext_resource type="FontFile" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
+
+[node name="DraftMenu" type="VBoxContainer"]
+custom_minimum_size = Vector2(0, 820)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+script = ExtResource("1_script")
+
+[node name="DraftModePanel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+
+[node name="Heading" type="HBoxContainer" parent="DraftModePanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="HeadingCopy" type="VBoxContainer" parent="DraftModePanel/Heading"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="DraftModePanel/Heading/HeadingCopy"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 25
+text = "PICK A CARD"
+
+[node name="DraftInstruction" type="Label" parent="DraftModePanel/Heading/HeadingCopy"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.32, 0.29, 0.25, 1)
+theme_override_fonts/font = ExtResource("4_body")
+
+[node name="DraftProgress" type="Label" parent="DraftModePanel/Heading"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 24
+vertical_alignment = 1
+
+[node name="DraftWorkspace" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="DraftOfferRow" type="HBoxContainer" parent="DraftWorkspace"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="DraftOfferSlot0" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
+custom_minimum_size = Vector2(218, 344)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DraftOfferSlot1" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
+custom_minimum_size = Vector2(218, 344)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DraftOfferSlot2" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
+custom_minimum_size = Vector2(218, 344)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DraftDeckRail" type="PanelContainer" parent="DraftWorkspace"]
+custom_minimum_size = Vector2(292, 330)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+
+[node name="DraftDistributionCharts" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="DraftTypeChartPanel" type="PanelContainer" parent="DraftDistributionCharts"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DraftFlavorChartPanel" type="PanelContainer" parent="DraftDistributionCharts"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AbandonDraftButton" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 22
+text = "ABANDON DRAFT"

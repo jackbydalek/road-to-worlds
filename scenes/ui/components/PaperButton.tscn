@@ -1,0 +1,58 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/ui/painted_buttons/button_outline_wide.png" id="1_frame"]
+[ext_resource type="FontFile" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="2_font"]
+[ext_resource type="Script" path="res://scripts/ui/AssetButtonTint.gd" id="3_tint_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/painted_buttons/button_wide.png" id="4_fill"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_button"]
+content_margin_left = 24.0
+content_margin_top = 14.0
+content_margin_right = 24.0
+content_margin_bottom = 14.0
+
+[node name="PaperButton" type="Button"]
+custom_minimum_size = Vector2(490, 102)
+focus_mode = 0
+theme_override_colors/font_color = Color(0.203922, 0.231373, 0.301961, 1)
+theme_override_colors/font_hover_color = Color(0.203922, 0.231373, 0.301961, 1)
+theme_override_colors/font_pressed_color = Color(0.203922, 0.231373, 0.301961, 1)
+theme_override_colors/font_disabled_color = Color(0.478431, 0.501961, 0.568627, 0.75)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 34
+theme_override_styles/normal = SubResource("StyleBoxEmpty_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_button")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_button")
+script = ExtResource("3_tint_script")
+tint_target_path = NodePath("Fill")
+normal_tint = Color(1, 1, 1, 0)
+hover_tint = Color(0.94902, 0.815686, 0.643137, 0.24)
+pressed_tint = Color(0.752941, 0.196078, 0.129412, 0.22)
+
+[node name="Fill" type="TextureRect" parent="."]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_fill")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Artwork" type="TextureRect" parent="."]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_frame")
+expand_mode = 1
+stretch_mode = 0

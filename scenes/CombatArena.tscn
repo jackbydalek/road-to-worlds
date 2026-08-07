@@ -16,7 +16,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.93, 0.902, 0.835, 1)
+color = Color(0.94902, 0.815686, 0.643137, 1)
 
 [node name="TableSurface" type="Polygon2D" parent="." unique_id=21633865]
 unique_name_in_owner = true

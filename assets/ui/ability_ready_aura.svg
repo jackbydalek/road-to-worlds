@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="360" height="500" viewBox="0 0 360 500">
-  <rect x="24" y="24" width="312" height="452" rx="42" fill="none" stroke="#ffd84d" stroke-opacity=".12" stroke-width="34"/>
-  <rect x="31" y="31" width="298" height="438" rx="36" fill="none" stroke="#ffe66d" stroke-opacity=".25" stroke-width="22"/>
-  <rect x="39" y="39" width="282" height="422" rx="30" fill="none" stroke="#fff2a6" stroke-opacity=".72" stroke-width="10"/>
-  <rect x="45" y="45" width="270" height="410" rx="26" fill="none" stroke="#fff8cf" stroke-opacity=".9" stroke-width="4"/>
+  <rect x="25" y="25" width="310" height="450" rx="43" fill="none" stroke="#8ea9e6" stroke-opacity=".24" stroke-width="30"/>
+  <rect x="32" y="32" width="296" height="436" rx="37" fill="none" stroke="#d8b35f" stroke-opacity=".38" stroke-width="19"/>
+  <rect x="39" y="39" width="282" height="422" rx="31" fill="none" stroke="#29365f" stroke-opacity=".58" stroke-width="12"/>
+  <rect x="44" y="44" width="272" height="412" rx="27" fill="none" stroke="#fff7f1" stroke-opacity=".96" stroke-width="6" stroke-dasharray="38 16 9 20"/>
+  <rect x="48" y="48" width="264" height="404" rx="24" fill="none" stroke="#d8b35f" stroke-opacity=".9" stroke-width="3"/>
 </svg>

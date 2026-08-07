@@ -14,7 +14,7 @@ Then choose a border:
 
 - **Black** — standard rules
 - **Blue** — stronger opponents and earlier deck upgrades
-- **Yellow** — reduced starting money
+- **Yellow** — $5 starting money
 - **Silver** — a modest opposing deck-quality boost
 - **Gold** — the opening chef can change between tournament rounds
 
@@ -53,5 +53,7 @@ Opponent decision-making and deck strength advance together. Practice and the op
 Finishing or forfeiting the match produces a tournament result. After a win, either continue directly to the next round or return to the card store to buy cards and edit the deck. The active tournament remains paused between rounds; speak to the clerk and choose the next round when ready. A loss ends the run. Clearing the third round pays rewards, updates the metagame, and advances the demo calendar.
 
 Every completed round pays cash immediately, beginning at $2 in round one and increasing by $1 each round. That money is available during between-round store visits. This escalating round income is separate from the money and prize packs awarded for clearing the full event.
+
+Black and Blue begin with the standard $20. Yellow's economy modifier, inherited by Silver and Gold, sets the opening balance to $5. Difficulty does not reduce the cash subsequently earned from rounds or event rewards.
 
 Debug tournaments use the same deck quality, opponent, matchup, record, economy, and reward systems but may resolve quickly without playing each match.

@@ -114,13 +114,11 @@ func generate_opponent(host, round_number: int, deck_metrics: Dictionary, event:
 
 
 func difficulty_opponent_quality_bonus(host) -> float:
-	match host._run_difficulty_id():
-		"blue":
-			return 7.0
-		"silver":
-			return 4.0
-		_:
-			return 0.0
+	if host._run_difficulty_id() in ["silver", "gold"]:
+		return 11.0
+	if host._run_difficulty_id() in ["blue", "yellow"]:
+		return 7.0
+	return 0.0
 
 
 func season_round_first_side(host) -> String:
@@ -136,7 +134,7 @@ func ai_difficulty_for_round(host, event: Dictionary, round_number: int) -> Stri
 		tier = "easy" if round_number <= 1 else "medium"
 	elif event_index == 1:
 		tier = "hard" if round_number <= 2 else "expert"
-	if host._run_difficulty_id() == "blue":
+	if host._run_difficulty_id() in ["blue", "yellow", "silver", "gold"]:
 		if tier == "easy":
 			tier = "medium"
 		elif tier == "medium":

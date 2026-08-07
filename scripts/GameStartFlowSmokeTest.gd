@@ -21,19 +21,22 @@ func _run() -> void:
 
 	_expect(main.current_screen == "start", "The game did not boot to the landing screen.")
 	_expect(main.find_child("GameStartButton", true, false) is Button, "The landing screen did not offer Game Start.")
-	_expect(main.find_child("StartTutorialButton", true, false) is Button, "The landing screen did not keep How to Play.")
+	_expect(main.find_child("TitleHowToPlayButton", true, false) is Button, "The landing screen did not offer How to Play as a main action.")
 	_expect(main.find_child("OpenDebugMenuButton", true, false) is Button, "The landing screen did not keep the Debug Menu.")
 	_expect(main.find_child("TitleSettingsButton", true, false) is Button, "The landing screen did not offer Settings.")
-	var title_banner := main.find_child("BootTitleBanner", true, false) as PanelContainer
-	var title_style := title_banner.get_theme_stylebox("panel") as StyleBoxTexture if title_banner != null else null
+	var title_menu := main.find_child("BootLanding", true, false) as Control
+	var title_primary := main.find_child("GameStartButton", true, false) as Button
+	var storefront_backdrop := main.find_child("StorefrontBackdrop", true, false) as Control
+	var storefront_shop := main.find_child("StorefrontShop", true, false) as Node3D
 	_expect(
-		title_style != null
-		and title_style.texture.resource_path == "res://assets/ui/wired_title/title_paper.svg",
-		"The landing screen did not use the Wired title treatment."
+		title_menu != null
+		and title_menu.scene_file_path == "res://scenes/ui/TitleMenu.tscn"
+		and title_primary != null
+		and storefront_backdrop != null
+		and storefront_shop != null,
+		"The landing screen did not use the editable 3D storefront title scene."
 	)
-	_expect(main.find_child("WiredTitleDoodles", true, false) != null, "The landing screen did not render its sketch decorations.")
-	var collection_button := main.find_child("TitleCollectionButton", true, false) as Button
-	_expect(collection_button != null, "The landing screen did not offer Collection.")
+	_expect(main.find_child("TitleCollectionButton", true, false) == null, "The landing screen still offered Collection.")
 	var options_button := main.find_child("TitleOptionsButton", true, false) as Button
 	var options_panel := main.find_child("TitleOptionsPanel", true, false) as PanelContainer
 	_expect(options_button != null and options_panel != null and not options_panel.visible, "The landing screen did not keep its collapsed More menu.")
@@ -42,9 +45,13 @@ func _run() -> void:
 	await process_frame
 	_expect(options_panel != null and options_panel.visible, "The Wired More button did not open its player options.")
 
-	main._show_game_start()
+	if title_primary != null:
+		title_primary.emit_signal("pressed")
+	await create_timer(0.9).timeout
 	await process_frame
 	_expect(main.current_screen == "game_start", "Game Start did not open the saved-run gateway.")
+	var game_status_scene := main.find_child("GameStartGateway", true, false) as Control
+	_expect(game_status_scene != null and game_status_scene.scene_file_path == "res://scenes/ui/GameStatusMenu.tscn", "Game Status was not instantiated from its editable scene.")
 	var empty_continue := main.find_child("ContinueRunButton", true, false) as Button
 	_expect(empty_continue != null and empty_continue.disabled, "Continue was enabled without a valid autosave.")
 	_expect(main.find_child("NewGameButton", true, false) is Button, "The saved-run gateway did not offer New Game.")
@@ -54,6 +61,41 @@ func _run() -> void:
 	main._show_season_run_setup()
 	await process_frame
 	_expect(main.current_screen == "season_setup", "New Game did not open season setup.")
+	var reduced_money: int = main.run_state_service.starting_money_for_difficulty("yellow")
+	_expect(
+		main.run_state_service.starting_money_for_difficulty("blue") == main.run_state_service.starting_money
+		and reduced_money == 5
+		and main.run_state_service.starting_money_for_difficulty("silver") == reduced_money
+		and main.run_state_service.starting_money_for_difficulty("gold") == reduced_money,
+		"Yellow's $5 starting-money modifier did not carry into Silver and Gold."
+	)
+	_expect(
+		main.run_state_service.starting_lives_for_difficulty("blue") == 3
+		and main.run_state_service.starting_lives_for_difficulty("yellow") == 3
+		and main.run_state_service.starting_lives_for_difficulty("silver") == 1
+		and main.run_state_service.starting_lives_for_difficulty("gold") == 1,
+		"Silver's one-life modifier did not carry into Gold."
+	)
+	for stacked_difficulty in ["blue", "yellow"]:
+		main.run = {"difficulty": stacked_difficulty}
+		_expect(
+			main.tournament_service.difficulty_opponent_quality_bonus(main) == 7.0,
+			"Blue's opponent-quality modifier did not carry into %s." % stacked_difficulty.capitalize()
+		)
+	for stacked_difficulty in ["silver", "gold"]:
+		main.run = {"difficulty": stacked_difficulty}
+		_expect(
+			main.tournament_service.difficulty_opponent_quality_bonus(main) == 11.0,
+			"Blue and Silver opponent-quality modifiers did not stack in %s." % stacked_difficulty.capitalize()
+		)
+	main.run = {"difficulty": "gold"}
+	_expect(
+		main.tournament_service.ai_difficulty_for_round(main, {"id": "weekly_locals"}, 1) == "medium",
+		"Blue's earlier AI-tier modifier did not carry into Gold."
+	)
+	main.run = {}
+	var season_setup_scene := main.find_child("SeasonRegistration", true, false) as Control
+	_expect(season_setup_scene != null and season_setup_scene.scene_file_path == "res://scenes/ui/SeasonSetupMenu.tscn", "Deck Select was not instantiated from its editable scene.")
 	_expect(main.DEMO_STARTER_ORDER == ["spicy", "hearty", "sweet", "draft_night"], "The starter wheel did not include Draft Night.")
 	var starter_card := main.find_child("SeasonStarterCard", true, false)
 	var border_card := main.find_child("SeasonBorderCard", true, false)
@@ -116,13 +158,14 @@ func _run() -> void:
 	_expect(bool(saved.get("ok", false)), "The flow test could not create its isolated autosave.")
 	main._show_start()
 	await process_frame
-	var saved_collection := main.find_child("TitleCollectionButton", true, false) as Button
-	_expect(saved_collection != null and not saved_collection.disabled, "Collection did not enable for a valid autosave.")
-	if saved_collection != null:
-		saved_collection.emit_signal("pressed")
+	var title_how_to_play := main.find_child("TitleHowToPlayButton", true, false) as Button
+	_expect(title_how_to_play != null, "How to Play disappeared when a valid autosave existed.")
+	_expect(main.find_child("TitleCollectionButton", true, false) == null, "Collection returned when a valid autosave existed.")
+	if title_how_to_play != null:
+		title_how_to_play.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	_expect(main.current_screen == "deck", "Title-screen Collection did not open the saved Deck Workshop.")
+	_expect(main.current_screen == "tutorial", "Title-screen How to Play did not open the guided match.")
 	main._show_game_start()
 	await process_frame
 	var continue_button := main.find_child("ContinueRunButton", true, false) as Button
@@ -132,8 +175,8 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	await process_frame
-	_expect(main.current_screen == "shop", "Front-door Continue did not route directly to the shop.")
-	_expect(main.find_child("CardShopOverworld", true, false) != null, "Continue did not restore the season shop.")
+	_expect(main.current_screen == "deck", "Front-door Continue did not restore the saved screen.")
+	_expect(main.find_child("DeckbuilderWorkspace", true, false) != null, "Continue did not restore the saved deck editor.")
 
 	main.run.run_over = true
 	saved = main.run_state_service.save_run(main.run, "result")
@@ -143,8 +186,11 @@ func _run() -> void:
 	var finished_continue := main.find_child("ContinueRunButton", true, false) as Button
 	_expect(finished_continue != null and finished_continue.disabled, "Continue remained enabled for a finished season.")
 
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
 	main.queue_free()
-	await process_frame
+	for unused_frame in range(4):
+		await process_frame
 	_remove_test_saves()
 	if failed:
 		quit(1)

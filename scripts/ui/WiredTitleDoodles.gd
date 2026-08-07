@@ -1,10 +1,11 @@
 extends Control
 class_name WiredTitleDoodles
 
-const INK := Color("#241B17")
-const TEAL := Color("#2D6F6A")
-const ORANGE := Color("#E06B4F")
-const MUSTARD := Color("#F0B34D")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const INK := PALETTE.INK
+const TEAL := PALETTE.TEAL
+const ORANGE := PALETTE.BRICK
+const MUSTARD := PALETTE.APRICOT
 
 
 func _ready() -> void:

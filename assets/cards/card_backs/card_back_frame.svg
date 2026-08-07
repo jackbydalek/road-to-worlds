@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1620" height="2160" viewBox="0 0 1620 2160">
+  <rect
+    x="28"
+    y="28"
+    width="1564"
+    height="2104"
+    rx="132"
+    fill="none"
+    stroke="#29365F"
+    stroke-width="56"
+  />
+  <rect
+    x="66"
+    y="66"
+    width="1488"
+    height="2028"
+    rx="102"
+    fill="none"
+    stroke="#FFF7F1"
+    stroke-width="12"
+    opacity="0.92"
+  />
+</svg>

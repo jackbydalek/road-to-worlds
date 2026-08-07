@@ -2,6 +2,12 @@ extends RefCounted
 class_name SeasonHubScreen
 
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const NEXUS_UI := preload("res://scripts/ui/NexusMenuComponents.gd")
+const ICON_SHOP := preload("res://assets/ui/audacious/currency-circle-dollar-bold.svg")
+const ICON_DECK := preload("res://assets/ui/audacious/folder.svg")
+const ICON_EVENTS := preload("res://assets/ui/audacious/calendar-blank-bold.svg")
+const ICON_TROPHY := preload("res://assets/ui/audacious/crown-simple-bold.svg")
+const ICON_SETTINGS := preload("res://assets/ui/audacious/dots-three-vertical-bold.svg")
 
 
 func show(host) -> void:
@@ -18,17 +24,271 @@ func show(host) -> void:
 	var legal: Dictionary = host._deck_is_legal()
 	var metrics: Dictionary = host._calculate_deck_metrics(host.run.get("deck", {}), host.run.get("sideboard", {}))
 	var difficulty: Dictionary = host._difficulty_data(host._run_difficulty_id())
+	var compact_layout: bool = float(host.get_viewport_rect().size.y) <= 760.0
 
 	var hub := VBoxContainer.new()
 	hub.name = "SeasonCalendarMap"
 	hub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hub.add_theme_constant_override("separation", 10)
+	hub.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	hub.add_theme_constant_override("separation", 12)
 	host.content.add_child(hub)
 
-	_add_header(host, hub, event, event_id, metrics, legal, difficulty)
-	_add_event_calendar(host, hub, event_id)
-	_add_notice_and_results(host, hub)
-	host._add_exit_to_store_button(hub)
+	_add_nexus_header(host, hub, event, metrics, legal, difficulty, compact_layout)
+
+	var body := HBoxContainer.new()
+	body.name = "SeasonHubNexusBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 14)
+	hub.add_child(body)
+
+	_add_nexus_menu(host, body, legal)
+	_add_nexus_event_workspace(host, body, event, event_id, legal, compact_layout)
+
+
+func _add_nexus_header(host, parent: Node, event: Dictionary, metrics: Dictionary, legal: Dictionary, difficulty: Dictionary, compact_layout: bool) -> void:
+	var header := NEXUS_UI.make_header_panel(Vector2(0, 78 if compact_layout else 92))
+	header.name = "SeasonHubHeader"
+	parent.add_child(header)
+
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 18)
+	header.add_child(row)
+
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", -1)
+	row.add_child(copy)
+	var eyebrow := NEXUS_UI.make_section_label("ROAD TO WORLDS  •  SEASON CIRCUIT", NEXUS_UI.TEAL_DARK, 15)
+	copy.add_child(eyebrow)
+	var title := NEXUS_UI.make_section_label("EVENT CALENDAR", NEXUS_UI.INK, 34)
+	copy.add_child(title)
+	var next := NEXUS_UI.make_body_label(
+		"Next: %s  •  %d rounds  •  Win %d" % [
+			String(event.get("name", "Weekly Locals")),
+			int(event.get("rounds", 3)),
+			int(event.get("requiredWins", 3)),
+		],
+		NEXUS_UI.MUTED,
+		14
+	)
+	copy.add_child(next)
+
+	var badges := VBoxContainer.new()
+	badges.alignment = BoxContainer.ALIGNMENT_CENTER
+	badges.add_theme_constant_override("separation", 5)
+	row.add_child(badges)
+	badges.add_child(NEXUS_UI.make_status_badge("WEEK %d  •  $%d  •  LIVES %d/%d" % [
+		int(host.run.get("week", 1)),
+		int(host.run.get("money", 0)),
+		int(host.run.get("season_lives", 0)),
+		int(host.run.get("max_season_lives", 0)),
+	]))
+	badges.add_child(NEXUS_UI.make_status_badge(
+		"%s BORDER  •  DECK %s" % [
+			String(difficulty.get("name", "Black")).to_upper(),
+			"READY" if bool(legal.get("ok", false)) else "NEEDS WORK",
+		],
+		NEXUS_UI.TEAL if bool(legal.get("ok", false)) else NEXUS_UI.ORANGE
+	))
+
+
+func _add_nexus_menu(host, parent: Node, legal: Dictionary) -> void:
+	var rail := NEXUS_UI.make_panel(Vector2(248, 0), NEXUS_UI.TEAL_DEEP, NEXUS_UI.MUSTARD, Vector4(12, 13, 12, 13))
+	rail.name = "SeasonHubMenuRail"
+	rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(rail)
+
+	var menu := VBoxContainer.new()
+	menu.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	menu.add_theme_constant_override("separation", 9)
+	rail.add_child(menu)
+
+	var menu_title := NEXUS_UI.make_section_label("MAIN MENU", NEXUS_UI.INK, 17)
+	menu.add_child(menu_title)
+
+	var shop_button := NEXUS_UI.make_menu_button("Card Shop", ICON_SHOP)
+	shop_button.name = "ExitToCardStoreButton"
+	host._connect_pressed(shop_button, host._show_shop)
+	menu.add_child(shop_button)
+
+	var deck_button := NEXUS_UI.make_menu_button("Deck Workshop", ICON_DECK)
+	deck_button.name = "SeasonHubDeckbuilderButton"
+	host._connect_pressed(deck_button, host._show_deckbuilder)
+	menu.add_child(deck_button)
+
+	var events_button := NEXUS_UI.make_menu_button("Season Events", ICON_EVENTS, true)
+	events_button.name = "SeasonHubEventsButton"
+	menu.add_child(events_button)
+
+	var tournament_button := NEXUS_UI.make_menu_button("Tournament", ICON_TROPHY, false, true)
+	tournament_button.name = "SeasonHubRegisterButton"
+	tournament_button.disabled = not bool(legal.get("ok", false)) or not host._season_event_selectable(host._selected_season_event_id())
+	host._connect_pressed(tournament_button, host._show_tournament)
+	menu.add_child(tournament_button)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	menu.add_child(spacer)
+
+	var settings_button := NEXUS_UI.make_menu_button("Settings", ICON_SETTINGS)
+	settings_button.name = "SeasonHubSettingsButton"
+	host._connect_pressed(settings_button, host._show_settings)
+	menu.add_child(settings_button)
+
+
+func _add_nexus_event_workspace(host, parent: Node, event: Dictionary, event_id: String, legal: Dictionary, compact_layout: bool) -> void:
+	var workspace := VBoxContainer.new()
+	workspace.name = "SeasonHubEventWorkspace"
+	workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	workspace.add_theme_constant_override("separation", 11)
+	parent.add_child(workspace)
+
+	_add_nexus_selected_event(host, workspace, event, event_id, legal, compact_layout)
+
+	var calendar_panel := NEXUS_UI.make_panel(Vector2(0, 220 if compact_layout else 270), Color("#F5EEDF"), NEXUS_UI.TEAL, Vector4(16, 10 if compact_layout else 12, 16, 10 if compact_layout else 14))
+	calendar_panel.name = "SeasonHubEventCalendar"
+	calendar_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	workspace.add_child(calendar_panel)
+	var calendar := VBoxContainer.new()
+	calendar.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	calendar.add_theme_constant_override("separation", 9)
+	calendar_panel.add_child(calendar)
+	var calendar_heading := HBoxContainer.new()
+	calendar.add_child(calendar_heading)
+	calendar_heading.add_child(NEXUS_UI.make_section_label("CHAMPIONSHIP ROAD", NEXUS_UI.INK, 21))
+	var heading_spacer := Control.new()
+	heading_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	calendar_heading.add_child(heading_spacer)
+	calendar_heading.add_child(NEXUS_UI.make_status_badge("%d/%d CLEARED" % [host._season_completed_count(), host._season_calendar_ids().size()], NEXUS_UI.TEAL))
+
+	var event_row := GridContainer.new()
+	event_row.name = "SeasonHubCalendarRow"
+	event_row.columns = max(1, min(5, host._season_calendar_ids().size()))
+	event_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	event_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	event_row.add_theme_constant_override("h_separation", 12)
+	event_row.add_theme_constant_override("v_separation", 8)
+	calendar.add_child(event_row)
+
+	var ids: Array = host._season_calendar_ids()
+	for index in range(ids.size()):
+		_add_nexus_event_card(host, event_row, String(ids[index]), event_id, index, compact_layout)
+
+	var notice := String(host.run.get("season_notice", "Choose an event, tune your deck, then register when ready."))
+	if notice == "":
+		notice = "Choose an event, tune your deck, then register when ready."
+	var notice_panel := NEXUS_UI.make_panel(Vector2(0, 58), NEXUS_UI.TEAL_DEEP, NEXUS_UI.ORANGE, Vector4(14, 8, 14, 8))
+	notice_panel.name = "SeasonHubNotice"
+	workspace.add_child(notice_panel)
+	var notice_row := HBoxContainer.new()
+	notice_row.add_theme_constant_override("separation", 12)
+	notice_panel.add_child(notice_row)
+	notice_row.add_child(NEXUS_UI.make_section_label("SHOP NOTE", NEXUS_UI.TEAL_DARK, 15))
+	notice_row.add_child(NEXUS_UI.make_body_label(notice, NEXUS_UI.INK, 14))
+
+
+func _add_nexus_selected_event(host, parent: Node, event: Dictionary, event_id: String, legal: Dictionary, compact_layout: bool) -> void:
+	var panel := NEXUS_UI.make_panel(Vector2(0, 140 if compact_layout else 168), NEXUS_UI.PAPER, NEXUS_UI.MUSTARD, Vector4(20, 10 if compact_layout else 14, 20, 10 if compact_layout else 14))
+	panel.name = "SeasonHubSelectedEvent"
+	parent.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	panel.add_child(row)
+
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", 4)
+	row.add_child(copy)
+	copy.add_child(NEXUS_UI.make_section_label("CURRENT DESTINATION", NEXUS_UI.TEAL, 15))
+	copy.add_child(NEXUS_UI.make_section_label(String(event.get("name", event_id)), NEXUS_UI.INK, 29))
+	copy.add_child(NEXUS_UI.make_body_label(String(event.get("summary", "Your next step on the road to Worlds.")), NEXUS_UI.MUTED, 14))
+	copy.add_child(NEXUS_UI.make_body_label(
+		"Week %d  •  %d rounds  •  Need %d wins  •  Free entry" % [
+			int(event.get("calendarWeek", 1)),
+			int(event.get("rounds", 3)),
+			int(event.get("requiredWins", 3)),
+		],
+		NEXUS_UI.INK,
+		14
+	))
+
+	var action_column := VBoxContainer.new()
+	action_column.custom_minimum_size.x = 275
+	action_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	action_column.add_theme_constant_override("separation", 8)
+	row.add_child(action_column)
+	action_column.add_child(NEXUS_UI.make_status_badge("DECK %s" % ("LEGAL" if bool(legal.get("ok", false)) else "NOT LEGAL"), NEXUS_UI.TEAL if bool(legal.get("ok", false)) else NEXUS_UI.ORANGE))
+	var action := _make_nexus_primary_action(host, event, event_id, legal)
+	action_column.add_child(action)
+
+
+func _make_nexus_primary_action(host, event: Dictionary, event_id: String, legal: Dictionary) -> Button:
+	var label := "REGISTER"
+	var callback: Callable = host._show_tournament
+	var active: Dictionary = host.run.get("active_tournament", {})
+	if host._current_pack_needs_attention():
+		label = "CONTINUE PACK"
+		callback = host._show_packs
+	elif int(host.run.get("prize_packs", 0)) > 0:
+		label = "OPEN PRIZE PACKS"
+		callback = host._open_reward_pack_flow
+	elif not active.is_empty():
+		label = "START ROUND %d" % int(active.get("round", 1))
+		callback = host._start_season_tournament_round
+	elif not bool(legal.get("ok", false)):
+		label = "TUNE DECK"
+		callback = host._show_deckbuilder
+	elif not host._season_event_selectable(event_id):
+		label = "EVENT LOCKED"
+
+	var button := NEXUS_UI.make_menu_button(label, ICON_TROPHY, false, true)
+	button.name = "SeasonHubNextStepButton"
+	button.custom_minimum_size = Vector2(275, 58)
+	button.disabled = label == "EVENT LOCKED"
+	host._connect_pressed(button, callback)
+	return button
+
+
+func _add_nexus_event_card(host, parent: Node, event_id: String, selected_event_id: String, index: int, compact_layout: bool) -> void:
+	var event: Dictionary = host._season_event_by_id(event_id)
+	var completed := bool(host._season_event_completed(event_id))
+	var unlocked := bool(host._season_event_unlocked(event_id))
+	var selected := event_id == selected_event_id
+	var border := NEXUS_UI.MUSTARD if selected else (NEXUS_UI.TEAL if unlocked else Color("#918571"))
+	var fill := Color("#FFF9EC") if selected else (Color("#EBF1E8") if completed else NEXUS_UI.PAPER_DIM if not unlocked else NEXUS_UI.PAPER)
+	var card := NEXUS_UI.make_panel(Vector2(0, 142 if compact_layout else 175), fill, border, Vector4(14, 8 if compact_layout else 11, 14, 8 if compact_layout else 12))
+	card.name = "SeasonHubCalendarEvent_%s" % event_id
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(card)
+
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 4)
+	card.add_child(box)
+	var top := HBoxContainer.new()
+	box.add_child(top)
+	var status := "CLEARED" if completed else ("SELECTED" if selected else "AVAILABLE" if unlocked else "LOCKED")
+	top.add_child(NEXUS_UI.make_status_badge(status, border))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(spacer)
+	top.add_child(NEXUS_UI.make_section_label("WEEK %d" % int(event.get("calendarWeek", index + 1)), NEXUS_UI.MUTED, 14))
+	box.add_child(NEXUS_UI.make_section_label(String(event.get("name", event_id)), NEXUS_UI.INK, 22))
+	box.add_child(NEXUS_UI.make_body_label("%d rounds  •  Need %d wins" % [int(event.get("rounds", 3)), int(event.get("requiredWins", 3))], NEXUS_UI.MUTED, 13))
+	var filler := Control.new()
+	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(filler)
+	var button := NEXUS_UI.make_event_button(selected, completed, unlocked)
+	button.text = "CLEARED" if completed else ("CURRENT EVENT" if selected else "SELECT EVENT" if unlocked else "LOCKED")
+	button.name = "SeasonHubCalendarButton_%s" % event_id
+	button.disabled = completed or not unlocked or host._season_tournament_active()
+	var selected_calendar_event_id := event_id
+	host._connect_pressed(button, func() -> void: host._select_season_event(selected_calendar_event_id))
+	box.add_child(button)
 
 
 func _add_header(host, parent: Node, event: Dictionary, event_id: String, metrics: Dictionary, legal: Dictionary, difficulty: Dictionary) -> void:

@@ -1,0 +1,58 @@
+name: Demo release gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GODOT_VERSION: 4.6.3-stable
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Godot and Web templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          engine_url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          templates_url="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl --fail --location --retry 3 "$engine_url" --output "$RUNNER_TEMP/godot.zip"
+          curl --fail --location --retry 3 "$templates_url" --output "$RUNNER_TEMP/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          godot_bin="$(find "$RUNNER_TEMP/godot" -maxdepth 1 -type f -name 'Godot_*' -print -quit)"
+          chmod +x "$godot_bin"
+          mv "$godot_bin" "$RUNNER_TEMP/godot/godot"
+          template_version="${GODOT_VERSION/-/.}"
+          template_dir="$HOME/.local/share/godot/export_templates/$template_version"
+          mkdir -p "$template_dir"
+          unzip -q -j "$RUNNER_TEMP/templates.tpz" -d "$template_dir"
+          "$RUNNER_TEMP/godot/godot" --version
+
+      - name: Run gate and create itch ZIP
+        env:
+          GODOT_BIN: ${{ runner.temp }}/godot/godot
+        run: scripts/release/build_itch_release.sh
+
+      - name: Upload versioned itch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kitchen-table-road-to-worlds-itch-web
+          path: builds/*-itch-web.zip
+          if-no-files-found: error
+          retention-days: 14

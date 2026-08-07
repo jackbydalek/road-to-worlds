@@ -18,13 +18,11 @@ func _init() -> void:
 
 		var face := CARD_FACE_SCRIPT.new()
 		face.configure(card, "gold", false, false, false)
-		var frame := face.find_child("CardFrame", true, false) as TextureRect
+		var frame := face.find_child("CardFrame", true, false) as Panel
 		var icon := face.find_child("CardAffinityIcon", true, false) as Label
 		var stats := face.find_child("CardStats", true, false) as Label
-		var expected_path := "res://assets/cards/frames/%s/black.png" % card_type
-		_expect(frame != null and frame.texture != null and frame.texture.resource_path == expected_path, "%s did not use its supplied black frame." % card_type.capitalize())
-		_expect(frame != null and frame.texture.get_size() == Vector2(501, 711), "%s frame was not imported at 501 × 711." % card_type.capitalize())
-		_expect(icon != null and not icon.visible, "%s displayed a unit affinity icon." % card_type.capitalize())
+		_expect(frame != null and frame.get_meta("frame_style", "") == "cozy_cafe", "%s did not use the reusable cozy frame." % card_type.capitalize())
+		_expect(icon != null and icon.visible and icon.text != "", "%s did not display its support-card classification icon." % card_type.capitalize())
 		_expect(stats != null and not stats.visible, "%s displayed unit combat stats." % card_type.capitalize())
 		face.free()
 

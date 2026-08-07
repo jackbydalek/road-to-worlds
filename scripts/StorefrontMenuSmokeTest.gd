@@ -43,7 +43,17 @@ func _run() -> void:
 		return
 	var top_bar := main.find_child("TopBar", true, false) as PanelContainer
 	var cash_hud := main.find_child("ShopHudCashButton", true, false) as Button
+	var deck_hud := main.find_child("ShopHudDeckButton", true, false) as Button
+	var save_hud := main.find_child("ShopHudSaveButton", true, false) as Button
+	var settings_hud := main.find_child("ShopHudSettingsButton", true, false) as Button
 	var autosave := main.find_child("AutosaveIndicator", true, false) as Label
+	var shop_tooltips_clear := true
+	for control_value in shop_world.find_children("*", "Control", true, false):
+		var control := control_value as Control
+		if control != null and not control.tooltip_text.is_empty():
+			shop_tooltips_clear = false
+			break
+	_expect(shop_tooltips_clear, "The card shop still exposes native hover tooltips.")
 	_expect(not main.header_bar.visible and not main.nav.visible, "The 3D store still reserved the persistent outer title or status row.")
 	_expect(
 		top_bar != null and top_bar.get_theme_stylebox("panel") is StyleBoxFlat,
@@ -52,6 +62,18 @@ func _run() -> void:
 	_expect(
 		cash_hud != null and cash_hud.get_theme_stylebox("normal") is StyleBoxFlat,
 		"The store HUD controls still used the rough sketch treatment."
+	)
+	_expect(
+		deck_hud != null and deck_hud.icon.resource_path == "res://assets/ui/shop_hud/deck_edit.png"
+		and save_hud != null and save_hud.icon.resource_path == "res://assets/ui/shop_hud/save.png"
+		and settings_hud != null and settings_hud.icon.resource_path == "res://assets/ui/shop_hud/settings.png",
+		"The Deck Edit, Save, or Settings HUD control is not using its supplied icon."
+	)
+	_expect(
+		deck_hud != null and deck_hud.expand_icon and deck_hud.get_theme_constant("icon_max_width") == 60 and deck_hud.get_theme_color("icon_normal_color") == Color.WHITE
+		and save_hud != null and save_hud.expand_icon and save_hud.get_theme_constant("icon_max_width") == 60 and save_hud.get_theme_color("icon_normal_color") == Color.WHITE
+		and settings_hud != null and settings_hud.expand_icon and settings_hud.get_theme_constant("icon_max_width") == 60 and settings_hud.get_theme_color("icon_normal_color") == Color.WHITE,
+		"The supplied toolbar icons are still being stretched or tinted."
 	)
 	_expect(
 		autosave != null and autosave.get_parent() == main and not autosave.visible,
@@ -70,10 +92,17 @@ func _run() -> void:
 
 	var round_button := main.find_child("StoreOverviewRoundButton", true, false) as Button
 	_expect(
-		round_button != null
+		main.root_margin.get_theme_constant("margin_left") == 0
+		and main.root_margin.get_theme_constant("margin_right") == 0
+		and main.root_margin.get_theme_constant("margin_top") == 0
+		and main.root_margin.get_theme_constant("margin_bottom") == 0,
+		"The season storefront still exposes the paper shell as an outer border."
+	)
+	_expect(
+		 round_button != null
 		and round_button.visible
 		and round_button.text == "START ROUND 1   →"
-		and "Register" in round_button.tooltip_text,
+		and round_button.tooltip_text.is_empty(),
 		"The store overview did not offer Start Round 1 before tournament registration."
 	)
 	if round_button != null:
@@ -94,13 +123,14 @@ func _run() -> void:
 	var menu_content := shop_world.menu_content as VBoxContainer
 	var status := main.find_child("ShopkeeperStatus", true, false) as HBoxContainer
 	var buy_section := _find_label(main, "BUY CARDS")
-	var plan_section := _find_label(main, "PLAN YOUR WEEK")
 	var separator := main.find_child("ShopkeeperExitSeparator", true, false) as HSeparator
 	_expect(menu_panel != null and menu_panel.visible, "The cleaned storefront menu did not become visible.")
 	_expect(menu_content != null and menu_content.get_theme_constant("separation") == 10, "The storefront menu did not use the intended compact vertical rhythm.")
 	_expect(status != null and status.get_child_count() == 2, "The storefront menu did not separate cash and prize-pack status.")
-	_expect(buy_section != null and plan_section != null and separator != null, "The storefront menu is missing its action grouping.")
+	_expect(buy_section != null and separator != null, "The storefront menu is missing its action grouping.")
+	_expect(_find_label(main, "PLAN YOUR WEEK") == null, "The removed planning group is still visible in the clerk menu.")
 	_expect(main.find_child("Tournament", true, false) == null, "The tournament action is still inside the shopkeeper menu.")
+	_expect(main.find_child("Meta", true, false) == null and main.find_child("Calendar", true, false) == null, "The clerk menu still exposes Meta Analysis or Calendar.")
 	_expect(round_button != null and not round_button.visible, "The Start Round CTA remained visible inside the shopkeeper menu.")
 
 	var cash_status := shop_world.menu_cash_status_label as Label
@@ -111,8 +141,6 @@ func _run() -> void:
 	var actions := [
 		main.find_child("BuySingles", true, false) as Button,
 		main.find_child("BuyPack", true, false) as Button,
-		main.find_child("Meta", true, false) as Button,
-		main.find_child("Calendar", true, false) as Button,
 		main.find_child("Leave", true, false) as Button,
 	]
 	for button_value in actions:
@@ -121,7 +149,7 @@ func _run() -> void:
 			button != null
 			and button.custom_minimum_size.y >= 46.0
 			and button.alignment == HORIZONTAL_ALIGNMENT_LEFT
-			and button.get_theme_stylebox("normal") is StyleBoxFlat,
+			and button.get_theme_stylebox("normal") is StyleBox,
 			"A storefront action did not use the cleaned, full-height menu treatment."
 		)
 
@@ -153,6 +181,15 @@ func _run() -> void:
 	await process_frame
 	var singles_case := main.find_child("InSceneSinglesCase", true, false) as PanelContainer
 	_expect(singles_case != null and singles_case.visible, "The cleaned Browse Singles action no longer opened the in-store case.")
+
+	var shop_music := main.find_child("CardShopMusic", true, false) as AudioStreamPlayer
+	_expect(shop_music != null and shop_music.playing, "The card-store soundtrack was not playing in the shop.")
+	main._show_deckbuilder()
+	await process_frame
+	_expect(shop_music != null and shop_music.playing, "Opening Deck Edit stopped the card-store soundtrack.")
+	main._show_settings()
+	await process_frame
+	_expect(shop_music != null and shop_music.playing, "Opening Settings from Deck Edit stopped the card-store soundtrack.")
 
 	main.run.active_tournament = {}
 	main.run.money = 0

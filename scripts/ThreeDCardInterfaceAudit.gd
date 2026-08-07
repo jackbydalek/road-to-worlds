@@ -9,16 +9,16 @@ const EFFECT_ARRAY_KEYS := [
 	"on_end_turn", "on_ko", "on_ko_enemy", "on_move_to_plated", "on_sacrifice"
 ]
 const SUPPORTED_EFFECT_TYPES := [
-	"absorb_all_friendly_units", "buff_friendly_plated", "buff_friendly_unit", "buff_self",
-	"conditional_draw", "copy_prep_activated_ability", "create_token", "damage_all_enemy_plated",
-	"damage_all_enemy_units", "damage_all_plated_units", "damage_enemy_plated", "damage_enemy_player",
-	"damage_enemy_prep", "damage_enemy_unit", "deploy_enemy_hand_unit", "destroy_enemy_unit",
+	"absorb_all_friendly_units", "buff_friendly_unit", "buff_self", "buff_self_from_discard_attack",
+	"create_token", "damage_all_enemy_plated", "damage_all_enemy_units", "damage_enemy_player",
+	"damage_enemy_prep", "destroy_all_plated_units", "destroy_enemy_unit",
 	"disable_enemy_chefs_next_turn", "disable_enemy_items_next_turn", "discard_hand",
-	"discard_hand_then_draw", "discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw",
-	"draw_for_friendly_archetype", "draw_to_hand_size", "heal_all_friendly_units", "heal_player",
-	"heal_self", "heal_unit", "look_and_take", "move_friendly_to_prep", "recover", "recycle",
-	"remove_enemy_spice", "return_enemy_ingredient", "search", "swap_attack_health",
-	"switch_enemy_zones", "switch_friendly_zones"
+	"discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw", "draw_to_hand_size",
+	"fill_prep_with_tokens", "heal_all_friendly_units", "heal_player", "heal_unit", "look_and_take",
+	"recover", "recycle", "remove_enemy_spice", "return_enemy_ingredient", "revive",
+	"sacrifice_friendly_then_damage_all_enemy_units_by_attack", "search",
+	"shuffle_both_hands_then_draw", "swap_attack_health", "switch_enemy_zones",
+	"switch_friendly_zones", "switch_two_each"
 ]
 const BOARD_CHOICE_EFFECTS := [
 	"buff_friendly_unit", "buff_friendly_plated", "heal_unit", "damage_enemy_unit",
@@ -27,21 +27,21 @@ const BOARD_CHOICE_EFFECTS := [
 	"swap_attack_health", "remove_enemy_spice"
 ]
 const EXPECTED_CATEGORY_COUNTS := {
-	"cards": 89,
-	"recipes": 28,
+	"cards": 87,
+	"recipes": 23,
 	"searches": 12,
-	"discard_choices": 4,
-	"board_choices": 15,
-	"reactions": 5,
-	"abilities": 8,
-	"discard_costs": 7
+	"discard_choices": 5,
+	"board_choices": 9,
+	"reactions": 3,
+	"abilities": 6,
+	"discard_costs": 8
 }
 
 var failed := false
 var failures: Array[String] = []
 var table
 var service
-var authored_face_count := 0
+var rendered_face_count := 0
 var fallback_face_count := 0
 
 
@@ -54,6 +54,9 @@ func _run() -> void:
 	root.add_child(table)
 	await process_frame
 	await process_frame
+	# Let the opening turn banner finish so its awaited tween does not outlive the
+	# short-lived audit scene and appear as a false-positive ObjectDB leak.
+	await create_timer(1.0).timeout
 	service = table.service
 
 	_audit_inventory_and_3d_faces()
@@ -64,24 +67,27 @@ func _run() -> void:
 	_audit_search_discard_and_reaction_presentations()
 	_audit_effect_lab_regressions()
 
+	table.queue_free()
+	await process_frame
+	await process_frame
 	if failed:
 		for failure in failures:
 			push_error(failure)
 		quit(1)
 		return
-	print("3D card interface audit passed: 89/89 playable cards (%d authored faces, %d fallback faces); 37 effect operations; 28 recipes; 12 searches; 4 discard choices; 15 board-target cards; 8 activated abilities; 5 reactions; 7 discard-cost Items." % [authored_face_count, fallback_face_count])
+	print("3D card interface audit passed: 87/87 canonical cards (%d renderer-supported faces, %d fallback faces); 35 effect operations; 23 recipes; 12 searches; 5 discard choices; 9 board-target cards; 6 activated abilities; 3 reactions; 8 discard-cost cards." % [rendered_face_count, fallback_face_count])
 	quit()
 
 
 func _audit_inventory_and_3d_faces() -> void:
 	var playable_ids := _playable_card_ids()
-	_expect(playable_ids.size() == int(EXPECTED_CATEGORY_COUNTS.cards), "Catalog did not contain exactly 89 playable cards in addition to internal tokens.")
+	_expect(playable_ids.size() == int(EXPECTED_CATEGORY_COUNTS.cards), "Catalog did not contain exactly 87 canonical cards in addition to internal tokens.")
 	for card_id_value in playable_ids:
 		var card_id := String(card_id_value)
 		var data: Dictionary = service.card(card_id)
 		_expect(String(data.get("card_type", "")) in ["ingredient", "meal", "tool", "chef", "spice", "environment"], "%s has no supported 3D play route." % card_id)
 		if CARD_FACE_SCRIPT.supports_card(data):
-			authored_face_count += 1
+			rendered_face_count += 1
 		else:
 			fallback_face_count += 1
 		var physical_card := table._make_card(card_id, true) as Node3D
@@ -173,12 +179,19 @@ func _audit_every_activated_ability_route() -> void:
 			var source_zone := String(ability.get("active_zone", "plated"))
 			if source_zone == "":
 				source_zone = "plated"
-			var source := _add_unit(state, "player", card_id, source_zone)
+			var source: Dictionary = {}
+			if source_zone == "environment":
+				state.player.environment = card_id
+			else:
+				source = _add_unit(state, "player", card_id, source_zone)
 			var target_id := -1
 			var target_spec: Dictionary = ability.get("target", {})
 			if not target_spec.is_empty():
 				target_id = _add_ability_target(state, source, target_spec)
-			service.activate_ability(state, int(source.instance_id), String(ability.get("id", "")))
+			if source_zone == "environment":
+				service.activate_environment_ability(state, String(ability.get("id", "")))
+			else:
+				service.activate_ability(state, int(source.instance_id), String(ability.get("id", "")))
 			if target_spec.is_empty():
 				_expect(state.pending_ability.is_empty(), "%s's targetless ability opened an unexpected target prompt." % card_id)
 				if _ability_has_effect(ability, "search"):
@@ -245,7 +258,7 @@ func _audit_search_discard_and_reaction_presentations() -> void:
 func _audit_effect_lab_regressions() -> void:
 	var lab = EFFECT_LAB_SCRIPT.new()
 	var results: Array[Dictionary] = lab.run_all_scenarios()
-	_expect(results.size() == 19 and results.all(func(result: Dictionary) -> bool: return bool(result.get("passed", false))), "One or more of the 19 complex-card production scenarios failed.")
+	_expect(results.size() == 12 and results.all(func(result: Dictionary) -> bool: return bool(result.get("passed", false))), "One or more of the 12 canonical high-risk production scenarios failed.")
 
 
 func _fresh_state() -> Dictionary:
@@ -283,7 +296,7 @@ func _add_ability_target(state: Dictionary, source: Dictionary, target_spec: Dic
 	var target_zone := String(target_spec.get("zone", "plated"))
 	if target_zone == "":
 		target_zone = "plated"
-	var target_card_id := "hearty_stewoose" if String(target_spec.get("card_type", "")) == "meal" else "hearty_bagver"
+	var target_card_id := "hearty_lasagnama" if String(target_spec.get("card_type", "")) == "meal" else "hearty_bagver"
 	if bool(target_spec.get("has_activated_ability", false)):
 		target_card_id = "hearty_gravy_gazelle"
 	var target := _add_unit(state, target_side, target_card_id, target_zone)
@@ -298,8 +311,13 @@ func _ingredient_for_requirement(requirement: String) -> String:
 	for card_id_value in service.cards_by_id:
 		var card_id := String(card_id_value)
 		var data: Dictionary = service.card(card_id)
-		if String(data.get("card_type", "")) == "ingredient" and (requirement == "any" or data.get("ingredient_types", []).has(requirement)):
+		if String(data.get("card_type", "")) != "ingredient":
+			continue
+		if requirement == "any":
 			return card_id
+		for option in requirement.split("|"):
+			if data.get("ingredient_types", []).has(String(option)):
+				return card_id
 	return "spicy_hot_honey_bee"
 
 

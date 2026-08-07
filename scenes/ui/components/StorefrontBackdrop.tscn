@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/StorefrontBackdrop.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/title_storefront/shop.glb" id="2_shop"]
+
+[sub_resource type="Environment" id="Environment_storefront"]
+background_mode = 1
+background_color = Color(0.18, 0.14, 0.30, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.58, 0.48, 0.75, 1)
+ambient_light_energy = 0.78
+
+[node name="StorefrontBackdrop" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="ViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1440, 900)
+render_target_update_mode = 4
+
+[node name="World" type="Node3D" parent="ViewportContainer/SubViewport"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="ViewportContainer/SubViewport/World"]
+environment = SubResource("Environment_storefront")
+
+[node name="Sun" type="DirectionalLight3D" parent="ViewportContainer/SubViewport/World"]
+rotation_degrees = Vector3(-48, -32, 0)
+light_color = Color(0.72, 0.61, 0.92, 1)
+light_energy = 1.05
+shadow_enabled = true
+
+[node name="StorefrontShop" parent="ViewportContainer/SubViewport/World" instance=ExtResource("2_shop")]
+position = Vector3(0, 3.17, 0)
+
+[node name="CameraRig" type="Node3D" parent="ViewportContainer/SubViewport/World"]
+
+[node name="Camera3D" type="Camera3D" parent="ViewportContainer/SubViewport/World/CameraRig"]
+current = true
+fov = 40.0

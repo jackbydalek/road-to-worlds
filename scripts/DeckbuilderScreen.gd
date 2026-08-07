@@ -3,6 +3,7 @@ class_name DeckbuilderScreen
 
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
 const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
@@ -18,6 +19,10 @@ const HOVER_DELAY_SECONDS := 0.38
 const SURFACE := WORKSPACE_UI.SURFACE
 const SURFACE_WARM := WORKSPACE_UI.SURFACE_WARM
 const BORDER_SOFT := WORKSPACE_UI.BORDER_SOFT
+const WORKSHOP_CREAM := PALETTE.CREAM
+const COLLECTION_LAVENDER := Color("#F3EFFA")
+const DECK_BLUSH := Color("#FBE5EC")
+const CARD_PAPER := Color("#FFF9F5")
 
 var _hover_preview: PanelContainer
 var _hover_preview_body: CenterContainer
@@ -45,7 +50,7 @@ func show(host) -> void:
 	workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	workspace.custom_minimum_size = Vector2(0, 560 if compact_workspace else 600)
-	workspace.add_theme_constant_override("separation", 12)
+	workspace.add_theme_constant_override("separation", 16)
 	host.content.add_child(workspace)
 
 	_add_collection_binder(host, workspace, collection_ids, compact_workspace)
@@ -61,8 +66,8 @@ func _add_header(host, metrics: Dictionary, legal: Dictionary) -> void:
 	var header: VBoxContainer = _add_clean_panel(
 		host.content,
 		"DECK WORKSHOP",
-		SKETCH_UI.TEAL,
-		Vector2(0, 74)
+		PALETTE.CORAL,
+		Vector2(0, 82)
 	)
 	header.name = "DeckbuilderHeader"
 
@@ -80,7 +85,7 @@ func _add_header(host, metrics: Dictionary, legal: Dictionary) -> void:
 	collection_label.name = "DeckbuilderCollectionSummary"
 	collection_label.text = "COLLECTION  •  %d unique cards" % host.run.collection.size()
 	collection_label.add_theme_font_size_override("font_size", 13)
-	collection_label.add_theme_color_override("font_color", Color("#174f59"))
+	collection_label.add_theme_color_override("font_color", PALETTE.NAVY)
 	identity.add_child(collection_label)
 
 	var metrics_label := Label.new()
@@ -88,24 +93,29 @@ func _add_header(host, metrics: Dictionary, legal: Dictionary) -> void:
 	metrics_label.text = host._format_metrics_short(metrics)
 	metrics_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	metrics_label.add_theme_font_size_override("font_size", 13)
-	metrics_label.add_theme_color_override("font_color", Color("#5d5148"))
+	metrics_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	metrics_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	identity.add_child(metrics_label)
 
 	var legality := _add_badge(
 		toolbar,
 		"✓  EVENT LEGAL" if bool(legal.ok) else "!  " + String(legal.reason).to_upper(),
-		Color("#DCEBCF") if bool(legal.ok) else Color("#F2D0C8"),
-		SKETCH_UI.TEAL if bool(legal.ok) else SKETCH_UI.ORANGE
+		PALETTE.SKY.lightened(0.42) if bool(legal.ok) else PALETTE.BLUSH.lightened(0.30),
+		PALETTE.NAVY if bool(legal.ok) else PALETTE.BRICK_DARK
 	)
 	legality.name = "DeckbuilderLegalityBadge"
-	legality.tooltip_text = "Your current deck is legal for the selected event." if bool(legal.ok) else String(legal.reason)
 
 	_add_sort_controls(host, toolbar)
 
 
 func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Array, compact_workspace: bool) -> void:
-	var collection_panel := _add_workspace_panel(host, workspace, "CARD COLLECTION", "#FFFCF6", "#2D6F6A")
+	var collection_panel := _add_workspace_panel(
+		host,
+		workspace,
+		"CARD COLLECTION",
+		COLLECTION_LAVENDER,
+		PALETTE.PERIWINKLE
+	)
 	collection_panel.name = "DeckbuilderCollectionPanel"
 	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	collection_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -160,8 +170,8 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	var owned_badge := _add_badge(
 		info_row,
 		"OWNED ×%d" % owned,
-		Color("#E7DECD"),
-		SKETCH_UI.MUTED_INK
+		PALETTE.LAVENDER_GLASS,
+		PALETTE.NAVY
 	)
 	owned_badge.name = "DeckbuilderOwnedBadge"
 
@@ -170,7 +180,7 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	available_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	available_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	available_label.add_theme_font_size_override("font_size", 12)
-	available_label.add_theme_color_override("font_color", SKETCH_UI.TEAL if available > 0 else SKETCH_UI.MUTED_INK)
+	available_label.add_theme_color_override("font_color", PALETTE.NAVY if available > 0 else Color("#85829A"))
 	info_row.add_child(available_label)
 
 	var actions := HBoxContainer.new()
@@ -208,7 +218,7 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 
 
 func _add_deck_rail(host, workspace: HBoxContainer, compact_workspace: bool) -> void:
-	var rail := _add_workspace_panel(host, workspace, "MY DECKS", "#F8F1E4", "#E06B4F")
+	var rail := _add_workspace_panel(host, workspace, "MY DECKS", DECK_BLUSH, PALETTE.CORAL)
 	rail.name = "DeckbuilderDeckRail"
 	rail.custom_minimum_size = Vector2(380 if compact_workspace else 364, 0)
 	rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -314,7 +324,7 @@ func _add_deck_grid(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 		count.text = "×%d" % int(deck[card_id])
 		count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		count.add_theme_font_size_override("font_size", 15)
-		count.add_theme_color_override("font_color", host._affinity_color(host._card_archetype(card)).darkened(0.34))
+		count.add_theme_color_override("font_color", PALETTE.NAVY)
 		controls.add_child(count)
 
 		var remove: Button = host._make_button("−")
@@ -331,12 +341,12 @@ func _add_deck_grid(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 		_bind_card_hover(host, tile, card_id)
 
 
-func _add_workspace_panel(host, parent: Node, title: String, accent: String, border: String) -> VBoxContainer:
+func _add_workspace_panel(host, parent: Node, title: String, background: Color, accent: Color) -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_theme_stylebox_override(
 		"panel",
-		_clean_style(Color(accent), Color(border), 1, 9, Vector4.ZERO, 4)
+		_clean_style(background, PALETTE.NAVY, 2, 14, Vector4.ZERO, 0, true)
 	)
 	parent.add_child(panel)
 
@@ -356,9 +366,14 @@ func _add_workspace_panel(host, parent: Node, title: String, accent: String, bor
 	var title_label := Label.new()
 	title_label.text = title
 	title_label.add_theme_font_override("font", SKETCH_UI.body_font(0.5))
-	title_label.add_theme_font_size_override("font_size", 15)
-	title_label.add_theme_color_override("font_color", SKETCH_UI.INK)
+	title_label.add_theme_font_size_override("font_size", 16)
+	title_label.add_theme_color_override("font_color", PALETTE.NAVY)
 	box.add_child(title_label)
+	var accent_rule := ColorRect.new()
+	accent_rule.custom_minimum_size = Vector2(0, 3)
+	accent_rule.color = accent
+	accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(accent_rule)
 	return box
 
 
@@ -367,19 +382,20 @@ func _add_card_tile(host, parent: Node, card_id: String, card: Dictionary, node_
 	panel.name = node_name
 	panel.set_meta("card_id", card_id)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tile_fill := SKETCH_UI.PAPER.lerp(
+	var tile_fill := CARD_PAPER.lerp(
 		host._rarity_line_color(card.get("rarity", "common")),
-		0.07
+		0.035
 	)
 	panel.add_theme_stylebox_override(
 		"panel",
 		_clean_style(
 			tile_fill,
-			host._affinity_color(host._card_archetype(card)).darkened(0.2),
-			1,
-			7,
+			PALETTE.NAVY,
+			2,
+			11,
 			Vector4.ZERO,
-			3
+			0,
+			true
 		)
 	)
 	parent.add_child(panel)
@@ -407,7 +423,7 @@ func _make_visual_card(host, card: Dictionary, size: Vector2) -> Control:
 	var fallback := PanelContainer.new()
 	fallback.custom_minimum_size = size
 	var fallback_style := StyleBoxFlat.new()
-	fallback_style.bg_color = Color("#202734")
+	fallback_style.bg_color = PALETTE.INK
 	fallback_style.border_color = host._affinity_color(host._card_archetype(card))
 	fallback_style.set_border_width_all(2)
 	fallback_style.set_corner_radius_all(8)
@@ -417,7 +433,7 @@ func _make_visual_card(host, card: Dictionary, size: Vector2) -> Control:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.add_theme_color_override("font_color", Color("#f3efe4"))
+	title.add_theme_color_override("font_color", PALETTE.GHOST)
 	fallback.add_child(title)
 	return fallback
 
@@ -438,7 +454,7 @@ func _create_hover_preview(host) -> void:
 
 	_hover_preview.add_theme_stylebox_override(
 		"panel",
-		_clean_style(SURFACE, SKETCH_UI.TEAL, 2, 10, Vector4(12, 12, 12, 12), 0, true)
+		_clean_style(WORKSHOP_CREAM, PALETTE.NAVY, 3, 16, Vector4(12, 12, 12, 12), 0, true)
 	)
 	host.add_child(_hover_preview)
 
@@ -509,10 +525,10 @@ func _show_hover_preview(host, source: Control, card_id: String) -> void:
 		glossary.add_theme_constant_override("separation", 9)
 		preview_row.add_child(glossary)
 		var heading := Label.new()
-		heading.text = "KEYWORDS"
+		heading.text = "KEYWORD GUIDE"
 		heading.add_theme_font_override("font", SKETCH_UI.display_font(0.68))
 		heading.add_theme_font_size_override("font_size", 12)
-		heading.add_theme_color_override("font_color", SKETCH_UI.TEAL)
+		heading.add_theme_color_override("font_color", PALETTE.NAVY)
 		glossary.add_child(heading)
 		for keyword_id in known_keywords:
 			host._add_keyword_explanation(glossary, keyword_id, "DeckbuilderKeyword")
@@ -563,9 +579,37 @@ func _add_clean_panel(
 	accent: Color,
 	minimum_size: Vector2 = Vector2.ZERO
 ) -> VBoxContainer:
-	var section: Dictionary = WORKSPACE_UI.make_section(title, accent, minimum_size)
-	parent.add_child(section.panel)
-	return section.body as VBoxContainer
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = minimum_size
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override(
+		"panel",
+		_clean_style(WORKSHOP_CREAM, PALETTE.NAVY, 2, 14, Vector4.ZERO, 0, true)
+	)
+	parent.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 6)
+	margin.add_child(body)
+	var heading := Label.new()
+	heading.text = title
+	heading.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	heading.add_theme_font_size_override("font_size", 19)
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	body.add_child(heading)
+	var accent_rule := ColorRect.new()
+	accent_rule.custom_minimum_size = Vector2(116, 3)
+	accent_rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	accent_rule.color = accent
+	accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body.add_child(accent_rule)
+	return body
 
 
 func _style_deck_button(button: Button, variant: String = "secondary") -> void:

@@ -23,6 +23,26 @@ func _run() -> void:
 	root.add_child(table)
 	await process_frame
 	await process_frame
+	var arena_table := table.get_node("ViewportContainer/WorldViewport/World/Table") as MeshInstance3D
+	var arena_slot := table.get_node("ViewportContainer/WorldViewport/World/Zones/PlayerPrep/Slot1") as MeshInstance3D
+	var arena_chef := table.get_node("ViewportContainer/WorldViewport/World/PlayerChef/Mesh") as MeshInstance3D
+	var player_chef_life := table.get_node("ViewportContainer/WorldViewport/World/PlayerChef/Label") as Label3D
+	var opponent_chef_life := table.get_node("ViewportContainer/WorldViewport/World/OpponentChef/Label") as Label3D
+	var auxiliary_zone := table.find_child("PlayerDeckZone", true, false) as Node3D
+	var auxiliary_pad := auxiliary_zone.find_child("ZonePad", true, false) as MeshInstance3D if auxiliary_zone != null else null
+	_expect(_has_lofi_outline(arena_table), "The combat table surface did not receive the shop-style navy outline.")
+	_expect(_has_lofi_outline(arena_slot), "Combat slot pads did not receive the shop-style navy outline.")
+	_expect(_has_lofi_outline(arena_chef), "Chef pucks did not receive the shop-style navy outline.")
+	_expect(
+		player_chef_life.modulate == Color.WHITE
+		and opponent_chef_life.modulate == Color.WHITE
+		and player_chef_life.outline_modulate.is_equal_approx(Color("#29365F"))
+		and opponent_chef_life.outline_modulate.is_equal_approx(Color("#29365F"))
+		and player_chef_life.outline_size >= 15
+		and opponent_chef_life.outline_size >= 15,
+		"Chef health numbers did not use high-contrast white text with the navy outline."
+	)
+	_expect(_has_lofi_outline(auxiliary_pad), "Deck, discard, and Environment pads did not receive the shop-style navy outline.")
 	_expect(table.find_child("TurnBanner", true, false) != null, "The turn pacing banner was not created.")
 	_expect(table.find_child("OutcomeOverlay", true, false) != null, "The match outcome overlay was not created.")
 	var rival_action_panel := table.find_child("RivalActionPanel", true, false) as PanelContainer
@@ -36,7 +56,7 @@ func _run() -> void:
 	var readability_controls := table.find_child("ReadabilityControls", true, false) as PanelContainer
 	_expect(match_options_button != null and match_options_button.text == "OPTIONS", "The compact match-options control was not created.")
 	_expect(readability_controls != null and not readability_controls.visible, "Readability settings did not start collapsed.")
-	_expect(rival_pacing_button != null and rival_pacing_button.text.begins_with("RIVAL SPEED"), "The opponent pacing control was not created.")
+	_expect(rival_pacing_button != null and rival_pacing_button.text.begins_with("PLAY SPEED"), "The play-speed control was not created.")
 	_expect(text_scale_button != null and text_scale_button.text.begins_with("TEXT SIZE"), "The readable text-scale control was not created.")
 	_expect(table.theme.default_font.resource_path.ends_with("AtkinsonHyperlegibleNext.ttf"), "The Living Table UI did not use the bundled hyperlegible font.")
 	var original_text_scale_index: int = table.text_scale_index
@@ -82,7 +102,7 @@ func _run() -> void:
 		table.keyword_popout != null
 		and table.keyword_popout.visible
 		and String(table.service.card("spicy_wasabi_wasp").get("text", "")) == "Stalwart"
-		and String(table.service.card("sweet_soft_serve_crab").get("text", "")) == "Stalwart"
+		and String(table.service.card("sweet_soft_serve_crab").get("text", "")) == "Bodyguard"
 		and String(table.service.card("hearty_french_bread_dog").get("text", "")) == "Taunt",
 		"Keyword cards did not use concise printed text with an inspector popout."
 	)
@@ -247,7 +267,22 @@ func _run() -> void:
 	)
 	var action_reveal_preview_timer := create_timer(0.55)
 	action_reveal_preview_timer.timeout.connect(func() -> void:
-		_expect(table.find_child("ActionCardFullscreenReveal", true, false) != null, "The Tool did not appear in the full-screen action-card reveal.")
+		var fullscreen_reveal := table.find_child("ActionCardFullscreenReveal", true, false) as TextureRect
+		var reveal_border := fullscreen_reveal.find_child("ActionCardRevealBorder", true, false) as Panel if fullscreen_reveal != null else null
+		var reveal_border_style := reveal_border.get_theme_stylebox("panel") as StyleBoxFlat if reveal_border != null else null
+		_expect(fullscreen_reveal != null, "The Tool did not appear in the full-screen action-card reveal.")
+		_expect(
+			reveal_border_style != null
+			and reveal_border_style.border_width_left >= 8
+			and reveal_border_style.border_color == table._action_reveal_border_color(),
+			"The Tool/Chef spin reveal did not carry the selected rounded card border."
+		)
+		_expect(
+			reveal_border_style != null
+			and not reveal_border_style.draw_center
+			and reveal_border_style.shadow_size == 0,
+			"The Tool/Chef spin border added a fill, tint, or shadow over the card art."
+		)
 		if DisplayServer.get_name() != "headless":
 			var spin_preview := root.get_texture().get_image()
 			_expect(spin_preview.save_png(ACTION_SPIN_PREVIEW_PATH) == OK, "The full-screen action-card preview could not be saved.")
@@ -309,7 +344,7 @@ func _run() -> void:
 	table.animation_busy = false
 	table._reset_camera_pacing()
 	var table_environment := table.find_child("WorldEnvironment", true, false) as WorldEnvironment
-	_expect(table_environment != null and table_environment.environment.background_color.is_equal_approx(Color("#e9dfc9")), "Living Table did not match the menu's #e9dfc9 background.")
+	_expect(table_environment != null and table_environment.environment.background_color.is_equal_approx(Color(0.976, 0.941, 0.922, 1.0)), "Living Table did not retain its warm cream background.")
 	table._face_material("spicy_hot_honey_bee")
 	var bee_face_viewport := table.texture_viewports.find_child("PrototypeFullCardFaceViewport_spicy_hot_honey_bee", false, false) as SubViewport
 	_expect(bee_face_viewport != null and bee_face_viewport.size == table.CARD_FACE_TEXTURE_SIZE and bee_face_viewport.render_target_update_mode != SubViewport.UPDATE_ALWAYS, "Living Table card faces still used an unbounded full-frame render target.")
@@ -352,9 +387,12 @@ func _run() -> void:
 	_expect(
 		taunt_aura != null
 		and taunt_aura_material != null
-		and taunt_aura_material.emission.r > taunt_aura_material.emission.g * 2.0,
-		"A Taunt unit in Plated did not render its red aura."
+		and taunt_aura_material.emission.r > taunt_aura_material.emission.g * 2.0
+		and taunt_aura_material.albedo_texture.resource_path.ends_with("taunt_aura.svg"),
+		"A Taunt unit in Plated did not render its dedicated brick-red frame."
 	)
+	_expect(plated_taunt_card.find_child("TauntBadge", true, false) == null, "Taunt should communicate through its frame without a text badge.")
+	_expect(plated_taunt_card.find_child("ReadyStatus", true, false) == null, "Generic READY competes with the Taunt priority state.")
 	table.state.opponent.plated = []
 	table.state.opponent.prep = [taunt_unit]
 	table._render_match()
@@ -373,18 +411,53 @@ func _run() -> void:
 	var floating_art := prep_card.find_child("FloatingArt", true, false) as MeshInstance3D if prep_card != null else null
 	var stat_backing := prep_card.find_child("StatsBacking", true, false) as Sprite3D if prep_card != null else null
 	var ready_badge_root := Node3D.new()
+	ready_badge_root.scale = Vector3.ONE * table.PLATED_CARD_SCALE
 	table.card_layer.add_child(ready_badge_root)
 	var ready_badge_unit: Dictionary = moved_unit.duplicate(true)
 	ready_badge_unit.ready = true
 	table._add_stat_badge(ready_badge_root, ready_badge_unit, "player")
 	var ready_stats := ready_badge_root.find_child("Stats", true, false) as Label3D
+	var ready_stats_backing := ready_badge_root.find_child("StatsBacking", true, false) as Sprite3D
+	var ready_indicator := ready_badge_root.find_child("ReadyStatus", true, false) as Label3D
+	var ready_indicator_backing := ready_badge_root.find_child("ReadyStatusBacking", true, false) as Sprite3D
 	var ready_status := ready_badge_root.find_child("Status", true, false) as Label3D
 	_expect(
 		ready_stats != null
-		and ready_stats.text == "%d/%d READY" % [int(ready_badge_unit.attack), int(ready_badge_unit.health)]
+		and ready_stats.text == "%d/%d" % [int(ready_badge_unit.attack), int(ready_badge_unit.health)]
+		and ready_stats.font_size >= 54
+		and ready_stats.pixel_size >= 0.006
+		and ready_indicator != null
+		and ready_indicator.text == "READY"
+		and ready_indicator.font_size >= 54
+		and ready_indicator.pixel_size >= 0.004
+		and ready_stats_backing != null
+		and ready_indicator_backing != null
+		and float(ready_indicator_backing.get_meta("fitted_width", INF)) <= table.FIELD_BADGE_MAX_WIDTH
 		and ready_status == null,
-		"A ready card did not keep its attack, health, and READY state in one badge."
+		"A ready card did not split its large stats and bounded READY indicators cleanly."
 	)
+	var ready_badge_gap := absf(ready_stats.position.z - ready_indicator.position.z) if ready_stats != null and ready_indicator != null else 0.0
+	var combined_badge_half_height := (
+		float(ready_stats_backing.get_meta("fitted_height", INF))
+		+ float(ready_indicator_backing.get_meta("fitted_height", INF))
+	) * 0.5 if ready_stats_backing != null and ready_indicator_backing != null else INF
+	_expect(
+		ready_badge_gap > combined_badge_half_height + 0.02,
+		"A card's READY pill overlaps its attack/health pill vertically (gap %.3f, required %.3f)." % [ready_badge_gap, combined_badge_half_height + 0.02]
+	)
+	var adjacent_ready_root := Node3D.new()
+	adjacent_ready_root.position.x = 1.72
+	adjacent_ready_root.scale = Vector3.ONE * table.PLATED_CARD_SCALE
+	table.card_layer.add_child(adjacent_ready_root)
+	table._add_stat_badge(adjacent_ready_root, ready_badge_unit, "player")
+	var adjacent_backing := adjacent_ready_root.find_child("ReadyStatusBacking", true, false) as Sprite3D
+	var first_ready_width: float = float(ready_indicator_backing.get_meta("fitted_width", INF)) * table.PLATED_CARD_SCALE if ready_indicator_backing != null else INF
+	var adjacent_ready_width: float = float(adjacent_backing.get_meta("fitted_width", INF)) * table.PLATED_CARD_SCALE if adjacent_backing != null else INF
+	_expect(
+		(first_ready_width + adjacent_ready_width) * 0.5 < adjacent_ready_root.position.x - 0.08,
+		"Two adjacent plated cards let their READY pills overlap."
+	)
+	adjacent_ready_root.queue_free()
 	ready_badge_root.queue_free()
 	table.state.phase = "opponent_turn"
 	table.animation_busy = true
@@ -563,3 +636,13 @@ func _finish() -> void:
 	for failure in failures:
 		push_error(failure)
 	quit(1)
+
+
+func _has_lofi_outline(mesh: MeshInstance3D) -> bool:
+	if mesh == null or mesh.mesh == null or mesh.mesh.get_surface_count() == 0:
+		return false
+	var material := mesh.get_active_material(0) as BaseMaterial3D
+	if material == null or not material.next_pass is ShaderMaterial:
+		return false
+	var shader_material := material.next_pass as ShaderMaterial
+	return shader_material.shader != null and shader_material.shader.resource_path.ends_with("lofi_outline.gdshader")

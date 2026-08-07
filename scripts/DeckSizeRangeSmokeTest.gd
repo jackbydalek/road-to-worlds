@@ -32,8 +32,8 @@ func _run() -> void:
 	_expect(main._deck_total(main.run.deck) == 20, "The Spicy starter no longer begins at exactly 20 cards.")
 	_expect(bool(main.run_state_service.deck_is_legal(main.run).get("ok", false)), "The untouched 20-card starter was not legal.")
 
-	main.run.collection["item_rolling_pin"] = 1
-	var add_result: Dictionary = main.run_state_service.add_to_deck(main.run, "item_rolling_pin")
+	main.run.collection["item_tool_drawer"] = 1
+	var add_result: Dictionary = main.run_state_service.add_to_deck(main.run, "item_tool_drawer")
 	_expect(bool(add_result.get("ok", false)), "A newly acquired card could not be added directly to the 20-card starter.")
 	_expect(main._deck_total(main.run.deck) == 21, "Adding a card to the starter did not produce a 21-card deck.")
 	_expect(bool(main.run_state_service.deck_is_legal(main.run).get("ok", false)), "A 21-card deck was not tournament legal.")
@@ -45,17 +45,17 @@ func _run() -> void:
 	_expect(main.status_label.text.ends_with("Main 21/30"), "The top status bar did not display the 30-card capacity.")
 
 	var deck_30: Dictionary = starter.duplicate(true)
-	deck_30["item_rolling_pin"] = 3
+	deck_30["item_tool_drawer"] = 3
 	deck_30["item_wooden_spoon"] = 3
 	deck_30["item_switchblade"] = 3
-	deck_30["environment_blazing_wok"] = 1
+	deck_30["environment_spicy_taqueria"] = 1
 	main.run.deck = deck_30
 	main.run.collection = deck_30.duplicate(true)
 	_expect(main._deck_total(main.run.deck) == 30, "The range test did not construct a 30-card deck.")
 	_expect(bool(main.run_state_service.deck_is_legal(main.run).get("ok", false)), "A 30-card deck was not tournament legal.")
 
 	var deck_31: Dictionary = deck_30.duplicate(true)
-	deck_31["environment_slow_cooker"] = 1
+	deck_31["environment_hearty_diner"] = 1
 	main.run.deck = deck_31
 	main.run.collection = deck_31.duplicate(true)
 	var too_large: Dictionary = main.run_state_service.deck_is_legal(main.run)

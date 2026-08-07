@@ -4,7 +4,7 @@ class_name CardShopScreen
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
 const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
 
-const CARD_SHOP_SCENE := preload("res://scenes/CardShopScene.tscn")
+const CARD_SHOP_SCENE_PATH := "res://scenes/CardShopScene.tscn"
 const BOOSTER_ID := "base_standard_pack"
 const DEFAULT_HOVER_TEXT := ""
 const SCENE_SIZE := Vector2(1440, 900)
@@ -81,7 +81,7 @@ func show_singles(host) -> void:
 
 func _add_status_strip(host, event: Dictionary, metrics: Dictionary, legal: Dictionary, debug_scene_test: bool) -> void:
 	var title := "Card Shop Scene Test" if debug_scene_test else "Card Shop"
-	var panel: VBoxContainer = host._add_bordered_panel(host.content, title, "#173B39", "#78AAA3", 2)
+	var panel: VBoxContainer = host._add_bordered_panel(host.content, title, "#29233C", "#8299D0", 2)
 	panel.name = "CardShopStatusStrip"
 	panel.custom_minimum_size = Vector2(0, 86)
 	host._add_body_text(panel, "$%d | Prize packs %d | Next event: %s | Free entry | Deck %s" % [
@@ -102,7 +102,7 @@ func _add_authored_scene(host, event: Dictionary, legal: Dictionary) -> Node:
 		"panel",
 		SKETCH_UI.texture_style(
 			SKETCH_UI.PANEL_PAPER,
-			Color("#FFF8E9"),
+			Color("#E9DFEE"),
 			Vector4(24, 24, 24, 24),
 			Vector4(8, 8, 8, 8)
 		)
@@ -124,7 +124,9 @@ func _add_authored_scene(host, event: Dictionary, legal: Dictionary) -> Node:
 	canvas.clip_contents = true
 	margin.add_child(canvas)
 
-	var scene_root := CARD_SHOP_SCENE.instantiate()
+	var packed_scene := load(CARD_SHOP_SCENE_PATH) as PackedScene
+	assert(packed_scene != null, "Unable to load card shop scene: %s" % CARD_SHOP_SCENE_PATH)
+	var scene_root := packed_scene.instantiate()
 	scene_root.name = "CardShopScene"
 	canvas.add_child(scene_root)
 	_update_authored_button_labels(host, scene_root, event, legal)
@@ -276,8 +278,8 @@ func _add_tournament_person_hotspot(host, scene_root: Node, hover_label: Label, 
 	button.custom_minimum_size = size
 	button.size = size
 	button.add_theme_stylebox_override("normal", _transparent_button_style())
-	button.add_theme_stylebox_override("hover", _transparent_button_style(Color("#f0a5cc33"), Color("#f0a5cc"), 2))
-	button.add_theme_stylebox_override("pressed", _transparent_button_style(Color("#e8c15a33"), Color("#e8c15a"), 2))
+	button.add_theme_stylebox_override("hover", _transparent_button_style(Color(SKETCH_UI.TEAL, 0.20), SKETCH_UI.TEAL, 2))
+	button.add_theme_stylebox_override("pressed", _transparent_button_style(Color(SKETCH_UI.ORANGE, 0.20), SKETCH_UI.ORANGE, 2))
 	button.add_theme_stylebox_override("disabled", _transparent_button_style())
 	_wire_hover(button, hover_label, "Tournament clerk: click to open registration for the selected event.")
 	host._connect_pressed(button, host._show_tournament)
@@ -359,7 +361,6 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 		var select_button := Button.new()
 		select_button.name = "CardShopSingleSelectButton_%s" % card_id
 		select_button.text = ""
-		select_button.tooltip_text = "Select %s to reveal its Buy button." % String(card.get("name", card_id))
 		select_button.focus_mode = Control.FOCUS_ALL
 		select_button.set_anchors_preset(Control.PRESET_FULL_RECT)
 		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
@@ -398,7 +399,6 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 	buy_button.set_meta("card_id", card_id)
 	buy_button.disabled = int(host.run.get("money", 0)) < price
 	buy_button.visible = false
-	buy_button.tooltip_text = "Buy %s for $%d." % [String(card.get("name", card_id)), price]
 	WORKSPACE_UI.style_button(buy_button, "primary")
 	_wire_hover(buy_button, hover_label, "Buy %s for $%d and add it to your collection." % [String(card.get("name", card_id)), price])
 	var selected_id := card_id
@@ -455,7 +455,6 @@ func _can_register(host, event: Dictionary, legal: Dictionary) -> bool:
 
 
 func _wire_hover(control: Control, hover_label: Label, text: String) -> void:
-	control.tooltip_text = text
 	if hover_label == null:
 		return
 	control.mouse_entered.connect(func() -> void:

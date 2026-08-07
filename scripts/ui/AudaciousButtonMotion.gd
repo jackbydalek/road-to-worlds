@@ -39,9 +39,17 @@ func _release() -> void:
 
 
 func _tween_scale(target: Vector2, duration: float) -> void:
+	# A button press can replace its entire screen before button_up arrives. In
+	# that case this helper has already left the SceneTree and must not create a
+	# tween or query the root viewport.
+	if not is_inside_tree() or not is_instance_valid(button):
+		return
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
-	if bool(get_tree().root.get_meta("reduced_motion", false)):
+	var tree := get_tree()
+	if tree == null or tree.root == null:
+		return
+	if bool(tree.root.get_meta("reduced_motion", false)):
 		button.scale = rest_scale
 		return
 	active_tween = create_tween()

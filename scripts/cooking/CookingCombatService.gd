@@ -378,8 +378,24 @@ func confirm_discard_cost(state: Dictionary) -> Dictionary:
 	var played_index := int(pending.hand_index)
 	if played_index < 0 or played_index >= state.player.hand.size():
 		state.pending_discard = {}
-		return _message(state, "The pending Item is no longer in your hand.")
+		return _message(state, "The pending card is no longer in your hand.")
 	var data := card(String(state.player.hand[played_index]))
+	if String(pending.get("card_type", "tool")) == "ingredient":
+		var ingredient_removal_indices := selected.duplicate()
+		ingredient_removal_indices.sort()
+		ingredient_removal_indices.reverse()
+		for removal_index in ingredient_removal_indices:
+			var index := int(removal_index)
+			if index < 0 or index >= state.player.hand.size() or index == played_index:
+				continue
+			state.player.discard.append(String(state.player.hand[index]))
+			state.player.hand.remove_at(index)
+			if index < played_index:
+				played_index -= 1
+		state.pending_discard = {}
+		_log(state, "You discard %d card%s and play %s." % [pending.required, "" if int(pending.required) == 1 else "s", data.name])
+		_play_ingredient(state, "player", played_index, String(pending.get("destination", "prep")), true)
+		return state
 	var removal_indices := selected.duplicate()
 	removal_indices.append(played_index)
 	removal_indices.sort()
@@ -406,7 +422,7 @@ func cancel_discard_cost(state: Dictionary) -> Dictionary:
 	if state.get("pending_discard", {}).is_empty():
 		return state
 	state.pending_discard = {}
-	return _message(state, "Discard payment cancelled. The Item remains in your hand.")
+	return _message(state, "Discard payment cancelled. The card remains in your hand.")
 
 
 func activate_ability(state: Dictionary, source_instance_id: int, ability_id: String = "") -> Dictionary:
@@ -1302,7 +1318,7 @@ func _trigger_friendly_chef_damaged(state: Dictionary, target_side: String) -> v
 			_deploy_damage_trigger_card(state, target_side, card_id)
 
 
-func _play_ingredient(state: Dictionary, side: String, hand_index: int, destination: String) -> bool:
+func _play_ingredient(state: Dictionary, side: String, hand_index: int, destination: String, discard_paid: bool = false) -> bool:
 	if destination != "prep" and destination != "plated":
 		return false
 	var who: Dictionary = state[side]
@@ -1312,7 +1328,30 @@ func _play_ingredient(state: Dictionary, side: String, hand_index: int, destinat
 		return false
 	var card_id := String(who.hand[hand_index])
 	var data := card(card_id)
+	var discard_cost := int(data.get("discard_cost", 0))
+	if not discard_paid and who.hand.size() - 1 < discard_cost:
+		_message(state, "Not enough cards to pay %s's discard cost." % data.name)
+		return false
+	if side == "player" and discard_cost > 0 and not discard_paid:
+		state.pending_discard = {
+			"hand_index": hand_index,
+			"card_id": card_id,
+			"card_type": "ingredient",
+			"destination": destination,
+			"required": discard_cost,
+			"selected_indices": []
+		}
+		_clear_selections(state)
+		_message(state, "Select %d card%s from your hand to discard for %s." % [discard_cost, "" if discard_cost == 1 else "s", data.name])
+		return true
 	who.hand.remove_at(hand_index)
+	if side == "opponent":
+		for unused in range(discard_cost):
+			var discard_index: int = who.hand.size() - 1
+			if _ai_level(state) >= 3:
+				discard_index = _ai_lowest_value_hand_index(who.hand)
+			who.discard.append(String(who.hand[discard_index]))
+			who.hand.remove_at(discard_index)
 	var unit := _make_unit(state, who, data, destination, side)
 	who[destination].append(unit)
 	_record_hand_play(state, side, card_id, "ingredient", int(unit.instance_id))
@@ -1456,13 +1495,25 @@ func _play_tool(state: Dictionary, side: String, hand_index: int, skip_reaction:
 		return true
 	who.hand.remove_at(hand_index)
 	who.discard.append(card_id)
+	var discarded_cost_cards: Array[String] = []
 	for unused in range(discard_cost):
 		var discard_index: int = who.hand.size() - 1
 		if side == "opponent" and _ai_level(state) >= 3:
 			discard_index = _ai_lowest_value_hand_index(who.hand)
-		who.discard.append(String(who.hand[discard_index]))
+		var discarded_cost_card := String(who.hand[discard_index])
+		who.discard.append(discarded_cost_card)
+		discarded_cost_cards.append(discarded_cost_card)
 		who.hand.remove_at(discard_index)
 	var play_group_id := _queue_play_event(state, side, card_id, "tool")
+	if side == "opponent":
+		for discard_order in range(discarded_cost_cards.size()):
+			_queue_animation_event(state, "discard", {
+				"side": side,
+				"card_id": discarded_cost_cards[discard_order],
+				"from": "hand",
+				"discard_order": discard_order,
+				"discard_count": discarded_cost_cards.size()
+			}, play_group_id)
 	_log(state, "%s uses %s." % [_side_name(side), data.name])
 	if side == "player" and _ai_hand_trap_stops(state, "enemy_tool", side):
 		_log(state, "%s is negated." % data.name)
@@ -1612,6 +1663,7 @@ func _start_turn(state: Dictionary, side: String, draw_card: bool = true) -> boo
 						unit.health += growth
 						unit.max_health += growth
 						_queue_buff_event(state, side, unit, growth, growth, growth_group_id)
+		_resolve_effects(state, side, card(String(who.environment)).get("on_turn_start", []), {})
 	if should_draw:
 		_draw(state, side)
 		while who.hand.size() < START_TURN_HAND_FLOOR and not who.deck.is_empty():
@@ -2217,7 +2269,7 @@ func _ai_attack_with_unit(state: Dictionary, unit: Dictionary) -> void:
 		var deferred_direct_events: Array[Dictionary] = []
 		if defer_on_attack_animation:
 			deferred_direct_events = _take_animation_events_from(state, on_attack_animation_start_id)
-		_deal_chef_damage(state, "player", int(unit.attack), "opponent", true)
+		_deal_chef_damage(state, "player", int(unit.attack), "opponent", true, -1, String(unit_data.get("card_type", "ingredient")))
 		if not state.get("pending_reaction", {}).is_empty():
 			_append_animation_events(state, deferred_direct_events)
 			return
@@ -2519,7 +2571,15 @@ func _resolve_unit_battle(state: Dictionary, attacker_side: String, attacker: Di
 		}, combat_group_id)
 	defender.health -= attack_value
 	attacker.health -= defense_value
-	_deal_chef_damage(state, defender_side, overflow_damage, attacker_side, true, combat_group_id)
+	_deal_chef_damage(
+		state,
+		defender_side,
+		overflow_damage,
+		attacker_side,
+		true,
+		combat_group_id,
+		String(card(String(attacker.card_id)).get("card_type", "ingredient"))
+	)
 	if overflow_damage > 0:
 		_resolve_effects(state, attacker_side, card(String(attacker.card_id)).get("on_combat_damage_to_chef", []), attacker, -1, false)
 	if attack_value > 0:
@@ -2564,6 +2624,9 @@ func _resolve_effects(
 	var enemy_side := "opponent" if side == "player" else "player"
 	for effect_index in range(effects.size()):
 		var effect: Dictionary = effects[effect_index]
+		if not _effect_condition_is_met(state, side, effect):
+			_log(state, "%s's condition was not met." % _effect_label(effect))
+			continue
 		if String(effect.get("type", "")) == "revive" and state[side].prep.size() >= PREP_SLOTS:
 			_log(state, "%s has no room in Prep for a revived unit." % _side_name(side))
 			continue
@@ -2649,10 +2712,22 @@ func _resolve_effects(
 				state[side].life = mini(STARTING_LIFE, int(state[side].life) + player_healing)
 				_queue_heal_event(state, side, "chef", -1, int(state[side].life) - life_before)
 			"damage_enemy_player":
-				_deal_chef_damage(state, enemy_side, amount, side, false)
+				_deal_chef_damage(
+					state,
+					enemy_side,
+					amount,
+					side,
+					false,
+					-1,
+					String(card(String(source.get("card_id", ""))).get("card_type", ""))
+				)
 			"discard_hand":
-				for discarded_card in state[side].hand:
-					state[side].discard.append(String(discarded_card))
+				var discarded_hand: Array = state[side].hand.duplicate()
+				for discard_order in range(discarded_hand.size()):
+					var discarded_card := String(discarded_hand[discard_order])
+					state[side].discard.append(discarded_card)
+					if side == "opponent":
+						_queue_animation_event(state, "discard", {"side": side, "card_id": discarded_card, "from": "hand", "discard_order": discard_order, "discard_count": discarded_hand.size()})
 				state[side].hand.clear()
 			"shuffle_both_hands_then_draw":
 				# Chef Duff follows Pokémon TCG's Judge pattern: both hands are
@@ -2665,15 +2740,23 @@ func _resolve_effects(
 					for unused in range(amount):
 						_draw(state, affected_side)
 			"discard_hand_then_draw":
-				for discarded_card in state[side].hand:
-					state[side].discard.append(String(discarded_card))
+				var discarded_hand: Array = state[side].hand.duplicate()
+				for discard_order in range(discarded_hand.size()):
+					var discarded_card := String(discarded_hand[discard_order])
+					state[side].discard.append(discarded_card)
+					if side == "opponent":
+						_queue_animation_event(state, "discard", {"side": side, "card_id": discarded_card, "from": "hand", "discard_order": discard_order, "discard_count": discarded_hand.size()})
 				state[side].hand.clear()
 				for unused in range(amount):
 					_draw(state, side)
 			"discard_hand_then_draw_if_any":
 				var discarded_count: int = state[side].hand.size()
-				for discarded_card in state[side].hand:
-					state[side].discard.append(String(discarded_card))
+				var discarded_hand: Array = state[side].hand.duplicate()
+				for discard_order in range(discarded_hand.size()):
+					var discarded_card := String(discarded_hand[discard_order])
+					state[side].discard.append(discarded_card)
+					if side == "opponent":
+						_queue_animation_event(state, "discard", {"side": side, "card_id": discarded_card, "from": "hand", "discard_order": discard_order, "discard_count": discarded_hand.size()})
 				state[side].hand.clear()
 				if discarded_count > 0:
 					for unused in range(amount):
@@ -2682,6 +2765,8 @@ func _resolve_effects(
 				if not state[side].deck.is_empty():
 					var discarded_id := String(state[side].deck.pop_back())
 					state[side].discard.append(discarded_id)
+					if side == "opponent":
+						_queue_animation_event(state, "discard", {"side": side, "card_id": discarded_id, "from": "deck"})
 					_log(state, "%s discards %s from the top of the deck." % [_side_name(side), card(discarded_id).get("name", discarded_id)])
 			"damage_enemy_prep":
 				if not state[enemy_side].prep.is_empty():
@@ -2768,6 +2853,28 @@ func _resolve_effects(
 					source.health += health_bonus
 					source.max_health += health_bonus
 					_queue_buff_event(state, side, source, attack_bonus, health_bonus)
+			"discard_all_friendly_prep_then_buff_self":
+				if not source.is_empty():
+					var prep_ids: Array[int] = []
+					for prep_unit in state[side].prep:
+						prep_ids.append(int(prep_unit.instance_id))
+					var discarded_count := 0
+					var discard_group_id := _next_animation_group(state)
+					for prep_id in prep_ids:
+						var discarded_unit := _remove_unit(state[side], prep_id)
+						if discarded_unit.is_empty():
+							continue
+						discarded_count += 1
+						_queue_unit_event(state, "destroy", side, discarded_unit, "attack_effect_discard", discard_group_id, "prep")
+						_discard_unit_attachments(state[side], discarded_unit)
+						_discard_unit_card(state[side], discarded_unit)
+					if discarded_count > 0:
+						var attack_bonus := discarded_count * int(effect.get("attack_per_card", 1))
+						var health_bonus := discarded_count * int(effect.get("health_per_card", 1))
+						source.attack += attack_bonus
+						source.health += health_bonus
+						source.max_health += health_bonus
+						_queue_buff_event(state, side, source, attack_bonus, health_bonus)
 			"buff_self_from_discard_attack":
 				if not source.is_empty():
 					var total_attack := 0
@@ -2812,6 +2919,8 @@ func _resolve_effects(
 				if not state[side].deck.is_empty():
 					var discarded_id := String(state[side].deck.pop_back())
 					state[side].discard.append(discarded_id)
+					if side == "opponent":
+						_queue_animation_event(state, "discard", {"side": side, "card_id": discarded_id, "from": "deck"})
 					_log(state, "%s discards %s from the top of the deck." % [_side_name(side), card(discarded_id).get("name", discarded_id)])
 					if String(card(discarded_id).get("card_type", "")) in ["ingredient", "meal"] and not source.is_empty():
 						var attack_bonus := int(effect.get("attack", 0))
@@ -3029,6 +3138,19 @@ func _resolve_effects(
 	_check_game_over(state)
 
 
+func _effect_condition_is_met(state: Dictionary, side: String, effect: Dictionary) -> bool:
+	var condition := String(effect.get("condition", ""))
+	if condition.is_empty():
+		return true
+	var enemy_side := "opponent" if side == "player" else "player"
+	match condition:
+		"enemy_player_has_more_health":
+			return int(state[enemy_side].life) > int(state[side].life)
+		_:
+			push_warning("Unknown card-effect condition: %s" % condition)
+			return false
+
+
 func _effect_needs_board_choice(effect: Dictionary) -> bool:
 	var effect_type := String(effect.get("type", ""))
 	if effect_type == "damage_enemy_prep":
@@ -3054,11 +3176,15 @@ func _valid_discard_indices(combatant: Dictionary, effect: Dictionary) -> Array[
 	var result: Array[int] = []
 	var allowed_types: Array = effect.get("card_types", [])
 	var required_type := String(effect.get("card_type", ""))
+	var required_archetype := String(effect.get("archetype", ""))
 	for discard_index in range(combatant.discard.size()):
-		var candidate_type := String(card(String(combatant.discard[discard_index])).get("card_type", ""))
+		var candidate := card(String(combatant.discard[discard_index]))
+		var candidate_type := String(candidate.get("card_type", ""))
 		if required_type != "" and candidate_type != required_type:
 			continue
 		if not allowed_types.is_empty() and not allowed_types.has(candidate_type):
+			continue
+		if required_archetype != "" and not _card_has_archetype(candidate, required_archetype):
 			continue
 		result.append(discard_index)
 	return result
@@ -3232,7 +3358,15 @@ func _resume_pending_action(state: Dictionary) -> void:
 		"target_instance_id": target_instance_id
 	}, 0)
 	if target_instance_id < 0:
-		_deal_chef_damage(state, "opponent", int(attacker.attack), "player", true)
+		_deal_chef_damage(
+			state,
+			"opponent",
+			int(attacker.attack),
+			"player",
+			true,
+			-1,
+			String(card(String(attacker.card_id)).get("card_type", "ingredient"))
+		)
 		if int(attacker.attack) > 0:
 			_resolve_effects(state, "player", card(String(attacker.card_id)).get("on_combat_damage_to_chef", []), attacker)
 		_log(state, "%s hits the opposing chef for %d." % [attacker.name, attacker.attack])
@@ -3491,7 +3625,7 @@ func _recipe_text(recipe: Array) -> String:
 	for requirement_value in recipe:
 		var requirement := String(requirement_value)
 		if requirement == "any":
-			parts.append("Anything")
+			parts.append("*")
 		else:
 			var options: Array[String] = []
 			for option in requirement.split("|"):
@@ -3571,7 +3705,15 @@ func _first_copyable_ability(data: Dictionary) -> Dictionary:
 	return {}
 
 
-func _deal_chef_damage(state: Dictionary, target_side: String, amount: int, source_side: String = "", combat_damage: bool = false, animation_group_id: int = -1) -> void:
+func _deal_chef_damage(
+	state: Dictionary,
+	target_side: String,
+	amount: int,
+	source_side: String = "",
+	combat_damage: bool = false,
+	animation_group_id: int = -1,
+	source_card_type: String = ""
+) -> void:
 	if amount <= 0:
 		return
 	_queue_animation_event(state, "damage", {
@@ -3580,7 +3722,8 @@ func _deal_chef_damage(state: Dictionary, target_side: String, amount: int, sour
 		"target_side": target_side,
 		"target_instance_id": -1,
 		"amount": amount,
-		"combat": combat_damage
+		"combat": combat_damage,
+		"source_card_type": source_card_type
 	}, animation_group_id)
 	state[target_side].life -= amount
 	_log(state, "%s takes %d %sdamage." % [_side_name(target_side), amount, "combat " if combat_damage else ""])

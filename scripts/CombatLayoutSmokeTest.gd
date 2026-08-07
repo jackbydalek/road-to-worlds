@@ -53,8 +53,8 @@ func _run() -> void:
 	var board_info_button := table.find_child("BoardInfoButton", true, false) as Button
 	_expect(board_info_button != null and board_info_button.text == "i", "The match HUD is missing its table-information control.")
 	_expect(not table.player_life.visible and not table.opponent_life.visible, "Duplicate life totals still occupy the top HUD.")
-	_expect((table.player_chef.get_node("Label") as Label3D).text == "15", "The player Chef puck still shows a name instead of only its life total.")
-	_expect((table.opponent_chef.get_node("Label") as Label3D).text == "15", "The rival Chef puck still shows a name instead of only its life total.")
+	_expect((table.player_chef.get_node("Label") as Label3D).text == str(int(table.state.player.life)), "The player Chef puck still shows a name instead of only its life total.")
+	_expect((table.opponent_chef.get_node("Label") as Label3D).text == str(int(table.state.opponent.life)), "The rival Chef puck still shows a name instead of only its life total.")
 	var board_info_labels: Array[Label3D] = []
 	for label_node in table.card_layer.find_children("*", "Label3D", true, false):
 		if bool(label_node.get_meta("board_info_label", false)):
@@ -81,10 +81,12 @@ func _run() -> void:
 	_expect(table.title_label.text == "Weekly Locals  •  ROUND 1 OF 3", "The match HUD still exposes prototype or AI-facing copy.")
 	_expect(table.end_turn_button.text == "END TURN  →", "The primary turn action is not clearly labeled.")
 	for choice_button in [table.confirm_choice_button, table.cancel_choice_button, table.battle_log_close_button, table.card_tray_confirm_button, table.card_tray_skip_button]:
-		for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
+		for state_name in ["normal", "hover", "pressed", "disabled"]:
+			var color_name := "font_color" if state_name == "normal" else "font_%s_color" % state_name
+			var style := choice_button.get_theme_stylebox(state_name) as StyleBoxFlat
 			_expect(
-				choice_button.get_theme_color(color_name).get_luminance() >= 0.70,
-				"A dark battle-menu button has low-contrast text in its %s state." % color_name
+				style != null and _contrast_ratio(choice_button.get_theme_color(color_name), style.bg_color) >= 4.5,
+				"A battle-menu button has low-contrast text in its %s state." % state_name
 			)
 	_expect(table.status_context_label.text == "YOUR MOVE", "The instruction strip is missing its action context.")
 	_expect(not table.status_panel.visible, "The bottom instruction strip remains visible during ordinary play.")
@@ -111,6 +113,7 @@ func _run() -> void:
 	var meal_candidate_card := table.find_child("PlayerPrepCard_%d" % meal_test_ingredient_id, true, false) as Node3D
 	var candidate_aura := meal_candidate_card.find_child("MealIngredientCandidateAura", true, false) as MeshInstance3D if meal_candidate_card != null else null
 	_expect(candidate_aura != null, "A recipe-ready Meal ingredient did not receive the ability-style candidate aura.")
+	_expect(meal_candidate_card.find_child("MealCandidateBadge", true, false) != null, "A recipe-ready Meal ingredient is missing its CHOOSE badge.")
 	table.state.selected_ingredients = [meal_test_ingredient_id]
 	table._render_match()
 	var selected_meal_card := table.find_child("PlayerPrepCard_%d" % meal_test_ingredient_id, true, false) as Node3D
@@ -118,8 +121,9 @@ func _run() -> void:
 	_expect(selected_meal_aura != null, "A selected Meal ingredient did not receive the stronger ability-style aura.")
 	if selected_meal_aura != null:
 		var selected_aura_material := selected_meal_aura.material_override as StandardMaterial3D
-		_expect(selected_aura_material != null and selected_aura_material.albedo_texture.resource_path.ends_with("ability_ready_aura.svg"), "The Meal selection aura does not reuse the ability-aura texture.")
+		_expect(selected_aura_material != null and selected_aura_material.albedo_texture.resource_path.ends_with("meal_selected_aura.svg"), "The selected Meal ingredient does not use its clear selected-state frame.")
 		_expect(table.pulsing_field_auras.has(selected_meal_aura), "The selected Meal ingredient aura is not registered for pulsing animation.")
+		_expect(selected_meal_card.find_child("MealSelectionBadge", true, false) != null, "A selected Meal ingredient is missing its SELECTED badge.")
 	if DisplayServer.get_name() != "headless":
 		await process_frame
 		var meal_aura_preview := root.get_texture().get_image()
@@ -135,6 +139,7 @@ func _run() -> void:
 	table._render_match()
 	_expect(not table.status_panel.visible, "The contextual action bar remained visible after its decision ended.")
 	_expect("CURRENT" in table.battle_log_text.text and String(table.state.message) in table.battle_log_text.text, "Current match guidance was not moved into the match log.")
+	_expect(table.battle_log_text.get_theme_color("default_color") == Color("#29365F"), "Match log copy did not use the readable navy ink color.")
 	table.dragging = true
 	table._refresh_status_panel_visibility()
 	_expect(not table.status_panel.visible, "The rule-error toast appeared during a valid card drag.")
@@ -207,8 +212,10 @@ func _run() -> void:
 		var hand_rect: Rect2 = table._card_screen_rect(hand_card)
 		var visible_hand_rect := hand_rect.intersection(Rect2(Vector2.ZERO, table.viewport_container.size))
 		_expect(visible_hand_rect.size.y >= hand_rect.size.y * 0.72, "Too much of the player's hand is clipped below the screen.")
-		var status_panel: Control = table.get_node("Interface/StatusPanel")
-		_expect(hand_rect.end.y <= status_panel.global_position.y - 4.0, "The message strip blocks the player's hand cards.")
+		_expect(
+			visible_hand_rect.end.y >= table.viewport_container.size.y - 4.0,
+			"The player's hand is no longer anchored to the bottom screen edge."
+		)
 		var visible_click_point := Vector2(visible_hand_rect.get_center().x, visible_hand_rect.position.y + 12.0)
 		_expect(table._pick_card(visible_click_point) == hand_card, "The visible portion of a hand card is not clickable.")
 		_expect(table._can_drag_card(hand_card), "A player hand card cannot begin a drag during the player's main phase.")
@@ -260,3 +267,18 @@ func _expect(condition: bool, message: String) -> void:
 		return
 	failed = true
 	push_error(message)
+
+
+func _contrast_ratio(foreground: Color, background: Color) -> float:
+	var foreground_luminance := _relative_luminance(foreground)
+	var background_luminance := _relative_luminance(background)
+	var lighter := maxf(foreground_luminance, background_luminance)
+	var darker := minf(foreground_luminance, background_luminance)
+	return (lighter + 0.05) / (darker + 0.05)
+
+
+func _relative_luminance(color: Color) -> float:
+	var red := color.r / 12.92 if color.r <= 0.04045 else pow((color.r + 0.055) / 1.055, 2.4)
+	var green := color.g / 12.92 if color.g <= 0.04045 else pow((color.g + 0.055) / 1.055, 2.4)
+	var blue := color.b / 12.92 if color.b <= 0.04045 else pow((color.b + 0.055) / 1.055, 2.4)
+	return red * 0.2126 + green * 0.7152 + blue * 0.0722

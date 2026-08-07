@@ -57,17 +57,30 @@ func _run() -> void:
 	var saved_round := int(main.run.active_tournament.get("round", 0))
 	var saved_seed := int(main.run.active_tournament.get("current_seed", 0))
 	var saved_opponent := String(main.run.active_tournament.get("current_opponent", {}).get("name", ""))
+	var active_tabletop = main.find_child("Tabletop3DPrototype", true, false)
+	_expect(active_tabletop != null, "The active match did not create a Living Table instance.")
+	if active_tabletop != null:
+		active_tabletop.state.turn = 4
+		active_tabletop.state.phase = "player_main"
+		active_tabletop.state.player.life = 13
+		active_tabletop.state.opponent.life = 9
+		active_tabletop.state.message = "Exact checkpoint marker"
 	main._autosave_now("kitchen_match")
 	main.autosave_enabled = false
+	await create_timer(1.15).timeout
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
 	main.queue_free()
-	await process_frame
+	for unused_frame in range(4):
+		await process_frame
 
 	var resumed = MAIN_SCENE.instantiate()
 	root.add_child(resumed)
 	await process_frame
 	await process_frame
 	resumed.run_state_service.save_path = TEST_SAVE_PATH
-	resumed._load_run_from_disk()
+	# Exercise the title-screen Continue route, not only the internal load helper.
+	resumed._continue_run_to_shop()
 	await process_frame
 	await process_frame
 	_expect(resumed.current_screen == "kitchen_match", "Continue did not return an interrupted match to the Kitchen Match screen.")
@@ -78,9 +91,20 @@ func _run() -> void:
 	_expect(resumed_tabletop != null, "Continue did not rebuild the interrupted Living Table match.")
 	if resumed_tabletop != null:
 		_expect(int(resumed_tabletop.configured_seed) == saved_seed and int(resumed_tabletop.configured_match_context.get("round", 0)) == saved_round, "Continue did not restore the Living Table seed and tournament round configuration.")
+		_expect(int(resumed_tabletop.state.get("turn", 0)) == 4, "Continue restarted the battle instead of restoring its saved turn.")
+		_expect(int(resumed_tabletop.state.get("player", {}).get("life", 0)) == 13, "Continue did not restore player life.")
+		_expect(int(resumed_tabletop.state.get("opponent", {}).get("life", 0)) == 9, "Continue did not restore opponent life.")
+		_expect(String(resumed_tabletop.state.get("message", "")) == "Exact checkpoint marker", "Continue did not restore the exact combat state.")
+	var clear_result: Dictionary = resumed.run_state_service.clear_saved_run()
+	_expect(bool(clear_result.get("ok", false)), "Abandon Run could not remove the autosave files.")
+	_expect(not resumed.run_state_service.has_saved_run(), "Abandon Run left a primary or backup autosave behind.")
 
+	await create_timer(1.15).timeout
+	resumed._release_audio_streams()
+	await create_timer(0.12).timeout
 	resumed.queue_free()
-	await process_frame
+	for unused_frame in range(4):
+		await process_frame
 	_cleanup_test_saves()
 	if failed:
 		quit(1)

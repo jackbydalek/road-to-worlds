@@ -2,16 +2,36 @@
 
 [ext_resource type="PackedScene" uid="uid://chxdi02oet6l2" path="res://assets/card_shop/counter.glb" id="1_08b7n"]
 [ext_resource type="Texture2D" uid="uid://dh0jjo7xgomou" path="res://assets/card_shop/PandaMat.png" id="2_485ie"]
+[ext_resource type="Shader" path="res://assets/shaders/lofi_material_remap.gdshader" id="3_remap"]
+[ext_resource type="Shader" path="res://assets/shaders/lofi_outline.gdshader" id="4_outline"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_08b7n"]
-shading_mode = 0
-albedo_texture = ExtResource("2_485ie")
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_counter_outline"]
+shader = ExtResource("4_outline")
+shader_parameter/outline_color = Color(0.161, 0.212, 0.373, 1)
+shader_parameter/outline_width = 0.032
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2o3rj"]
-albedo_texture = ExtResource("2_485ie")
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_counter"]
+next_pass = SubResource("ShaderMaterial_counter_outline")
+shader = ExtResource("3_remap")
+shader_parameter/source_texture = ExtResource("2_485ie")
+shader_parameter/shadow_color = Color(0.16, 0.21, 0.37, 1)
+shader_parameter/mid_color = Color(0.56, 0.66, 0.90, 1)
+shader_parameter/highlight_color = Color(1.0, 0.94, 0.86, 1)
+shader_parameter/midpoint = 0.43
+shader_parameter/material_roughness = 0.86
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_counter_surface"]
+next_pass = SubResource("ShaderMaterial_counter_outline")
+shader = ExtResource("3_remap")
+shader_parameter/source_texture = ExtResource("2_485ie")
+shader_parameter/shadow_color = Color(0.20, 0.42, 0.47, 1)
+shader_parameter/mid_color = Color(0.50, 0.78, 0.74, 1)
+shader_parameter/highlight_color = Color(0.96, 0.84, 0.89, 1)
+shader_parameter/midpoint = 0.46
+shader_parameter/material_roughness = 0.82
 
 [node name="counter" unique_id=1291513717 instance=ExtResource("1_08b7n")]
 
 [node name="KFP_Prop_Fridge_04" parent="." index="0" unique_id=1783181367]
-material_override = SubResource("StandardMaterial3D_08b7n")
-surface_material_override/0 = SubResource("StandardMaterial3D_2o3rj")
+material_override = SubResource("ShaderMaterial_counter")
+surface_material_override/0 = SubResource("ShaderMaterial_counter_surface")

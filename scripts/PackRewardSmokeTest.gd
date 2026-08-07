@@ -20,6 +20,12 @@ func _init() -> void:
 		for pack_index in range(40):
 			var pack: Array = economy.generate_pack(booster_id, "spicy")
 			_expect(pack.size() == 5, "%s did not generate exactly five cards." % booster_id)
+			for entry in pack:
+				var card_id := String((entry as Dictionary).get("cardId", ""))
+				_expect(
+					bool(catalog.cards_by_id.get(card_id, {}).get("public_reward_eligible", false)),
+					"%s exposed unfinished card art for %s." % [booster_id, card_id]
+				)
 
 	for affinity in AFFINITY_ORDER:
 		for pack_index in range(100):
@@ -60,7 +66,7 @@ func _init() -> void:
 		"Dual-affinity cards did not qualify through their secondary affinity."
 	)
 	_expect(
-		economy.card_is_affinity_reward_eligible(catalog.cards_by_id["environment_slow_cooker"], "spicy"),
+		economy.card_is_affinity_reward_eligible(catalog.cards_by_id["environment_hearty_diner"], "spicy"),
 		"Off-affinity Environments were not retained in the tournament support pool."
 	)
 	_expect(
@@ -71,6 +77,17 @@ func _init() -> void:
 		not economy.card_is_affinity_reward_eligible(catalog.cards_by_id["fresh_sprout_squirrel"], "sweet"),
 		"Off-affinity units were allowed into the tournament reward pool."
 	)
+
+	var shop_run := {"shop": []}
+	for inventory_index in range(40):
+		economy.generate_shop_inventory(shop_run, "spicy")
+		_expect(shop_run.shop.size() == 8, "The finished-art singles pool could not fill all eight slots.")
+		for card_id_value in shop_run.shop:
+			var card_id := String(card_id_value)
+			_expect(
+				bool(catalog.cards_by_id.get(card_id, {}).get("public_reward_eligible", false)),
+				"The singles case exposed unfinished card art for %s." % card_id
+			)
 
 	if failed:
 		quit(1)

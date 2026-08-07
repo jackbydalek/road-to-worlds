@@ -2,6 +2,7 @@ extends Control
 
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 signal match_finished(result: Dictionary)
 signal exit_requested
@@ -24,6 +25,7 @@ var card_font: Font
 var player_deck_id := ""
 var inspected_card: Dictionary = {}
 var inspect_overlay: PanelContainer
+var inspect_overlay_request_generation := 0
 var season_match := false
 var configured_player_deck: Dictionary = {}
 var configured_opponent_deck: Dictionary = {}
@@ -91,7 +93,7 @@ func _notification(what: int) -> void:
 func _build_shell() -> void:
 	if not use_authored_arena:
 		var background := ColorRect.new()
-		background.color = Color("#f3efe5")
+		background.color = Color("#F2D0A4")
 		background.set_anchors_preset(Control.PRESET_FULL_RECT)
 		add_child(background)
 		var margin := MarginContainer.new()
@@ -194,10 +196,7 @@ func _refresh() -> void:
 	# into a later Living Table consumer or persisted match.
 	service.clear_animation_events(state)
 	_capture_removed_event_geometry(visual_events)
-	if is_instance_valid(inspect_overlay):
-		inspect_overlay.get_parent().remove_child(inspect_overlay)
-		inspect_overlay.queue_free()
-	inspect_overlay = null
+	_clear_inspect_overlay()
 	unit_visual_nodes.clear()
 	hand_visual_nodes.clear()
 	environment_visual_nodes.clear()
@@ -351,12 +350,6 @@ func _build_arena_side(side: String) -> void:
 
 func _build_zone_at_anchor(anchor: HBoxContainer, combatant: Dictionary, zone_name: String, is_player: bool) -> void:
 	var capacity: int = service.PLATED_SLOTS if zone_name == "plated" else service.PREP_SLOTS
-	anchor.tooltip_text = "%s — %s (%d/%d)" % [
-		zone_name.capitalize(),
-		"can attack and be attacked" if zone_name == "plated" else "protected, normally cannot attack",
-		combatant[zone_name].size(),
-		capacity
-	]
 	if is_player:
 		_wire_unit_zone_drop(anchor, zone_name)
 	for slot_index in range(capacity):
@@ -485,7 +478,7 @@ func _build_environment(parent: Node, combatant: Dictionary, is_player: bool) ->
 				if String(ability.get("timing", "")) != "activated" or String(ability.get("active_zone", "")) != "environment":
 					continue
 				var ability_id := String(ability.get("id", "activated"))
-				var used := bool(ability.get("once_per_turn", false)) and combatant.get("environment_used_abilities", []).has(ability_id)
+				var used: bool = bool(ability.get("once_per_turn", false)) and combatant.get("environment_used_abilities", []).has(ability_id)
 				var activate := _button("Used" if used else "Activate Ability", true)
 				activate.name = "CookingActivateEnvironmentAbility_%s" % ability_id
 				activate.disabled = used or not _dragging_allowed()
@@ -1029,7 +1022,6 @@ func _add_hand_card(parent: Node, hand_index: int, card_id: String) -> void:
 
 func _bind_hand_card_action_toggle(panel: Control, hand_index: int, card_id: String) -> void:
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	panel.tooltip_text = "Drag to play • click for card actions"
 	var click_state := {"tracking": false, "origin": Vector2.ZERO}
 	panel.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -1114,7 +1106,6 @@ func _add_hand_action_buttons(parent: HBoxContainer, hand_index: int, card_id: S
 		"ingredient":
 			for destination in ["prep", "plated"]:
 				var play := _hand_card_action_button(destination.capitalize())
-				play.tooltip_text = "Play %s to %s" % [String(data.get("name", card_id)), destination.capitalize()]
 				var selected_destination := String(destination)
 				play.pressed.connect(func() -> void:
 					service.play_card(state, hand_index, selected_destination)
@@ -1145,9 +1136,9 @@ func _hand_card_action_button(text: String) -> Button:
 	var button := _button(text, true)
 	button.custom_minimum_size = Vector2(62, 28)
 	button.add_theme_font_size_override("font_size", 12)
-	button.add_theme_stylebox_override("normal", _panel_style(Color("#255c70"), Color("#123b4b"), 1, 8))
-	button.add_theme_stylebox_override("hover", _panel_style(Color("#3181a1"), Color("#f3c765"), 1, 8))
-	button.add_theme_stylebox_override("pressed", _panel_style(Color("#173e52"), Color("#f3c765"), 1, 8))
+	button.add_theme_stylebox_override("normal", _panel_style(PALETTE.TEAL, PALETTE.TEAL_DARK, 1, 8))
+	button.add_theme_stylebox_override("hover", _panel_style(PALETTE.TEAL_HOVER, PALETTE.APRICOT, 1, 8))
+	button.add_theme_stylebox_override("pressed", _panel_style(PALETTE.TEAL_DARK, PALETTE.APRICOT, 1, 8))
 	return button
 
 
@@ -1322,8 +1313,8 @@ func _build_action_bar(parent: Control) -> void:
 		row.add_child(face)
 	var end_turn := _button("End Turn")
 	end_turn.name = "CookingEndTurnButton"
-	end_turn.add_theme_stylebox_override("normal", _panel_style(Color("#c85d2d"), Color("#8f3c1f"), 2, 4))
-	end_turn.add_theme_stylebox_override("hover", _panel_style(Color("#ef7131"), Color("#f3c765"), 2, 4))
+	end_turn.add_theme_stylebox_override("normal", _panel_style(PALETTE.TEAL, PALETTE.BRICK, 2, 4))
+	end_turn.add_theme_stylebox_override("hover", _panel_style(PALETTE.TEAL_HOVER, PALETTE.APRICOT, 2, 4))
 	end_turn.disabled = String(state.phase) != "player_main"
 	end_turn.pressed.connect(func() -> void:
 		_end_player_turn_with_sequence()
@@ -1370,12 +1361,6 @@ func _wire_unit_slot_drag_and_drop(control: Control, unit: Dictionary, zone_name
 		func(_at_position: Vector2, data: Variant) -> void:
 			_drop_on_unit_slot(data, unit, zone_name, is_player)
 	)
-	if unit.is_empty():
-		control.tooltip_text = "Drop a unit here"
-	elif is_player:
-		control.tooltip_text = "Drag to the other zone, or drag a Spice onto this card"
-	elif zone_name == "plated":
-		control.tooltip_text = "Drag a ready Plated attacker here to battle"
 
 
 func _wire_unit_zone_drop(control: Control, zone_name: String) -> void:
@@ -1387,7 +1372,6 @@ func _wire_unit_zone_drop(control: Control, zone_name: String) -> void:
 		func(_at_position: Vector2, data: Variant) -> void:
 			_drop_on_unit_slot(data, {}, zone_name, true)
 	)
-	control.tooltip_text = "Drop an Ingredient or Meal here"
 
 
 func _wire_environment_drop(control: Control) -> void:
@@ -1399,7 +1383,6 @@ func _wire_environment_drop(control: Control) -> void:
 		func(_at_position: Vector2, data: Variant) -> void:
 			_drop_environment(data)
 	)
-	control.tooltip_text = "Drop an Environment card here"
 
 
 func _wire_opponent_face_drop(control: Control) -> void:
@@ -1411,7 +1394,6 @@ func _wire_opponent_face_drop(control: Control) -> void:
 		func(_at_position: Vector2, data: Variant) -> void:
 			_drop_on_opponent_face(data)
 	)
-	control.tooltip_text = "Drop a ready Plated attacker here to attack the opposing chef"
 
 
 func _can_drop_on_unit_slot(data: Variant, target_unit: Dictionary, zone_name: String, is_player: bool) -> bool:
@@ -1885,14 +1867,14 @@ func _animate_opponent_hand_play(event: Dictionary) -> void:
 	tween.tween_callback(Callable(ghost, "queue_free"))
 
 
-func _reveal_opponent_play_ghost(ghost: PanelContainer, ghost_label: Label, data: Dictionary) -> void:
+func _reveal_opponent_play_ghost(ghost, ghost_label, data: Dictionary) -> void:
 	if not is_instance_valid(ghost) or not is_instance_valid(ghost_label):
 		return
 	ghost.add_theme_stylebox_override("panel", _panel_style(_card_type_color(String(data.get("card_type", ""))), Color("#fff09a"), 3, 5))
 	ghost_label.text = "%s\n%s" % [AFFINITY_VISUALS.card_display_name(data), AFFINITY_VISUALS.card_type_label(String(data.get("card_type", "card")))]
 
 
-func _land_opponent_hand_play(target: Control, action_kind: String) -> void:
+func _land_opponent_hand_play(target, action_kind: String) -> void:
 	if not is_instance_valid(target):
 		return
 	if action_kind in ["ingredient", "meal", "environment"]:
@@ -2194,7 +2176,6 @@ func _add_inspect_header(parent: Node, data: Dictionary, side: String, zone_name
 	var inspect := _button("i", true)
 	inspect.name = "CookingInspectCard_%s_%s_%d" % [side.capitalize(), zone_name.capitalize(), instance_id]
 	inspect.custom_minimum_size = Vector2(22, 21)
-	inspect.tooltip_text = "Inspect card and zone effects"
 	var card_id := String(data.get("id", ""))
 	inspect.pressed.connect(func() -> void:
 		_open_card_inspector(card_id, side, zone_name, instance_id)
@@ -2204,7 +2185,6 @@ func _add_inspect_header(parent: Node, data: Dictionary, side: String, zone_name
 
 func _bind_card_panel_inspection(panel: Control, card_id: String, side: String, zone_name: String, instance_id: int = -1) -> void:
 	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	panel.tooltip_text = "Drag to play or move • click to inspect card and zone effects" if zone_name in ["hand", "prep", "plated"] else "Click to inspect card and zone effects"
 	var click_state := {"tracking": false, "origin": Vector2.ZERO}
 	panel.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -2229,7 +2209,11 @@ func _open_card_inspector(card_id: String, side: String, zone_name: String, inst
 		"zone": zone_name,
 		"instance_id": instance_id
 	}
-	call_deferred("_refresh")
+	# Inspector requests can arrive while another inspector is still on screen.
+	# Replace just that popout rather than rebuilding the entire combat layout; the
+	# generation check collapses rapid clicks to the newest requested card.
+	inspect_overlay_request_generation += 1
+	call_deferred("_replace_card_inspector", inspect_overlay_request_generation)
 
 
 func _show_card_inspector_immediately(card_id: String, side: String, zone_name: String, instance_id: int = -1) -> void:
@@ -2239,14 +2223,27 @@ func _show_card_inspector_immediately(card_id: String, side: String, zone_name: 
 		"zone": zone_name,
 		"instance_id": instance_id
 	}
-	if is_instance_valid(inspect_overlay):
-		inspect_overlay.get_parent().remove_child(inspect_overlay)
-		inspect_overlay.queue_free()
-	inspect_overlay = null
+	inspect_overlay_request_generation += 1
+	_replace_card_inspector(inspect_overlay_request_generation)
+
+
+func _replace_card_inspector(request_generation: int) -> void:
+	if request_generation != inspect_overlay_request_generation:
+		return
+	_clear_inspect_overlay()
 	if use_authored_arena:
 		_build_inspect_overlay(arena_anchors.InspectionAnchor, true)
 	else:
 		_build_inspect_overlay(self, false)
+
+
+func _clear_inspect_overlay() -> void:
+	if is_instance_valid(inspect_overlay):
+		var overlay_parent := inspect_overlay.get_parent()
+		if is_instance_valid(overlay_parent):
+			overlay_parent.remove_child(inspect_overlay)
+		inspect_overlay.queue_free()
+	inspect_overlay = null
 
 
 func _build_inspect_overlay(parent: Control, authored_layout: bool) -> void:
@@ -2464,6 +2461,8 @@ func _inspect_zone_effects(data: Dictionary, zone_name: String, unit: Dictionary
 		lines.append("%s — Triggers when this card attacks" % ("ACTIVE IN PLATED" if zone_name == "plated" else "INACTIVE — REQUIRES PLATED"))
 	if not data.get("on_combat_damage_to_chef", []).is_empty():
 		lines.append("%s — Triggers after dealing combat damage to the opposing chef" % ("ACTIVE IN PLATED" if zone_name == "plated" else "INACTIVE — REQUIRES PLATED"))
+	if bool(data.get("can_attack_from_prep", false)):
+		lines.append("%s — Can attack from Prep" % ("ACTIVE IN PREP" if zone_name == "prep" else "INACTIVE — REQUIRES PREP"))
 	if not data.get("on_play", []).is_empty():
 		lines.append("%s — On-play effect" % ("TRIGGERS WHEN PLAYED" if not in_play else "RESOLVED WHEN PLAYED"))
 	if not data.get("on_sacrifice", []).is_empty():
@@ -2568,9 +2567,9 @@ func _button(text: String, compact: bool = false) -> Button:
 	button.custom_minimum_size = Vector2(0, 21 if compact else 28)
 	button.add_theme_font_override("font", card_font)
 	button.add_theme_font_size_override("font_size", 10 if compact else 13)
-	button.add_theme_stylebox_override("normal", _panel_style(Color("#255c70"), Color("#123b4b"), 1, 3))
-	button.add_theme_stylebox_override("hover", _panel_style(Color("#3181a1"), Color("#f3c765"), 1, 3))
-	button.add_theme_stylebox_override("pressed", _panel_style(Color("#173e52"), Color("#f3c765"), 1, 3))
+	button.add_theme_stylebox_override("normal", _panel_style(PALETTE.TEAL, PALETTE.TEAL_DARK, 1, 3))
+	button.add_theme_stylebox_override("hover", _panel_style(PALETTE.TEAL_HOVER, PALETTE.APRICOT, 1, 3))
+	button.add_theme_stylebox_override("pressed", _panel_style(PALETTE.TEAL_DARK, PALETTE.APRICOT, 1, 3))
 	return button
 
 

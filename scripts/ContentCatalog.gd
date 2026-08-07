@@ -130,6 +130,18 @@ func _decorate_card(card: Dictionary) -> void:
 	card["role"] = _role_for_type(card_type)
 	card["stats"] = _season_stats(card)
 	card["tags"] = _card_tags(card)
+	# The full canonical catalog remains playable, but public packs and singles
+	# only surface cards with final dedicated art.
+	card["public_reward_eligible"] = _has_finished_art(card)
+
+
+func _has_finished_art(card: Dictionary) -> bool:
+	for frame_path_value in card.get("art_frames", []):
+		var frame_path := String(frame_path_value)
+		if frame_path != "" and ResourceLoader.exists(frame_path):
+			return true
+	var art_path := String(card.get("art_path", ""))
+	return art_path != "" and not art_path.ends_with("art_pending.png") and ResourceLoader.exists(art_path)
 
 
 func _role_for_type(card_type: String) -> String:

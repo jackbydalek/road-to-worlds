@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/season_setup/starter_deck.glb" id="1_model"]
+[ext_resource type="Texture2D" path="res://assets/season_setup/starter_sweet_alpha.png" id="2_texture"]
+
+[sub_resource type="StandardMaterial3D" id="Material_starter_sweet"]
+transparency = 1
+cull_mode = 2
+albedo_texture = ExtResource("2_texture")
+roughness = 0.82
+
+[node name="StarterSweet" instance=ExtResource("1_model")]
+
+[node name="Cube" parent="." index="0"]
+material_override = SubResource("Material_starter_sweet")

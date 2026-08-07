@@ -2,18 +2,24 @@ extends RefCounted
 class_name WorkspaceUIComponents
 
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 const INK := SKETCH_UI.INK
 const MUTED_INK := SKETCH_UI.MUTED_INK
 const TEAL := SKETCH_UI.TEAL
 const ORANGE := SKETCH_UI.ORANGE
 const MUSTARD := SKETCH_UI.MUSTARD
-const SURFACE := Color("#FFFCF6")
-const SURFACE_WARM := Color("#F8F1E4")
-const BORDER_SOFT := Color("#C8BDAE")
-const TEAL_SOFT := Color("#DDECE8")
-const ORANGE_SOFT := Color("#F6DED5")
-const MUSTARD_SOFT := Color("#F8E8BC")
+const SURFACE := PALETTE.GHOST
+const SURFACE_WARM := PALETTE.APRICOT
+const BORDER_SOFT := PALETTE.BORDER_SOFT
+const TEAL_SOFT := PALETTE.TEAL_SOFT
+const ORANGE_SOFT := PALETTE.BRICK_SOFT
+const MUSTARD_SOFT := PALETTE.APRICOT_SOFT
+const PRICE_STICKER := Color("#D5C16D")
+const PRICE_STICKER_BORDER := Color("#756334")
+## A single, forgiving silhouette for every player-facing action. Status chips
+## deliberately remain smaller and rounder through make_badge().
+const BUTTON_RADIUS := 12
 
 
 static func clean_style(
@@ -38,7 +44,7 @@ static func clean_style(
 	style.content_margin_bottom = content_margins.w
 	style.anti_aliasing = true
 	if with_shadow:
-		style.shadow_color = Color(0.15, 0.11, 0.08, 0.18)
+		style.shadow_color = Color(0.08, 0.05, 0.16, 0.24)
 		style.shadow_size = 8
 		style.shadow_offset = Vector2(0, 3)
 	return style
@@ -109,8 +115,8 @@ static func make_price_sticker(price: int, minimum_size: Vector2 = Vector2(72, 4
 	sticker.add_theme_stylebox_override(
 		"panel",
 		clean_style(
-			Color("#F2F018"),
-			Color("#D94524") if on_sale else Color("#A18F16"),
+			PRICE_STICKER,
+			PALETTE.BRICK_DARK if on_sale else PRICE_STICKER_BORDER,
 			2 if on_sale else 1,
 			1,
 			Vector4(3, 3, 3, 3)
@@ -128,7 +134,7 @@ static func make_price_sticker(price: int, minimum_size: Vector2 = Vector2(72, 4
 		sale_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		sale_strip.add_theme_stylebox_override(
 			"panel",
-			clean_style(Color("#E54824"), Color.TRANSPARENT, 0, 0, Vector4(2, 0, 2, 0))
+			clean_style(PALETTE.BRICK, Color.TRANSPARENT, 0, 0, Vector4(2, 0, 2, 0))
 		)
 		copy.add_child(sale_strip)
 		var sale := Label.new()
@@ -138,7 +144,7 @@ static func make_price_sticker(price: int, minimum_size: Vector2 = Vector2(72, 4
 		sale.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		sale.add_theme_font_override("font", SKETCH_UI.body_font(0.72))
 		sale.add_theme_font_size_override("font_size", 13)
-		sale.add_theme_color_override("font_color", Color("#FFF327"))
+		sale.add_theme_color_override("font_color", PALETTE.GHOST)
 		sale_strip.add_child(sale)
 
 	var amount := Label.new()
@@ -150,7 +156,7 @@ static func make_price_sticker(price: int, minimum_size: Vector2 = Vector2(72, 4
 	amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	amount.add_theme_font_override("font", SKETCH_UI.body_font(0.55))
 	amount.add_theme_font_size_override("font_size", 16 if on_sale else 18)
-	amount.add_theme_color_override("font_color", Color("#111111"))
+	amount.add_theme_color_override("font_color", PALETTE.INK)
 	copy.add_child(amount)
 	return sticker
 
@@ -178,54 +184,45 @@ static func style_button(button: Button, variant: String = "secondary") -> void:
 	button.add_theme_color_override("font_pressed_color", text_color)
 	button.add_theme_color_override(
 		"font_disabled_color",
-		text_color if variant == "selected" else Color("#8D847A")
+		text_color if variant == "selected" else Color("#85829A")
 	)
 
 
 static func button_style(variant: String, state: String) -> StyleBoxFlat:
-	var normal_fill := SURFACE
-	var hover_fill := TEAL_SOFT
-	var pressed_fill := MUSTARD_SOFT
-	var disabled_fill := Color("#E9E3D9")
-	var border := BORDER_SOFT
+	var fill := Color(PALETTE.LAVENDER_GLASS, 0.86)
+	var border := PALETTE.PERIWINKLE
 	if variant == "primary":
-		normal_fill = TEAL
-		hover_fill = TEAL.lightened(0.08)
-		pressed_fill = TEAL.darkened(0.08)
-		border = TEAL.darkened(0.18)
-	elif variant == "selected":
-		normal_fill = TEAL_SOFT
-		hover_fill = TEAL_SOFT
-		pressed_fill = TEAL_SOFT
-		disabled_fill = TEAL_SOFT
-		border = TEAL
-	elif variant == "danger" or variant == "icon":
-		normal_fill = ORANGE_SOFT
-		hover_fill = Color("#F2CABB")
-		pressed_fill = Color("#EDB7A4")
-		border = ORANGE
+		fill = Color(PALETTE.CORAL, 0.92)
+		border = PALETTE.NAVY
 	elif variant == "target":
-		normal_fill = MUSTARD_SOFT
-		hover_fill = Color("#F5D98F")
-		pressed_fill = Color("#EDC866")
-		border = MUSTARD.darkened(0.22)
+		fill = Color(PALETTE.PERIWINKLE, 0.90)
+		border = PALETTE.NAVY
+	elif variant == "selected":
+		fill = Color(PALETTE.SKY, 0.88)
+		border = PALETTE.NAVY
+	elif variant == "danger":
+		fill = Color(PALETTE.BRICK, 0.92)
+		border = PALETTE.BRICK_DARK
 
-	match state:
-		"hover":
-			return clean_style(hover_fill, border, 1, 6, Vector4(9, 4, 9, 5))
-		"pressed":
-			return clean_style(pressed_fill, border, 1, 6, Vector4(9, 5, 9, 4))
-		"disabled":
-			return clean_style(disabled_fill, border if variant == "selected" else Color("#CFC5B7"), 1, 6, Vector4(9, 4, 9, 5))
-		"focus":
-			return clean_style(Color.TRANSPARENT, TEAL, 2, 6)
-		_:
-			return clean_style(normal_fill, border, 1, 6, Vector4(9, 4, 9, 5))
+	var pressed := state == "pressed"
+	if state == "hover" or state == "focus":
+		fill = fill.lerp(PALETTE.BLUSH, 0.34)
+		border = PALETTE.SKY
+	elif pressed:
+		fill = fill.darkened(0.10)
+		border = PALETTE.NAVY
+	elif state == "disabled":
+		fill = Color(PALETTE.LAVENDER_GLASS, 0.62)
+		border = PALETTE.PERIWINKLE.lightened(0.16)
+
+	var style := clean_style(fill, border, 2, BUTTON_RADIUS, Vector4(15, 7, 15, 7), 0, not pressed)
+	if pressed:
+		style.content_margin_top = 8
+		style.content_margin_bottom = 6
+	return style
 
 
 static func button_text_color(variant: String) -> Color:
-	if variant == "primary":
-		return Color.WHITE
-	if variant == "selected":
-		return TEAL.darkened(0.2)
-	return INK
+	if variant == "danger":
+		return PALETTE.GHOST
+	return PALETTE.NAVY

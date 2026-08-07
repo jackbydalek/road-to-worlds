@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://cugdmnv4qe53f"]
 
 [ext_resource type="PackedScene" uid="uid://8twlxvfpcws" path="res://assets/characters/shopkeeper/clerkidle.glb" id="1_l32w8"]
-[ext_resource type="Texture2D" uid="uid://bxn84x5q33ujt" path="res://assets/characters/shopkeeper/shopkeeper.png" id="2_teb0b"]
+[ext_resource type="Texture2D" path="res://assets/characters/shopkeeper/shopkeeper_lofi_v2.png" id="2_teb0b"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fq3p5"]
 shading_mode = 0
 albedo_texture = ExtResource("2_teb0b")
+albedo_color = Color(1, 1, 1, 1)
+roughness = 0.84
 
 [node name="clerkidle" unique_id=1033687673 instance=ExtResource("1_l32w8")]
 

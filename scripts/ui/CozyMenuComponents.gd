@@ -1,9 +1,10 @@
 extends RefCounted
 class_name CozyMenuComponents
 
-const INK := Color("#17110E")
-const CREAM := Color("#FFF9ED")
-const MUTED_INK := Color("#5D4438")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const INK := PALETTE.INK
+const CREAM := PALETTE.GHOST
+const MUTED_INK := PALETTE.SLATE
 
 
 static func make_button(
@@ -26,7 +27,7 @@ static func make_button(
 	button.add_theme_color_override("font_color", text_color)
 	button.add_theme_color_override("font_hover_color", text_color)
 	button.add_theme_color_override("font_pressed_color", text_color)
-	button.add_theme_color_override("font_disabled_color", Color("#8F8178"))
+	button.add_theme_color_override("font_disabled_color", PALETTE.DISABLED_INK)
 	button.add_theme_font_override("font", bold_font())
 	button.add_theme_font_size_override("font_size", font_size)
 	return button
@@ -37,7 +38,7 @@ static func make_icon_button(
 	icon: Texture2D,
 	minimum_size: Vector2 = Vector2(86, 88),
 	icon_width: int = 48,
-	tooltip: String = ""
+	_tooltip: String = ""
 ) -> Button:
 	var button := make_button("", texture, minimum_size, false, 18)
 	button.add_theme_stylebox_override("normal", texture_style(texture, Color.WHITE, Vector4(30, 30, 30, 34), Vector4(12, 12, 12, 15)))
@@ -52,7 +53,6 @@ static func make_icon_button(
 	button.add_theme_color_override("icon_hover_color", Color.WHITE)
 	button.add_theme_color_override("icon_pressed_color", Color(0.84, 0.84, 0.84, 1.0))
 	button.add_theme_color_override("icon_disabled_color", Color(0.62, 0.62, 0.62, 0.78))
-	button.tooltip_text = tooltip
 	return button
 
 

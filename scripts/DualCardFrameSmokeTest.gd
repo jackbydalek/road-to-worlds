@@ -32,13 +32,6 @@ func _run() -> void:
 		quit(1)
 		return
 
-	for frame_key in DUAL_FRAME_KEYS.values():
-		for card_type in ["ingredient", "meal"]:
-			var frame_path := "res://assets/cards/frames/dual/%s_%s.png" % [String(frame_key), card_type]
-			_expect(ResourceLoader.exists(frame_path), "Missing supplied dual frame: %s." % frame_path)
-			var frame_texture := load(frame_path) as Texture2D
-			_expect(frame_texture != null and frame_texture.get_width() == 501 and frame_texture.get_height() == 711, "Dual frame was not imported at 501 × 711: %s." % frame_path)
-
 	var dual_card_count := 0
 	for card in catalog.cards:
 		var affinities: Array = card.get("archetypes", [])
@@ -53,17 +46,38 @@ func _run() -> void:
 
 		var face = CARD_FACE_SCRIPT.new()
 		face.configure(card, "gold", false)
-		var frame := face.find_child("CardFrame", true, false) as TextureRect
+		var frame := face.find_child("CardFrame", true, false) as Panel
 		var icon := face.find_child("CardAffinityIcon", true, false) as Label
-		var expected_path := "frames/dual/%s_%s.png" % [expected_frame_key, String(card.get("card_type", ""))]
+		var symbol_box := face.find_child("CardSymbolBox", true, false) as Panel
+		var symbol_tint := face.find_child("DualAffinitySymbolTint", true, false) as Panel
+		var symbol_divider := face.find_child("DualAffinitySymbolDivider", true, false) as Panel
+		var first_stripe := face.find_child("AffinityStripe0", true, false) as Panel
+		var second_stripe := face.find_child("AffinityStripe1", true, false) as Panel
+		var dual_tint := face.find_child("DualArtTint", true, false) as Panel
+		var dual_type_tint := face.find_child("DualTypeTint", true, false) as Panel
+		var left_rail := face.find_child("DualAffinityRailLeft", true, false) as Panel
+		var right_rail := face.find_child("DualAffinityRailRight", true, false) as Panel
+		var dual_badge := face.find_child("DualAffinityBadgeLabel", true, false)
+		var type_label := face.find_child("CardType", true, false) as Label
 		var expected_icons := ""
+		var expected_type_symbols: Array[String] = []
 		for affinity_id in DUAL_FRAME_AFFINITY_ORDER[expected_frame_key]:
-			expected_icons += AFFINITY_VISUALS.symbol(String(affinity_id))
-		_expect(frame != null and frame.texture.resource_path.ends_with(expected_path), "%s did not select its supplied dual frame." % String(card.get("id", "")))
+			var symbol := AFFINITY_VISUALS.symbol(String(affinity_id))
+			expected_icons += symbol
+			expected_type_symbols.append(symbol)
+		_expect(frame != null and frame.get_meta("frame_style", "") == "cozy_cafe", "%s did not use the reusable cozy frame." % String(card.get("id", "")))
+		_expect(first_stripe != null and second_stripe != null, "%s did not display both affinity stripe segments." % String(card.get("id", "")))
+		_expect(dual_tint != null and left_rail != null and right_rail != null, "%s did not receive the split artwork tint and opposing side rails." % String(card.get("id", "")))
+		_expect(dual_type_tint != null, "%s did not split its Ingredient or Meal classification pill between both affinities." % String(card.get("id", "")))
+		_expect(symbol_tint != null and symbol_divider != null, "%s did not split the larger affinity-symbol box between both affinity colors." % String(card.get("id", "")))
+		if symbol_box != null:
+			_expect(symbol_box.size.x >= symbol_box.size.y * 1.65, "%s did not give its dual affinity symbols a wide enough box." % String(card.get("id", "")))
+		_expect(dual_badge == null, "%s still displayed the redundant DUAL badge." % String(card.get("id", "")))
+		_expect(type_label != null and type_label.text == "%s %s" % [" + ".join(expected_type_symbols), String(card.get("card_type", "")).capitalize()], "%s did not use both Noto affinity symbols in its type ribbon." % String(card.get("id", "")))
 		_expect(icon != null and icon.text == expected_icons, "%s did not display both affinity symbols." % String(card.get("id", "")))
 		face.free()
 
-	_expect(dual_card_count == 15, "Expected the supplied frames to cover all 15 dual-type cards.")
+	_expect(dual_card_count > 0, "The catalog did not contain a dual-affinity card to exercise the split accent stripe.")
 	if failed:
 		quit(1)
 		return

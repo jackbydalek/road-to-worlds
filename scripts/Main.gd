@@ -7,7 +7,12 @@ const SIDEBOARD_SIZE := 6
 const STARTING_MONEY := 20
 const SAVE_PATH := "user://kitchen_table_season_run.json"
 const SETTINGS_PATH := "user://kitchen_table_settings.json"
+const LEGACY_BATTLE_SETTINGS_PATH := "user://road_to_worlds_readability.cfg"
 const DEVELOPMENT_FLAGS := ["--dev", "--debug-menu"]
+## Populate these when the public pages are ready. The finale keeps honest
+## coming-soon labels instead of presenting disabled controls as working links.
+const STEAM_STORE_URL := ""
+const DISCORD_INVITE_URL := "https://discord.gg/EK6AmYgnPZ"
 const RESOLUTION_OPTIONS := [
 	Vector2i(1280, 720),
 	Vector2i(1440, 900),
@@ -15,6 +20,12 @@ const RESOLUTION_OPTIONS := [
 	Vector2i(2560, 1440),
 ]
 const TEXT_SCALE_OPTIONS := [0.9, 1.0, 1.1, 1.25]
+const BATTLE_TEXT_SCALE_OPTIONS := [1.0, 1.25, 1.5]
+const PLAY_SPEED_OPTIONS := [
+	{"id": "fast", "label": "Fast"},
+	{"id": "normal", "label": "Normal"},
+	{"id": "slow", "label": "Slow"},
+]
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
@@ -52,13 +63,23 @@ const CARD_EFFECT_LAB_SCRIPT := preload("res://scripts/CardEffectLab.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const UI_THEME_SCRIPT := preload("res://scripts/ui/KitchenGlassTheme.gd")
+const UI_SOUND_CONTROLLER_SCRIPT := preload("res://scripts/ui/UiSoundController.gd")
+const MENU_SPARKLE_CONTROLLER_SCRIPT := preload("res://scripts/ui/MenuSparkleController.gd")
 const SKETCH_THEME_SCRIPT := preload("res://scripts/ui/SketchTheme.gd")
 const WORKSPACE_THEME_SCRIPT := preload("res://scripts/ui/WorkspaceTheme.gd")
 const BUTTON_MOTION_SCRIPT := preload("res://scripts/ui/AudaciousButtonMotion.gd")
 const SKETCH_UI_SCRIPT := preload("res://scripts/ui/SketchUIComponents.gd")
 const WORKSPACE_UI_SCRIPT := preload("res://scripts/ui/WorkspaceUIComponents.gd")
-const WIRED_TITLE_DOODLES_SCRIPT := preload("res://scripts/ui/WiredTitleDoodles.gd")
-const CARD_SHOP_MUSIC := preload("res://assets/audio/card_shop_background.mp3")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const PASTEL_WORKSPACE_BACKGROUND_SHADER := preload("res://assets/shaders/pastel_workspace_background.gdshader")
+const INTRO_MUSIC_PATH := "res://assets/audio/intro.mp3"
+const CARD_SHOP_MUSIC_PATH := "res://assets/audio/shop.mp3"
+const BATTLE_MUSIC_PATH := "res://assets/audio/combat.mp3"
+const SHOP_DOOR_BELL_PATH := "res://assets/audio/shop_door_bell_squeak.wav"
+const SHOP_DOOR_BELL_VOLUME_DB := -8.0
+const SHOP_MUSIC_VOLUME_DB := -16.0
+const MENU_MUSIC_VOLUME_DB := -24.0
+const BATTLE_MUSIC_VOLUME_DB := -10.0
 const ICON_ARROW_OUT := preload("res://assets/ui/audacious/arrow-square-out-bold.svg")
 const ICON_BOWL := preload("res://assets/ui/audacious/bowl-food-bold.svg")
 const ICON_CALENDAR := preload("res://assets/ui/audacious/calendar-blank-bold.svg")
@@ -71,8 +92,12 @@ const ICON_CUBE := preload("res://assets/ui/audacious/cube-bold.svg")
 const ICON_FOLDER := preload("res://assets/ui/audacious/folder.svg")
 const ICON_MENU := preload("res://assets/ui/audacious/dots-three-vertical-bold.svg")
 const ICON_STAR := preload("res://assets/ui/audacious/star-four-bold.svg")
-const GREYBOX_CAMERA_DEMO_SCENE := preload("res://scenes/GreyboxCameraDemo.tscn")
-const TABLETOP_3D_PROTOTYPE_SCENE := preload("res://scenes/Tabletop3DPrototype.tscn")
+const TITLE_MENU_SCENE := preload("res://scenes/ui/TitleMenu.tscn")
+const GAME_STATUS_MENU_SCENE := preload("res://scenes/ui/GameStatusMenu.tscn")
+const SEASON_SETUP_MENU_SCENE := preload("res://scenes/ui/SeasonSetupMenu.tscn")
+const DRAFT_MENU_SCENE := preload("res://scenes/ui/DraftMenu.tscn")
+const GREYBOX_CAMERA_DEMO_SCENE_PATH := "res://scenes/GreyboxCameraDemo.tscn"
+const TABLETOP_3D_PROTOTYPE_SCENE_PATH := "res://scenes/Tabletop3DPrototype.tscn"
 
 var rng := RandomNumberGenerator.new()
 var content_catalog: RefCounted
@@ -98,6 +123,7 @@ var current_screen := "start"
 var deckbuilder_sort_mode := SORT_AFFINITY
 var season_setup_archetype_index := 0
 var season_setup_difficulty_index := 0
+var season_setup_difficulty_open := false
 var draft_deck: Dictionary = {}
 var draft_offer: Array[String] = []
 var draft_picks: Array[String] = []
@@ -108,6 +134,7 @@ var draft_difficulty_id := "white"
 var draft_hover_preview: PanelContainer
 var draft_hover_preview_body: CenterContainer
 var draft_hover_request_id := 0
+var deckbuilder_scroll_positions: Dictionary = {}
 var starter_deck_hover_preview: PanelContainer
 var starter_deck_hover_preview_body: CenterContainer
 var starter_deck_hover_request_id := 0
@@ -125,6 +152,13 @@ var round_result_popup: Control
 var autosave_label: Label
 var autosave_tween: Tween
 var card_shop_music_player: AudioStreamPlayer
+var battle_music_player: AudioStreamPlayer
+var music_mix_tween: Tween
+var music_mode := ""
+var suspended_tabletop: Control
+var suspended_tabletop_screen := ""
+var ui_sound_controller
+var menu_sparkle_controller
 var autosave_enabled := true
 var autosave_suspended := false
 var autosave_poll_elapsed := 0.0
@@ -140,6 +174,8 @@ var player_settings: Dictionary = {
 	"music_volume": 70.0,
 	"sfx_volume": 85.0,
 	"text_scale": 1.0,
+	"battle_text_scale": 1.0,
+	"play_speed": "normal",
 	"high_contrast": false,
 	"reduced_motion": false,
 }
@@ -158,6 +194,14 @@ func _ready() -> void:
 	autosave_enabled = not _running_automated_test()
 	_load_player_settings()
 	_ensure_audio_buses()
+	ui_sound_controller = UI_SOUND_CONTROLLER_SCRIPT.new()
+	ui_sound_controller.name = "UiSoundController"
+	ui_sound_controller.enabled = not _running_automated_test()
+	add_child(ui_sound_controller)
+	menu_sparkle_controller = MENU_SPARKLE_CONTROLLER_SCRIPT.new()
+	menu_sparkle_controller.name = "MenuSparkleController"
+	menu_sparkle_controller.enabled = not _running_automated_test()
+	add_child(menu_sparkle_controller)
 	_apply_player_settings(not _running_automated_test())
 	get_tree().node_added.connect(_on_ui_node_added)
 	get_tree().auto_accept_quit = false
@@ -201,6 +245,7 @@ func _process(delta: float) -> void:
 	if autosave_poll_elapsed < AUTOSAVE_POLL_SECONDS:
 		return
 	autosave_poll_elapsed = 0.0
+	_capture_live_kitchen_match_state()
 	if _run_fingerprint() != last_autosave_fingerprint:
 		_autosave_now(current_screen)
 
@@ -211,6 +256,24 @@ func _notification(what: int) -> void:
 	if autosave_enabled and not run.is_empty():
 		_autosave_now(current_screen)
 	get_tree().quit()
+
+
+func _exit_tree() -> void:
+	# Explicitly release looping stream playback before the shell is destroyed.
+	# This matters for repeated scene/test teardown and avoids leaving WebAudio or
+	# native audio playback objects alive while changing or closing the app.
+	_kill_music_tween()
+	if autosave_tween != null and autosave_tween.is_valid():
+		autosave_tween.kill()
+	autosave_tween = null
+	_release_audio_streams()
+
+
+func _release_audio_streams() -> void:
+	for player_node in find_children("*", "AudioStreamPlayer", true, false):
+		var player := player_node as AudioStreamPlayer
+		player.stop()
+		player.stream = null
 
 
 func _input(event: InputEvent) -> void:
@@ -253,6 +316,8 @@ func _default_player_settings() -> Dictionary:
 		"music_volume": 70.0,
 		"sfx_volume": 85.0,
 		"text_scale": 1.0,
+		"battle_text_scale": 1.0,
+		"play_speed": "normal",
 		"high_contrast": false,
 		"reduced_motion": false,
 	}
@@ -261,17 +326,23 @@ func _default_player_settings() -> Dictionary:
 func _load_player_settings() -> void:
 	var defaults := _default_player_settings()
 	player_settings = defaults.duplicate(true)
-	if not FileAccess.file_exists(settings_path):
-		return
-	var file := FileAccess.open(settings_path, FileAccess.READ)
-	if file == null:
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	if not (parsed is Dictionary):
-		return
+	var parsed: Dictionary = {}
+	if FileAccess.file_exists(settings_path):
+		var file := FileAccess.open(settings_path, FileAccess.READ)
+		if file != null:
+			var loaded_value = JSON.parse_string(file.get_as_text())
+			if loaded_value is Dictionary:
+				parsed = loaded_value
 	for key in defaults:
 		if parsed.has(key):
 			player_settings[key] = parsed[key]
+	if not parsed.has("play_speed") or not parsed.has("battle_text_scale"):
+		var legacy_config := ConfigFile.new()
+		if legacy_config.load(LEGACY_BATTLE_SETTINGS_PATH) == OK:
+			if not parsed.has("play_speed"):
+				player_settings.play_speed = String(legacy_config.get_value("readability", "rival_pacing", "normal"))
+			if not parsed.has("battle_text_scale"):
+				player_settings.battle_text_scale = float(legacy_config.get_value("readability", "text_scale", 1.0))
 	_sanitize_player_settings()
 
 
@@ -304,6 +375,17 @@ func _sanitize_player_settings() -> void:
 			closest_distance = distance
 			closest_scale = float(option)
 	player_settings.text_scale = closest_scale
+	var requested_battle_scale := float(player_settings.get("battle_text_scale", 1.0))
+	var closest_battle_scale := 1.0
+	var closest_battle_distance := INF
+	for option in BATTLE_TEXT_SCALE_OPTIONS:
+		var battle_distance := absf(float(option) - requested_battle_scale)
+		if battle_distance < closest_battle_distance:
+			closest_battle_distance = battle_distance
+			closest_battle_scale = float(option)
+	player_settings.battle_text_scale = closest_battle_scale
+	var requested_play_speed := String(player_settings.get("play_speed", "normal"))
+	player_settings.play_speed = requested_play_speed if requested_play_speed in ["fast", "normal", "slow"] else "normal"
 	player_settings.high_contrast = bool(player_settings.get("high_contrast", false))
 	player_settings.reduced_motion = bool(player_settings.get("reduced_motion", false))
 
@@ -321,6 +403,17 @@ func _ensure_audio_buses() -> void:
 			continue
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.bus_count - 1, bus_name)
+	var menu_music_index := AudioServer.get_bus_index("MenuMusic")
+	if menu_music_index < 0:
+		AudioServer.add_bus()
+		menu_music_index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(menu_music_index, "MenuMusic")
+	AudioServer.set_bus_send(menu_music_index, "Music")
+	if AudioServer.get_bus_effect_count(menu_music_index) == 0:
+		var outside_filter := AudioEffectLowPassFilter.new()
+		outside_filter.cutoff_hz = 1850.0
+		outside_filter.resonance = 0.18
+		AudioServer.add_bus_effect(menu_music_index, outside_filter)
 
 
 func _apply_player_settings(apply_display: bool = true) -> void:
@@ -407,13 +500,18 @@ func _reduced_motion_enabled() -> bool:
 
 
 func _run_fingerprint() -> String:
-	return str(JSON.stringify(run).hash())
+	# Hash the Variant tree directly so the frequent autosave poll does not build
+	# a complete JSON copy of the run just to detect whether it changed.
+	return str(hash(run))
 
 
 func _autosave_now(resume_screen: String = "") -> Dictionary:
 	if not autosave_enabled or autosave_suspended or run.is_empty():
 		return {"ok": false, "message": "Autosave skipped."}
+	_capture_live_kitchen_match_state()
 	var target_screen := resume_screen if resume_screen != "" else current_screen
+	if target_screen == "settings" and is_instance_valid(suspended_tabletop) and suspended_tabletop_screen == "kitchen_match":
+		target_screen = "kitchen_match"
 	_show_autosave_indicator()
 	var result: Dictionary = run_state_service.save_run(run, target_screen)
 	if bool(result.get("ok", false)):
@@ -432,7 +530,6 @@ func _show_autosave_indicator() -> void:
 		autosave_tween.kill()
 	autosave_label.visible = true
 	autosave_label.text = "◆"
-	autosave_label.tooltip_text = "Saving"
 	autosave_label.rotation = 0.0
 	autosave_label.scale = Vector2.ONE
 	autosave_label.modulate = Color(1, 1, 1, 0.72)
@@ -457,11 +554,12 @@ func _show_autosave_indicator() -> void:
 func _show_autosave_failure() -> void:
 	if autosave_label == null:
 		return
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_error()
 	if autosave_tween != null and autosave_tween.is_valid():
 		autosave_tween.kill()
 	autosave_label.visible = true
 	autosave_label.text = "!"
-	autosave_label.tooltip_text = "Could not save"
 	autosave_label.rotation = 0.0
 	autosave_label.scale = Vector2.ONE
 	autosave_label.modulate = Color.WHITE
@@ -473,10 +571,19 @@ func _show_autosave_failure() -> void:
 
 
 func _build_shell() -> void:
-	var background := ColorRect.new()
-	background.color = Color("#E9DFC9")
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var background := SKETCH_UI_SCRIPT.make_paper_background()
+	background.name = "PaperBackground"
 	add_child(background)
+	var workspace_background := ColorRect.new()
+	workspace_background.name = "PastelWorkspaceBackground"
+	workspace_background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	workspace_background.color = Color.WHITE
+	var workspace_background_material := ShaderMaterial.new()
+	workspace_background_material.shader = PASTEL_WORKSPACE_BACKGROUND_SHADER
+	workspace_background.material = workspace_background_material
+	workspace_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	workspace_background.visible = false
+	add_child(workspace_background)
 
 	root_margin = MarginContainer.new()
 	root_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -510,7 +617,6 @@ func _build_shell() -> void:
 	autosave_label = Label.new()
 	autosave_label.name = "AutosaveIndicator"
 	autosave_label.text = "◆"
-	autosave_label.tooltip_text = "Saving"
 	autosave_label.visible = false
 	autosave_label.z_index = 2000
 	autosave_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -574,26 +680,119 @@ func _load_content() -> void:
 
 
 func _clear(node: Node) -> void:
+	if node == content and node.get_child_count() > 0 and is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_transition()
 	if node == content:
-		_stop_card_shop_music()
+		_sync_music_for_current_screen()
 	for child in node.get_children():
 		# Screen rebuilds are often triggered by button signals; queue deletion so the
 		# emitting button is not freed while Godot is still dispatching its signal.
 		child.queue_free()
 
 
-func _play_card_shop_music() -> void:
+func _sync_music_for_current_screen() -> void:
+	if current_screen in ["kitchen_match", "tutorial"]:
+		_play_battle_music()
+	elif current_screen in ["start", "game_start", "new_game", "season_setup", "draft", "season"]:
+		_play_card_shop_music(true)
+	elif current_screen == "shop" or (current_screen == "deck" and deckbuilder_return_screen == "shop"):
+		_play_card_shop_music(false)
+	elif current_screen == "settings" and settings_return_screen in ["start", "game_start", "new_game", "season_setup", "draft", "season"]:
+		_play_card_shop_music(true)
+	elif current_screen == "settings" and (
+		settings_return_screen == "shop"
+		or (settings_return_screen == "deck" and deckbuilder_return_screen == "shop")
+	):
+		_play_card_shop_music(false)
+	elif current_screen == "settings" and settings_return_screen in ["kitchen_match", "tutorial"]:
+		_play_battle_music()
+	else:
+		_fade_out_music()
+
+
+func _play_card_shop_music(menu_mix: bool = false) -> void:
+	var next_mode := "menu" if menu_mix else "shop"
+	var target_volume := MENU_MUSIC_VOLUME_DB if menu_mix else SHOP_MUSIC_VOLUME_DB
 	if card_shop_music_player == null:
 		card_shop_music_player = AudioStreamPlayer.new()
 		card_shop_music_player.name = "CardShopMusic"
-		var music_stream := CARD_SHOP_MUSIC.duplicate() as AudioStreamMP3
+		add_child(card_shop_music_player)
+	if music_mode != next_mode:
+		var source_path := INTRO_MUSIC_PATH if menu_mix else CARD_SHOP_MUSIC_PATH
+		var source_stream := load(source_path) as AudioStreamMP3
+		assert(source_stream != null, "Unable to load music stream: %s" % source_path)
+		var music_stream := source_stream.duplicate() as AudioStreamMP3
+		music_stream.resource_name = source_stream.resource_path
 		music_stream.loop = true
 		card_shop_music_player.stream = music_stream
-		card_shop_music_player.bus = &"Music"
-		card_shop_music_player.volume_db = -10.0
-		add_child(card_shop_music_player)
+		card_shop_music_player.stop()
+	card_shop_music_player.bus = &"MenuMusic" if menu_mix else &"Music"
+	music_mode = next_mode
+	_kill_music_tween()
+	music_mix_tween = create_tween().set_parallel(true)
 	if not card_shop_music_player.playing:
+		card_shop_music_player.volume_db = -36.0
 		card_shop_music_player.play()
+	music_mix_tween.tween_property(card_shop_music_player, "volume_db", target_volume, 0.9)
+	if battle_music_player != null and battle_music_player.playing:
+		music_mix_tween.tween_property(battle_music_player, "volume_db", -36.0, 0.55)
+		music_mix_tween.chain().tween_callback(func() -> void:
+			if music_mode == next_mode and battle_music_player != null:
+				battle_music_player.stop()
+		)
+
+
+func _play_battle_music() -> void:
+	if battle_music_player == null:
+		battle_music_player = AudioStreamPlayer.new()
+		battle_music_player.name = "BattleMusic"
+		var source_stream := load(BATTLE_MUSIC_PATH) as AudioStreamMP3
+		assert(source_stream != null, "Unable to load battle music: %s" % BATTLE_MUSIC_PATH)
+		var music_stream := source_stream.duplicate() as AudioStreamMP3
+		music_stream.resource_name = source_stream.resource_path
+		music_stream.loop = true
+		battle_music_player.stream = music_stream
+		battle_music_player.bus = &"Music"
+		add_child(battle_music_player)
+	music_mode = "battle"
+	_kill_music_tween()
+	music_mix_tween = create_tween().set_parallel(true)
+	if not battle_music_player.playing:
+		battle_music_player.volume_db = -34.0
+		battle_music_player.play()
+	music_mix_tween.tween_property(battle_music_player, "volume_db", BATTLE_MUSIC_VOLUME_DB, 0.8)
+	if card_shop_music_player != null and card_shop_music_player.playing:
+		music_mix_tween.tween_property(card_shop_music_player, "volume_db", -36.0, 0.55)
+		music_mix_tween.chain().tween_callback(func() -> void:
+			if music_mode == "battle" and card_shop_music_player != null:
+				card_shop_music_player.stop()
+		)
+
+
+func _fade_out_music() -> void:
+	if music_mode == "none":
+		return
+	music_mode = "none"
+	_kill_music_tween()
+	music_mix_tween = create_tween().set_parallel(true)
+	if card_shop_music_player != null and card_shop_music_player.playing:
+		music_mix_tween.tween_property(card_shop_music_player, "volume_db", -36.0, 0.45)
+	if battle_music_player != null and battle_music_player.playing:
+		music_mix_tween.tween_property(battle_music_player, "volume_db", -36.0, 0.45)
+	music_mix_tween.chain().tween_callback(func() -> void:
+		if music_mode != "none":
+			return
+		if card_shop_music_player != null:
+			card_shop_music_player.stop()
+		if battle_music_player != null:
+			battle_music_player.stop()
+	)
+
+
+func _kill_music_tween() -> void:
+	if music_mix_tween != null and music_mix_tween.is_valid():
+		music_mix_tween.kill()
+	music_mix_tween = null
 
 
 func _stop_card_shop_music() -> void:
@@ -775,6 +974,8 @@ func _make_title_route_menu(screen: Control, node_name: String) -> PanelContaine
 func _show_starter_deck_preview(starter_id: String) -> void:
 	if current_screen != "season_setup" or find_child("StarterDeckPreview", true, false) != null:
 		return
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_popup()
 	var draft_night := starter_id == DRAFT_NIGHT_ID
 	var display_name := "Draft Night" if draft_night else _archetype_label(starter_id)
 	var entries := _starter_deck_preview_entries(starter_id)
@@ -805,13 +1006,19 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(center)
 
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(780, 690),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.ORANGE,
-		Vector4(46, 38, 46, 42),
-		1
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(780, 690)
+	panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(
+			WORKSPACE_UI_SCRIPT.SURFACE,
+			WORKSPACE_UI_SCRIPT.PALETTE.SLATE,
+			3,
+			14,
+			Vector4(46, 38, 46, 42),
+			0,
+			true
+		)
 	)
 	panel.name = "StarterDeckPreviewPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -821,23 +1028,41 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 	layout.add_theme_constant_override("separation", 8)
 	panel.add_child(layout)
 
-	var banner := SKETCH_UI_SCRIPT.make_section_banner(
-		"%s DECK" % display_name.to_upper(),
-		"Review the cards before committing to this season.",
+	var banner_parts := WORKSPACE_UI_SCRIPT.make_section(
+		"DRAFT NIGHT" if draft_night else "%s DECK" % display_name.to_upper(),
+		WORKSPACE_UI_SCRIPT.TEAL,
 		Vector2(650, 96),
-		SKETCH_UI_SCRIPT.TEAL
+		false,
+		Vector4(20, 12, 20, 12)
 	)
+	var banner := banner_parts.panel as PanelContainer
+	var banner_heading := banner_parts.heading as Label
+	banner_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner_heading.add_theme_font_size_override("font_size", 28)
+	var banner_subtitle := Label.new()
+	banner_subtitle.text = (
+		"Build your season deck one pick at a time."
+		if draft_night
+		else "Review the cards before committing to this season."
+	)
+	banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner_subtitle.add_theme_color_override("font_color", WORKSPACE_UI_SCRIPT.MUTED_INK)
+	banner_parts.body.add_child(banner_subtitle)
 	banner.name = "StarterDeckPreviewBanner"
 	layout.add_child(banner)
 
 	if draft_night:
-		var empty_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-			Vector2(0, 420),
-			Color("#FFF3CF"),
-			SKETCH_UI_SCRIPT.INK,
-			SKETCH_UI_SCRIPT.MUSTARD,
-			Vector4(42, 34, 42, 34),
-			0
+		var empty_panel := PanelContainer.new()
+		empty_panel.custom_minimum_size = Vector2(0, 420)
+		empty_panel.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI_SCRIPT.clean_style(
+				WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT,
+				WORKSPACE_UI_SCRIPT.PALETTE.BRICK,
+				2,
+				10,
+				Vector4(42, 34, 42, 34)
+			)
 		)
 		empty_panel.name = "DraftNightDeckPreviewEmptyState"
 		layout.add_child(empty_panel)
@@ -878,13 +1103,17 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		summary.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
 		layout.add_child(summary)
 
-		var list_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-			Vector2(0, 420),
-			Color("#FFF8E8"),
-			SKETCH_UI_SCRIPT.INK,
-			SKETCH_UI_SCRIPT.ORANGE,
-			Vector4(22, 16, 22, 16),
-			0
+		var list_panel := PanelContainer.new()
+		list_panel.custom_minimum_size = Vector2(0, 420)
+		list_panel.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI_SCRIPT.clean_style(
+				WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT,
+				WORKSPACE_UI_SCRIPT.PALETTE.BORDER_SOFT,
+				2,
+				10,
+				Vector4(22, 16, 22, 16)
+			)
 		)
 		layout.add_child(list_panel)
 		var list_scroll := ScrollContainer.new()
@@ -900,13 +1129,12 @@ func _show_starter_deck_preview(starter_id: String) -> void:
 		for entry in entries:
 			_add_starter_deck_preview_row(list, entry)
 
-	var close_button := SKETCH_UI_SCRIPT.make_button(
-		"CLOSE DECK LIST",
-		Vector2(360, 82),
-		true,
-		25,
-		false
-	)
+	var close_button := Button.new()
+	close_button.text = "CLOSE" if draft_night else "CLOSE DECK LIST"
+	close_button.custom_minimum_size = Vector2(360, 64)
+	close_button.focus_mode = Control.FOCUS_NONE
+	WORKSPACE_UI_SCRIPT.style_button(close_button, "primary")
+	close_button.add_theme_font_size_override("font_size", 22)
 	close_button.name = "CloseStarterDeckPreviewButton"
 	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_connect_pressed(close_button, _close_starter_deck_preview)
@@ -983,13 +1211,19 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 
 func _create_starter_deck_hover_preview(overlay: Control) -> void:
 	starter_deck_hover_request_id += 1
-	starter_deck_hover_preview = SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(310, 448),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL,
-		Vector4(16, 16, 16, 18),
-		1
+	starter_deck_hover_preview = PanelContainer.new()
+	starter_deck_hover_preview.custom_minimum_size = Vector2(310, 448)
+	starter_deck_hover_preview.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(
+			WORKSPACE_UI_SCRIPT.SURFACE,
+			WORKSPACE_UI_SCRIPT.TEAL,
+			2,
+			12,
+			Vector4(16, 16, 16, 18),
+			0,
+			true
+		)
 	)
 	starter_deck_hover_preview.name = "StarterDeckCardHoverPreview"
 	starter_deck_hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1060,6 +1294,8 @@ func _close_starter_deck_preview() -> void:
 	var overlay := find_child("StarterDeckPreview", true, false)
 	if overlay == null:
 		return
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_transition()
 	overlay.name = "StarterDeckPreviewClosing"
 	overlay.queue_free()
 
@@ -1087,166 +1323,15 @@ func _show_start() -> void:
 	_update_status()
 	_set_footer("")
 
-	var saved_result: Dictionary = run_state_service.load_run()
-	var has_save := bool(saved_result.get("ok", false))
-	var screen := _make_front_door_screen("BootLanding")
-
-	var paper_background := ColorRect.new()
-	paper_background.name = "WiredTitleBackground"
-	paper_background.color = Color("#F3ECD9")
-	paper_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	paper_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(paper_background)
-
-	var doodles := WIRED_TITLE_DOODLES_SCRIPT.new()
-	doodles.name = "WiredTitleDoodles"
-	doodles.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	screen.add_child(doodles)
-
-	var title_banner := SKETCH_UI_SCRIPT.make_title_panel(
-		"TOPDECK TO WORLDS",
-		"Build your deck. Survive the season. Earn your seat at Worlds.",
-		Vector2(1080, 230)
-	)
-	title_banner.name = "BootTitleBanner"
-	_anchor_rect(title_banner, 0.5, 0.5, 0.0, 0.0, -540, 40, 540, 270)
-	screen.add_child(title_banner)
-
-	var landing_actions := VBoxContainer.new()
-	landing_actions.name = "BootLandingPanel"
-	landing_actions.add_theme_constant_override("separation", 6)
-	_anchor_rect(landing_actions, 0.5, 0.5, 0.0, 0.0, -245, 326, 245, 650)
-	screen.add_child(landing_actions)
-
-	var game_start_button := SKETCH_UI_SCRIPT.make_button(
-		"START GAME",
-		Vector2(490, 102),
-		true,
-		36,
-		false
-	)
-	game_start_button.name = "GameStartButton"
-	_connect_pressed(game_start_button, _show_game_start)
-	landing_actions.add_child(game_start_button)
-
-	var collection_button := SKETCH_UI_SCRIPT.make_button(
-		"COLLECTION",
-		Vector2(490, 102),
-		false,
-		34,
-		true
-	)
-	collection_button.name = "TitleCollectionButton"
-	collection_button.disabled = not has_save
-	collection_button.tooltip_text = (
-		"Open the saved season's collection and deck."
-		if has_save
-		else "Start a season to build a collection."
-	)
-	_connect_pressed(collection_button, _open_saved_collection)
-	landing_actions.add_child(collection_button)
-
-	var exit_button := SKETCH_UI_SCRIPT.make_button(
-		"EXIT GAME",
-		Vector2(490, 102),
-		false,
-		34,
-		false
-	)
-	exit_button.name = "ExitGameButton"
-	_connect_pressed(exit_button, _quit_from_title)
-	landing_actions.add_child(exit_button)
-
-	var season_note := Label.new()
-	season_note.name = "WiredSeasonNote"
-	season_note.text = "20 CARDS   •   THREE ROUNDS   •   ONE SHOT AT WORLDS"
-	season_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	season_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	season_note.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
-	season_note.add_theme_font_size_override("font_size", 18)
-	season_note.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
-	_anchor_rect(season_note, 0.5, 0.5, 0.0, 0.0, -380, 752, 380, 792)
-	screen.add_child(season_note)
-
-	var left_caption := Label.new()
-	left_caption.text = "BUILD\nSHOP\nCOMPETE"
-	left_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	left_caption.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
-	left_caption.add_theme_font_size_override("font_size", 25)
-	left_caption.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	_anchor_rect(left_caption, 0.0, 0.0, 0.0, 0.0, 102, 622, 282, 716)
-	screen.add_child(left_caption)
-
-	var right_caption := Label.new()
-	right_caption.text = "LOCALS\nLEAGUE CUP\nWORLDS"
-	right_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	right_caption.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
-	right_caption.add_theme_font_size_override("font_size", 25)
-	right_caption.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	_anchor_rect(right_caption, 1.0, 1.0, 0.0, 0.0, -310, 622, -90, 716)
-	screen.add_child(right_caption)
-
-	var options_panel := SKETCH_UI_SCRIPT.make_panel(
-		Vector2(310, 260 if _development_tools_enabled() else 190),
-		Vector4(30, 27, 30, 31)
-	)
-	options_panel.name = "TitleOptionsPanel"
-	options_panel.visible = false
-	options_panel.z_index = 20
-	_anchor_rect(options_panel, 1.0, 1.0, 1.0, 1.0, -430, -286, -104, -78)
-	screen.add_child(options_panel)
-
-	var options := VBoxContainer.new()
-	options.add_theme_constant_override("separation", 2)
-	options_panel.add_child(options)
-
-	var tutorial_button := SKETCH_UI_SCRIPT.make_button(
-		"HOW TO PLAY",
-		Vector2(250, 66),
-		false,
-		21,
-		false
-	)
-	tutorial_button.name = "StartTutorialButton"
-	_connect_pressed(tutorial_button, _show_tutorial)
-	options.add_child(tutorial_button)
-
-	var settings_button := SKETCH_UI_SCRIPT.make_button(
-		"SETTINGS",
-		Vector2(250, 66),
-		false,
-		21,
-		true
-	)
-	settings_button.name = "TitleSettingsButton"
-	_connect_pressed(settings_button, _show_settings)
-	options.add_child(settings_button)
-
-	if _development_tools_enabled():
-		var debug_link := SKETCH_UI_SCRIPT.make_button(
-			"DEBUG MENU",
-			Vector2(250, 66),
-			false,
-			21,
-			true
-		)
-		debug_link.name = "OpenDebugMenuButton"
-		_connect_pressed(debug_link, _show_debug_starter_selection)
-		options.add_child(debug_link)
-
-	var options_button := SKETCH_UI_SCRIPT.make_button(
-		"MORE",
-		Vector2(126, 74),
-		false,
-		22,
-		true
-	)
-	options_button.name = "TitleOptionsButton"
-	options_button.tooltip_text = "How to Play and Settings"
-	options_button.z_index = 20
-	_anchor_rect(options_button, 1.0, 1.0, 1.0, 1.0, -154, -106, -28, -32)
-	_connect_pressed(options_button, func() -> void: options_panel.visible = not options_panel.visible)
-	screen.add_child(options_button)
+	var screen = TITLE_MENU_SCENE.instantiate()
+	screen.name = "BootLanding"
+	screen.configure(_development_tools_enabled())
+	screen.start_requested.connect(_show_game_start, CONNECT_DEFERRED)
+	screen.tutorial_requested.connect(_show_tutorial, CONNECT_DEFERRED)
+	screen.exit_requested.connect(_quit_from_title, CONNECT_DEFERRED)
+	screen.settings_requested.connect(_show_settings, CONNECT_DEFERRED)
+	screen.debug_requested.connect(_show_debug_starter_selection, CONNECT_DEFERRED)
+	content.add_child(screen)
 
 
 func _show_game_start() -> void:
@@ -1271,41 +1356,6 @@ func _show_game_start() -> void:
 			else _archetype_label(saved_starter_id) if archetypes_by_id.has(saved_starter_id) else "Custom Deck"
 		)
 
-	var screen := _make_front_door_screen("GameStartGateway")
-	var paper_background := ColorRect.new()
-	paper_background.color = Color("#F3ECD9")
-	paper_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	paper_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(paper_background)
-
-	var gateway_banner := SKETCH_UI_SCRIPT.make_section_banner(
-		"GAME STATUS",
-		"Continue your season or start fresh.",
-		Vector2(1060, 126),
-		SKETCH_UI_SCRIPT.TEAL
-	)
-	gateway_banner.name = "GameStatusBanner"
-	_anchor_rect(gateway_banner, 0.5, 0.5, 0.0, 0.0, -530, 34, 530, 160)
-	screen.add_child(gateway_banner)
-
-	var summary_row := HBoxContainer.new()
-	summary_row.add_theme_constant_override("separation", 42)
-	_anchor_rect(summary_row, 0.5, 0.5, 0.0, 0.0, -545, 186, 545, 532)
-	screen.add_child(summary_row)
-
-	var deck_frame := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(390, 346),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.ORANGE,
-		Vector4(42, 32, 42, 34),
-		0
-	)
-	deck_frame.name = "SavedDeckFrame"
-	summary_row.add_child(deck_frame)
-
-	var deck_center := CenterContainer.new()
-	deck_frame.add_child(deck_center)
 	var deck_art := _make_menu_deck_art(
 		saved_starter_id,
 		saved_starter_name,
@@ -1313,124 +1363,42 @@ func _show_game_start() -> void:
 		Vector2(198, 270)
 	)
 	deck_art.name = "SavedDeckArtwork"
-	deck_center.add_child(deck_art)
-
-	var status_column := VBoxContainer.new()
-	status_column.custom_minimum_size = Vector2(570, 346)
-	summary_row.add_child(status_column)
-
-	var status_outer := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(570, 346),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL,
-		Vector4(40, 34, 40, 34),
-		1
-	)
-	status_outer.name = "SavedGameStatusFrame"
-	status_column.add_child(status_outer)
-	var status_box := VBoxContainer.new()
-	status_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	status_box.add_theme_constant_override("separation", 10)
-	status_outer.add_child(status_box)
+	var status_lines: Array[String] = []
 	if has_save:
 		var difficulty := _difficulty_data(String(saved_run.get("difficulty", "white")))
-		_add_sketch_status_text(status_box, "%s  •  WEEK %d  •  ROUND %d" % [
-			String(saved_run.get("active_event_name", "Season in progress")),
+		status_lines.append("WEEK %d  •  ROUND %d" % [
 			int(saved_run.get("week", 1)),
 			int(saved_run.get("active_tournament", {}).get("round", 0))
-		], 21)
-		_add_sketch_status_text(status_box, "$%d  •  %s BORDER  •  LIVES %d/%d" % [
+		])
+		status_lines.append("$%d  •  %s BORDER" % [
 			int(saved_run.get("money", 0)),
-			String(difficulty.get("name", "Black")),
-			int(saved_run.get("season_lives", 0)),
-			int(saved_run.get("max_season_lives", 0))
-		], 18)
-		_add_sketch_status_text(status_box, "%d CARDS OWNED  •  MAIN DECK %d/%d" % [
-			_deck_total(saved_run.get("collection", {})),
-			_deck_total(saved_run.get("deck", {})),
-			MAIN_DECK_SIZE
-		], 18)
-		_add_sketch_status_text(
-			status_box,
-			"This season has ended. Start a New Game to continue playing."
-			if saved_run_finished
-			else "Continue returns to the card shop.",
-			17
-		)
+			String(difficulty.get("name", "Black"))
+		])
+		if saved_run_finished:
+			status_lines.append("This season has ended. Start a New Game to continue playing.")
 	else:
-		_add_sketch_status_text(status_box, "NO SAVED SEASON YET", 25)
-		_add_sketch_status_text(status_box, "Choose New Game to select a starter deck or begin Draft Night.", 18)
+		status_lines = [
+			"NO SAVED SEASON YET",
+			"Choose New Game to select a starter deck or begin Draft Night.",
+		]
 
-	var deck_action_row := HBoxContainer.new()
-	deck_action_row.alignment = BoxContainer.ALIGNMENT_END
-	status_box.add_child(deck_action_row)
-	var current_deck_button := SKETCH_UI_SCRIPT.make_button(
-		"VIEW DECK",
-		Vector2(152, 62),
-		false,
-		19,
-		true
-	)
-	current_deck_button.name = "SavedDeckCollectionButton"
-	current_deck_button.tooltip_text = "Open the saved collection and deck"
-	current_deck_button.disabled = not has_save
-	_connect_pressed(current_deck_button, _open_saved_collection)
-	deck_action_row.add_child(current_deck_button)
-
-	var action_column := VBoxContainer.new()
-	action_column.add_theme_constant_override("separation", 6)
-	_anchor_rect(action_column, 0.5, 0.5, 0.0, 0.0, -245, 566, 245, 774)
-	screen.add_child(action_column)
-
-	var continue_button := SKETCH_UI_SCRIPT.make_button(
-		"CONTINUE",
-		Vector2(490, 98),
-		true,
-		35,
-		false
-	)
-	continue_button.name = "ContinueRunButton"
-	continue_button.disabled = not has_save or saved_run_finished
-	_connect_pressed(continue_button, _continue_run_to_shop)
-	action_column.add_child(continue_button)
-
-	var new_game_button := SKETCH_UI_SCRIPT.make_button(
-		"NEW GAME",
-		Vector2(490, 98),
-		false,
-		34,
-		true
-	)
-	new_game_button.name = "NewGameButton"
-	_connect_pressed(new_game_button, _show_season_run_setup)
-	action_column.add_child(new_game_button)
-
-	var menu_panel := _make_title_route_menu(screen, "GameStartOptionsPanel")
-	var menu_actions := menu_panel.get_node("TitleRouteMenuActions") as VBoxContainer
-	var back_button := SKETCH_UI_SCRIPT.make_button(
-		"BACK TO TITLE",
-		Vector2(250, 58),
-		false,
-		19,
-		false
-	)
-	back_button.name = "GameStartBackButton"
-	_connect_pressed(back_button, _show_start)
-	menu_actions.add_child(back_button)
-
-	var menu_button := SKETCH_UI_SCRIPT.make_button(
-		"MORE",
-		Vector2(126, 74),
-		false,
-		22,
-		true
-	)
-	menu_button.name = "GameStartOptionsButton"
-	menu_button.tooltip_text = "Back, How to Play, and Settings"
-	_anchor_rect(menu_button, 1.0, 1.0, 1.0, 1.0, -154, -106, -28, -32)
-	_connect_pressed(menu_button, func() -> void: menu_panel.visible = not menu_panel.visible)
-	screen.add_child(menu_button)
+	var screen = GAME_STATUS_MENU_SCENE.instantiate()
+	screen.name = "GameStartGateway"
+	screen.continue_requested.connect(_continue_from_gateway_with_circle_wipe, CONNECT_DEFERRED)
+	screen.new_game_requested.connect(_new_game_from_gateway_with_circle_wipe, CONNECT_DEFERRED)
+	screen.view_deck_requested.connect(_open_saved_collection, CONNECT_DEFERRED)
+	screen.back_requested.connect(_show_start, CONNECT_DEFERRED)
+	screen.tutorial_requested.connect(_show_tutorial, CONNECT_DEFERRED)
+	screen.settings_requested.connect(_show_settings, CONNECT_DEFERRED)
+	screen.debug_requested.connect(_show_debug_starter_selection, CONNECT_DEFERRED)
+	content.add_child(screen)
+	screen.configure({
+		"has_save": has_save,
+		"finished": saved_run_finished,
+		"starter_id": saved_starter_id,
+		"drafted": has_save and bool(saved_run.get("drafted", false)),
+		"status_lines": status_lines,
+	}, deck_art, _development_tools_enabled())
 
 
 func _show_new_game_menu() -> void:
@@ -1483,9 +1451,23 @@ func _show_settings() -> void:
 	_update_status()
 	_set_footer("Changes are saved automatically.")
 
-	var header := _add_bordered_panel(content, "SETTINGS", "#173B39", "#78AAA3", 3)
-	header.name = "SettingsHeader"
-	_add_body_text(header, "Set up the game for your screen, speakers, and play style.")
+	var header_parts := _make_settings_section(
+		"SETTINGS",
+		Color(PALETTE.CREAM, 0.96),
+		PALETTE.CORAL,
+		Vector2(0, 78),
+		Vector4(22, 13, 22, 13)
+	)
+	var header_panel := header_parts.panel as PanelContainer
+	header_panel.name = "SettingsHeader"
+	content.add_child(header_panel)
+	var header_heading := header_parts.heading as Label
+	header_heading.add_theme_font_size_override("font_size", 26)
+	var header_subtitle := Label.new()
+	header_subtitle.text = "Set up the game for your screen, speakers, and play style."
+	header_subtitle.add_theme_font_size_override("font_size", 14)
+	header_subtitle.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	(header_parts.body as VBoxContainer).add_child(header_subtitle)
 
 	var columns := HBoxContainer.new()
 	columns.name = "SettingsColumns"
@@ -1493,16 +1475,26 @@ func _show_settings() -> void:
 	columns.add_theme_constant_override("separation", 12)
 	content.add_child(columns)
 
-	var display_panel := _add_bordered_panel(columns, "DISPLAY", "#1E302E", "#78AAA3", 2)
-	display_panel.name = "SettingsDisplayPanel"
-	display_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	display_panel.custom_minimum_size = Vector2(420, 0)
+	var display_parts := _make_settings_section(
+		"DISPLAY",
+		Color("#EEF3FFED"),
+		PALETTE.PERIWINKLE,
+		Vector2(340, 208),
+		Vector4(18, 13, 18, 15)
+	)
+	var display_frame := display_parts.panel as PanelContainer
+	display_frame.name = "SettingsDisplayPanel"
+	display_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(display_frame)
+	var display_panel := display_parts.body as VBoxContainer
+	display_panel.add_theme_constant_override("separation", 12)
 
 	var fullscreen_toggle := CheckButton.new()
 	fullscreen_toggle.name = "FullscreenToggle"
 	fullscreen_toggle.text = "Fullscreen"
 	fullscreen_toggle.button_pressed = bool(player_settings.fullscreen)
 	fullscreen_toggle.focus_mode = Control.FOCUS_ALL
+	_style_settings_text_control(fullscreen_toggle)
 	display_panel.add_child(fullscreen_toggle)
 
 	var resolution_row := HBoxContainer.new()
@@ -1512,6 +1504,7 @@ func _show_settings() -> void:
 	var resolution_label := Label.new()
 	resolution_label.text = "Resolution"
 	resolution_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(resolution_label)
 	resolution_row.add_child(resolution_label)
 	var resolution_select := OptionButton.new()
 	resolution_select.name = "ResolutionSelect"
@@ -1533,6 +1526,7 @@ func _show_settings() -> void:
 	var text_scale_label := Label.new()
 	text_scale_label.text = "Text size"
 	text_scale_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(text_scale_label)
 	text_scale_row.add_child(text_scale_label)
 	var text_scale_select := OptionButton.new()
 	text_scale_select.name = "TextScaleSelect"
@@ -1543,27 +1537,94 @@ func _show_settings() -> void:
 			text_scale_select.select(text_scale_select.item_count - 1)
 	text_scale_row.add_child(text_scale_select)
 
-	var audio_panel := _add_bordered_panel(columns, "AUDIO", "#30291E", "#E2B84C", 2)
-	audio_panel.name = "SettingsAudioPanel"
-	audio_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	audio_panel.custom_minimum_size = Vector2(420, 0)
+	var audio_parts := _make_settings_section(
+		"AUDIO",
+		Color("#FBE7ECED"),
+		PALETTE.BLUSH,
+		Vector2(340, 208),
+		Vector4(18, 13, 18, 15)
+	)
+	var audio_frame := audio_parts.panel as PanelContainer
+	audio_frame.name = "SettingsAudioPanel"
+	audio_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(audio_frame)
+	var audio_panel := audio_parts.body as VBoxContainer
+	audio_panel.add_theme_constant_override("separation", 8)
 	_add_volume_setting(audio_panel, "Master", "master_volume")
 	_add_volume_setting(audio_panel, "Music", "music_volume")
 	_add_volume_setting(audio_panel, "Sound effects", "sfx_volume")
 
-	var accessibility_panel := _add_bordered_panel(content, "ACCESSIBILITY", "#272338", "#A798D4", 2)
-	accessibility_panel.name = "SettingsAccessibilityPanel"
+	var battle_parts := _make_settings_section(
+		"BATTLE",
+		Color("#FFF3DDED"),
+		PALETTE.HONEY,
+		Vector2(340, 208),
+		Vector4(18, 13, 18, 15)
+	)
+	var battle_frame := battle_parts.panel as PanelContainer
+	battle_frame.name = "SettingsBattlePanel"
+	battle_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(battle_frame)
+	var battle_panel := battle_parts.body as VBoxContainer
+	battle_panel.add_theme_constant_override("separation", 12)
+
+	var play_speed_row := HBoxContainer.new()
+	play_speed_row.add_theme_constant_override("separation", 10)
+	battle_panel.add_child(play_speed_row)
+	var play_speed_label := Label.new()
+	play_speed_label.text = "Play speed"
+	play_speed_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(play_speed_label)
+	play_speed_row.add_child(play_speed_label)
+	var play_speed_select := OptionButton.new()
+	play_speed_select.name = "PlaySpeedSelect"
+	play_speed_select.custom_minimum_size = Vector2(150, 40)
+	for option in PLAY_SPEED_OPTIONS:
+		play_speed_select.add_item(String(option.label))
+		if String(option.id) == String(player_settings.play_speed):
+			play_speed_select.select(play_speed_select.item_count - 1)
+	play_speed_row.add_child(play_speed_select)
+
+	var battle_text_row := HBoxContainer.new()
+	battle_text_row.add_theme_constant_override("separation", 10)
+	battle_panel.add_child(battle_text_row)
+	var battle_text_label := Label.new()
+	battle_text_label.text = "Battle text size"
+	battle_text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(battle_text_label)
+	battle_text_row.add_child(battle_text_label)
+	var battle_text_select := OptionButton.new()
+	battle_text_select.name = "BattleTextScaleSelect"
+	battle_text_select.custom_minimum_size = Vector2(150, 40)
+	for option in BATTLE_TEXT_SCALE_OPTIONS:
+		battle_text_select.add_item("%d%%" % roundi(float(option) * 100.0))
+		if is_equal_approx(float(option), float(player_settings.battle_text_scale)):
+			battle_text_select.select(battle_text_select.item_count - 1)
+	battle_text_row.add_child(battle_text_select)
+
+	var accessibility_parts := _make_settings_section(
+		"ACCESSIBILITY",
+		Color("#EEE9F8ED"),
+		PALETTE.FUNKY_PLUM,
+		Vector2(0, 126),
+		Vector4(18, 13, 18, 15)
+	)
+	var accessibility_frame := accessibility_parts.panel as PanelContainer
+	accessibility_frame.name = "SettingsAccessibilityPanel"
+	content.add_child(accessibility_frame)
+	var accessibility_panel := accessibility_parts.body as VBoxContainer
+	accessibility_panel.add_theme_constant_override("separation", 8)
 	var high_contrast_toggle := CheckButton.new()
 	high_contrast_toggle.name = "HighContrastToggle"
 	high_contrast_toggle.text = "High-contrast text"
-	high_contrast_toggle.tooltip_text = "Adds a strong outline to interface text."
 	high_contrast_toggle.button_pressed = bool(player_settings.high_contrast)
+	_style_settings_text_control(high_contrast_toggle)
 	accessibility_panel.add_child(high_contrast_toggle)
 	var reduced_motion_toggle := CheckButton.new()
 	reduced_motion_toggle.name = "ReducedMotionToggle"
 	reduced_motion_toggle.text = "Reduce menu motion"
-	reduced_motion_toggle.tooltip_text = "Removes pulsing, bounce, and decorative menu movement."
 	reduced_motion_toggle.button_pressed = bool(player_settings.reduced_motion)
+	_style_settings_text_control(reduced_motion_toggle)
 	accessibility_panel.add_child(reduced_motion_toggle)
 
 	var actions := HBoxContainer.new()
@@ -1573,7 +1634,7 @@ func _show_settings() -> void:
 	var back_button := _make_button("Back")
 	back_button.name = "SettingsBackButton"
 	back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(back_button, "action")
+	_style_button(back_button, "target")
 	_connect_pressed(back_button, _return_from_settings)
 	actions.add_child(back_button)
 	var reset_button := _make_button("Restore Defaults")
@@ -1581,6 +1642,41 @@ func _show_settings() -> void:
 	reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_connect_pressed(reset_button, _reset_player_settings)
 	actions.add_child(reset_button)
+
+	var abandon_button := _make_button("Abandon Run")
+	abandon_button.name = "SettingsAbandonRunButton"
+	abandon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	abandon_button.disabled = run.is_empty() and not run_state_service.has_saved_run()
+	_style_button(abandon_button, "danger")
+	actions.add_child(abandon_button)
+
+	var abandon_confirmation := HBoxContainer.new()
+	abandon_confirmation.name = "AbandonRunConfirmation"
+	abandon_confirmation.visible = false
+	abandon_confirmation.add_theme_constant_override("separation", 10)
+	content.add_child(abandon_confirmation)
+	var confirmation_copy := Label.new()
+	confirmation_copy.text = "Abandon this run? Your deck, money, and season progress cannot be recovered."
+	confirmation_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(confirmation_copy, true)
+	abandon_confirmation.add_child(confirmation_copy)
+	var cancel_abandon_button := _make_button("Keep Playing")
+	cancel_abandon_button.name = "CancelAbandonRunButton"
+	_style_button(cancel_abandon_button, "default")
+	abandon_confirmation.add_child(cancel_abandon_button)
+	var confirm_abandon_button := _make_button("Yes, Abandon Run")
+	confirm_abandon_button.name = "ConfirmAbandonRunButton"
+	_style_button(confirm_abandon_button, "danger")
+	abandon_confirmation.add_child(confirm_abandon_button)
+	_connect_pressed(abandon_button, func() -> void:
+		abandon_button.visible = false
+		abandon_confirmation.visible = true
+	)
+	_connect_pressed(cancel_abandon_button, func() -> void:
+		abandon_confirmation.visible = false
+		abandon_button.visible = true
+	)
+	_connect_pressed(confirm_abandon_button, _abandon_current_run)
 
 	fullscreen_toggle.toggled.connect(func(enabled: bool) -> void:
 		player_settings.fullscreen = enabled
@@ -1600,6 +1696,18 @@ func _show_settings() -> void:
 		player_settings.text_scale = float(TEXT_SCALE_OPTIONS[index])
 		_commit_player_settings()
 	)
+	play_speed_select.item_selected.connect(func(index: int) -> void:
+		if index < 0 or index >= PLAY_SPEED_OPTIONS.size():
+			return
+		player_settings.play_speed = String(PLAY_SPEED_OPTIONS[index].id)
+		_commit_player_settings()
+	)
+	battle_text_select.item_selected.connect(func(index: int) -> void:
+		if index < 0 or index >= BATTLE_TEXT_SCALE_OPTIONS.size():
+			return
+		player_settings.battle_text_scale = float(BATTLE_TEXT_SCALE_OPTIONS[index])
+		_commit_player_settings()
+	)
 	high_contrast_toggle.toggled.connect(func(enabled: bool) -> void:
 		player_settings.high_contrast = enabled
 		_commit_player_settings()
@@ -1608,6 +1716,73 @@ func _show_settings() -> void:
 		player_settings.reduced_motion = enabled
 		_commit_player_settings()
 	)
+
+
+func _make_settings_section(
+	title: String,
+	fill: Color,
+	accent: Color,
+	minimum_size: Vector2,
+	margins: Vector4
+) -> Dictionary:
+	var parts := WORKSPACE_UI_SCRIPT.make_section(title, accent, minimum_size, false, margins)
+	var panel := parts.panel as PanelContainer
+	panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(fill, accent, 2, 16, Vector4.ZERO, 0, true)
+	)
+	var heading := parts.heading as Label
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	return parts
+
+
+func _style_settings_text_control(control: Control, muted: bool = false) -> void:
+	var color := PALETTE.NAVY_MUTED if muted else PALETTE.NAVY
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		control.add_theme_color_override(state, color)
+
+
+func _style_settings_slider(slider: HSlider) -> void:
+	var track := StyleBoxLine.new()
+	track.color = Color("#B8C7EA")
+	track.thickness = 6
+	track.grow_begin = 2
+	track.grow_end = 2
+	slider.add_theme_stylebox_override("slider", track)
+	var fill := StyleBoxLine.new()
+	fill.color = PALETTE.BLUSH
+	fill.thickness = 6
+	fill.grow_begin = 2
+	fill.grow_end = 2
+	slider.add_theme_stylebox_override("grabber_area", fill)
+	var highlight_fill := StyleBoxLine.new()
+	highlight_fill.color = PALETTE.CORAL
+	highlight_fill.thickness = 6
+	highlight_fill.grow_begin = 2
+	highlight_fill.grow_end = 2
+	slider.add_theme_stylebox_override("grabber_area_highlight", highlight_fill)
+
+
+func _abandon_current_run() -> void:
+	autosave_suspended = true
+	var clear_result: Dictionary = run_state_service.clear_saved_run()
+	if not bool(clear_result.get("ok", false)):
+		autosave_suspended = false
+		_set_footer(String(clear_result.get("message", "Could not remove the saved run.")))
+		return
+	if is_instance_valid(suspended_tabletop):
+		suspended_tabletop.queue_free()
+	suspended_tabletop = null
+	suspended_tabletop_screen = ""
+	run = {}
+	draft_deck = {}
+	draft_offer.clear()
+	draft_picks.clear()
+	draft_signpost_chosen = false
+	last_autosave_fingerprint = ""
+	last_autosave_screen = ""
+	autosave_suspended = false
+	_show_start()
 
 
 func _add_volume_setting(parent: Node, label_text: String, setting_key: String) -> void:
@@ -1620,12 +1795,14 @@ func _add_volume_setting(parent: Node, label_text: String, setting_key: String) 
 	var heading := Label.new()
 	heading.text = label_text
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_settings_text_control(heading)
 	heading_row.add_child(heading)
 	var value_label := Label.new()
 	value_label.name = "%sVolumeValue" % label_text.replace(" ", "")
 	value_label.text = "%d%%" % roundi(float(player_settings.get(setting_key, 80.0)))
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	value_label.custom_minimum_size.x = 58
+	_style_settings_text_control(value_label)
 	heading_row.add_child(value_label)
 	var slider := HSlider.new()
 	slider.name = "%sVolumeSlider" % label_text.replace(" ", "")
@@ -1634,6 +1811,7 @@ func _add_volume_setting(parent: Node, label_text: String, setting_key: String) 
 	slider.step = 1.0
 	slider.value = float(player_settings.get(setting_key, 80.0))
 	slider.custom_minimum_size = Vector2(0, 34)
+	_style_settings_slider(slider)
 	slider.value_changed.connect(func(value: float) -> void:
 		player_settings[setting_key] = value
 		value_label.text = "%d%%" % roundi(value)
@@ -1670,6 +1848,8 @@ func _return_from_settings() -> void:
 			_show_tournament()
 		"meta":
 			_show_meta()
+		"kitchen_match", "tutorial":
+			_restore_tabletop_after_settings()
 		_:
 			if not run.is_empty():
 				_show_shop()
@@ -1685,12 +1865,18 @@ func _show_tutorial() -> void:
 	_clear(content)
 	_update_status()
 	_set_footer("")
-	var tutorial_game = TABLETOP_3D_PROTOTYPE_SCENE.instantiate()
+	var tutorial_game = _instantiate_scene(TABLETOP_3D_PROTOTYPE_SCENE_PATH)
 	tutorial_game.configure_tutorial()
+	tutorial_game.configure_battle_preferences(
+		String(player_settings.play_speed),
+		float(player_settings.battle_text_scale)
+	)
 	tutorial_game.custom_minimum_size = Vector2(0, 820)
 	tutorial_game.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tutorial_game.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tutorial_game.exit_requested.connect(_show_start)
+	tutorial_game.settings_requested.connect(func() -> void: _show_settings_from_tabletop(tutorial_game))
+	tutorial_game.battle_preferences_changed.connect(_on_battle_preferences_changed)
 	content.add_child(tutorial_game)
 
 
@@ -1732,6 +1918,8 @@ func _show_debug_starter_selection() -> void:
 
 
 func _show_season_run_setup() -> void:
+	if current_screen != "season_setup":
+		season_setup_difficulty_open = false
 	current_screen = "season_setup"
 	run = {}
 	_apply_screen_chrome()
@@ -1744,7 +1932,6 @@ func _show_season_run_setup() -> void:
 	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
 	var difficulty := _difficulty_data(selected_difficulty_id)
 	var draft_night_selected := selected_starter_id == DRAFT_NIGHT_ID
-
 	var starter_title := "Draft Night"
 	var starter_summary := "Build your season deck one choice at a time from rotating three-card offers."
 	var starter_detail := "20 picks  •  Opening signpost Meal  •  Drafted cards become your collection"
@@ -1754,261 +1941,44 @@ func _show_season_run_setup() -> void:
 		var metrics := _calculate_deck_metrics(starter_deck, {})
 		starter_title = _archetype_label(selected_starter_id)
 		starter_summary = String(archetype.get("summary", ""))
-		starter_detail = "%s\nStarter deck: %d cards  •  Predator: %s" % [
+		starter_detail = "%s  •  Starter deck: %d cards  •  Predator: %s" % [
 			_format_metrics_short(metrics),
 			_deck_total(starter_deck),
-			_affinity_label(_predator_archetype(selected_starter_id))
+			_affinity_label(_predator_archetype(selected_starter_id)),
 		]
 
-	var screen := _make_front_door_screen("SeasonRegistration")
-	var paper_background := ColorRect.new()
-	paper_background.color = Color("#F3ECD9")
-	paper_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	paper_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(paper_background)
-
-	var setup_banner := SKETCH_UI_SCRIPT.make_section_banner(
-		"CHOOSE YOUR RUN",
-		"Pick a starter path and a season border.",
-		Vector2(680, 104),
-		SKETCH_UI_SCRIPT.ORANGE
-	)
-	setup_banner.name = "SeasonSetupBanner"
-	_anchor_rect(setup_banner, 0.5, 0.5, 0.0, 0.0, -340, 14, 340, 118)
-	screen.add_child(setup_banner)
-
-	var back_button := SKETCH_UI_SCRIPT.make_button(
-		"← BACK",
-		Vector2(146, 72),
-		false,
-		22,
-		false
-	)
-	back_button.name = "SeasonSetupBackButton"
-	back_button.tooltip_text = "Back to saved-game menu"
-	_anchor_rect(back_button, 0.0, 0.0, 0.0, 0.0, 24, 26, 170, 98)
-	_connect_pressed(back_button, _show_game_start)
-	screen.add_child(back_button)
-
-	var selection_row := HBoxContainer.new()
-	selection_row.add_theme_constant_override("separation", 42)
-	_anchor_rect(selection_row, 0.5, 0.5, 0.0, 0.0, -620, 132, 620, 812)
-	screen.add_child(selection_row)
-
-	var starter_column := VBoxContainer.new()
-	starter_column.custom_minimum_size = Vector2(700, 0)
-	starter_column.add_theme_constant_override("separation", 10)
-	selection_row.add_child(starter_column)
-
-	var starter_accent := SKETCH_UI_SCRIPT.MUSTARD if draft_night_selected else _affinity_color(selected_starter_id)
-	var deck_card := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(700, 490),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		starter_accent,
-		Vector4(38, 30, 38, 32),
-		season_setup_archetype_index
-	)
-	deck_card.name = "SeasonStarterCard"
-	deck_card.set_meta("starter_id", selected_starter_id)
-	starter_column.add_child(deck_card)
-
-	var deck_stage := Control.new()
-	deck_stage.custom_minimum_size = Vector2(624, 428)
-	deck_card.add_child(deck_stage)
-
-	var deck_art := _make_menu_deck_art(
+	var starter_art := _make_menu_deck_art(
 		selected_starter_id,
 		starter_title,
 		draft_night_selected,
 		Vector2(236, 292)
 	)
-	deck_art.name = "SelectedStarterArtwork"
-	_anchor_rect(deck_art, 0.5, 0.5, 0.0, 0.0, -118, 22, 118, 314)
-	deck_stage.add_child(deck_art)
-
-	var previous_deck := _make_sketch_arrow_button(-1, Vector2(78, 78))
-	previous_deck.name = "PreviousStarterButton"
-	_anchor_rect(previous_deck, 0.0, 0.0, 0.5, 0.5, 10, -39, 88, 39)
-	_connect_pressed(previous_deck, func() -> void: _shift_season_setup_archetype(-1))
-	deck_stage.add_child(previous_deck)
-
-	var next_deck := _make_sketch_arrow_button(1, Vector2(78, 78))
-	next_deck.name = "NextStarterButton"
-	_anchor_rect(next_deck, 1.0, 1.0, 0.5, 0.5, -88, -39, -10, 39)
-	_connect_pressed(next_deck, func() -> void: _shift_season_setup_archetype(1))
-	deck_stage.add_child(next_deck)
-
-	var deck_name_banner := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(350, 76),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		starter_accent,
-		Vector4(20, 10, 20, 12),
-		season_setup_archetype_index + 1
-	)
-	deck_name_banner.name = "StarterNameBanner"
-	_anchor_rect(deck_name_banner, 0.5, 0.5, 1.0, 1.0, -175, -84, 175, -8)
-	deck_stage.add_child(deck_name_banner)
-	var deck_name_label := Label.new()
-	deck_name_label.text = starter_title.to_upper()
-	deck_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	deck_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	deck_name_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
-	deck_name_label.add_theme_font_size_override("font_size", 30)
-	deck_name_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	deck_name_banner.add_child(deck_name_label)
-
-	var info_bar := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(700, 122),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		starter_accent,
-		Vector4(24, 18, 24, 20),
-		2
-	)
-	info_bar.name = "StarterInfoBar"
-	starter_column.add_child(info_bar)
-	var info_row := HBoxContainer.new()
-	info_row.add_theme_constant_override("separation", 14)
-	info_bar.add_child(info_row)
-	_add_starter_info_symbol(info_row, selected_starter_id, draft_night_selected)
-	var info_copy := VBoxContainer.new()
-	info_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_copy.add_theme_constant_override("separation", 1)
-	info_row.add_child(info_copy)
-	var info_title := Label.new()
-	info_title.text = "%s Deck" % starter_title if not draft_night_selected else "Draft Night"
-	info_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.62))
-	info_title.add_theme_font_size_override("font_size", 22)
-	info_title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	info_copy.add_child(info_title)
-	var info_detail := Label.new()
-	info_detail.text = "%s  •  %s" % [starter_summary, starter_detail.replace("\n", "  •  ")]
-	info_detail.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	info_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.12))
-	info_detail.add_theme_font_size_override("font_size", 15)
-	info_detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	info_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_copy.add_child(info_detail)
-	var cycle_deck_button := SKETCH_UI_SCRIPT.make_button(
-		"LIST",
-		Vector2(88, 66),
-		false,
-		19,
-		true
-	)
-	cycle_deck_button.name = "StarterDeckContentsButton"
-	cycle_deck_button.tooltip_text = "View this deck's contents"
-	_connect_pressed(cycle_deck_button, func() -> void: _show_starter_deck_preview(selected_starter_id))
-	info_row.add_child(cycle_deck_button)
-
-	var difficulty_column := VBoxContainer.new()
-	difficulty_column.custom_minimum_size = Vector2(498, 0)
-	difficulty_column.add_theme_constant_override("separation", 8)
-	selection_row.add_child(difficulty_column)
-
-	var difficulty_card := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(498, 438),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		Color(String(difficulty.get("accent", "#171717"))),
-		Vector4(40, 30, 40, 34),
-		season_setup_difficulty_index
-	)
-	difficulty_card.name = "SeasonBorderCard"
-	difficulty_card.set_meta("difficulty_id", selected_difficulty_id)
-	difficulty_column.add_child(difficulty_card)
-	var difficulty_box := VBoxContainer.new()
-	difficulty_box.add_theme_constant_override("separation", 8)
-	difficulty_card.add_child(difficulty_box)
-
-	var border_title := Label.new()
-	border_title.text = "%s BORDER" % String(difficulty.get("name", "Black")).to_upper()
-	border_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	border_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
-	border_title.add_theme_font_size_override("font_size", 30)
-	border_title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	difficulty_box.add_child(border_title)
-
-	var difficulty_row := HBoxContainer.new()
-	difficulty_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	difficulty_row.add_theme_constant_override("separation", 18)
-	difficulty_box.add_child(difficulty_row)
-
-	var previous_difficulty := _make_sketch_arrow_button(-1, Vector2(64, 68))
-	previous_difficulty.name = "PreviousBorderButton"
-	_connect_pressed(previous_difficulty, func() -> void: _shift_season_setup_difficulty(-1))
-	difficulty_row.add_child(previous_difficulty)
-
-	var border_preview := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(210, 228),
-		Color("#F7F2E6"),
-		Color(String(difficulty.get("border_color", "#090909"))),
-		Color(String(difficulty.get("accent", "#171717"))),
-		Vector4(24, 24, 24, 26),
-		season_setup_difficulty_index + 1
-	)
-	border_preview.name = "SeasonBorderPreview"
-	var effect_label := Label.new()
-	effect_label.text = String(difficulty.get("rules_text", "Base season rules."))
-	effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	effect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	effect_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.14))
-	effect_label.add_theme_font_size_override("font_size", 17)
-	effect_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	border_preview.add_child(effect_label)
-	difficulty_row.add_child(border_preview)
-
-	var next_difficulty := _make_sketch_arrow_button(1, Vector2(64, 68))
-	next_difficulty.name = "NextBorderButton"
-	_connect_pressed(next_difficulty, func() -> void: _shift_season_setup_difficulty(1))
-	difficulty_row.add_child(next_difficulty)
-
-	var border_stats := Label.new()
-	border_stats.text = "Starting money $%d  •  %d season %s" % [
-		run_state_service.starting_money_for_difficulty(selected_difficulty_id),
-		1 if selected_difficulty_id == "silver" else 3,
-		"life" if selected_difficulty_id == "silver" else "lives"
-	]
-	border_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	border_stats.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.14))
-	border_stats.add_theme_font_size_override("font_size", 16)
-	border_stats.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	difficulty_box.add_child(border_stats)
-
-	var pips := HBoxContainer.new()
-	pips.name = "SeasonBorderPagination"
-	pips.alignment = BoxContainer.ALIGNMENT_CENTER
-	pips.add_theme_constant_override("separation", 6)
-	difficulty_column.add_child(pips)
-	for index in DIFFICULTY_ORDER.size():
-		var pip := SKETCH_UI_SCRIPT.make_pip(
-			index == season_setup_difficulty_index,
-			Color(String(difficulty.get("accent", "#171717")))
-		)
-		pip.name = "SeasonBorderPip%d" % index
-		pips.add_child(pip)
-
-	var route_hint := Label.new()
-	route_hint.text = "STARTS AT DRAFT NIGHT" if draft_night_selected else "STARTS AT THE CARD SHOP"
-	route_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	route_hint.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
-	route_hint.add_theme_font_size_override("font_size", 15)
-	route_hint.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.ORANGE)
-	difficulty_column.add_child(route_hint)
-
-	var play_button := SKETCH_UI_SCRIPT.make_button(
-		"START THE SEASON",
-		Vector2(498, 98),
-		true,
-		32,
-		false
-	)
-	play_button.name = "ConfirmSeasonStartButton"
-	_connect_pressed(play_button, _confirm_season_run_setup)
-	difficulty_column.add_child(play_button)
+	starter_art.name = "SelectedStarterArtwork"
+	var screen = SEASON_SETUP_MENU_SCENE.instantiate()
+	screen.name = "SeasonRegistration"
+	screen.back_requested.connect(_show_game_start, CONNECT_DEFERRED)
+	screen.starter_selected_requested.connect(_select_season_setup_archetype, CONNECT_DEFERRED)
+	screen.deck_list_requested.connect(func() -> void: _show_starter_deck_preview(selected_starter_id), CONNECT_DEFERRED)
+	screen.previous_border_requested.connect(func() -> void: _shift_season_setup_difficulty(-1), CONNECT_DEFERRED)
+	screen.next_border_requested.connect(func() -> void: _shift_season_setup_difficulty(1), CONNECT_DEFERRED)
+	screen.confirm_requested.connect(_confirm_season_run_setup, CONNECT_DEFERRED)
+	screen.difficulty_closed_requested.connect(_close_season_setup_difficulty, CONNECT_DEFERRED)
+	content.add_child(screen)
+	screen.configure({
+		"starter_id": selected_starter_id,
+		"starter_index": season_setup_archetype_index,
+		"difficulty_id": selected_difficulty_id,
+		"difficulty_index": season_setup_difficulty_index,
+		"difficulty_open": season_setup_difficulty_open,
+		"starter_title": starter_title,
+		"info_title": "Draft Night" if draft_night_selected else "%s Deck" % starter_title,
+		"info_detail": "%s  •  %s" % [starter_summary, starter_detail],
+		"difficulty_name": String(difficulty.get("name", "Black")),
+		"difficulty_rules": String(difficulty.get("rules_text", "Base season rules.")),
+		"border_stats": "Starting money $%d" % run_state_service.starting_money_for_difficulty(selected_difficulty_id),
+		"route_hint": "STARTS AT DRAFT NIGHT" if draft_night_selected else "STARTS AT THE CARD SHOP",
+	}, starter_art)
+	_add_starter_info_symbol(screen.get_symbol_mount(), selected_starter_id, draft_night_selected)
 
 
 func _begin_draft(difficulty_id: String = "white") -> void:
@@ -2030,84 +2000,48 @@ func _show_draft() -> void:
 	_clear(content)
 	_remove_draft_hover_preview()
 	_update_status()
-
 	var drafted_count := _draft_total()
 	var signpost_step := not draft_signpost_chosen
 	_set_footer("Click a card to add it to your deck.")
 
-	var heading_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 88),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.MUSTARD if signpost_step else SKETCH_UI_SCRIPT.TEAL,
-		Vector4(28, 16, 28, 18),
-		drafted_count
+	var screen = DRAFT_MENU_SCENE.instantiate()
+	screen.name = "DraftWorkspaceScreen"
+	screen.abandon_requested.connect(_show_start, CONNECT_DEFERRED)
+	content.add_child(screen)
+	screen.configure(
+		"Choose your opening dual-flavor Meal."
+		if signpost_step
+		else "Pick %d of %d  •  Click one card to add it to your deck." % [drafted_count + 1, DRAFT_DECK_SIZE],
+		"%02d / %02d" % [drafted_count, DRAFT_DECK_SIZE]
 	)
-	heading_panel.name = "DraftModePanel"
-	heading_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.add_child(heading_panel)
-	var heading := HBoxContainer.new()
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_theme_constant_override("separation", 12)
-	heading_panel.add_child(heading)
-	var heading_copy := VBoxContainer.new()
-	heading_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_child(heading_copy)
-	var title := Label.new()
-	title.text = "PICK A CARD"
-	title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.86))
-	title.add_theme_font_size_override("font_size", 25)
-	title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	heading_copy.add_child(title)
-	var instruction := Label.new()
-	instruction.text = (
-		"Choose your opening dual-flavor Meal." if signpost_step
-		else "Pick %d of %d  •  Click one card to add it to your deck." % [drafted_count + 1, DRAFT_DECK_SIZE]
-	)
-	instruction.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.14))
-	instruction.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	heading_copy.add_child(instruction)
-	var progress := Label.new()
-	progress.text = "%02d / %02d" % [drafted_count, DRAFT_DECK_SIZE]
-	progress.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.82))
-	progress.add_theme_font_size_override("font_size", 24)
-	progress.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
-	heading.add_child(progress)
+	_populate_draft_offer_row(screen.get_offer_row())
+	_add_draft_deck_rail(screen.get_workspace())
+	_create_draft_hover_preview()
+	_add_draft_distribution_charts(screen)
 
-	var workspace := HBoxContainer.new()
-	workspace.name = "DraftWorkspace"
-	workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	workspace.add_theme_constant_override("separation", 12)
-	content.add_child(workspace)
 
-	var offer_row := HBoxContainer.new()
-	offer_row.name = "DraftOfferRow"
-	offer_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	offer_row.add_theme_constant_override("separation", 12)
-	workspace.add_child(offer_row)
-
-	for card_id_value in draft_offer:
+func _populate_draft_offer_row(offer_row: HBoxContainer) -> void:
+	var offer_slots := offer_row.get_children()
+	for index in range(offer_slots.size()):
+		var slot := offer_slots[index] as PanelContainer
+		slot.visible = index < draft_offer.size()
+		if not slot.visible:
+			continue
+		for child in slot.get_children():
+			child.queue_free()
+	for offer_index in range(draft_offer.size()):
+		var card_id_value = draft_offer[offer_index]
 		var card_id := String(card_id_value)
 		var card: Dictionary = cards_by_id[card_id]
-		var card_accent := _affinity_color(_card_archetype(card))
-		var choice_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-			Vector2(218, 344),
-			SKETCH_UI_SCRIPT.PAPER,
-			SKETCH_UI_SCRIPT.INK,
-			card_accent,
-			Vector4(14, 14, 14, 16),
-			draft_offer.find(card_id)
-		)
+		var choice_panel := offer_slots[offer_index] as PanelContainer
 		choice_panel.name = "DraftOffer_%s" % card_id
-		choice_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		offer_row.add_child(choice_panel)
 		var choice := VBoxContainer.new()
 		choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		choice.add_theme_constant_override("separation", 6)
 		choice.set_meta("light_surface", true)
 		choice_panel.add_child(choice)
 		choice_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		choice_panel.tooltip_text = "Pick " + _card_display_name(card)
+		choice_panel.add_theme_stylebox_override("panel", _draft_offer_panel_style(false))
 		if _card_uses_authored_face(card):
 			var face := _make_card_face(card, Vector2(188, 267), true)
 			face.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2116,64 +2050,62 @@ func _show_draft() -> void:
 		else:
 			_add_body_text(choice, "%s • %s" % [String(card.get("rarity", "common")).capitalize(), _card_descriptor(card)])
 			_add_body_text(choice, String(card.get("text", "")))
-		var pick_label := Label.new()
-		pick_label.name = "DraftPick_%s" % card_id
-		pick_label.text = "PICK THIS CARD"
-		pick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pick_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.48))
-		pick_label.add_theme_font_size_override("font_size", 13)
-		pick_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
-		pick_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		choice.add_child(pick_label)
 		var selected_card_id := card_id
+		var hovered_card_id := card_id
+		var pick_button := Button.new()
+		pick_button.name = "DraftPick_%s" % card_id
+		pick_button.text = "PICK THIS CARD"
+		pick_button.focus_mode = Control.FOCUS_NONE
+		WORKSPACE_UI_SCRIPT.style_button(pick_button, "primary")
+		pick_button.pressed.connect(func() -> void: _draft_pick(selected_card_id, choice_panel), CONNECT_DEFERRED)
+		choice.add_child(pick_button)
 		choice_panel.gui_input.connect(func(event: InputEvent) -> void:
 			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 				_draft_pick(selected_card_id, choice_panel)
 		)
 		choice_panel.mouse_entered.connect(func() -> void:
-			choice_panel.set("fill_color", Color("#FFF1C9"))
-			choice_panel.queue_redraw()
+			choice_panel.add_theme_stylebox_override("panel", _draft_offer_panel_style(true))
+			_queue_draft_hover_preview(choice_panel, hovered_card_id)
 		)
 		choice_panel.mouse_exited.connect(func() -> void:
-			choice_panel.set("fill_color", SKETCH_UI_SCRIPT.PAPER)
-			choice_panel.queue_redraw()
+			choice_panel.add_theme_stylebox_override("panel", _draft_offer_panel_style(false))
+			_hide_draft_hover_preview()
 		)
 
-	_add_draft_deck_rail(workspace)
-	_create_draft_hover_preview()
-	_add_draft_distribution_charts(content)
 
-	var actions := HBoxContainer.new()
-	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_theme_constant_override("separation", 10)
-	content.add_child(actions)
-	var back_button := SKETCH_UI_SCRIPT.make_button(
-		"ABANDON DRAFT",
-		Vector2(0, 66),
-		false,
-		22,
+func _draft_offer_panel_style(hovered: bool) -> StyleBoxFlat:
+	return WORKSPACE_UI_SCRIPT.clean_style(
+		WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT if hovered else WORKSPACE_UI_SCRIPT.SURFACE,
+		WORKSPACE_UI_SCRIPT.PALETTE.BRICK if hovered else WORKSPACE_UI_SCRIPT.BORDER_SOFT,
+		3 if hovered else 2,
+		10,
+		Vector4(14, 14, 14, 16),
+		0,
 		true
 	)
-	back_button.name = "AbandonDraftButton"
-	back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_connect_pressed(back_button, _show_start)
-	actions.add_child(back_button)
 
 
 func _add_draft_deck_rail(parent: HBoxContainer) -> void:
-	var rail_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(292, 330),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL,
-		Vector4(18, 16, 18, 18),
-		1
-	)
-	rail_panel.name = "DraftDeckRail"
+	var rail_panel := parent.get_node_or_null("DraftDeckRail") as PanelContainer
+	if rail_panel == null:
+		rail_panel = PanelContainer.new()
+		rail_panel.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI_SCRIPT.clean_style(
+				WORKSPACE_UI_SCRIPT.SURFACE,
+				WORKSPACE_UI_SCRIPT.TEAL,
+				2,
+				10,
+				Vector4(18, 16, 18, 18),
+				4,
+				true
+			)
+		)
+		rail_panel.name = "DraftDeckRail"
+		parent.add_child(rail_panel)
 	rail_panel.custom_minimum_size = Vector2(292, 330)
 	rail_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
 	rail_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	parent.add_child(rail_panel)
 	var rail := VBoxContainer.new()
 	rail.add_theme_constant_override("separation", 6)
 	rail_panel.add_child(rail)
@@ -2211,13 +2143,17 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 	for entry in entries:
 		var card_id := String(entry.id)
 		var card: Dictionary = cards_by_id[card_id]
-		var tile := SKETCH_UI_SCRIPT.make_rough_panel(
-			Vector2(70, 116),
-			SKETCH_UI_SCRIPT.PAPER,
-			_affinity_color(_card_archetype(card)).darkened(0.28),
-			Color.TRANSPARENT,
-			Vector4(3, 3, 3, 3),
-			entries.find(entry)
+		var tile := PanelContainer.new()
+		tile.custom_minimum_size = Vector2(70, 116)
+		tile.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI_SCRIPT.clean_style(
+				WORKSPACE_UI_SCRIPT.SURFACE,
+				_affinity_color(_card_archetype(card)).darkened(0.28),
+				2,
+				7,
+				Vector4(3, 3, 3, 3)
+			)
 		)
 		tile.name = "DraftDeckCard_%s" % card_id
 		tile.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -2241,13 +2177,19 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 
 
 func _create_draft_hover_preview() -> void:
-	draft_hover_preview = SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(326, 466),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL,
-		Vector4(12, 12, 12, 12),
-		1
+	draft_hover_preview = PanelContainer.new()
+	draft_hover_preview.custom_minimum_size = Vector2(326, 466)
+	draft_hover_preview.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(
+			WORKSPACE_UI_SCRIPT.SURFACE,
+			WORKSPACE_UI_SCRIPT.TEAL,
+			2,
+			10,
+			Vector4(12, 12, 12, 12),
+			4,
+			true
+		)
 	)
 	draft_hover_preview.name = "DraftHoverPreview"
 	draft_hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2310,10 +2252,10 @@ func _show_draft_hover_preview(source: Control, card_id: String) -> void:
 		glossary.add_theme_constant_override("separation", 9)
 		preview_row.add_child(glossary)
 		var heading := Label.new()
-		heading.text = "KEYWORDS"
+		heading.text = "KEYWORD GUIDE"
 		heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.66))
 		heading.add_theme_font_size_override("font_size", 12)
-		heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
+		heading.add_theme_color_override("font_color", PALETTE.NAVY)
 		glossary.add_child(heading)
 		for keyword_id in known_keywords:
 			_add_draft_keyword_explanation(glossary, keyword_id)
@@ -2334,35 +2276,76 @@ func _add_keyword_explanation(parent: VBoxContainer, keyword_id: String, node_pr
 	var tooltip: Dictionary = KEYWORD_TOOLTIPS.get(keyword_id, {})
 	if tooltip.is_empty():
 		return
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2.ZERO,
-		Color("#FFF5D9"),
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.MUSTARD,
-		Vector4(12, 9, 12, 10),
-		1
+	var accent := _keyword_accent_color(keyword_id)
+	var panel := PanelContainer.new()
+	panel.clip_contents = true
+	panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI_SCRIPT.clean_style(
+			PALETTE.CREAM,
+			PALETTE.NAVY,
+			2,
+			12,
+			Vector4.ZERO,
+			0,
+			true
+		)
 	)
 	panel.name = "%s_%s" % [node_prefix, keyword_id]
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(panel)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 0)
+	panel.add_child(row)
+	var accent_bar := ColorRect.new()
+	accent_bar.name = "KeywordAccentBar"
+	accent_bar.color = accent
+	accent_bar.custom_minimum_size = Vector2(7, 0)
+	accent_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(accent_bar)
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	row.add_child(margin)
 	var copy := VBoxContainer.new()
 	copy.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	copy.add_theme_constant_override("separation", 4)
-	panel.add_child(copy)
-	var title := Label.new()
-	title.text = String(tooltip.title)
-	title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.68))
-	title.add_theme_font_size_override("font_size", 17)
-	title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.ORANGE)
-	copy.add_child(title)
+	copy.add_theme_constant_override("separation", 8)
+	margin.add_child(copy)
+	var title_badge := WORKSPACE_UI_SCRIPT.make_badge(
+		String(tooltip.title).to_upper(),
+		accent.lightened(0.50),
+		PALETTE.NAVY
+	)
+	title_badge.name = "KeywordTitleBadge"
+	title_badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	copy.add_child(title_badge)
 	var body := Label.new()
 	body.text = String(tooltip.body)
 	body.custom_minimum_size = Vector2(214, 0)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
-	body.add_theme_font_size_override("font_size", 13)
-	body.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	body.add_theme_font_size_override("font_size", 14)
+	body.add_theme_color_override("font_color", PALETTE.NAVY)
+	body.add_theme_constant_override("line_spacing", 2)
 	copy.add_child(body)
+
+
+func _keyword_accent_color(keyword_id: String) -> Color:
+	match keyword_id:
+		"piercing":
+			return PALETTE.CORAL
+		"stalwart":
+			return PALETTE.PERIWINKLE
+		"taunt":
+			return PALETTE.FRESH_YELLOW
+		"hand_trap":
+			return PALETTE.FUNKY_PLUM
+		_:
+			return PALETTE.SKY
 
 
 func _hide_draft_hover_preview() -> void:
@@ -2372,11 +2355,13 @@ func _hide_draft_hover_preview() -> void:
 
 
 func _add_draft_distribution_charts(parent: VBoxContainer) -> void:
-	var charts := HBoxContainer.new()
-	charts.name = "DraftDistributionCharts"
+	var charts := parent.get_node_or_null("DraftDistributionCharts") as HBoxContainer
+	if charts == null:
+		charts = HBoxContainer.new()
+		charts.name = "DraftDistributionCharts"
+		parent.add_child(charts)
 	charts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	charts.add_theme_constant_override("separation", 12)
-	parent.add_child(charts)
 	var type_counts := {"ingredient": 0, "meal": 0, "chef": 0, "tool": 0, "environment": 0, "spice": 0}
 	var flavor_counts := {"spicy": 0, "hearty": 0, "sweet": 0, "fresh": 0, "funky": 0}
 	for card_id in draft_deck:
@@ -2405,16 +2390,26 @@ func _add_draft_distribution_charts(parent: VBoxContainer) -> void:
 
 
 func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictionary, rows: Array) -> void:
-	var chart_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2.ZERO,
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL if "FLAVOR" in title else SKETCH_UI_SCRIPT.ORANGE,
-		Vector4(18, 14, 18, 16),
-		0 if "TYPE" in title else 1
-	)
+	var panel_name := "DraftFlavorChartPanel" if "FLAVOR" in title else "DraftTypeChartPanel"
+	var chart_panel := parent.get_node_or_null(panel_name) as PanelContainer
+	if chart_panel == null:
+		chart_panel = PanelContainer.new()
+		chart_panel.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI_SCRIPT.clean_style(
+				WORKSPACE_UI_SCRIPT.SURFACE,
+				WORKSPACE_UI_SCRIPT.TEAL if "FLAVOR" in title else WORKSPACE_UI_SCRIPT.PALETTE.SLATE,
+				2,
+				10,
+				Vector4(18, 14, 18, 16)
+			)
+		)
+		chart_panel.name = panel_name
+		parent.add_child(chart_panel)
+	else:
+		for child in chart_panel.get_children():
+			child.queue_free()
 	chart_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(chart_panel)
 	var chart := VBoxContainer.new()
 	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chart.add_theme_constant_override("separation", 6)
@@ -2453,8 +2448,8 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 		var bar_track := PanelContainer.new()
 		bar_track.custom_minimum_size = Vector2(38, 88)
 		var track_style := StyleBoxFlat.new()
-		track_style.bg_color = Color("#E4DAC4")
-		track_style.border_color = SKETCH_UI_SCRIPT.INK
+		track_style.bg_color = WORKSPACE_UI_SCRIPT.PALETTE.GHOST_PRESSED
+		track_style.border_color = WORKSPACE_UI_SCRIPT.PALETTE.SLATE
 		track_style.set_border_width_all(1)
 		track_style.set_corner_radius_all(5)
 		bar_track.add_theme_stylebox_override("panel", track_style)
@@ -2490,7 +2485,6 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 		label.text = String(row[1])
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		label.tooltip_text = String(row[1])
 		label.add_theme_font_size_override("font_size", 11)
 		label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
 		column.add_child(label)
@@ -2825,6 +2819,17 @@ func _shift_season_setup_archetype(delta: int) -> void:
 	_show_season_run_setup()
 
 
+func _select_season_setup_archetype(index: int) -> void:
+	season_setup_archetype_index = clampi(index, 0, DEMO_STARTER_ORDER.size() - 1)
+	season_setup_difficulty_open = true
+	_show_season_run_setup()
+
+
+func _close_season_setup_difficulty() -> void:
+	season_setup_difficulty_open = false
+	_show_season_run_setup()
+
+
 func _shift_season_setup_difficulty(delta: int) -> void:
 	season_setup_difficulty_index = posmod(season_setup_difficulty_index + delta, DIFFICULTY_ORDER.size())
 	_show_season_run_setup()
@@ -3003,8 +3008,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Blue",
 				"accent": "#20334a",
 				"border_color": "#6aa8ff",
-				"summary": "Opponents upgrade their decks and decisions earlier.",
-				"rules_text": "Rivals get a quality bump, swap weak starter cards sooner, and advance one AI skill tier earlier."
+				"summary": "Rivals upgrade their decks and decisions earlier.",
+				"rules_text": "Blue modifier: rivals get a quality bump, swap weak starter cards sooner, and advance one AI skill tier earlier."
 			}
 		"yellow":
 			return {
@@ -3012,8 +3017,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Yellow",
 				"accent": "#44391e",
 				"border_color": "#f0c94a",
-				"summary": "The season starts on a tighter budget.",
-				"rules_text": "You start with less money, so every pack and single matters more."
+				"summary": "Blue rules plus a tighter starting budget.",
+				"rules_text": "Includes Blue. Yellow modifier: you start with less money, so every pack and single matters more."
 			}
 		"silver":
 			return {
@@ -3021,8 +3026,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Silver",
 				"accent": "#30343a",
 				"border_color": "#cfd6df",
-				"summary": "Tournament fields bring more refined decks.",
-				"rules_text": "Rivals receive a modest deck-quality boost, but their AI tier does not advance as early as Blue."
+				"summary": "Blue and Yellow rules, tougher decks, and only one life.",
+				"rules_text": "Includes Blue + Yellow. Silver modifier: rivals gain another deck-quality bump and you have only one season life."
 			}
 		"gold":
 			return {
@@ -3030,8 +3035,8 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 				"name": "Gold",
 				"accent": "#42351c",
 				"border_color": "#e2b84c",
-				"summary": "First player is no longer guaranteed.",
-				"rules_text": "Each tournament round may change which chef takes the opening turn."
+				"summary": "Every previous modifier plus uncertain turn order.",
+				"rules_text": "Includes Blue + Yellow + Silver. Gold modifier: each tournament round may change which chef takes the opening turn."
 			}
 		_:
 			return {
@@ -3047,6 +3052,10 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
+	if title_label != null:
+		title_label.add_theme_color_override("font_color", PALETTE.NAVY if current_screen in ["settings", "result"] else UI_THEME_SCRIPT.INK)
+	if status_label != null:
+		status_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED if current_screen in ["settings", "result"] else UI_THEME_SCRIPT.TEAL_DEEP)
 	theme = (
 		workspace_ui_theme
 		if _uses_workspace_interface()
@@ -3058,23 +3067,39 @@ func _apply_screen_chrome() -> void:
 	var compact_deck := current_screen == "deck" and _run_mode() == "season"
 	var title_flow := current_screen in ["start", "game_start", "season_setup"]
 	var store_chrome := current_screen == "shop" and _run_mode() == "season"
-	var hide_footer := title_flow or compact_duel or compact_deck or (current_screen == "shop" and _run_mode() == "season")
+	var season_menu := current_screen == "season"
+	var pack_screen := current_screen == "packs"
+	var finale_screen := current_screen == "thanks"
+	var immersive_screen := pack_screen or finale_screen
+	var hide_footer := title_flow or compact_duel or compact_deck or season_menu or immersive_screen or (current_screen == "shop" and _run_mode() == "season")
+	var shell_background := get_node_or_null("PaperBackground") as ColorRect
+	var pastel_workspace_background := get_node_or_null("PastelWorkspaceBackground") as ColorRect
+	var pastel_workspace_screens := [
+		"new_game", "settings", "draft", "path_choice", "season", "singles",
+		"trading", "deck", "tournament", "result", "thanks", "meta", "card_lab",
+	]
+	var use_pastel_workspace := current_screen in pastel_workspace_screens
+	if shell_background != null:
+		shell_background.visible = not use_pastel_workspace
+	if pastel_workspace_background != null:
+		pastel_workspace_background.visible = use_pastel_workspace
 	if header_bar != null:
-		header_bar.visible = not compact_duel and not title_flow and not store_chrome
+		header_bar.visible = not compact_duel and not title_flow and not store_chrome and not season_menu and not immersive_screen
 	if nav != null:
-		nav.visible = not compact_duel and not title_flow and not store_chrome
+		nav.visible = not compact_duel and not title_flow and not store_chrome and not immersive_screen
 	footer_label.visible = not hide_footer
 	footer_label.custom_minimum_size = Vector2(0, 0 if hide_footer else 78)
 	var compact_margin := compact_duel or compact_deck
-	root_margin.add_theme_constant_override("margin_left", 6 if compact_margin else (14 if store_chrome else (0 if title_flow else 18)))
-	root_margin.add_theme_constant_override("margin_right", 6 if compact_margin else (14 if store_chrome else (0 if title_flow else 18)))
-	root_margin.add_theme_constant_override("margin_top", 4 if compact_margin else (10 if store_chrome else (0 if title_flow else 14)))
-	root_margin.add_theme_constant_override("margin_bottom", 4 if compact_margin else (10 if store_chrome else (0 if title_flow else 14)))
-	shell.add_theme_constant_override("separation", 3 if compact_margin else (0 if title_flow or store_chrome else 10))
+	var immersive_margin := 0 if pack_screen else 12
+	root_margin.add_theme_constant_override("margin_left", immersive_margin if immersive_screen else (6 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 18)))))
+	root_margin.add_theme_constant_override("margin_right", immersive_margin if immersive_screen else (6 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 18)))))
+	root_margin.add_theme_constant_override("margin_top", immersive_margin if immersive_screen else (4 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 14)))))
+	root_margin.add_theme_constant_override("margin_bottom", immersive_margin if immersive_screen else (4 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 14)))))
+	shell.add_theme_constant_override("separation", 0 if pack_screen else (3 if compact_margin else (0 if title_flow or store_chrome else 10)))
 	content.add_theme_constant_override("separation", 4 if compact_margin else (0 if title_flow else 10))
 	if scroll != null:
-		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow else ScrollContainer.SCROLL_MODE_AUTO
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow else ScrollContainer.SCROLL_MODE_AUTO
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen else ScrollContainer.SCROLL_MODE_AUTO
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen or season_menu else ScrollContainer.SCROLL_MODE_AUTO
 
 
 func _uses_sketch_interface() -> bool:
@@ -3082,7 +3107,6 @@ func _uses_sketch_interface() -> bool:
 		"start",
 		"game_start",
 		"season_setup",
-		"draft",
 		"season",
 		"shop",
 		"singles",
@@ -3093,12 +3117,11 @@ func _uses_sketch_interface() -> bool:
 			"result",
 			"thanks",
 			"meta",
-			"settings",
 		]
 
 
 func _uses_workspace_interface() -> bool:
-	return current_screen in ["deck", "singles"]
+	return current_screen in ["deck", "singles", "draft", "settings"]
 
 
 func _add_nav_button(label: String, callback: Callable) -> void:
@@ -3211,7 +3234,7 @@ func _show_shop_overworld() -> void:
 	_update_status()
 	_set_footer("Your next round is waiting. Stock up, tune your deck, or talk to the clerk.")
 
-	var shop_world := GREYBOX_CAMERA_DEMO_SCENE.instantiate() as Control
+	var shop_world := _instantiate_scene(GREYBOX_CAMERA_DEMO_SCENE_PATH) as Control
 	shop_world.name = "CardShopOverworld"
 	shop_world.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_world.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -3493,6 +3516,11 @@ func _strongest_pack_affinity() -> String:
 
 
 func _show_deckbuilder() -> void:
+	var rebuilding_deckbuilder := current_screen == "deck"
+	if rebuilding_deckbuilder:
+		_capture_deckbuilder_scroll_positions()
+	else:
+		deckbuilder_scroll_positions.clear()
 	if current_screen != "deck":
 		deckbuilder_return_screen = current_screen
 		deckbuilder_return_shop_view = ""
@@ -3501,6 +3529,31 @@ func _show_deckbuilder() -> void:
 			if shop_world != null and shop_world.has_method("current_menu_view"):
 				deckbuilder_return_shop_view = String(shop_world.call("current_menu_view"))
 	deckbuilder_screen.show(self)
+	if rebuilding_deckbuilder:
+		_restore_deckbuilder_scroll_positions()
+
+
+func _capture_deckbuilder_scroll_positions() -> void:
+	deckbuilder_scroll_positions.clear()
+	for scroll_name in [
+		"DeckbuilderCollectionScroll",
+		"DeckbuilderMainDeckScroll",
+		"DeckbuilderSideboardScroll",
+	]:
+		var deck_scroll := content.find_child(scroll_name, true, false) as ScrollContainer
+		if deck_scroll != null:
+			deckbuilder_scroll_positions[scroll_name] = deck_scroll.scroll_vertical
+
+
+func _restore_deckbuilder_scroll_positions() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if current_screen != "deck":
+		return
+	for scroll_name in deckbuilder_scroll_positions:
+		var deck_scroll := content.find_child(String(scroll_name), true, false) as ScrollContainer
+		if deck_scroll != null:
+			deck_scroll.scroll_vertical = int(deckbuilder_scroll_positions[scroll_name])
 
 
 func _add_deckbuilder_back_button(parent: Node) -> Button:
@@ -3567,7 +3620,7 @@ func _show_greybox_camera_demo() -> void:
 	_clear(content)
 	_update_status()
 	_set_footer("Graybox camera proof of concept: use the shot buttons or press 1, 2, and 3.")
-	var demo := GREYBOX_CAMERA_DEMO_SCENE.instantiate() as Control
+	var demo := _instantiate_scene(GREYBOX_CAMERA_DEMO_SCENE_PATH) as Control
 	demo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	demo.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	demo.connect("exit_requested", _show_shop)
@@ -3605,18 +3658,24 @@ func _remove_from_sideboard(card_id: String) -> void:
 
 
 
-func _start_debug_kitchen_match() -> void:
+func _start_debug_kitchen_match(resume_snapshot: Dictionary = {}) -> void:
 	if _guard_run_over():
 		return
 	var metrics := _calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {}))
 	var opponent_archetype := _predator_archetype(String(metrics.get("primary", ARCHETYPE_ORDER[0])))
 	var opponent_deck := _opponent_deck_for_round(opponent_archetype, 1)
+	var seed_value := rng.randi()
+	if not resume_snapshot.is_empty():
+		seed_value = int(run.get("kitchen_match", {}).get("seed", seed_value))
 	_begin_kitchen_match(
 		run.get("deck", {}),
 		opponent_deck,
 		"Practice %s Chef" % _archetype_label(opponent_archetype),
 		false,
-		rng.randi()
+		seed_value,
+		String(run.get("kitchen_match", {}).get("first_side", "player")),
+		String(run.get("kitchen_match", {}).get("ai_difficulty", "easy")),
+		resume_snapshot
 	)
 
 
@@ -3638,7 +3697,7 @@ func _start_debug_3d_arena() -> void:
 	)
 
 
-func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player", ai_difficulty: String = "easy") -> void:
+func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, opponent_name: String, tournament_round: bool, seed_value: int, first_side: String = "player", ai_difficulty: String = "easy", resume_snapshot: Dictionary = {}) -> void:
 	_dismiss_round_result_popup()
 	current_screen = "kitchen_match"
 	_render_nav()
@@ -3646,7 +3705,7 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 	_update_status()
 	var metrics := _calculate_deck_metrics(player_deck, {})
 	var player_name := String(archetypes_by_id.get(String(metrics.get("primary", ARCHETYPE_ORDER[0])), {}).get("name", "Your Kitchen"))
-	var kitchen_game = TABLETOP_3D_PROTOTYPE_SCENE.instantiate()
+	var kitchen_game = _instantiate_scene(TABLETOP_3D_PROTOTYPE_SCENE_PATH)
 	var active: Dictionary = run.get("active_tournament", {})
 	var match_context := {
 		"tournament_round": tournament_round,
@@ -3667,12 +3726,20 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		_run_difficulty_id(),
 		match_context
 	)
+	kitchen_game.configure_battle_preferences(
+		String(player_settings.play_speed),
+		float(player_settings.battle_text_scale)
+	)
+	if not resume_snapshot.is_empty() and kitchen_game.has_method("configure_resume_snapshot"):
+		kitchen_game.call("configure_resume_snapshot", resume_snapshot)
 	kitchen_game.custom_minimum_size = Vector2(0, 820)
 	kitchen_game.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kitchen_game.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	kitchen_game.match_finished.connect(_on_kitchen_match_finished)
 	kitchen_game.exit_requested.connect(_on_kitchen_exit_requested)
-	run.kitchen_match = {
+	kitchen_game.settings_requested.connect(func() -> void: _show_settings_from_tabletop(kitchen_game))
+	kitchen_game.battle_preferences_changed.connect(_on_battle_preferences_changed)
+	var match_checkpoint := {
 		"active": true,
 		"complete": false,
 		"tournament_round": tournament_round,
@@ -3683,8 +3750,69 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 		"presentation": "living_table",
 		"match_context": match_context
 	}
+	if not resume_snapshot.is_empty():
+		match_checkpoint["snapshot"] = resume_snapshot.duplicate(true)
+	run.kitchen_match = match_checkpoint
 	run.kitchen_match_result = {"game_over": false}
 	content.add_child(kitchen_game)
+
+
+func _capture_live_kitchen_match_state() -> void:
+	if run.is_empty():
+		return
+	var tabletop: Node = suspended_tabletop if is_instance_valid(suspended_tabletop) else find_child("Tabletop3DPrototype", true, false)
+	if tabletop == null or not tabletop.has_method("capture_match_snapshot"):
+		return
+	var snapshot: Variant = tabletop.call("capture_match_snapshot")
+	if not (snapshot is Dictionary) or (snapshot as Dictionary).is_empty():
+		return
+	var match_checkpoint: Dictionary = run.get("kitchen_match", {}).duplicate(true)
+	match_checkpoint["snapshot"] = (snapshot as Dictionary).duplicate(true)
+	run.kitchen_match = match_checkpoint
+
+
+func _show_settings_from_tabletop(tabletop: Control) -> void:
+	if not is_instance_valid(tabletop) or current_screen not in ["kitchen_match", "tutorial"]:
+		return
+	suspended_tabletop = tabletop
+	suspended_tabletop_screen = current_screen
+	tabletop.reparent(self)
+	tabletop.visible = false
+	tabletop.process_mode = Node.PROCESS_MODE_DISABLED
+	_show_settings()
+
+
+func _on_battle_preferences_changed(play_speed_id: String, battle_text_scale: float) -> void:
+	player_settings.play_speed = play_speed_id
+	player_settings.battle_text_scale = battle_text_scale
+	_sanitize_player_settings()
+	_save_player_settings()
+
+
+func _restore_tabletop_after_settings() -> void:
+	if not is_instance_valid(suspended_tabletop):
+		if settings_return_screen == "tutorial":
+			_show_tutorial()
+		else:
+			_resume_kitchen_match()
+		return
+	current_screen = suspended_tabletop_screen
+	_apply_screen_chrome()
+	_render_nav()
+	_clear(content)
+	_update_status()
+	var tabletop := suspended_tabletop
+	suspended_tabletop = null
+	suspended_tabletop_screen = ""
+	if tabletop.has_method("configure_battle_preferences"):
+		tabletop.call(
+			"configure_battle_preferences",
+			String(player_settings.play_speed),
+			float(player_settings.battle_text_scale)
+		)
+	tabletop.reparent(content)
+	tabletop.visible = true
+	tabletop.process_mode = Node.PROCESS_MODE_INHERIT
 
 
 func _resume_kitchen_match() -> void:
@@ -3718,6 +3846,11 @@ func _show_season_round_result_popup(won: bool) -> void:
 	if not _season_tournament_active() or current_screen != "kitchen_match":
 		return
 	_dismiss_round_result_popup()
+	if is_instance_valid(ui_sound_controller):
+		if won:
+			ui_sound_controller.play_success()
+		else:
+			ui_sound_controller.play_error()
 
 	var active: Dictionary = run.get("active_tournament", {})
 	var round_number := int(active.get("round", 1))
@@ -3797,7 +3930,7 @@ func _show_season_round_result_popup(won: bool) -> void:
 	earnings.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	earnings.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
 	earnings.add_theme_font_size_override("font_size", 22)
-	earnings.add_theme_color_override("font_color", Color("#2D6F6A"))
+	earnings.add_theme_color_override("font_color", Color("#3F826D"))
 	box.add_child(earnings)
 
 	var actions := HBoxContainer.new()
@@ -3995,7 +4128,7 @@ func _start_season_tournament() -> void:
 	_start_season_tournament_round()
 
 
-func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_saved_setup: bool = false) -> void:
+func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_saved_setup: bool = false, resume_snapshot: Dictionary = {}) -> void:
 	if not _season_tournament_active():
 		_show_tournament()
 		return
@@ -4041,8 +4174,114 @@ func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_
 		true,
 		seed_value,
 		first_side,
-		ai_difficulty
+		ai_difficulty,
+		resume_snapshot
 	)
+
+
+func _continue_from_gateway_with_circle_wipe() -> void:
+	_play_shop_door_bell()
+	await _play_menu_circle_wipe(Callable(self, "_continue_run_to_shop"))
+
+
+func _new_game_from_gateway_with_circle_wipe() -> void:
+	_play_shop_door_bell()
+	await _play_menu_circle_wipe(Callable(self, "_show_season_run_setup"))
+
+
+func _play_shop_door_bell() -> void:
+	var player := AudioStreamPlayer.new()
+	player.stream = load(SHOP_DOOR_BELL_PATH) as AudioStream
+	player.bus = &"SFX"
+	player.volume_db = SHOP_DOOR_BELL_VOLUME_DB
+	player.finished.connect(player.queue_free)
+	add_child(player)
+	player.play()
+
+
+func _instantiate_scene(path: String) -> Node:
+	var packed_scene := load(path) as PackedScene
+	assert(packed_scene != null, "Unable to load scene: %s" % path)
+	return packed_scene.instantiate()
+
+
+func _play_menu_circle_wipe(navigate: Callable) -> void:
+	if has_node("MenuCircleWipe"):
+		return
+	if _running_automated_test() or _reduced_motion_enabled():
+		navigate.call()
+		return
+
+	var overlay := Control.new()
+	overlay.name = "MenuCircleWipe"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = 3000
+	add_child(overlay)
+
+	var wipe := ColorRect.new()
+	wipe.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var shader := Shader.new()
+	shader.code = """
+		shader_type canvas_item;
+		uniform float radius = 1.2;
+		uniform vec4 paper_color : source_color;
+		uniform vec4 accent_color : source_color;
+		uniform vec4 highlight_color : source_color;
+		void fragment() {
+			vec2 point = (UV - vec2(0.5)) * vec2(1.78, 1.0);
+			float distance_from_center = length(point);
+			float paper_mask = smoothstep(radius - 0.025, radius, distance_from_center);
+			float accent_band = 1.0 - smoothstep(radius + 0.008, radius + 0.085, distance_from_center);
+			float cream_line = smoothstep(radius + 0.026, radius + 0.042, distance_from_center)
+				* (1.0 - smoothstep(radius + 0.042, radius + 0.058, distance_from_center));
+			vec3 color = mix(paper_color.rgb, accent_color.rgb, accent_band * 0.9);
+			color = mix(color, highlight_color.rgb, cream_line);
+			COLOR = vec4(color, paper_mask * paper_color.a);
+		}
+	"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("radius", 1.2)
+	material.set_shader_parameter("paper_color", PALETTE.PERIWINKLE.darkened(0.28))
+	material.set_shader_parameter("accent_color", PALETTE.SKY)
+	material.set_shader_parameter("highlight_color", PALETTE.CREAM)
+	wipe.material = material
+	overlay.add_child(wipe)
+
+	var star := TextureRect.new()
+	star.texture = ICON_STAR
+	star.set_anchors_preset(Control.PRESET_CENTER)
+	star.offset_left = -26.0
+	star.offset_top = -26.0
+	star.offset_right = 26.0
+	star.offset_bottom = 26.0
+	star.pivot_offset = Vector2(26.0, 26.0)
+	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	star.modulate = Color(PALETTE.FRESH_YELLOW, 0.0)
+	star.scale = Vector2(0.65, 0.65)
+	overlay.add_child(star)
+
+	var close_tween := create_tween()
+	close_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	close_tween.tween_property(material, "shader_parameter/radius", 0.0, 0.36)
+	close_tween.parallel().tween_property(star, "modulate:a", 1.0, 0.14).set_delay(0.18)
+	close_tween.parallel().tween_property(star, "scale", Vector2.ONE, 0.18).set_delay(0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await close_tween.finished
+
+	navigate.call()
+	await get_tree().process_frame
+
+	var open_tween := create_tween()
+	open_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	open_tween.tween_property(material, "shader_parameter/radius", 1.2, 0.38)
+	open_tween.parallel().tween_property(star, "modulate:a", 0.0, 0.12)
+	open_tween.parallel().tween_property(star, "rotation", 0.35, 0.2)
+	await open_tween.finished
+	overlay.queue_free()
 
 
 func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
@@ -4062,15 +4301,27 @@ func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
 	shader.code = """
 		shader_type canvas_item;
 		uniform float radius = 0.0;
+		uniform vec4 paper_color : source_color;
+		uniform vec4 accent_color : source_color;
+		uniform vec4 highlight_color : source_color;
 		void fragment() {
 			vec2 point = (UV - vec2(0.5)) * vec2(1.78, 1.0);
-			float edge = 1.0 - smoothstep(radius, radius + 0.035, length(point));
-			COLOR = vec4(0.035, 0.045, 0.065, edge);
+			float distance_from_center = length(point);
+			float paper_mask = 1.0 - smoothstep(radius, radius + 0.025, distance_from_center);
+			float accent_band = 1.0 - smoothstep(0.0, 0.085, radius - distance_from_center);
+			float cream_line = smoothstep(0.026, 0.042, radius - distance_from_center)
+				* (1.0 - smoothstep(0.042, 0.058, radius - distance_from_center));
+			vec3 color = mix(paper_color.rgb, accent_color.rgb, accent_band * 0.9);
+			color = mix(color, highlight_color.rgb, cream_line);
+			COLOR = vec4(color, paper_mask * paper_color.a);
 		}
 	"""
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("radius", 0.0)
+	material.set_shader_parameter("paper_color", PALETTE.PERIWINKLE.darkened(0.28))
+	material.set_shader_parameter("accent_color", PALETTE.FRESH_YELLOW)
+	material.set_shader_parameter("highlight_color", PALETTE.CREAM)
 	wipe.material = material
 	overlay.add_child(wipe)
 
@@ -4082,7 +4333,9 @@ func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
 	label.text = "%s\nROUND %d" % [event_name.to_upper(), round_number]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 46)
-	label.add_theme_color_override("font_color", Color("#f3efe4"))
+	label.add_theme_color_override("font_color", PALETTE.CREAM)
+	label.add_theme_color_override("font_outline_color", PALETTE.NAVY)
+	label.add_theme_constant_override("outline_size", 8)
 	label.modulate.a = 0.0
 	center.add_child(label)
 
@@ -4379,12 +4632,13 @@ func _show_tournament_result(logs: Array, survived: bool) -> void:
 	var screen := VBoxContainer.new()
 	screen.name = "TournamentResultScreen"
 	screen.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	screen.add_theme_constant_override("separation", 10)
+	screen.add_theme_constant_override("separation", 12)
 	content.add_child(screen)
 
 	_add_tournament_result_hero(screen, result_summary, made_record, champion, run_over)
-	_add_tournament_result_stats(screen, result_summary)
-	_add_tournament_result_next_step(screen, result_summary, made_record, champion, run_over)
+	if not champion and not run_over:
+		_add_tournament_result_stats(screen, result_summary)
+		_add_tournament_result_next_step(screen, result_summary, made_record, champion, run_over)
 	_add_tournament_round_recap(screen, result_summary)
 
 	if _development_tools_enabled():
@@ -4438,18 +4692,30 @@ func _add_tournament_result_hero(
 	champion: bool,
 	run_over: bool
 ) -> void:
-	var accent := SKETCH_UI_SCRIPT.MUSTARD if champion else (SKETCH_UI_SCRIPT.TEAL if made_record else SKETCH_UI_SCRIPT.ORANGE)
-	var fill := Color("#FFF2CB") if champion else (Color("#EAF4EC") if made_record else Color("#F9E8DE"))
-	var hero := SKETCH_UI_SCRIPT.make_rough_panel(
+	var accent := PALETTE.FRESH_YELLOW if champion else (PALETTE.SKY if made_record else PALETTE.CORAL)
+	var fill := (
+		PALETTE.CREAM.lerp(PALETTE.FRESH_YELLOW, 0.22)
+		if champion
+		else PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.25)
+		if run_over
+		else PALETTE.CREAM.lerp(PALETTE.SKY, 0.18)
+		if made_record
+		else PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.18)
+	)
+	var hero := _make_cute_result_panel(
 		Vector2(0, 166),
 		fill,
-		SKETCH_UI_SCRIPT.INK,
-		accent,
-		Vector4(38, 22, 38, 24),
-		1
+		PALETTE.NAVY,
+		Vector4(38, 18, 38, 20),
+		22
 	)
+	hero.set_meta("result_accent", accent)
 	hero.name = "TournamentResultHero"
 	parent.add_child(hero)
+	if champion or run_over:
+		hero.custom_minimum_size.y = 220
+		_add_season_result_list_hero(hero, summary, champion)
+		return
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 24)
@@ -4483,7 +4749,7 @@ func _add_tournament_result_hero(
 		outcome_label.text = "ONE MORE TRY"
 	outcome_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
 	outcome_label.add_theme_font_size_override("font_size", 42)
-	outcome_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	outcome_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.PAPER if run_over else SKETCH_UI_SCRIPT.INK)
 	copy.add_child(outcome_label)
 
 	var detail := Label.new()
@@ -4499,7 +4765,7 @@ func _add_tournament_result_hero(
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.16))
 	detail.add_theme_font_size_override("font_size", 16)
-	detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+	detail.add_theme_color_override("font_color", Color("#D7CBE0") if run_over else SKETCH_UI_SCRIPT.MUTED_INK)
 	copy.add_child(detail)
 
 	var record_box := VBoxContainer.new()
@@ -4512,15 +4778,141 @@ func _add_tournament_result_hero(
 	record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	record.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.94))
 	record.add_theme_font_size_override("font_size", 64)
-	record.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	record.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.PAPER if run_over else SKETCH_UI_SCRIPT.INK)
 	record_box.add_child(record)
 	var record_caption := Label.new()
 	record_caption.text = "FINAL RECORD"
 	record_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	record_caption.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
 	record_caption.add_theme_font_size_override("font_size", 13)
-	record_caption.add_theme_color_override("font_color", accent.darkened(0.18))
+	record_caption.add_theme_color_override("font_color", accent.lightened(0.12) if run_over else accent.darkened(0.18))
 	record_box.add_child(record_caption)
+
+
+func _add_season_result_list_hero(hero: PanelContainer, summary: Dictionary, champion: bool) -> void:
+	var copy := VBoxContainer.new()
+	copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	copy.add_theme_constant_override("separation", 7)
+	hero.add_child(copy)
+
+	var eyebrow := Label.new()
+	eyebrow.name = "TournamentResultEyebrow"
+	eyebrow.text = "YOUR SEASON SCRAPBOOK" if not champion else "A SEASON TO REMEMBER"
+	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.48))
+	eyebrow.add_theme_font_size_override("font_size", 13)
+	eyebrow.add_theme_color_override("font_color", PALETTE.CORAL.darkened(0.18) if not champion else PALETTE.FRESH_YELLOW.darkened(0.28))
+	copy.add_child(eyebrow)
+
+	var heading_row := HBoxContainer.new()
+	heading_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	heading_row.add_theme_constant_override("separation", 16)
+	copy.add_child(heading_row)
+	var left_sparkle := TextureRect.new()
+	left_sparkle.texture = ICON_STAR
+	left_sparkle.custom_minimum_size = Vector2(30, 30)
+	left_sparkle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	left_sparkle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	left_sparkle.modulate = PALETTE.FRESH_YELLOW
+	left_sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	heading_row.add_child(left_sparkle)
+	var outcome := Label.new()
+	outcome.name = "TournamentResultOutcome"
+	outcome.text = "SEASON WON" if champion else "SEASON ENDED"
+	outcome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	outcome.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
+	outcome.add_theme_font_size_override("font_size", 45)
+	outcome.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading_row.add_child(outcome)
+	var right_sparkle := TextureRect.new()
+	right_sparkle.texture = ICON_STAR
+	right_sparkle.custom_minimum_size = Vector2(24, 24)
+	right_sparkle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	right_sparkle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	right_sparkle.modulate = PALETTE.SKY
+	right_sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	heading_row.add_child(right_sparkle)
+
+	var encouragement := Label.new()
+	encouragement.name = "TournamentResultEncouragement"
+	encouragement.text = (
+		"You cleared the local circuit. Keep this page—the road gets bigger from here."
+		if champion
+		else "The table is cleared, but every round leaves something worth carrying into your next run."
+	)
+	encouragement.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	encouragement.add_theme_font_size_override("font_size", 15)
+	encouragement.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	copy.add_child(encouragement)
+
+	var stat_row := HBoxContainer.new()
+	stat_row.name = "TournamentResultSeasonStats"
+	stat_row.add_theme_constant_override("separation", 10)
+	copy.add_child(stat_row)
+	_add_season_result_chip(
+		stat_row,
+		"LAST STOP",
+		"%s · %s" % [String(summary.get("stage", "Season")), String(summary.get("event_name", "Final Event"))],
+		"TournamentResultReached",
+		PALETTE.CREAM.lerp(PALETTE.SKY, 0.19),
+		PALETTE.SKY
+	)
+	_add_season_result_chip(
+		stat_row,
+		"FINAL RECORD",
+		"%d–%d" % [int(summary.get("wins", 0)), int(summary.get("losses", 0))],
+		"TournamentResultRecord",
+		PALETTE.LAVENDER_GLASS,
+		PALETTE.PERIWINKLE
+	)
+	_add_season_result_chip(
+		stat_row,
+		"TABLE EARNINGS",
+		"$%d" % int(summary.get("round_cash_earned", 0)),
+		"TournamentResultEarnings",
+		PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.19),
+		PALETTE.CORAL
+	)
+
+
+func _add_season_result_chip(
+	parent: Node,
+	title: String,
+	value: String,
+	value_name: String,
+	fill: Color,
+	accent: Color
+) -> void:
+	var panel := _make_cute_result_panel(
+		Vector2(0, 64),
+		fill,
+		PALETTE.NAVY,
+		Vector4(14, 7, 14, 8),
+		15
+	)
+	panel.set_meta("result_accent", accent)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(panel)
+	var chip_copy := VBoxContainer.new()
+	chip_copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	chip_copy.add_theme_constant_override("separation", -2)
+	panel.add_child(chip_copy)
+	var heading := Label.new()
+	heading.text = title
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.44))
+	heading.add_theme_font_size_override("font_size", 11)
+	heading.add_theme_color_override("font_color", accent.darkened(0.24))
+	chip_copy.add_child(heading)
+	var amount := Label.new()
+	amount.name = value_name
+	amount.text = value
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	amount.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
+	amount.add_theme_font_size_override("font_size", 19)
+	amount.add_theme_color_override("font_color", PALETTE.NAVY)
+	chip_copy.add_child(amount)
 
 
 func _add_tournament_result_stats(parent: Node, summary: Dictionary) -> void:
@@ -4655,15 +5047,29 @@ func _add_tournament_round_recap(parent: Node, summary: Dictionary) -> void:
 	section.name = "TournamentResultRoundRecap"
 	section.add_theme_constant_override("separation", 4)
 	parent.add_child(section)
+	var heading_row := HBoxContainer.new()
+	heading_row.add_theme_constant_override("separation", 10)
+	section.add_child(heading_row)
 	var heading := Label.new()
 	heading.text = "ROUND RECAP"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
 	heading.add_theme_font_size_override("font_size", 19)
-	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	section.add_child(heading)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	section.add_child(row)
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading_row.add_child(heading)
+	var recap_note := Label.new()
+	recap_note.text = "%d MATCHES  ·  $%d EARNED" % [
+		maxi(1, int(summary.get("wins", 0)) + int(summary.get("losses", 0))),
+		int(summary.get("round_cash_earned", 0)),
+	]
+	recap_note.add_theme_font_size_override("font_size", 12)
+	recap_note.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	recap_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	heading_row.add_child(recap_note)
+	var list := VBoxContainer.new()
+	list.name = "TournamentResultRoundList"
+	list.add_theme_constant_override("separation", 5)
+	section.add_child(list)
 
 	var round_results: Array = summary.get("round_results", [])
 	if round_results.is_empty():
@@ -4671,37 +5077,40 @@ func _add_tournament_round_recap(parent: Node, summary: Dictionary) -> void:
 		var losses := int(summary.get("losses", 0))
 		for round_index in range(maxi(1, wins + losses)):
 			_add_tournament_round_card(
-				row,
+				list,
 				round_index + 1,
 				{"won": round_index < wins}
 			)
 		return
 	for round_value in round_results:
-		_add_tournament_round_card(row, int(round_value.get("round", row.get_child_count() + 1)), round_value)
+		_add_tournament_round_card(list, int(round_value.get("round", list.get_child_count() + 1)), round_value)
 
 
 func _add_tournament_round_card(parent: Node, round_number: int, result: Dictionary) -> void:
 	var won := bool(result.get("won", false))
-	var accent := SKETCH_UI_SCRIPT.TEAL if won else SKETCH_UI_SCRIPT.ORANGE
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 91),
-		Color("#F7F1E6"),
-		SKETCH_UI_SCRIPT.INK,
-		accent,
-		Vector4(15, 9, 15, 11),
-		parent.get_child_count() % 2
+	var accent := PALETTE.SKY if won else PALETTE.CORAL
+	var fill := PALETTE.CREAM.lerp(PALETTE.SKY if won else PALETTE.BLUSH, 0.16)
+	var panel := _make_cute_result_panel(
+		Vector2(0, 64),
+		fill,
+		PALETTE.NAVY,
+		Vector4(16, 8, 16, 9),
+		14
 	)
+	panel.set_meta("result_accent", accent)
 	panel.name = "TournamentResultRoundCard_%d" % round_number
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(panel)
-	var copy := VBoxContainer.new()
-	copy.add_theme_constant_override("separation", -2)
+	var copy := HBoxContainer.new()
+	copy.add_theme_constant_override("separation", 18)
 	panel.add_child(copy)
 	var top := Label.new()
+	top.custom_minimum_size = Vector2(180, 0)
 	top.text = "ROUND %d   •   %s" % [round_number, "WIN" if won else "LOSS"]
 	top.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
 	top.add_theme_font_size_override("font_size", 19)
-	top.add_theme_color_override("font_color", accent.darkened(0.18))
+	top.add_theme_color_override("font_color", PALETTE.NAVY)
+	top.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(top)
 	var opponent_name := String(result.get("opponent_name", ""))
 	var opponent_archetype := String(result.get("opponent_archetype", ""))
@@ -4711,20 +5120,52 @@ func _add_tournament_round_card(parent: Node, round_number: int, result: Diction
 		if opponent_name != ""
 		else ("Made the cut" if won else "Run ended")
 	)
+	matchup.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	matchup.clip_text = true
 	matchup.add_theme_font_size_override("font_size", 13)
-	matchup.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	matchup.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	matchup.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(matchup)
 	if result.has("turn") or result.has("cash"):
 		var detail := Label.new()
+		detail.custom_minimum_size = Vector2(190, 0)
 		detail.text = "Turn %d  •  %d life  •  +$%d" % [
 			int(result.get("turn", 0)),
 			int(result.get("player_life", 0)),
 			int(result.get("cash", 0)),
 		]
 		detail.add_theme_font_size_override("font_size", 12)
-		detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+		detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		copy.add_child(detail)
+
+
+func _make_cute_result_panel(
+	minimum_size: Vector2,
+	fill: Color,
+	border: Color,
+	content_margins: Vector4,
+	corner_radius: int
+) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = minimum_size
+	panel.set_meta("cute_result_panel", true)
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(corner_radius)
+	style.content_margin_left = content_margins.x
+	style.content_margin_top = content_margins.y
+	style.content_margin_right = content_margins.z
+	style.content_margin_bottom = content_margins.w
+	style.shadow_color = Color(PALETTE.NAVY, 0.15)
+	style.shadow_size = 6
+	style.shadow_offset = Vector2(0, 4)
+	style.anti_aliasing = true
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
 
 
 func _add_tournament_result_technical_details(parent: Node, logs: Array) -> void:
@@ -4843,9 +5284,46 @@ func _add_season_result_button(parent: Node, text: String, callback: Callable, p
 		_style_button(button, "action")
 	else:
 		button.name = "SeasonResultSecondaryAction"
+	_style_season_result_button(button, primary)
 	_connect_pressed(button, callback)
 	parent.add_child(button)
 	return button
+
+
+func _style_season_result_button(button: Button, primary: bool) -> void:
+	var normal_fill := PALETTE.CORAL if primary else PALETTE.LAVENDER_GLASS
+	var hover_fill := normal_fill.lightened(0.08) if primary else PALETTE.CREAM.lerp(PALETTE.SKY, 0.18)
+	var pressed_fill := normal_fill.darkened(0.07)
+	button.add_theme_stylebox_override("normal", _season_result_button_style(normal_fill, false))
+	button.add_theme_stylebox_override("hover", _season_result_button_style(hover_fill, false, true))
+	button.add_theme_stylebox_override("pressed", _season_result_button_style(pressed_fill, true))
+	button.add_theme_stylebox_override("focus", _season_result_button_style(hover_fill, false, true))
+	button.add_theme_stylebox_override("disabled", _season_result_button_style(Color(PALETTE.DISABLED, 0.72), false))
+	for color_name in [
+		"font_color", "font_hover_color", "font_pressed_color",
+		"icon_normal_color", "icon_hover_color", "icon_pressed_color",
+	]:
+		button.add_theme_color_override(color_name, PALETTE.NAVY)
+	button.add_theme_color_override("font_disabled_color", PALETTE.DISABLED_INK)
+	button.add_theme_color_override("icon_disabled_color", PALETTE.DISABLED_INK)
+
+
+func _season_result_button_style(fill: Color, pressed: bool, hovered: bool = false) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = PALETTE.SKY if hovered else PALETTE.NAVY
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(13)
+	style.content_margin_left = 17
+	style.content_margin_right = 17
+	style.content_margin_top = 8 if not pressed else 10
+	style.content_margin_bottom = 9 if not pressed else 7
+	style.anti_aliasing = true
+	if not pressed:
+		style.shadow_color = Color(PALETTE.NAVY, 0.18 if not hovered else 0.24)
+		style.shadow_size = 4 if not hovered else 6
+		style.shadow_offset = Vector2(0, 3)
+	return style
 
 
 func _open_reward_pack_flow() -> void:
@@ -4885,8 +5363,8 @@ func _show_thanks_for_playing() -> void:
 	content.add_child(finale)
 
 	var hero := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 238),
-		Color("#FFF3CF"),
+		Vector2(0, 218),
+		Color("#FFFEFA"),
 		SKETCH_UI_SCRIPT.INK,
 		SKETCH_UI_SCRIPT.MUSTARD,
 		Vector4(56, 34, 56, 38),
@@ -4899,7 +5377,7 @@ func _show_thanks_for_playing() -> void:
 	hero_copy.add_theme_constant_override("separation", 3)
 	hero.add_child(hero_copy)
 	var eyebrow := Label.new()
-	eyebrow.text = "SEASON COMPLETE"
+	eyebrow.text = "DEMO COMPLETE"
 	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.5))
 	eyebrow.add_theme_font_size_override("font_size", 17)
@@ -4907,30 +5385,51 @@ func _show_thanks_for_playing() -> void:
 	hero_copy.add_child(eyebrow)
 	var champion_title := Label.new()
 	champion_title.name = "FinaleChampionTitle"
-	champion_title.text = "LEAGUE CUP CHAMPION"
+	champion_title.text = "THANKS FOR PLAYING"
 	champion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	champion_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.94))
 	champion_title.add_theme_font_size_override("font_size", 56)
 	champion_title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
 	hero_copy.add_child(champion_title)
 	var hero_detail := Label.new()
-	hero_detail.text = "You conquered the shop circuit. The national stage is next."
+	hero_detail.text = "Thanks for finishing the demo — it means the world to me! Join the Discord to share feedback and follow what comes next."
 	hero_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hero_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
-	hero_detail.add_theme_font_size_override("font_size", 19)
+	hero_detail.add_theme_font_size_override("font_size", 16)
 	hero_detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
 	hero_copy.add_child(hero_detail)
 
-	var achievement_row := HBoxContainer.new()
-	achievement_row.name = "FinaleAchievementRow"
-	achievement_row.add_theme_constant_override("separation", 10)
-	finale.add_child(achievement_row)
-	_add_finale_milestone(achievement_row, "✓", "WEEKLY LOCALS", "Cleared", SKETCH_UI_SCRIPT.TEAL)
-	_add_finale_milestone(achievement_row, "★", "LEAGUE CUP", "Champion", SKETCH_UI_SCRIPT.MUSTARD)
-	_add_finale_milestone(achievement_row, "→", "STATE CHAMPIONSHIP", "Up next", SKETCH_UI_SCRIPT.ORANGE)
+	var achievement_heading := Label.new()
+	achievement_heading.text = "YOUR ROAD SO FAR"
+	achievement_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
+	achievement_heading.add_theme_font_size_override("font_size", 19)
+	achievement_heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	finale.add_child(achievement_heading)
+
+	var achievement_list := VBoxContainer.new()
+	achievement_list.name = "FinaleAchievementList"
+	achievement_list.add_theme_constant_override("separation", 5)
+	finale.add_child(achievement_list)
+	_add_finale_milestone(achievement_list, "✓", "WEEKLY LOCALS", "Cleared", SKETCH_UI_SCRIPT.TEAL)
+	_add_finale_milestone(achievement_list, "★", "LEAGUE CUP", "Champion", SKETCH_UI_SCRIPT.MUSTARD)
+	_add_finale_milestone(
+		achievement_list,
+		"▣",
+		"WINNING DECK",
+		"%d cards" % _deck_total(run.get("deck", {})),
+		SKETCH_UI_SCRIPT.TEAL
+	)
+	_add_finale_milestone(
+		achievement_list,
+		"$",
+		"FINAL EARNINGS",
+		"$%d" % int(run.get("money", 0)),
+		SKETCH_UI_SCRIPT.ORANGE
+	)
 
 	var road_ahead := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 144),
+		Vector2(0, 94),
 		Color("#FFF8E9"),
 		SKETCH_UI_SCRIPT.INK,
 		SKETCH_UI_SCRIPT.MUSTARD,
@@ -4950,32 +5449,40 @@ func _show_thanks_for_playing() -> void:
 	road_heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
 	road_copy.add_child(road_heading)
 	var road_detail := Label.new()
-	road_detail.text = "New rivals. Bigger venues. Stronger cards. One seat at Worlds."
+	road_detail.text = "Adding more cards, finishing the gameplay loop, and improving the presentation!"
 	road_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	road_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
 	road_detail.add_theme_font_size_override("font_size", 15)
 	road_detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
 	road_copy.add_child(road_detail)
-	var teaser_row := HBoxContainer.new()
-	teaser_row.add_theme_constant_override("separation", 8)
-	road_copy.add_child(teaser_row)
-	_add_finale_teaser(teaser_row, "STATE CHAMPS", "Prove you belong.")
-	_add_finale_teaser(teaser_row, "NATIONALS", "Survive the spotlight.")
-	_add_finale_teaser(teaser_row, "WORLDS", "Take your seat.")
-
 	var summary := Label.new()
 	summary.name = "FinaleRunSummary"
-	summary.text = "%d/%d events cleared  •  %d cards collected  •  $%d remaining" % [
-		_season_completed_count(),
-		_season_calendar_ids().size(),
-		_deck_total(run.get("collection", {})),
-		int(run.get("money", 0)),
-	]
+	summary.text = "Thanks for playing the demo and for helping shape what comes next!"
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.24))
 	summary.add_theme_font_size_override("font_size", 16)
 	summary.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
 	finale.add_child(summary)
+
+	var community_links := HBoxContainer.new()
+	community_links.name = "FinaleCommunityLinks"
+	community_links.add_theme_constant_override("separation", 10)
+	finale.add_child(community_links)
+	if not STEAM_STORE_URL.is_empty():
+		var steam_button := _make_button("Wishlist on Steam")
+		steam_button.name = "FinaleSteamWishlistButton"
+		steam_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		steam_button.custom_minimum_size.y = 40
+		_connect_pressed(steam_button, func() -> void: OS.shell_open(STEAM_STORE_URL))
+		community_links.add_child(steam_button)
+	if not DISCORD_INVITE_URL.is_empty():
+		var discord_button := _make_button("Join the Discord")
+		discord_button.name = "FinaleDiscordButton"
+		discord_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		discord_button.custom_minimum_size.y = 40
+		_style_button(discord_button, "action")
+		_connect_pressed(discord_button, func() -> void: OS.shell_open(DISCORD_INVITE_URL))
+		community_links.add_child(discord_button)
 
 	var actions := HBoxContainer.new()
 	actions.name = "FinaleActions"
@@ -5003,31 +5510,35 @@ func _show_thanks_for_playing() -> void:
 
 func _add_finale_milestone(parent: Node, symbol: String, title: String, status: String, accent: Color) -> void:
 	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 112),
+		Vector2(0, 50),
 		SKETCH_UI_SCRIPT.PAPER,
 		SKETCH_UI_SCRIPT.INK,
 		accent,
-		Vector4(22, 14, 22, 16),
+		Vector4(22, 8, 22, 9),
 		parent.get_child_count() % 2
 	)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(panel)
-	var copy := VBoxContainer.new()
+	var copy := HBoxContainer.new()
 	copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	copy.add_theme_constant_override("separation", 16)
 	panel.add_child(copy)
 	var heading := Label.new()
 	heading.text = "%s  %s" % [symbol, title]
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
-	heading.add_theme_font_size_override("font_size", 24)
+	heading.add_theme_font_size_override("font_size", 21)
 	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(heading)
 	var detail := Label.new()
 	detail.text = status
-	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail.custom_minimum_size = Vector2(180, 0)
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.32))
 	detail.add_theme_font_size_override("font_size", 14)
 	detail.add_theme_color_override("font_color", accent.darkened(0.2))
+	detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(detail)
 
 
@@ -5486,43 +5997,47 @@ func _make_card_face(card: Dictionary, minimum_size: Vector2 = Vector2(250, 355)
 func _affinity_color(archetype_id: String) -> Color:
 	match archetype_id:
 		"spicy":
-			return Color("#d95735")
+			return Color("#C96C60")
 		"hearty":
-			return Color("#8a6b32")
+			return Color("#82966F")
 		"sweet":
-			return Color("#c75ba3")
+			return Color("#8299D0")
+		"fresh":
+			return PALETTE.FRESH_YELLOW
+		"funky":
+			return PALETTE.FUNKY_PLUM
 		"neutral":
-			return Color("#c7d0df")
+			return Color("#A69AB7")
 		_:
-			return Color("#ffe08a")
+			return Color("#C9B56B")
 
 
 func _rarity_line_color(rarity: String) -> Color:
 	match rarity:
 		"common":
-			return Color("#232b35")
+			return Color("#29233C")
 		"uncommon":
-			return Color("#1f3530")
+			return Color("#314451")
 		"rare":
-			return Color("#3d321f")
+			return Color("#443A52")
 		"mythic":
-			return Color("#442334")
+			return Color("#49334E")
 		_:
-			return Color("#232b35")
+			return Color("#29233C")
 
 
 func _rarity_text_color(rarity: String) -> Color:
 	match rarity:
 		"common":
-			return Color("#d8dfec")
+			return Color("#D7CBE0")
 		"uncommon":
-			return Color("#96e6c8")
+			return Color("#A7BFA1")
 		"rare":
-			return Color("#ffd37a")
+			return Color("#D5C16D")
 		"mythic":
-			return Color("#ff9fc2")
+			return Color("#D38BBC")
 		_:
-			return Color("#d8dfec")
+			return Color("#D7CBE0")
 
 
 func _add_body_text(parent: Node, text: String) -> Label:
@@ -5691,7 +6206,11 @@ func _guard_run_over() -> bool:
 
 
 func _save_run() -> void:
-	var result: Dictionary = _autosave_now(current_screen) if autosave_enabled else run_state_service.save_run(run, current_screen)
+	_capture_live_kitchen_match_state()
+	var resume_screen := current_screen
+	if resume_screen == "settings" and is_instance_valid(suspended_tabletop) and suspended_tabletop_screen == "kitchen_match":
+		resume_screen = "kitchen_match"
+	var result: Dictionary = _autosave_now(resume_screen) if autosave_enabled else run_state_service.save_run(run, resume_screen)
 	_set_footer(result.message)
 
 
@@ -5734,8 +6253,8 @@ func _continue_run_to_shop() -> void:
 		_show_game_start()
 		return
 	_prepare_loaded_run(result)
-	_show_shop()
-	_set_footer("Welcome back to the card shop.")
+	_resume_loaded_screen(String(result.get("resume_screen", "")))
+	_set_footer("Welcome back. Your last checkpoint has been restored.")
 	call_deferred("_finish_autosave_resume")
 
 
@@ -5793,18 +6312,19 @@ func _resume_loaded_screen(saved_screen: String) -> void:
 
 
 func _resume_autosaved_kitchen_match() -> void:
-	if not _season_tournament_active():
-		_start_debug_kitchen_match()
-		return
 	var saved_match: Dictionary = run.get("kitchen_match", {}).duplicate(true)
+	var saved_snapshot: Dictionary = saved_match.get("snapshot", {}).duplicate(true)
+	if not _season_tournament_active():
+		_start_debug_kitchen_match(saved_snapshot)
+		return
 	var saved_result: Dictionary = run.get("kitchen_match_result", {}).duplicate(true)
-	_start_season_tournament_round(true, true)
+	_start_season_tournament_round(true, true, saved_snapshot)
 	if bool(saved_result.get("game_over", false)):
 		run.kitchen_match = saved_match
 		run.kitchen_match_result = saved_result
 		call_deferred("_show_season_round_result_popup", String(saved_result.get("winner", "opponent")) == "player")
 	else:
-		_set_footer("Round restored against the same opponent.")
+		_set_footer("Battle restored at the saved turn.")
 
 
 func _finish_autosave_resume() -> void:

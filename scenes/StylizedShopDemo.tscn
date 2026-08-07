@@ -1,0 +1,41 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/GreyboxCameraDemo.tscn" id="1_greybox"]
+[ext_resource type="PackedScene" path="res://assets/third_party/stylized_shop/low_poly_cafe/scene.gltf" id="2_cafe"]
+[ext_resource type="PackedScene" path="res://assets/third_party/stylized_shop/interior_plants/scene.gltf" id="3_plants"]
+[ext_resource type="PackedScene" path="res://assets/third_party/stylized_shop/coffee_table_set/scene.gltf" id="4_table"]
+[ext_resource type="Script" path="res://scripts/StylizedShopDemoDresser.gd" id="5_dresser"]
+[ext_resource type="PackedScene" path="res://assets/third_party/stylized_shop/neo_shopkeeper/neo_shopkeep.glb" id="6_neo"]
+
+[node name="StylizedShopDemo" instance=ExtResource("1_greybox")]
+
+[node name="StylizedAssets" type="Node3D" parent="ViewportContainer/SubViewport/World"]
+
+[node name="LowPolyCafe" parent="ViewportContainer/SubViewport/World/StylizedAssets" instance=ExtResource("2_cafe")]
+transform = Transform3D(0.07, 0, 0, 0, 0.07, 0, 0, 0, 0.07, 1.25, 0.09, 1.0)
+
+[node name="CoffeeTableSet" parent="ViewportContainer/SubViewport/World/StylizedAssets" instance=ExtResource("4_table")]
+transform = Transform3D(0.075, 0, 0, 0, 0.075, 0, 0, 0, 0.075, 2.65, 0.33, 3.15)
+
+[node name="InteriorPlantsLeft" parent="ViewportContainer/SubViewport/World/StylizedAssets" instance=ExtResource("3_plants")]
+transform = Transform3D(0.68, 0, 0, 0, 0.68, 0, 0, 0, 0.68, -3.25, -0.59, 1.55)
+
+[node name="InteriorPlantsRight" parent="ViewportContainer/SubViewport/World/StylizedAssets" instance=ExtResource("3_plants")]
+transform = Transform3D(-0.46, 0, 0, 0, 0.46, 0, 0, 0, -0.46, 3.2, -0.4, 0.15)
+
+[node name="NeoShopkeeperPrototype" parent="ViewportContainer/SubViewport/World/StylizedAssets" instance=ExtResource("6_neo")]
+
+[node name="CafeWindowGlow" type="OmniLight3D" parent="ViewportContainer/SubViewport/World/StylizedAssets"]
+position = Vector3(0, 2.1, 0.75)
+light_color = Color(1, 0.82, 0.72, 1)
+light_energy = 0.48
+omni_range = 4.8
+
+[node name="PastelFill" type="OmniLight3D" parent="ViewportContainer/SubViewport/World/StylizedAssets"]
+position = Vector3(-2.8, 3.2, 3.4)
+light_color = Color(0.56, 0.66, 0.9, 1)
+light_energy = 0.3
+omni_range = 6.0
+
+[node name="StylizedArtDirector" type="Node" parent="."]
+script = ExtResource("5_dresser")

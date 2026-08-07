@@ -79,8 +79,11 @@ func _run() -> void:
 		"Completing a lost round did not award that round's cash."
 	)
 
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
 	main.queue_free()
-	await process_frame
+	for unused_frame in range(4):
+		await process_frame
 	if failed:
 		quit(1)
 		return

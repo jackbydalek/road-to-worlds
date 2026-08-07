@@ -2,20 +2,98 @@ extends Control
 
 signal exit_requested
 signal match_finished(result: Dictionary)
+signal settings_requested
+signal battle_preferences_changed(play_speed_id: String, battle_text_scale: float)
 
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const COMBAT_SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
 const CARD_BACK := preload("res://assets/cards/card_backs/living_table.png")
+const CARD_BACK_FRAME := preload("res://assets/cards/card_backs/card_back_frame.svg")
 const ART_PENDING := preload("res://assets/cards/art_pending.png")
 const ABILITY_READY_AURA := preload("res://assets/ui/ability_ready_aura.svg")
+const ABILITY_READY_SPARKLES := preload("res://assets/ui/ability_ready_sparkles.svg")
+const MEAL_CANDIDATE_AURA := preload("res://assets/ui/meal_candidate_aura.svg")
+const MEAL_SELECTED_AURA := preload("res://assets/ui/meal_selected_aura.svg")
+const TAUNT_AURA := preload("res://assets/ui/taunt_aura.svg")
 const STAT_BADGE_BACKING := preload("res://assets/ui/field_stat_badge.svg")
 const READABLE_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const UI_THEME_SCRIPT := preload("res://scripts/ui/KitchenGlassTheme.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const LOFI_OUTLINE := preload("res://scripts/ui/LofiOutline.gd")
+const PICK_CARD_SOUNDS := [
+	preload("res://assets/audio/cards/817546__silverdubloons__pickupcard00.wav"),
+	preload("res://assets/audio/cards/817547__silverdubloons__pickupcard01.wav"),
+	preload("res://assets/audio/cards/817548__silverdubloons__pickupcard02.wav"),
+	preload("res://assets/audio/cards/817549__silverdubloons__pickupcard03.wav"),
+	preload("res://assets/audio/cards/817550__silverdubloons__pickupcard04.wav"),
+	preload("res://assets/audio/cards/817551__silverdubloons__pickupcard05.wav")
+]
+const DROP_CARD_SOUNDS := [
+	preload("res://assets/audio/cards/817540__silverdubloons__dropcard01.wav"),
+	preload("res://assets/audio/cards/817541__silverdubloons__dropcard02.wav"),
+	preload("res://assets/audio/cards/817542__silverdubloons__dropcard03.wav"),
+	preload("res://assets/audio/cards/817543__silverdubloons__dropcard04.wav"),
+	preload("res://assets/audio/cards/817544__silverdubloons__dropcard05.wav")
+]
+const SLIDE_CARD_SOUNDS := [
+	preload("res://assets/audio/cards/817576__silverdubloons__slidecard01.wav"),
+	preload("res://assets/audio/cards/817577__silverdubloons__slidecard02.wav"),
+	preload("res://assets/audio/cards/817579__silverdubloons__slidecard04.wav"),
+	preload("res://assets/audio/cards/817580__silverdubloons__slidecard05.wav")
+]
+const SHUFFLE_SOUNDS := [
+	preload("res://assets/audio/cards/817569__silverdubloons__shuffle00.wav"),
+	preload("res://assets/audio/cards/817570__silverdubloons__shuffle01.wav"),
+	preload("res://assets/audio/cards/817571__silverdubloons__shuffle02.wav"),
+	preload("res://assets/audio/cards/817573__silverdubloons__shuffle04.wav"),
+	preload("res://assets/audio/cards/817574__silverdubloons__shuffle05.wav")
+]
+const CARD_IMPACT_SOUNDS := [
+	preload("res://assets/audio/combat_hit_thud.mp3")
+]
+const INGREDIENT_CHEF_IMPACT_SOUNDS := [
+	preload("res://assets/audio/combat_hit_thud.mp3")
+]
+const MEAL_CHEF_IMPACT_SOUNDS := [
+	preload("res://assets/audio/combat_hit_ground.mp3")
+]
+const EFFECT_DAMAGE_SOUNDS := [
+	preload("res://assets/audio/kenney_impacts/impactGlass_light_000.ogg"),
+	preload("res://assets/audio/kenney_impacts/impactGlass_light_001.ogg"),
+	preload("res://assets/audio/kenney_impacts/impactGlass_light_002.ogg"),
+	preload("res://assets/audio/kenney_impacts/impactGlass_light_003.ogg"),
+	preload("res://assets/audio/kenney_impacts/impactGlass_light_004.ogg")
+]
+const MEAL_SUMMON_SOUND := preload("res://assets/audio/meal_summon_epic_spell_impact.mp3")
+const ABILITY_ACTIVATION_SOUND := preload("res://assets/audio/ability_activation_healing_magic.mp3")
+const POSITIVE_EFFECT_SOUND := preload("res://assets/audio/531087__ryusa__magic-spell-buff-bell-sparkle-reverb.wav")
+const MEAL_SUMMON_VOLUME_DB := -10.0
+const MEAL_SUMMON_SOUND_DELAY_SECONDS := 0.44
+const ABILITY_ACTIVATION_VOLUME_DB := 0.0
+const POSITIVE_EFFECT_VOLUME_DB := -7.0
+const POSITIVE_EFFECT_SOUND_COOLDOWN_MSEC := 160
+const CARD_IMPACT_VOLUME_DB := -5.0
+const INGREDIENT_CHEF_IMPACT_VOLUME_DB := -3.0
+const MEAL_CHEF_IMPACT_VOLUME_DB := -4.0
+const MEAL_CHEF_IMPACT_START_OFFSET_SECONDS := 0.28
+const EFFECT_DAMAGE_VOLUME_DB := -3.0
+const IMPACT_PITCH_VARIATION := 0.03
+const VFX_OUTLINE_WIDTH := 2.5
 
 const TABLE_Y := 0.235
 const DRAG_Y := 0.82
-const FIELD_CARD_SIZE := Vector2(1.08, 1.54)
-const PLAYER_HAND_Z := 3.3
+const FIELD_CARD_SIZE := Vector2(1.14, 1.62)
+const FIELD_BADGE_MAX_WIDTH := FIELD_CARD_SIZE.x - 0.12
+const ARENA_OUTLINE_COLOR := Color("#29365F")
+const TABLE_OUTLINE_WIDTH := 0.032
+const ZONE_OUTLINE_WIDTH := 0.018
+const CHEF_OUTLINE_WIDTH := 0.026
+const PLATED_CARD_SCALE := 1.20
+const PLATED_FLOATING_ART_SCALE := 1.18
+const INSPECTOR_CARD_SIZE := Vector2(272, 386)
+const ACTION_REVEAL_CARD_SIZE := Vector2(350, 498)
+# Anchor the player's cards against the near table edge so the center stays open.
+const PLAYER_HAND_Z := 4.45
 const OPPONENT_HAND_Z := -5.5
 const PLAYER_HAND_MAX_WIDTH := 8.8
 const OPPONENT_HAND_MAX_WIDTH := 6.6
@@ -30,6 +108,7 @@ const RIVAL_PACING_OPTIONS := [
 	{"id": "slow", "label": "SLOW", "base_seconds": 1.8, "seconds_per_word": 0.22, "max_seconds": 5.0, "action_gap": 0.7}
 ]
 const TEXT_SCALE_OPTIONS := [1.0, 1.25, 1.5]
+const BASE_TEXT_READABILITY_SCALE := 1.15
 const KEYWORD_TOOLTIPS := {
 	"stalwart": {"title": "Stalwart", "body": "This card can attack the opposing Chef even while they control Plated cards."},
 	"piercing": {"title": "Piercing", "body": "When this card overpowers a Defending unit, excess combat damage reaches the opposing Chef."},
@@ -42,8 +121,8 @@ const TUTORIAL_STEPS := [
 	{"lesson": 2, "title": "Play an Ingredient", "body": "Ingredients build recipes. New Ingredients are PREPARING until the start of your next turn.", "prompt": "Click the glowing Hot Honey Bee in your hand.", "action": "select_hand", "card_id": "spicy_hot_honey_bee"},
 	{"lesson": 2, "title": "Choose a Safe Zone", "body": "Prep protects a card from normal attacks while it matures. Plated cards can fight, but can also be attacked.", "prompt": "In Card Info, choose Play → Prep 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
 	{"lesson": 2, "title": "Let It Mature", "body": "At the start of your next turn, the Ingredient becomes RECIPE READY. Normal matches give the rival a full turn in between.", "prompt": "Press END TURN. The lesson will fast-forward the scripted rival turn.", "action": "end_turn"},
-	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. Playing another replaces the old one.", "prompt": "Click the glowing Blazing Wok.", "action": "select_hand", "card_id": "environment_blazing_wok", "scenario": "recipe"},
-	{"lesson": 3, "title": "Use the Environment", "body": "Blazing Wok gives each Meal you serve +1 Attack.", "prompt": "Choose Use Environment in Card Info.", "action": "play_hand", "card_id": "environment_blazing_wok"},
+	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. Playing another replaces the old one.", "prompt": "Click the glowing spicy taquería.", "action": "select_hand", "card_id": "environment_spicy_taqueria", "scenario": "recipe"},
+	{"lesson": 3, "title": "Use the Environment", "body": "spicy taquería gives each Spicy food you serve +2 Attack.", "prompt": "Choose Use Environment in Card Info.", "action": "play_hand", "card_id": "environment_spicy_taqueria"},
 	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe.", "prompt": "Click the glowing Sriracharrow in your hand.", "action": "select_hand", "card_id": "spicy_sriracharrow"},
 	{"lesson": 4, "title": "Choose Its Zone", "body": "You may serve one Meal each turn. This one will enter Prep, using the slot its Ingredient is about to vacate.", "prompt": "Choose Serve → Prep 2 (Sacrifice).", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
 	{"lesson": 4, "title": "Pay the Recipe", "body": "The cyan glow marks legal recipe Ingredients. The selected Ingredient will be sacrificed to your discard pile.", "prompt": "Click the glowing Hot Honey Bee on your table.", "action": "select_recipe", "card_id": "spicy_hot_honey_bee"},
@@ -67,10 +146,10 @@ const TUTORIAL_STEPS := [
 	{"lesson": 7, "title": "Tutorial Complete", "body": "You played an Ingredient, matured and sacrificed it, served and moved a Meal, used support cards, cleared a defender, and won with a direct attack.", "prompt": "Return to the title screen when you are ready.", "action": "finish"}
 ]
 const ZONE_CENTERS := {
-	"player_prep": Vector3(0.0, TABLE_Y, 1.25),
-	"player_plated": Vector3(0.0, TABLE_Y, -0.65),
-	"opponent_plated": Vector3(0.0, TABLE_Y, -2.55),
-	"opponent_prep": Vector3(0.0, TABLE_Y, -4.25)
+	"player_prep": Vector3(0.0, TABLE_Y, 2.25),
+	"player_plated": Vector3(0.0, TABLE_Y, 0.15),
+	"opponent_plated": Vector3(0.0, TABLE_Y, -2.25),
+	"opponent_prep": Vector3(0.0, TABLE_Y, -4.45)
 }
 const ZONE_EXTENTS := {
 	"player_prep": Vector2(2.8, 0.82),
@@ -79,12 +158,12 @@ const ZONE_EXTENTS := {
 	"opponent_prep": Vector2(2.8, 0.82)
 }
 const AUX_ZONE_POSITIONS := {
-	"player_deck": Vector3(5.05, TABLE_Y, 2.72),
-	"player_discard": Vector3(5.05, TABLE_Y, 1.05),
-	"player_environment": Vector3(-5.05, TABLE_Y, 0.05),
-	"opponent_deck": Vector3(-5.05, TABLE_Y, -4.55),
-	"opponent_discard": Vector3(-5.05, TABLE_Y, -2.88),
-	"opponent_environment": Vector3(5.05, TABLE_Y, -3.0)
+	"player_deck": Vector3(5.05, TABLE_Y, 4.05),
+	"player_discard": Vector3(5.05, TABLE_Y, 2.15),
+	"player_environment": Vector3(-5.05, TABLE_Y, 0.7),
+	"opponent_deck": Vector3(-5.05, TABLE_Y, -4.9),
+	"opponent_discard": Vector3(-5.05, TABLE_Y, -3.0),
+	"opponent_environment": Vector3(5.05, TABLE_Y, -2.7)
 }
 
 @onready var viewport_container: SubViewportContainer = $ViewportContainer
@@ -103,7 +182,8 @@ const AUX_ZONE_POSITIONS := {
 @onready var cancel_choice_button: Button = $Interface/StatusPanel/Margin/StatusRow/CancelChoiceButton
 @onready var effect_layer: Control = $Interface/EffectLayer
 @onready var action_panel: PanelContainer = $Interface/ActionPanel
-@onready var action_list: VBoxContainer = $Interface/ActionPanel/Margin/Actions
+@onready var action_scroll: ScrollContainer = $Interface/ActionPanel/Margin/InspectorScroll
+@onready var action_list: VBoxContainer = $Interface/ActionPanel/Margin/InspectorScroll/Actions
 @onready var prompt_panel: PanelContainer = $Interface/PromptPanel
 @onready var prompt_content: VBoxContainer = $Interface/PromptPanel/Margin/PromptContent
 @onready var card_tray_overlay: Control = $Interface/CardTrayOverlay
@@ -120,6 +200,7 @@ const AUX_ZONE_POSITIONS := {
 @onready var turn_label: Label = $Interface/TopBar/Margin/TopRow/TurnLabel
 @onready var end_turn_button: Button = $Interface/EndTurnButton
 @onready var reset_button: Button = $Interface/TopBar/Margin/TopRow/ResetButton
+@onready var settings_button: Button = $Interface/TopBar/Margin/TopRow/SettingsButton
 @onready var exit_button: Button = $Interface/TopBar/Margin/TopRow/ExitButton
 @onready var battle_log_button: Button = $Interface/BattleLogButton
 @onready var battle_log_panel: PanelContainer = $Interface/BattleLogPanel
@@ -149,6 +230,8 @@ var highlighted_zone := ""
 var highlighted_slot := -1
 var opponent_running := false
 var animation_busy := false
+var ability_activation_sound_player: AudioStreamPlayer
+var last_positive_effect_sound_msec := -POSITIVE_EFFECT_SOUND_COOLDOWN_MSEC
 var match_seed := 37
 var production_match := false
 var configured_player_deck: Dictionary = {}
@@ -161,11 +244,13 @@ var configured_exit_label := "Return"
 var configured_ai_difficulty := "easy"
 var configured_card_border_id := "white"
 var configured_match_context: Dictionary = {}
+var configured_resume_snapshot: Dictionary = {}
 var result_emitted := false
 var manual_discard_tray_side := ""
 var camera_home_transform := Transform3D.IDENTITY
 var camera_home_fov := 43.0
 var camera_pacing_tween: Tween
+@export var reduced_motion := false
 var turn_banner_panel: PanelContainer
 var turn_banner_title: Label
 var turn_banner_subtitle: Label
@@ -253,6 +338,24 @@ func configure_match(
 	configured_match_context = match_context.duplicate(true)
 
 
+func configure_resume_snapshot(snapshot: Dictionary) -> void:
+	configured_resume_snapshot = snapshot.duplicate(true)
+
+
+func capture_match_snapshot() -> Dictionary:
+	if state.is_empty() or service == null:
+		return {}
+	var saved_state := state.duplicate(true)
+	# Presentation events are transient. Restoring their completed rules state is
+	# safer than replaying half-finished movement or impact animations.
+	saved_state["animation_events"] = []
+	return {
+		"version": 1,
+		"state": saved_state,
+		"rng_state": service.rng.state
+	}
+
+
 func configure_tutorial() -> void:
 	tutorial_mode = true
 	configured_player_name = "Teaching Kitchen"
@@ -261,10 +364,25 @@ func configure_tutorial() -> void:
 	configured_card_border_id = "white"
 
 
+func configure_battle_preferences(play_speed_id: String, battle_text_scale: float) -> void:
+	for option_index in range(RIVAL_PACING_OPTIONS.size()):
+		if String(RIVAL_PACING_OPTIONS[option_index].id) == play_speed_id:
+			rival_pacing_index = option_index
+			break
+	var closest_distance := INF
+	for option_index in range(TEXT_SCALE_OPTIONS.size()):
+		var distance := absf(float(TEXT_SCALE_OPTIONS[option_index]) - battle_text_scale)
+		if distance < closest_distance:
+			closest_distance = distance
+			text_scale_index = option_index
+	if is_node_ready():
+		_apply_text_scale()
+		_refresh_readability_control_labels()
+
+
 func _ready() -> void:
 	theme = UI_THEME_SCRIPT.build(READABLE_FONT)
 	_apply_glass_surface_styles()
-	_load_readability_settings()
 	camera.look_at(Vector3(0.0, 0.25, -0.75), Vector3.UP)
 	camera_home_transform = camera.global_transform
 	camera_home_fov = camera.fov
@@ -273,6 +391,7 @@ func _ready() -> void:
 	viewport_container.gui_input.connect(_on_table_gui_input)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	reset_button.pressed.connect(_start_match)
+	settings_button.pressed.connect(func() -> void: settings_requested.emit())
 	exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	battle_log_button.pressed.connect(_toggle_battle_log)
 	battle_log_close_button.pressed.connect(func() -> void: _set_battle_log_visible(false))
@@ -288,10 +407,16 @@ func _ready() -> void:
 	_apply_current_ui_button_style(end_turn_button, true)
 	_apply_rounded_button_style(reset_button)
 	_apply_high_contrast_button_text(reset_button)
+	_apply_current_ui_button_style(reset_button, false)
+	_apply_rounded_button_style(settings_button)
+	_apply_high_contrast_button_text(settings_button)
+	_apply_current_ui_button_style(settings_button, false)
 	_apply_rounded_button_style(exit_button)
 	_apply_high_contrast_button_text(exit_button)
+	_apply_current_ui_button_style(exit_button, false)
 	_apply_rounded_button_style(battle_log_button)
 	_apply_high_contrast_button_text(battle_log_button)
+	_apply_current_ui_button_style(battle_log_button, false)
 	_apply_rounded_button_style(battle_log_close_button)
 	_apply_rounded_button_style(card_tray_close_button)
 	_apply_rounded_button_style(card_tray_skip_button)
@@ -304,43 +429,69 @@ func _ready() -> void:
 		reset_button.visible = false
 		exit_button.text = "LEAVE MATCH"
 		exit_button.custom_minimum_size.x = 126
-		exit_button.tooltip_text = configured_exit_label
 	if tutorial_mode:
 		reset_button.visible = false
 		exit_button.text = "EXIT TUTORIAL"
 		exit_button.custom_minimum_size.x = 132
-		exit_button.tooltip_text = configured_exit_label
 		battle_log_button.visible = false
 		_build_tutorial_interface()
 	_load_reference_art()
+	_apply_lofi_arena_outlines()
 	_prepare_zone_materials()
 	_start_match()
+	for button_node in $Interface.find_children("*", "Button", true, false):
+		_bind_illustrated_button_feedback(button_node as Button)
 	set_process(true)
 
 
 func _apply_glass_surface_styles() -> void:
 	($Interface/TopBar as PanelContainer).add_theme_stylebox_override(
 		"panel",
-		UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+		UI_THEME_SCRIPT.light_glass_style(PALETTE.PERIWINKLE, 2)
 	)
 	($Interface/StatusPanel as PanelContainer).add_theme_stylebox_override(
 		"panel",
-		UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+		UI_THEME_SCRIPT.light_glass_style(PALETTE.SKY, 2)
 	)
-	prompt_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.OAK, 1))
-	battle_log_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1))
+	prompt_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.light_glass_style(PALETTE.BLUSH, 2))
+	battle_log_panel.add_theme_stylebox_override("panel", UI_THEME_SCRIPT.light_glass_style(PALETTE.PERIWINKLE, 2))
+	battle_log_text.add_theme_color_override("default_color", PALETTE.NAVY)
+	var battle_log_title := battle_log_panel.find_child("Title", true, false) as Label
+	if battle_log_title != null:
+		battle_log_title.add_theme_color_override("font_color", PALETTE.NAVY)
+	for label in [title_label, turn_label, status_label, status_context_label]:
+		label.add_theme_color_override("font_color", PALETTE.NAVY)
 	_apply_match_hud_styles()
 
 
+func _apply_lofi_arena_outlines() -> void:
+	var world := $ViewportContainer/WorldViewport/World
+	var table_surface := world.get_node_or_null("Table")
+	if table_surface != null:
+		LOFI_OUTLINE.apply_to_mesh_tree(table_surface, TABLE_OUTLINE_WIDTH, ARENA_OUTLINE_COLOR)
+		table_surface.set_meta("lofi_arena_outline", true)
+	var zones := world.get_node_or_null("Zones")
+	if zones != null:
+		LOFI_OUTLINE.apply_to_mesh_tree(zones, ZONE_OUTLINE_WIDTH, ARENA_OUTLINE_COLOR)
+		zones.set_meta("lofi_arena_outline", true)
+	for chef_path in ["PlayerChef", "OpponentChef"]:
+		var chef := world.get_node_or_null(chef_path)
+		if chef != null:
+			LOFI_OUTLINE.apply_to_mesh_tree(chef, CHEF_OUTLINE_WIDTH, ARENA_OUTLINE_COLOR)
+			chef.set_meta("lofi_arena_outline", true)
+
+
 func _apply_match_hud_styles() -> void:
-	var player_style := UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.TEAL_LIGHT, 1)
+	var player_style := UI_THEME_SCRIPT.tinted_paper_style(PALETTE.SKY, 2)
 	player_style.content_margin_left = 10
 	player_style.content_margin_right = 10
 	player_life.add_theme_stylebox_override("normal", player_style)
-	var rival_style := UI_THEME_SCRIPT.dark_glass_style(UI_THEME_SCRIPT.ORANGE, 1)
+	player_life.add_theme_color_override("font_color", PALETTE.NAVY)
+	var rival_style := UI_THEME_SCRIPT.tinted_paper_style(PALETTE.CORAL, 2)
 	rival_style.content_margin_left = 10
 	rival_style.content_margin_right = 10
 	opponent_life.add_theme_stylebox_override("normal", rival_style)
+	opponent_life.add_theme_color_override("font_color", PALETTE.NAVY)
 	_refresh_turn_badge_style()
 
 
@@ -348,11 +499,12 @@ func _refresh_turn_badge_style() -> void:
 	if state.is_empty() or turn_label == null:
 		return
 	var player_turn := String(state.get("phase", "")) == "player_main"
-	var accent := UI_THEME_SCRIPT.TEAL_LIGHT if player_turn else UI_THEME_SCRIPT.ORANGE
-	var turn_style := UI_THEME_SCRIPT.dark_glass_style(accent, 2)
+	var accent := PALETTE.SKY if player_turn else PALETTE.CORAL
+	var turn_style := UI_THEME_SCRIPT.tinted_paper_style(accent, 2)
 	turn_style.content_margin_left = 12
 	turn_style.content_margin_right = 12
 	turn_label.add_theme_stylebox_override("normal", turn_style)
+	turn_label.add_theme_color_override("font_color", PALETTE.NAVY)
 
 
 func _start_match() -> void:
@@ -394,6 +546,12 @@ func _start_match() -> void:
 	else:
 		match_seed += 1
 		state = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", match_seed, "player", true, "easy")
+	if production_match and not configured_resume_snapshot.is_empty():
+		var resumed_state: Variant = configured_resume_snapshot.get("state", {})
+		if resumed_state is Dictionary and not (resumed_state as Dictionary).is_empty():
+			state = (resumed_state as Dictionary).duplicate(true)
+			service.clear_animation_events(state)
+			service.rng.state = int(configured_resume_snapshot.get("rng_state", service.rng.state))
 	selected_ref = {}
 	dragging = false
 	pressed_card = null
@@ -403,6 +561,15 @@ func _start_match() -> void:
 		_refresh_tutorial_panel()
 	else:
 		call_deferred("_begin_match_pacing")
+
+
+func _exit_tree() -> void:
+	_reset_camera_pacing()
+	camera_pacing_tween = null
+	for player_node in find_children("*", "AudioStreamPlayer", true, false):
+		var player := player_node as AudioStreamPlayer
+		player.stop()
+		player.stream = null
 
 
 func _begin_match_pacing() -> void:
@@ -431,8 +598,8 @@ func _build_tutorial_interface() -> void:
 	tutorial_panel.offset_right = 430.0
 	tutorial_panel.offset_bottom = 310.0
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.035, 0.12, 0.16, 0.96)
-	panel_style.border_color = Color("#f1b84f")
+	panel_style.bg_color = Color("#24213F", 0.96)
+	panel_style.border_color = Color("#8299D0")
 	panel_style.set_border_width_all(2)
 	panel_style.set_corner_radius_all(18)
 	panel_style.shadow_color = Color(0, 0, 0, 0.55)
@@ -450,14 +617,14 @@ func _build_tutorial_interface() -> void:
 	content.add_theme_constant_override("separation", 7)
 	margin.add_child(content)
 
-	tutorial_progress_label = _label("", 12, Color("#8ed9ff"))
+	tutorial_progress_label = _label("", 12, Color("#8299D0"))
 	content.add_child(tutorial_progress_label)
-	tutorial_title_label = _label("", 24, Color("#fff1c5"))
+	tutorial_title_label = _label("", 24, Color("#E9DFEE"))
 	content.add_child(tutorial_title_label)
-	tutorial_body_label = _label("", 14, Color("#dce9ed"))
+	tutorial_body_label = _label("", 14, Color("#D7CBE0"))
 	tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_body_label)
-	tutorial_prompt_label = _label("", 15, Color("#ffd36f"))
+	tutorial_prompt_label = _label("", 15, Color("#D5C16D"))
 	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_prompt_label)
 	tutorial_action_button = _styled_button("Begin")
@@ -539,7 +706,7 @@ func _load_tutorial_scenario(scenario: String) -> void:
 	_reset_tutorial_state()
 	match scenario:
 		"recipe":
-			state.player.hand = ["environment_blazing_wok", "spicy_sriracharrow", "item_wooden_spoon"]
+			state.player.hand = ["environment_spicy_taqueria", "spicy_sriracharrow", "item_wooden_spoon"]
 			state.player.deck = ["spicy_jalapeno_panther", "spicy_firecracker_shrimp", "spicy_sriracharrow"]
 			_add_tutorial_unit("player", "spicy_hot_honey_bee", "prep", 1, false, true)
 			state.message = "A preplanned turn: Hot Honey Bee is now RECIPE READY."
@@ -724,6 +891,9 @@ func _refresh_status_panel_visibility() -> void:
 func _show_invalid_action(message: String) -> void:
 	if message.strip_edges() == "":
 		message = "That action is not available right now."
+	var ui_sounds := get_tree().get_first_node_in_group("ui_sound_controller")
+	if ui_sounds != null and ui_sounds.has_method("play_error"):
+		ui_sounds.call("play_error")
 	invalid_action_visible = true
 	status_label.text = message
 	_refresh_status_context()
@@ -799,10 +969,7 @@ func _build_pacing_interface() -> void:
 	turn_banner_panel.set_anchors_preset(Control.PRESET_CENTER)
 	turn_banner_panel.position = Vector2(-235.0, -58.0)
 	turn_banner_panel.size = Vector2(470.0, 116.0)
-	var banner_style := StyleBoxFlat.new()
-	banner_style.bg_color = Color(0.025, 0.065, 0.085, 0.94)
-	banner_style.border_color = Color("#efb246")
-	banner_style.set_border_width_all(3)
+	var banner_style := UI_THEME_SCRIPT.tinted_paper_style(PALETTE.PERIWINKLE, 3)
 	banner_style.set_corner_radius_all(18)
 	turn_banner_panel.add_theme_stylebox_override("panel", banner_style)
 	effect_layer.add_child(turn_banner_panel)
@@ -816,12 +983,12 @@ func _build_pacing_interface() -> void:
 	banner_content.alignment = BoxContainer.ALIGNMENT_CENTER
 	banner_content.add_theme_constant_override("separation", 1)
 	banner_margin.add_child(banner_content)
-	turn_banner_title = _label("YOUR TURN", 34, Color("#fff2c7"))
+	turn_banner_title = _label("YOUR TURN", 34, PALETTE.NAVY)
 	turn_banner_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	turn_banner_title.add_theme_color_override("font_outline_color", Color("#07151c"))
-	turn_banner_title.add_theme_constant_override("outline_size", 8)
+	turn_banner_title.add_theme_color_override("font_outline_color", Color(PALETTE.GHOST, 0.9))
+	turn_banner_title.add_theme_constant_override("outline_size", 4)
 	banner_content.add_child(turn_banner_title)
-	turn_banner_subtitle = _label("TURN 1", 16, Color("#8fddf5"))
+	turn_banner_subtitle = _label("TURN 1", 16, PALETTE.SLATE)
 	turn_banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner_content.add_child(turn_banner_subtitle)
 
@@ -864,8 +1031,8 @@ func _build_readability_interface() -> void:
 	rival_action_panel.offset_right = -18.0
 	rival_action_panel.offset_bottom = 404.0
 	var action_style := StyleBoxFlat.new()
-	action_style.bg_color = Color(0.025, 0.065, 0.085, 0.97)
-	action_style.border_color = Color("#e66da5")
+	action_style.bg_color = Color("#24213F", 0.97)
+	action_style.border_color = Color("#C477A8")
 	action_style.set_border_width_all(2)
 	action_style.set_corner_radius_all(16)
 	action_style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
@@ -886,7 +1053,7 @@ func _build_readability_interface() -> void:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
 	content.add_child(header)
-	var heading := _label("RIVAL ACTION", 17, Color("#ffd0e5"))
+	var heading := _label("RIVAL ACTION", 17, Color("#D38BBC"))
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(heading)
@@ -983,14 +1150,15 @@ func _build_readability_interface() -> void:
 	controls_row.add_child(text_scale_button)
 
 	var top_row := $Interface/TopBar/Margin/TopRow as HBoxContainer
+	top_row.add_theme_constant_override("separation", 18)
 	battle_log_button.reparent(top_row)
+	battle_log_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	battle_log_button.custom_minimum_size = Vector2(118, 42)
 	battle_log_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	match_options_button = _styled_button("OPTIONS")
 	match_options_button.name = "MatchOptionsButton"
 	match_options_button.custom_minimum_size = Vector2(106, 42)
 	_apply_high_contrast_button_text(match_options_button)
-	match_options_button.tooltip_text = "Rival speed and text size"
 	match_options_button.pressed.connect(_toggle_readability_options)
 	top_row.add_child(match_options_button)
 	top_row.move_child(battle_log_button, maxi(0, top_row.get_child_count() - 4))
@@ -999,7 +1167,7 @@ func _build_readability_interface() -> void:
 	board_info_button.name = "BoardInfoButton"
 	board_info_button.custom_minimum_size = Vector2(42, 42)
 	board_info_button.toggle_mode = true
-	board_info_button.tooltip_text = "Show table labels and pile counts"
+	board_info_button.tooltip_text = "Show or hide board zone labels"
 	board_info_button.add_theme_font_size_override("font_size", _scaled_font_size(18))
 	board_info_button.set_meta("readability_base_font_font_size", 18)
 	_apply_high_contrast_button_text(board_info_button)
@@ -1025,7 +1193,6 @@ func _toggle_board_info() -> void:
 	board_info_visible = not board_info_visible
 	if is_instance_valid(board_info_button):
 		board_info_button.set_pressed_no_signal(board_info_visible)
-		board_info_button.tooltip_text = "Hide table labels and pile counts" if board_info_visible else "Show table labels and pile counts"
 	_refresh_board_info_visibility()
 
 
@@ -1034,10 +1201,20 @@ func _refresh_board_info_visibility() -> void:
 	for zone in zones.get_children():
 		var zone_label := zone.get_node_or_null("Label3D") as Label3D
 		if zone_label != null:
+			_style_board_info_label(zone_label, 50)
 			zone_label.visible = board_info_visible
 	for node in card_layer.find_children("*", "Label3D", true, false):
 		if bool(node.get_meta("board_info_label", false)):
-			(node as Label3D).visible = board_info_visible
+			var info_label := node as Label3D
+			_style_board_info_label(info_label, 56 if info_label.name.ends_with("Count") else 50)
+			info_label.visible = board_info_visible
+
+
+func _style_board_info_label(label: Label3D, minimum_font_size: int) -> void:
+	label.font_size = maxi(label.font_size, minimum_font_size)
+	label.outline_size = maxi(label.outline_size, 16)
+	label.modulate = PALETTE.CREAM
+	label.outline_modulate = PALETTE.NAVY
 
 
 func _load_readability_settings() -> void:
@@ -1059,10 +1236,10 @@ func _load_readability_settings() -> void:
 
 
 func _save_readability_settings() -> void:
-	var config := ConfigFile.new()
-	config.set_value("readability", "rival_pacing", String(RIVAL_PACING_OPTIONS[rival_pacing_index].id))
-	config.set_value("readability", "text_scale", float(TEXT_SCALE_OPTIONS[text_scale_index]))
-	config.save(READABILITY_SETTINGS_PATH)
+	battle_preferences_changed.emit(
+		String(RIVAL_PACING_OPTIONS[rival_pacing_index].id),
+		float(TEXT_SCALE_OPTIONS[text_scale_index])
+	)
 
 
 func _cycle_rival_pacing() -> void:
@@ -1080,13 +1257,13 @@ func _cycle_text_scale() -> void:
 
 func _refresh_readability_control_labels() -> void:
 	if is_instance_valid(rival_pacing_button):
-		rival_pacing_button.text = "RIVAL SPEED  •  %s" % String(RIVAL_PACING_OPTIONS[rival_pacing_index].label)
+		rival_pacing_button.text = "PLAY SPEED  •  %s" % String(RIVAL_PACING_OPTIONS[rival_pacing_index].label)
 	if is_instance_valid(text_scale_button):
 		text_scale_button.text = "TEXT SIZE  •  %d%%" % int(round(float(TEXT_SCALE_OPTIONS[text_scale_index]) * 100.0))
 
 
 func _scaled_font_size(base_size: int) -> int:
-	return maxi(1, int(round(float(base_size) * float(TEXT_SCALE_OPTIONS[text_scale_index]))))
+	return maxi(1, int(round(float(base_size) * BASE_TEXT_READABILITY_SCALE * float(TEXT_SCALE_OPTIONS[text_scale_index]))))
 
 
 func _apply_text_scale() -> void:
@@ -1115,14 +1292,16 @@ func _show_turn_banner(phase: String) -> void:
 		return
 	var is_player := phase == "player_main"
 	turn_banner_title.text = "YOUR TURN" if is_player else "RIVAL TURN"
-	turn_banner_title.add_theme_color_override("font_color", Color("#fff2c7") if is_player else Color("#ffd0e5"))
+	turn_banner_title.add_theme_color_override("font_color", PALETTE.NAVY)
 	turn_banner_subtitle.text = "TURN %d  •  %s" % [int(state.get("turn", 1)), "READY YOUR KITCHEN" if is_player else "WATCH THEIR MOVE"]
-	turn_banner_subtitle.add_theme_color_override("font_color", Color("#8fddf5") if is_player else Color("#f2a0c5"))
+	turn_banner_subtitle.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	turn_banner_panel.visible = true
 	turn_banner_panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	turn_banner_panel.scale = Vector2(0.72, 0.72)
 	turn_banner_panel.pivot_offset = turn_banner_panel.size * 0.5
-	_spawn_screen_particle_burst(effect_layer.size * Vector2(0.5, 0.5), Color("#49cef4") if is_player else Color("#e66da5"), 14, "◆")
+	var banner_accent := PALETTE.SKY if is_player else PALETTE.BLUSH
+	_spawn_celestial_orbit_screen(effect_layer.size * Vector2(0.5, 0.5), banner_accent, Vector2(178.0, 52.0), 0.8)
+	_spawn_screen_particle_burst(effect_layer.size * Vector2(0.5, 0.5), banner_accent, 10, "✦")
 	var enter_tween := create_tween().set_parallel(true)
 	enter_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	enter_tween.tween_property(turn_banner_panel, "modulate:a", 1.0, 0.2)
@@ -1152,7 +1331,7 @@ func _play_outcome_sequence() -> void:
 		return
 	var player_won := String(state.get("winner", "")) == "player"
 	var winner_node := player_chef if player_won else opponent_chef
-	var accent := Color("#ffe277") if player_won else Color("#ef6b83")
+	var accent := PALETTE.FRESH_YELLOW if player_won else PALETTE.CORAL
 	outcome_title.text = "VICTORY!" if player_won else "DEFEAT"
 	outcome_title.add_theme_color_override("font_color", accent)
 	outcome_subtitle.text = "THE COOK-OFF IS YOURS" if player_won else "THE RIVAL TAKES THIS ROUND"
@@ -1164,6 +1343,7 @@ func _play_outcome_sequence() -> void:
 	outcome_subtitle.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_reset_camera_pacing()
 	_spawn_particle_burst(winner_node.global_position + Vector3(0.0, 0.6, 0.0), accent, 28, "✦")
+	_spawn_celestial_orbit_screen(_world_to_container(winner_node.global_position + Vector3(0.0, 0.6, 0.0)), accent, Vector2(118.0, 72.0), 1.25)
 	var enter_tween := create_tween().set_parallel(true)
 	enter_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	enter_tween.tween_property(outcome_overlay, "color:a", 0.72, 0.55)
@@ -1202,7 +1382,7 @@ func _build_hand_cards(side: String) -> void:
 	if count == 0:
 		return
 	var is_player := side == "player"
-	var preferred_scale := 1.07 if is_player else 0.82
+	var preferred_scale := 1.12 if is_player else 0.84
 	var available_width := PLAYER_HAND_MAX_WIDTH if is_player else OPPONENT_HAND_MAX_WIDTH
 	var scale_factor := minf(preferred_scale, (available_width - HAND_CARD_GAP * float(count - 1)) / (FIELD_CARD_SIZE.x * float(count)))
 	scale_factor = maxf(scale_factor, 0.58)
@@ -1239,6 +1419,8 @@ func _build_field_cards(side: String, zone: String) -> void:
 		var root := _make_card(String(unit.card_id), true, false)
 		root.name = "%s%sCard_%d" % [side.capitalize(), zone.capitalize(), int(unit.instance_id)]
 		root.position = center + Vector3(offset * spacing, 0.0, 0.0)
+		if zone == "plated":
+			root.scale = Vector3.ONE * PLATED_CARD_SCALE
 		root.set_meta("kind", "field")
 		root.set_meta("side", side)
 		root.set_meta("zone", zone)
@@ -1303,21 +1485,23 @@ func _build_zone_marker(side: String, zone_kind: String, display_name: String) -
 	mesh.size = Vector3(1.18, 0.025, 1.62)
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var tint := Color("#38b8db") if side == "player" else Color("#a45dc7")
-	material.albedo_color = Color(tint.r, tint.g, tint.b, 0.13)
+	var tint := PALETTE.SKY if side == "player" else PALETTE.BLUSH
+	material.albedo_color = Color(tint.r, tint.g, tint.b, 0.24)
 	material.emission_enabled = true
 	material.emission = tint
-	material.emission_energy_multiplier = 0.18
+	material.emission_energy_multiplier = 0.08
 	mesh.material = material
 	marker.mesh = mesh
+	LOFI_OUTLINE.apply_to_mesh_tree(marker, ZONE_OUTLINE_WIDTH, ARENA_OUTLINE_COLOR)
+	marker.set_meta("lofi_arena_outline", true)
 	root.add_child(marker)
 	var label := Label3D.new()
 	label.name = "ZoneLabel"
 	label.position = Vector3(0.0, 0.08, 0.72)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 24
-	label.outline_size = 7
-	label.modulate = Color("#9cecff") if side == "player" else Color("#e1b5f5")
+	label.font_size = 34
+	label.outline_size = 10
+	label.modulate = PALETTE.NAVY
 	label.text = display_name
 	label.visible = board_info_visible
 	label.set_meta("board_info_label", true)
@@ -1356,8 +1540,9 @@ func _build_card_pile(side: String, pile_kind: String) -> void:
 	var count_offset_x := -0.72 if side == "player" else 0.72
 	count_label.position = position + Vector3(count_offset_x, 0.28, 0.0)
 	count_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	count_label.font_size = 32
-	count_label.outline_size = 9
+	count_label.font_size = 44
+	count_label.outline_size = 12
+	count_label.modulate = PALETTE.NAVY
 	count_label.text = str(cards.size())
 	count_label.visible = board_info_visible
 	count_label.set_meta("board_info_label", true)
@@ -1415,7 +1600,7 @@ func _build_environment_card(side: String) -> void:
 	card_layer.add_child(root)
 	interactive_cards.append(root)
 	if _environment_has_ready_activated_ability(side):
-		_add_pulsing_card_aura(root, "AbilityReadyAura", 9000 if side == "player" else 9001, Color("#ffd84d"), Color.WHITE, Vector2(1.18, 1.68), 1.35, 1.05, 1.8)
+		_add_pulsing_card_aura(root, "AbilityReadyAura", 9000 if side == "player" else 9001, PALETTE.FRESH_YELLOW, PALETTE.CREAM, Vector2(1.42, 1.94), 1.36, 1.08, 1.72)
 
 
 func _add_spice_attachments(root: Node3D, unit: Dictionary, side: String) -> void:
@@ -1439,30 +1624,18 @@ func _add_taunt_aura(root: Node3D, unit: Dictionary, zone: String) -> void:
 	var data: Dictionary = service.card(String(unit.get("card_id", "")))
 	if not data.get("keywords", []).has("taunt"):
 		return
-	var aura := MeshInstance3D.new()
-	aura.name = "TauntAura"
-	aura.position = Vector3(0.0, 0.031, 0.0)
-	aura.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mesh := QuadMesh.new()
-	mesh.size = Vector2(1.46, 2.0)
-	aura.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_texture = ABILITY_READY_AURA
-	material.albedo_color = Color("#ff304d")
-	material.emission_enabled = true
-	material.emission = Color("#ff1838")
-	material.emission_texture = ABILITY_READY_AURA
-	material.emission_energy_multiplier = 1.65
-	aura.material_override = material
-	aura.set_meta("pulse_seed", float(int(unit.get("instance_id", 0))) * 0.37)
-	aura.set_meta("pulse_energy_min", 1.35)
-	aura.set_meta("pulse_energy_max", 2.15)
-	root.add_child(aura)
-	pulsing_field_auras.append(aura)
+	_add_pulsing_card_aura(
+		root,
+		"TauntAura",
+		int(unit.get("instance_id", 0)),
+		PALETTE.BRICK_DARK,
+		Color.WHITE,
+		Vector2(1.68, 2.26),
+		1.52,
+		1.22,
+		1.98,
+		TAUNT_AURA
+	)
 
 
 func _add_ability_ready_aura(root: Node3D, unit: Dictionary, side: String, zone: String) -> void:
@@ -1472,12 +1645,12 @@ func _add_ability_ready_aura(root: Node3D, unit: Dictionary, side: String, zone:
 		root,
 		"AbilityReadyAura",
 		int(unit.get("instance_id", 0)),
-		Color("#ffd84d"),
-		Color.WHITE,
-		Vector2(1.36, 1.9),
-		1.35,
-		1.05,
-		1.8
+		PALETTE.FRESH_YELLOW,
+		PALETTE.CREAM,
+		Vector2(1.60, 2.18),
+		1.42,
+		1.12,
+		1.82
 	)
 
 
@@ -1489,8 +1662,9 @@ func _add_meal_selection_aura(root: Node3D, unit: Dictionary, side: String) -> v
 	var selected: bool = state.get("selected_ingredients", []).has(instance_id)
 	if not selectable and not selected:
 		return
-	var aura_color := Color("#ffb547") if selected else Color("#53dff5")
-	var albedo_tint := Color(aura_color.r, aura_color.g, aura_color.b, 0.96 if selected else 0.72)
+	var aura_color := PALETTE.FRESH_YELLOW if selected else PALETTE.SKY
+	var albedo_tint := Color.WHITE
+	root.set_meta("meal_selection_state", "selected" if selected else "candidate")
 	_add_pulsing_card_aura(
 		root,
 		"MealIngredientSelectedAura" if selected else "MealIngredientCandidateAura",
@@ -1498,9 +1672,10 @@ func _add_meal_selection_aura(root: Node3D, unit: Dictionary, side: String) -> v
 		aura_color,
 		albedo_tint,
 		Vector2(1.40, 1.96),
-		1.55 if selected else 1.05,
-		1.35 if selected else 0.85,
-		2.15 if selected else 1.45
+		1.28 if selected else 0.96,
+		1.02 if selected else 0.72,
+		1.54 if selected else 1.18,
+		MEAL_SELECTED_AURA if selected else MEAL_CANDIDATE_AURA
 	)
 
 
@@ -1513,7 +1688,8 @@ func _add_pulsing_card_aura(
 	mesh_size: Vector2,
 	initial_energy: float,
 	energy_min: float,
-	energy_max: float
+	energy_max: float,
+	aura_texture: Texture2D = ABILITY_READY_AURA
 ) -> void:
 	var aura := MeshInstance3D.new()
 	aura.name = aura_name
@@ -1527,17 +1703,39 @@ func _add_pulsing_card_aura(
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_texture = ABILITY_READY_AURA
+	material.albedo_texture = aura_texture
 	material.albedo_color = albedo_tint
 	material.emission_enabled = true
 	material.emission = emission_color
-	material.emission_texture = ABILITY_READY_AURA
+	material.emission_texture = aura_texture
 	material.emission_energy_multiplier = initial_energy
 	aura.material_override = material
 	aura.set_meta("pulse_seed", float(instance_id) * 0.37)
 	aura.set_meta("pulse_energy_min", energy_min)
 	aura.set_meta("pulse_energy_max", energy_max)
 	root.add_child(aura)
+	if aura_name == "AbilityReadyAura":
+		var sparkle_overlay := MeshInstance3D.new()
+		sparkle_overlay.name = "AbilityReadySparkles"
+		sparkle_overlay.position = Vector3(0.0, 0.037, 0.0)
+		sparkle_overlay.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+		sparkle_overlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var sparkle_mesh := QuadMesh.new()
+		sparkle_mesh.size = mesh_size
+		sparkle_overlay.mesh = sparkle_mesh
+		var sparkle_material := StandardMaterial3D.new()
+		sparkle_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sparkle_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sparkle_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		sparkle_material.albedo_texture = ABILITY_READY_SPARKLES
+		sparkle_material.albedo_color = Color(PALETTE.CREAM, 0.08)
+		sparkle_material.emission_enabled = true
+		sparkle_material.emission = emission_color
+		sparkle_material.emission_texture = ABILITY_READY_SPARKLES
+		sparkle_material.emission_energy_multiplier = 0.4
+		sparkle_overlay.material_override = sparkle_material
+		root.add_child(sparkle_overlay)
+		aura.set_meta("sparkle_overlay", sparkle_overlay)
 	pulsing_field_auras.append(aura)
 
 
@@ -1578,13 +1776,17 @@ func _make_card(card_id: String, face_up: bool, show_art: bool = true) -> Node3D
 	var root := Node3D.new()
 	var body := MeshInstance3D.new()
 	body.name = "CardBody"
-	var body_mesh := BoxMesh.new()
-	body_mesh.size = Vector3(FIELD_CARD_SIZE.x + 0.06, 0.06, FIELD_CARD_SIZE.y + 0.06)
+	var body_mesh := _rounded_card_body_mesh(
+		Vector3(FIELD_CARD_SIZE.x + 0.06, 0.06, FIELD_CARD_SIZE.y + 0.06),
+		0.12,
+		6
+	)
 	var edge_material := StandardMaterial3D.new()
-	edge_material.albedo_color = Color("#090b0f")
+	edge_material.albedo_color = PALETTE.NAVY
 	edge_material.roughness = 0.68
-	body_mesh.material = edge_material
+	edge_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	body.mesh = body_mesh
+	body.material_override = edge_material
 	root.add_child(body)
 	var face := MeshInstance3D.new()
 	face.name = "CardFace"
@@ -1596,7 +1798,64 @@ func _make_card(card_id: String, face_up: bool, show_art: bool = true) -> Node3D
 	face.mesh = face_mesh
 	face.material_override = _face_material(card_id, show_art) if face_up else _card_back_material()
 	root.add_child(face)
+	if not face_up:
+		var back_frame := MeshInstance3D.new()
+		back_frame.name = "CardBackFrame"
+		back_frame.position = Vector3(0.0, 0.038, 0.0)
+		back_frame.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+		back_frame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var back_frame_mesh := QuadMesh.new()
+		back_frame_mesh.size = FIELD_CARD_SIZE
+		back_frame.mesh = back_frame_mesh
+		back_frame.material_override = _card_back_frame_material()
+		root.add_child(back_frame)
 	return root
+
+
+func _rounded_card_body_mesh(size: Vector3, corner_radius: float, corner_segments: int) -> ArrayMesh:
+	var half_width := size.x * 0.5
+	var half_depth := size.z * 0.5
+	var radius := minf(corner_radius, minf(half_width, half_depth) - 0.001)
+	var boundary := PackedVector2Array()
+	var corner_centers := [
+		Vector2(half_width - radius, half_depth - radius),
+		Vector2(-half_width + radius, half_depth - radius),
+		Vector2(-half_width + radius, -half_depth + radius),
+		Vector2(half_width - radius, -half_depth + radius),
+	]
+	for corner_index in range(4):
+		var start_angle := float(corner_index) * PI * 0.5
+		for segment_index in range(corner_segments + 1):
+			var angle := start_angle + PI * 0.5 * float(segment_index) / float(corner_segments)
+			boundary.append(corner_centers[corner_index] + Vector2(cos(angle), sin(angle)) * radius)
+
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top_y := size.y * 0.5
+	var bottom_y := -top_y
+	for point_index in range(boundary.size()):
+		var next_index := (point_index + 1) % boundary.size()
+		var point := boundary[point_index]
+		var next_point := boundary[next_index]
+		_add_card_mesh_vertex(surface, Vector3.ZERO + Vector3(0.0, top_y, 0.0), Vector3.UP)
+		_add_card_mesh_vertex(surface, Vector3(point.x, top_y, point.y), Vector3.UP)
+		_add_card_mesh_vertex(surface, Vector3(next_point.x, top_y, next_point.y), Vector3.UP)
+		_add_card_mesh_vertex(surface, Vector3(0.0, bottom_y, 0.0), Vector3.DOWN)
+		_add_card_mesh_vertex(surface, Vector3(next_point.x, bottom_y, next_point.y), Vector3.DOWN)
+		_add_card_mesh_vertex(surface, Vector3(point.x, bottom_y, point.y), Vector3.DOWN)
+		var side_normal := Vector3(point.x + next_point.x, 0.0, point.y + next_point.y).normalized()
+		_add_card_mesh_vertex(surface, Vector3(point.x, top_y, point.y), side_normal)
+		_add_card_mesh_vertex(surface, Vector3(point.x, bottom_y, point.y), side_normal)
+		_add_card_mesh_vertex(surface, Vector3(next_point.x, bottom_y, next_point.y), side_normal)
+		_add_card_mesh_vertex(surface, Vector3(point.x, top_y, point.y), side_normal)
+		_add_card_mesh_vertex(surface, Vector3(next_point.x, bottom_y, next_point.y), side_normal)
+		_add_card_mesh_vertex(surface, Vector3(next_point.x, top_y, next_point.y), side_normal)
+	return surface.commit()
+
+
+func _add_card_mesh_vertex(surface: SurfaceTool, position: Vector3, normal: Vector3) -> void:
+	surface.set_normal(normal)
+	surface.add_vertex(position)
 
 
 func _face_material(card_id: String, show_art: bool = true) -> StandardMaterial3D:
@@ -1627,6 +1886,7 @@ func _face_material(card_id: String, show_art: bool = true) -> StandardMaterial3
 	else:
 		viewport.add_child(_make_fallback_card_face(data, viewport.size, show_art))
 	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.albedo_texture = viewport.get_texture()
@@ -1687,10 +1947,23 @@ func _card_back_material() -> StandardMaterial3D:
 	if face_materials.has("__card_back"):
 		return face_materials.__card_back
 	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.albedo_texture = CARD_BACK
 	face_materials.__card_back = material
+	return material
+
+
+func _card_back_frame_material() -> StandardMaterial3D:
+	if face_materials.has("__card_back_frame"):
+		return face_materials.__card_back_frame
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_texture = CARD_BACK_FRAME
+	face_materials.__card_back_frame = material
 	return material
 
 
@@ -1709,7 +1982,8 @@ func _add_floating_art(root: Node3D, data: Dictionary, _side: String) -> void:
 	var art := MeshInstance3D.new()
 	art.name = "FloatingArt"
 	var mesh := QuadMesh.new()
-	mesh.size = Vector2(1.03, 0.86)
+	var art_scale: float = PLATED_FLOATING_ART_SCALE if String(root.get_meta("zone", "")) == "plated" else 1.0
+	mesh.size = Vector2(1.03, 0.86) * art_scale
 	art.mesh = mesh
 	art.position = Vector3(0.0, FLOATING_ART_HEIGHT, -0.05)
 	art.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1731,9 +2005,13 @@ func _add_floating_art(root: Node3D, data: Dictionary, _side: String) -> void:
 func _add_stat_badge(root: Node3D, unit: Dictionary, side: String) -> void:
 	var is_defending := bool(unit.get("defending", false))
 	var is_ready := bool(unit.get("ready", false))
+	var instance_id := int(unit.get("instance_id", -1))
+	var meal_candidate: bool = side == "player" and service.meal_selectable_ingredient_ids(state).has(instance_id)
+	var meal_selected: bool = state.get("selected_ingredients", []).has(instance_id)
+	var ability_ready: bool = _unit_has_ready_activated_ability(unit, side, String(root.get_meta("zone", "prep")))
+	var data: Dictionary = service.card(String(unit.get("card_id", "")))
+	var taunt_active: bool = String(root.get_meta("zone", "")) == "plated" and data.get("keywords", []).has("taunt")
 	var stat_text := "%d/%d" % [int(unit.attack), int(unit.health)]
-	if not is_defending and side == "player" and is_ready:
-		stat_text += " READY"
 	_add_fitted_field_badge(
 		root,
 		"Stats",
@@ -1741,6 +2019,30 @@ func _add_stat_badge(root: Node3D, unit: Dictionary, side: String) -> void:
 		Vector3(0.0, 0.18, 0.59),
 		Color("#fff3c4") if is_ready else Color("#c7c9cf")
 	)
+	if not is_defending and side == "player" and is_ready and not meal_candidate and not meal_selected and not ability_ready and not taunt_active:
+		_add_fitted_field_badge(
+			root,
+			"ReadyStatus",
+			"READY",
+			Vector3(0.0, 0.19, 0.04),
+			Color("#fff3c4")
+		)
+	if not is_defending and meal_selected:
+		_add_fitted_field_badge(
+			root,
+			"MealSelectionBadge",
+			"SELECTED",
+			Vector3(0.0, 0.20, 0.04),
+			PALETTE.FRESH_YELLOW
+		)
+	elif not is_defending and meal_candidate:
+		_add_fitted_field_badge(
+			root,
+			"MealCandidateBadge",
+			"CHOOSE",
+			Vector3(0.0, 0.20, 0.04),
+			PALETTE.SKY
+		)
 	if not is_defending:
 		return
 	_add_fitted_field_badge(
@@ -1759,10 +2061,13 @@ func _add_fitted_field_badge(root: Node3D, badge_name: String, text: String, pos
 	backing.texture = STAT_BADGE_BACKING
 	backing.pixel_size = 0.003
 	backing.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	var font_size := 42
-	var label_pixel_size := 0.005
+	var font_size := 54
+	var label_pixel_size := 0.006
 	var text_size := READABLE_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var desired_width := text_size.x * label_pixel_size + 0.18
+	var available_text_width := FIELD_BADGE_MAX_WIDTH - 0.18
+	if text_size.x * label_pixel_size > available_text_width:
+		label_pixel_size = available_text_width / maxf(1.0, text_size.x)
+	var desired_width := minf(FIELD_BADGE_MAX_WIDTH, text_size.x * label_pixel_size + 0.18)
 	var desired_height := text_size.y * label_pixel_size + 0.08
 	var natural_width := float(STAT_BADGE_BACKING.get_width()) * backing.pixel_size
 	var natural_height := float(STAT_BADGE_BACKING.get_height()) * backing.pixel_size
@@ -1771,6 +2076,9 @@ func _add_fitted_field_badge(root: Node3D, badge_name: String, text: String, pos
 		desired_height / maxf(0.001, natural_height),
 		1.0
 	)
+	backing.set_meta("fitted_width", desired_width)
+	backing.set_meta("fitted_height", desired_height)
+	backing.set_meta("maximum_width", FIELD_BADGE_MAX_WIDTH)
 	root.add_child(backing)
 	var label := Label3D.new()
 	label.name = badge_name
@@ -1779,7 +2087,7 @@ func _add_fitted_field_badge(root: Node3D, badge_name: String, text: String, pos
 	label.font = READABLE_FONT
 	label.font_size = font_size
 	label.pixel_size = label_pixel_size
-	label.outline_size = 10
+	label.outline_size = 13
 	label.modulate = text_color
 	label.text = text
 	root.add_child(label)
@@ -1945,6 +2253,14 @@ func _process(delta: float) -> void:
 				float(aura.get_meta("pulse_energy_max", 1.8)),
 				pulse
 			)
+		var sparkle_overlay := aura.get_meta("sparkle_overlay") as MeshInstance3D if aura.has_meta("sparkle_overlay") else null
+		if is_instance_valid(sparkle_overlay):
+			var twinkle := 0.78 if reduced_motion else pow((sin(time * 5.0 + float(aura.get_meta("pulse_seed", 0.0)) + 0.9) + 1.0) * 0.5, 1.8)
+			sparkle_overlay.scale = Vector3.ONE if reduced_motion else Vector3.ONE * lerpf(0.82, 1.08, twinkle)
+			var sparkle_material := sparkle_overlay.material_override as StandardMaterial3D
+			if sparkle_material != null:
+				sparkle_material.albedo_color.a = lerpf(0.08, 1.0, twinkle)
+				sparkle_material.emission_energy_multiplier = lerpf(0.35, 2.15, twinkle)
 	_animate_physical_cards(delta, time)
 	_update_zone_flair(time)
 	for body in highlighted_bodies:
@@ -1978,7 +2294,7 @@ func _animate_physical_cards(delta: float, time: float) -> void:
 func _update_zone_flair(time: float) -> void:
 	for zone_id in zone_materials:
 		var base_color := _zone_color(String(zone_id))
-		var idle_alpha := 0.18 + sin(time * 1.5 + float(String(zone_id).hash() % 13)) * 0.018
+		var idle_alpha := 0.44 + sin(time * 1.5 + float(String(zone_id).hash() % 13)) * 0.012
 		var materials: Array = zone_materials[zone_id]
 		for slot_index in range(materials.size()):
 			var material_variant = materials[slot_index]
@@ -2001,10 +2317,12 @@ func _is_action_slot_highlighted(zone_id: String, slot_index: int) -> bool:
 
 func _zone_color(zone_id: String) -> Color:
 	if zone_id == "player_prep":
-		return Color("#28b9e2")
+		return PALETTE.SKY
 	if zone_id == "player_plated":
-		return Color("#f36c2c")
-	return Color("#9b4fbd")
+		return PALETTE.CORAL
+	if zone_id == "opponent_plated":
+		return PALETTE.BLUSH
+	return PALETTE.PERIWINKLE
 
 
 func _on_table_gui_input(event: InputEvent) -> void:
@@ -2024,6 +2342,14 @@ func _on_table_gui_input(event: InputEvent) -> void:
 						pressed_card = null
 						viewport_container.accept_event()
 						return
+				pressed_card = null
+				viewport_container.accept_event()
+				return
+			# The visible opponent hand is intentionally a large direct-attack target.
+			# Its card backs are also interactive for inspection, so resolve an already
+			# selected attacker before the generic card picker claims the click.
+			if int(state.get("selected_attacker", -1)) >= 0 and _screen_hits_opponent_hand(event.position):
+				_on_opponent_chef_clicked()
 				pressed_card = null
 				viewport_container.accept_event()
 				return
@@ -2197,6 +2523,7 @@ func _can_drag_card(card_node: Node3D) -> bool:
 func _begin_drag(point: Vector3) -> void:
 	if pressed_card == null:
 		return
+	_play_random_card_sound(PICK_CARD_SOUNDS)
 	dragging = true
 	drag_original_position = pressed_card.position
 	drag_original_rotation = pressed_card.rotation
@@ -2306,7 +2633,10 @@ func _slot_at_point(point: Vector3) -> Dictionary:
 	var center: Vector3 = ZONE_CENTERS[zone_id]
 	for slot_index in range(capacity):
 		var offset := (float(slot_index) - float(capacity - 1) * 0.5) * spacing
-		if absf(point.x - (center.x + offset)) <= 0.79 and absf(point.z - center.z) <= 0.76:
+		# Keep exact-slot hit testing as tall as the visible lane highlight. A card
+		# near the illustrated lane edge must resolve to the slot it visibly lights,
+		# even when the player grabbed the card away from its center.
+		if absf(point.x - (center.x + offset)) <= 0.79 and absf(point.z - center.z) <= float(ZONE_EXTENTS[zone_id].y):
 			return {"zone": zone_id, "slot": slot_index}
 	return {}
 
@@ -2435,11 +2765,15 @@ func _on_opponent_chef_clicked() -> void:
 func _refresh_action_panel() -> void:
 	_clear_children(action_list)
 	_clear_keyword_popout()
+	action_scroll.scroll_vertical = 0
 	action_panel.visible = not selected_ref.is_empty()
 	if selected_ref.is_empty():
 		return
 	var inspector_accent := UI_THEME_SCRIPT.TEAL if String(selected_ref.side) == "player" else UI_THEME_SCRIPT.ORANGE
 	var inspector_style := UI_THEME_SCRIPT.light_glass_style(inspector_accent, 2)
+	# Field-card details should stay visually distinct from the table beneath them.
+	inspector_style.border_color = Color.BLACK
+	inspector_style.set_border_width_all(6)
 	action_panel.add_theme_stylebox_override("panel", inspector_style)
 	var data := service.card(String(selected_ref.card_id))
 	var header := HBoxContainer.new()
@@ -2455,16 +2789,6 @@ func _refresh_action_panel() -> void:
 	_apply_current_ui_button_style(close_button, false)
 	close_button.pressed.connect(_close_info_window)
 	header.add_child(close_button)
-	if CARD_FACE_SCRIPT.supports_card(data):
-		var face_center := CenterContainer.new()
-		face_center.custom_minimum_size = Vector2(0, 268)
-		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		action_list.add_child(face_center)
-		var info_face := CARD_FACE_SCRIPT.new()
-		info_face.name = "LivingTableInfoCardFace"
-		info_face.configure(data, "black", true, false)
-		info_face.custom_minimum_size = Vector2(188, 267)
-		face_center.add_child(info_face)
 	var title := _label(String(data.get("name", "Card")), 22, UI_THEME_SCRIPT.INK)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	action_list.add_child(title)
@@ -2474,6 +2798,43 @@ func _refresh_action_panel() -> void:
 		var unit := service._find_unit(state[String(selected_ref.side)], int(selected_ref.instance_id))
 		if not unit.is_empty():
 			action_list.add_child(_label("%d Attack  •  %d/%d Health%s" % [int(unit.attack), int(unit.health), int(unit.max_health), "  •  Ready" if bool(unit.get("ready", false)) else ""], 14, UI_THEME_SCRIPT.TEAL_DEEP))
+	var complete_rules := String(data.get("text", "")).strip_edges()
+	if complete_rules != "":
+		action_list.add_child(_label("CARD TEXT", 12, UI_THEME_SCRIPT.TEAL_DEEP))
+		var complete_rules_label := _label(complete_rules, 15, UI_THEME_SCRIPT.INK)
+		complete_rules_label.name = "LivingTableCompleteCardText"
+		complete_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		complete_rules_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		action_list.add_child(complete_rules_label)
+	# Keep the selected card's usable controls above the large visual preview.
+	# This makes Play/Move/Attack reachable without scrolling at 1280x720 and
+	# with the enlarged readability settings, including the guided tutorial.
+	var can_offer_player_actions := String(selected_ref.side) == "player" and String(state.phase) == "player_main"
+	if can_offer_player_actions:
+		var blocked_by_other_prompt := _has_blocking_prompt() and pending_hand_play_index != int(selected_ref.get("hand_index", -1)) and pending_move_instance_id != int(selected_ref.get("instance_id", -1))
+		if not blocked_by_other_prompt:
+			if String(selected_ref.kind) == "hand":
+				if pending_hand_play_index == int(selected_ref.hand_index):
+					action_list.add_child(_label("CHOOSE A DESTINATION ON THE TABLE", 13, UI_THEME_SCRIPT.ORANGE))
+					_add_action_button("Cancel", _cancel_pending_hand_play)
+				else:
+					_build_hand_actions(data, int(selected_ref.hand_index))
+			else:
+				if pending_move_instance_id == int(selected_ref.instance_id):
+					action_list.add_child(_label("CHOOSE A GLOWING DESTINATION SLOT", 13, UI_THEME_SCRIPT.ORANGE))
+					_add_action_button("Cancel", _cancel_pending_move)
+				else:
+					_build_field_actions(data, int(selected_ref.instance_id), String(selected_ref.zone))
+	if CARD_FACE_SCRIPT.supports_card(data):
+		var face_center := CenterContainer.new()
+		face_center.custom_minimum_size = Vector2(0, INSPECTOR_CARD_SIZE.y + 2.0)
+		face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		action_list.add_child(face_center)
+		var info_face := CARD_FACE_SCRIPT.new()
+		info_face.name = "LivingTableInfoCardFace"
+		info_face.configure(data, "black", true, false)
+		info_face.custom_minimum_size = INSPECTOR_CARD_SIZE
+		face_center.add_child(info_face)
 	var keywords: Array = data.get("keywords", [])
 	if not keywords.is_empty():
 		action_list.add_child(_label("KEYWORDS", 12, UI_THEME_SCRIPT.TEAL_DEEP))
@@ -2491,24 +2852,6 @@ func _refresh_action_panel() -> void:
 			keyword_button.pressed.connect(func() -> void: _show_keyword_popout(keyword_id))
 			keyword_row.add_child(keyword_button)
 		_show_keyword_popout(String(keywords[0]))
-	if String(selected_ref.side) != "player" or String(state.phase) != "player_main":
-		return
-	if _has_blocking_prompt() and pending_hand_play_index != int(selected_ref.get("hand_index", -1)) and pending_move_instance_id != int(selected_ref.get("instance_id", -1)):
-		return
-	if String(selected_ref.kind) == "hand":
-		if pending_hand_play_index == int(selected_ref.hand_index):
-			action_list.add_child(_label("CHOOSE A DESTINATION ON THE TABLE", 13, UI_THEME_SCRIPT.ORANGE))
-			_add_action_button("Cancel", _cancel_pending_hand_play)
-		else:
-			_build_hand_actions(data, int(selected_ref.hand_index))
-	else:
-		if pending_move_instance_id == int(selected_ref.instance_id):
-			action_list.add_child(_label("CHOOSE A GLOWING DESTINATION SLOT", 13, UI_THEME_SCRIPT.ORANGE))
-			_add_action_button("Cancel", _cancel_pending_move)
-		else:
-			_build_field_actions(data, int(selected_ref.instance_id), String(selected_ref.zone))
-
-
 func _close_info_window() -> void:
 	_cancel_pending_hand_play(false)
 	_cancel_pending_move(false)
@@ -2537,23 +2880,57 @@ func _show_keyword_popout(keyword_id: String) -> void:
 	keyword_popout.z_index = 19
 	keyword_popout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	keyword_popout.position = Vector2(350.0, clampf(action_panel.position.y + 120.0, 92.0, maxf(92.0, size.y - 180.0)))
-	keyword_popout.size = Vector2(292.0, 118.0)
-	var popout_style := UI_THEME_SCRIPT.tinted_paper_style(UI_THEME_SCRIPT.OAK, 2)
+	keyword_popout.size = Vector2(310.0, 138.0)
+	keyword_popout.clip_contents = true
+	var popout_style := UI_THEME_SCRIPT.light_glass_style(UI_THEME_SCRIPT.PALETTE.NAVY, 2)
+	popout_style.bg_color = UI_THEME_SCRIPT.PALETTE.CREAM
+	popout_style.border_color = UI_THEME_SCRIPT.PALETTE.NAVY
+	popout_style.set_border_width_all(2)
+	popout_style.set_corner_radius_all(14)
+	popout_style.content_margin_left = 0
+	popout_style.content_margin_right = 0
+	popout_style.content_margin_top = 0
+	popout_style.content_margin_bottom = 0
 	keyword_popout.add_theme_stylebox_override("panel", popout_style)
 	$Interface.add_child(keyword_popout)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	keyword_popout.add_child(row)
+	var accent_bar := ColorRect.new()
+	accent_bar.name = "KeywordPopoutAccent"
+	accent_bar.color = _keyword_popout_accent(keyword_id)
+	accent_bar.custom_minimum_size = Vector2(8, 0)
+	accent_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(accent_bar)
 	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
-	keyword_popout.add_child(margin)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	row.add_child(margin)
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 3)
+	content.add_theme_constant_override("separation", 8)
 	margin.add_child(content)
-	content.add_child(_label(String(tooltip.title), 17, UI_THEME_SCRIPT.TEAL_DEEP))
-	var body := _label(String(tooltip.body), 13, UI_THEME_SCRIPT.INK)
+	var title := _label(String(tooltip.title).to_upper(), 14, UI_THEME_SCRIPT.PALETTE.NAVY)
+	content.add_child(title)
+	var body := _label(String(tooltip.body), 13, UI_THEME_SCRIPT.PALETTE.NAVY_MUTED)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(body)
+
+
+func _keyword_popout_accent(keyword_id: String) -> Color:
+	match keyword_id:
+		"piercing":
+			return UI_THEME_SCRIPT.PALETTE.CORAL
+		"stalwart":
+			return UI_THEME_SCRIPT.PALETTE.PERIWINKLE
+		"taunt":
+			return UI_THEME_SCRIPT.PALETTE.FRESH_YELLOW
+		"hand_trap":
+			return UI_THEME_SCRIPT.PALETTE.FUNKY_PLUM
+		_:
+			return UI_THEME_SCRIPT.PALETTE.SKY
 
 
 func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> void:
@@ -2639,6 +3016,18 @@ func _drain_animation_event_queue(play_origin_pose: Dictionary = {}) -> void:
 			while event_index < events.size() and int(events[event_index].get("group_id", 0)) == group_id:
 				batch.append(events[event_index])
 				event_index += 1
+		elif String(first_event.get("type", "")) == "draw":
+			# Turn-start draws do not belong to a formal action group. Keep a
+			# consecutive run together so we can animate them one at a time instead
+			# of rebuilding the hand between card flights.
+			while (
+				event_index < events.size()
+				and int(events[event_index].get("group_id", 0)) == 0
+				and String(events[event_index].get("type", "")) == "draw"
+				and String(events[event_index].get("side", "")) == String(first_event.get("side", ""))
+			):
+				batch.append(events[event_index])
+				event_index += 1
 		await _animate_event_batch(batch, play_origin_pose)
 	_clear_animation_ghosts()
 
@@ -2672,6 +3061,22 @@ func _clear_animation_ghosts() -> void:
 
 func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionary) -> void:
 	for event in events:
+		if String(event.get("type", "")) == "search":
+			_play_random_card_sound(SHUFFLE_SOUNDS)
+			break
+	if _is_serial_draw_batch(events):
+		_render_match()
+		var staged_cards := _stage_activation_result_transfers(events)
+		for event in events:
+			_release_staged_transfer_card(event, staged_cards)
+			var duration := _start_card_transfer_event_animation(event)
+			if duration > 0.0:
+				await get_tree().create_timer(duration).timeout
+		for staged_card in staged_cards:
+			if is_instance_valid(staged_card):
+				staged_card.visible = true
+		return
+	for event in events:
 		if String(event.get("type", "")) == "play":
 			if String(event.get("side", "")) == "opponent":
 				await _show_opponent_reveal(event, events)
@@ -2699,6 +3104,11 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 			activation_events.append(event)
 	if not activation_events.is_empty():
 		var staged_transfer_cards := _stage_activation_result_transfers(events)
+		var draw_event_count := 0
+		for event in events:
+			if String(event.get("type", "")) == "draw" and String(event.get("to", "hand")) == "hand":
+				draw_event_count += 1
+		var animate_draws_serially := draw_event_count > 1
 		var arrival_duration := 0.0
 		for event in events:
 			if String(event.get("type", "")) in ["play", "move"]:
@@ -2721,7 +3131,14 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 				continue
 			if event_type in ["draw", "search"]:
 				_release_staged_transfer_card(event, staged_transfer_cards)
-			result_duration = maxf(result_duration, _start_animation_event(event, play_origin_pose))
+			var event_duration := _start_animation_event(event, play_origin_pose)
+			if animate_draws_serially and event_type == "draw":
+				# A multi-draw effect is a sequence, not a stack of cards leaving the
+				# deck together. Wait for this flight to land before starting the next.
+				if event_duration > 0.0:
+					await get_tree().create_timer(event_duration).timeout
+			else:
+				result_duration = maxf(result_duration, event_duration)
 		if result_duration > 0.0:
 			await get_tree().create_timer(result_duration).timeout
 		for staged_card in staged_transfer_cards:
@@ -2750,6 +3167,10 @@ func _animate_event_batch(events: Array[Dictionary], play_origin_pose: Dictionar
 		await get_tree().create_timer(longest_duration).timeout
 	action_highlight_zone = ""
 	action_highlight_slot = -1
+
+
+func _is_serial_draw_batch(events: Array[Dictionary]) -> bool:
+	return events.size() > 1 and events.all(func(event: Dictionary) -> bool: return String(event.get("type", "")) == "draw" and String(event.get("to", "hand")) == "hand")
 
 
 func _uses_field_activation_indicator(event: Dictionary) -> bool:
@@ -2826,6 +3247,8 @@ func _start_animation_event(event: Dictionary, play_origin_pose: Dictionary) -> 
 			return _start_defense_position_animation(event)
 		"sacrifice", "destroy":
 			return _start_removal_event_animation(event)
+		"discard":
+			return _start_opponent_discard_animation(event)
 		"evaporate":
 			return _start_token_evaporation_animation(event)
 	return 0.0
@@ -2865,6 +3288,8 @@ func _start_defense_position_animation(event: Dictionary) -> float:
 func _start_play_event_animation(event: Dictionary, play_origin_pose: Dictionary) -> float:
 	var side := String(event.get("side", "player"))
 	var card_type := String(event.get("card_type", service.card(String(event.get("card_id", ""))).get("card_type", "")))
+	if card_type != "meal":
+		_play_random_card_sound(DROP_CARD_SOUNDS)
 	var instance_id := int(event.get("instance_id", -1))
 	var card_node := _card_node_for_instance(instance_id) if instance_id >= 0 else null
 	if card_node == null and String(event.get("to", "")) == "environment":
@@ -2887,7 +3312,7 @@ func _start_play_event_animation(event: Dictionary, play_origin_pose: Dictionary
 		return _start_action_card_discard_landing(card_node, side, card_type)
 	card_node.set_meta("play_animation_style", "standard")
 	_start_node_arrival_animation(card_node, origin_pose, hand_origin)
-	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff") if side == "player" else Color("#e66da5"), 10, "◆")
+	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.18, 0.0), PALETTE.SKY if side == "player" else PALETTE.BLUSH, 8, "◆")
 	return 0.44
 
 
@@ -2901,6 +3326,10 @@ func _start_meal_power_arrival_animation(
 	var target_rotation: Vector3 = card_node.rotation_degrees
 	var target_scale: Vector3 = card_node.scale
 	var reveal_position := target_position + Vector3(0.0, 2.25, 0.0)
+	get_tree().create_timer(MEAL_SUMMON_SOUND_DELAY_SECONDS).timeout.connect(func() -> void:
+		if is_inside_tree():
+			_play_card_sound(MEAL_SUMMON_SOUND, MEAL_SUMMON_VOLUME_DB)
+	)
 	card_node.position = origin_pose.get("position", hand_origin)
 	card_node.rotation_degrees = origin_pose.get("rotation_degrees", Vector3(64.0, 0.0, 0.0))
 	card_node.scale = origin_pose.get("scale", target_scale * 0.72)
@@ -2919,10 +3348,11 @@ func _start_meal_power_arrival_animation(
 	pose.tween_property(card_node, "scale", target_scale, 0.48)
 	pose.tween_property(card_node, "rotation_degrees", target_rotation, 0.36)
 	var landing_position := target_position
-	var landing_accent := Color("#ffd84d") if side == "player" else Color("#f18bc0")
+	var landing_accent := PALETTE.FRESH_YELLOW if side == "player" else PALETTE.BLUSH
 	get_tree().create_timer(0.56).timeout.connect(func() -> void:
 		_spawn_impact_flash(landing_position + Vector3(0.0, 0.22, 0.0))
 		_spawn_particle_burst(landing_position + Vector3(0.0, 0.3, 0.0), landing_accent, 24, "✦")
+		_spawn_cloud_puff_world(landing_position + Vector3(0.0, 0.2, 0.0), PALETTE.CREAM, landing_accent, 0.54)
 	)
 	return 0.74
 
@@ -2942,9 +3372,9 @@ func _start_action_card_discard_landing(
 	landing.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	landing.tween_property(card_node, "position", target_position, 0.24)
 	landing.tween_property(card_node, "scale", target_scale, 0.24)
-	var landing_accent := Color("#65d7ff") if card_type == "tool" else Color("#ffd166")
+	var landing_accent := PALETTE.SKY if card_type == "tool" else PALETTE.FRESH_YELLOW
 	if side == "opponent":
-		landing_accent = Color("#e58ac6")
+		landing_accent = PALETTE.BLUSH
 	var landing_position := target_position
 	get_tree().create_timer(0.2).timeout.connect(func() -> void:
 		_spawn_particle_burst(landing_position + Vector3(0.0, 0.18, 0.0), landing_accent, 9, "◆")
@@ -2969,7 +3399,7 @@ func _start_card_transfer_event_animation(event: Dictionary) -> float:
 	var source_key := "%s_%s" % [side, "discard" if source_kind == "discard" else "deck"]
 	var source_position: Vector3 = AUX_ZONE_POSITIONS[source_key] + Vector3(0.0, 0.9, 0.0)
 	var destination_position := card_node.global_position
-	var accent := Color("#42d7ff") if side == "player" else Color("#c979e8")
+	var accent := PALETTE.SKY if side == "player" else PALETTE.BLUSH
 	var show_particles := String(event.get("type", "")) != "draw"
 	if show_particles:
 		_spawn_particle_burst(source_position, accent, 7, "•")
@@ -2980,6 +3410,7 @@ func _start_card_transfer_event_animation(event: Dictionary) -> float:
 
 
 func _start_move_event_animation(event: Dictionary) -> float:
+	_play_random_card_sound(SLIDE_CARD_SOUNDS)
 	var side := String(event.get("side", "opponent"))
 	var card_node := _card_node_for_instance(int(event.get("instance_id", -1)))
 	if card_node == null:
@@ -2988,7 +3419,7 @@ func _start_move_event_animation(event: Dictionary) -> float:
 	var source_key := "%s_%s" % [side, source_zone]
 	var fallback_position: Vector3 = ZONE_CENTERS.get(source_key, card_node.position)
 	var destination_position := card_node.global_position
-	var accent := Color("#e66da5") if side == "opponent" else Color("#42d7ff")
+	var accent := PALETTE.BLUSH if side == "opponent" else PALETTE.SKY
 	_start_node_arrival_animation(card_node, event.get("origin_pose", {}), fallback_position)
 	_spawn_particle_burst(fallback_position + Vector3(0.0, 0.22, 0.0), accent, 7, "•")
 	get_tree().create_timer(0.34).timeout.connect(func() -> void: _spawn_particle_burst(destination_position + Vector3(0.0, 0.28, 0.0), accent, 10, "◆"))
@@ -3024,8 +3455,8 @@ func _start_swap_move_animation(first_event: Dictionary, second_event: Dictionar
 		lateral = Vector3(0.52, 0.0, 0.0)
 	var first_midpoint := crossing_center + lateral + Vector3(0.0, 0.62, 0.0)
 	var second_midpoint := crossing_center - lateral + Vector3(0.0, 0.62, 0.0)
-	_spawn_particle_burst(first_source_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff"), 8, "•")
-	_spawn_particle_burst(second_source_position + Vector3(0.0, 0.18, 0.0), Color("#42d7ff"), 8, "•")
+	_spawn_particle_burst(first_source_position + Vector3(0.0, 0.18, 0.0), PALETTE.SKY, 6, "•")
+	_spawn_particle_burst(second_source_position + Vector3(0.0, 0.18, 0.0), PALETTE.SKY, 6, "•")
 	var first_motion := create_tween()
 	first_motion.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	first_motion.tween_property(first_card, "position", first_midpoint, 0.22)
@@ -3049,7 +3480,7 @@ func _start_swap_move_animation(first_event: Dictionary, second_event: Dictionar
 	second_pose.tween_property(second_card, "scale", second_target_scale, 0.28)
 	second_pose.tween_property(second_card, "rotation_degrees", second_target_rotation, 0.28)
 	get_tree().create_timer(0.25).timeout.connect(func() -> void:
-		_spawn_particle_burst(crossing_center + Vector3(0.0, 0.5, 0.0), Color("#ffd166"), 16, "✦")
+		_spawn_particle_burst(crossing_center + Vector3(0.0, 0.5, 0.0), PALETTE.FRESH_YELLOW, 12, "✦")
 	)
 	return 0.52
 
@@ -3089,6 +3520,7 @@ func _animate_attack_motion(attacker_instance_id: int, target_instance_id: int, 
 	var origin_scale := attacker_node.scale
 	var lunge_position := origin.lerp(target_position, 0.58)
 	lunge_position.y = maxf(origin.y + 0.5, 0.82)
+	_play_attack_impact_sound(attacker_node, target_kind)
 	if attacks_chef:
 		_start_camera_pulse(attacker_side, 2.2)
 	var tween := create_tween().set_parallel(true)
@@ -3098,7 +3530,7 @@ func _animate_attack_motion(attacker_instance_id: int, target_instance_id: int, 
 	await tween.finished
 	var impact_position := target_node.global_position if target_node != null else lunge_position
 	_spawn_impact_flash(impact_position)
-	_spawn_particle_burst(impact_position + Vector3(0.0, 0.35, 0.0), Color("#ff9f43"), 14, "✦")
+	_spawn_particle_burst(impact_position + Vector3(0.0, 0.35, 0.0), PALETTE.CORAL, 12, "✦")
 	var return_tween := create_tween().set_parallel(true)
 	return_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	return_tween.tween_property(attacker_node, "position", origin, 0.28)
@@ -3106,40 +3538,105 @@ func _animate_attack_motion(attacker_instance_id: int, target_instance_id: int, 
 	await return_tween.finished
 
 
+func _play_attack_impact_sound(attacker_node: Node3D, target_kind: String) -> void:
+	var source_card_id := String(attacker_node.get_meta("card_id", ""))
+	var source_card_type := String(service.card(source_card_id).get("card_type", "ingredient"))
+	var impact_profile := _damage_impact_profile({
+		"combat": true,
+		"target_kind": target_kind,
+		"source_card_type": source_card_type
+	})
+	var start_offset := MEAL_CHEF_IMPACT_START_OFFSET_SECONDS if String(impact_profile.kind) == "meal_to_chef" else 0.0
+	_play_random_card_sound(
+		impact_profile.sounds,
+		float(impact_profile.volume_db),
+		IMPACT_PITCH_VARIATION,
+		start_offset
+	)
+
+
 func _start_damage_event_animation(event: Dictionary) -> float:
 	var amount := int(event.get("amount", 0))
 	if amount <= 0:
 		return 0.0
+	if not bool(event.get("combat", false)):
+		var impact_profile := _damage_impact_profile(event)
+		_play_random_card_sound(
+			impact_profile.sounds,
+			float(impact_profile.volume_db),
+			IMPACT_PITCH_VARIATION
+		)
 	if String(event.get("target_kind", "unit")) == "chef":
 		var chef_node := player_chef if String(event.get("target_side", "player")) == "player" else opponent_chef
 		_spawn_damage_number(chef_node.global_position + Vector3(0.0, 0.65, 0.0), amount)
-		_spawn_particle_burst(chef_node.global_position + Vector3(0.0, 0.5, 0.0), Color("#ff654f"), 12, "◆")
+		_spawn_particle_burst(chef_node.global_position + Vector3(0.0, 0.5, 0.0), PALETTE.CORAL, 12, "◆")
 		_animate_chef_hit(chef_node)
 		return 0.42
 	var card_node := _card_node_for_instance(int(event.get("target_instance_id", -1)))
 	if card_node == null:
 		return 0.0
 	_spawn_damage_number(card_node.global_position + Vector3(0.0, 0.55, 0.0), amount)
-	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), Color("#ff654f"), 9, "•")
+	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), PALETTE.CORAL, 9, "•")
 	_animate_hit_reaction(card_node)
 	return 0.42
+
+
+func _damage_impact_profile(event: Dictionary) -> Dictionary:
+	if not bool(event.get("combat", false)):
+		return {"sounds": EFFECT_DAMAGE_SOUNDS, "volume_db": EFFECT_DAMAGE_VOLUME_DB, "kind": "effect"}
+	if String(event.get("target_kind", "unit")) != "chef":
+		return {"sounds": CARD_IMPACT_SOUNDS, "volume_db": CARD_IMPACT_VOLUME_DB, "kind": "card"}
+	if String(event.get("source_card_type", "ingredient")) == "meal":
+		return {"sounds": MEAL_CHEF_IMPACT_SOUNDS, "volume_db": MEAL_CHEF_IMPACT_VOLUME_DB, "kind": "meal_to_chef"}
+	return {"sounds": INGREDIENT_CHEF_IMPACT_SOUNDS, "volume_db": INGREDIENT_CHEF_IMPACT_VOLUME_DB, "kind": "ingredient_to_chef"}
+
+
+func _play_random_card_sound(sounds: Array, volume_db: float = 0.0, pitch_variation: float = 0.0, from_position: float = 0.0) -> void:
+	if sounds.is_empty():
+		return
+	var pitch_scale := randf_range(1.0 - pitch_variation, 1.0 + pitch_variation)
+	_play_card_sound(sounds[randi_range(0, sounds.size() - 1)] as AudioStream, volume_db, pitch_scale, from_position)
+
+
+func _play_card_sound(stream: AudioStream, volume_db: float = 0.0, pitch_scale: float = 1.0, from_position: float = 0.0) -> void:
+	if stream == null:
+		return
+	var player := AudioStreamPlayer.new()
+	player.stream = stream
+	player.bus = &"SFX"
+	player.volume_db = volume_db
+	player.pitch_scale = pitch_scale
+	player.finished.connect(player.queue_free)
+	add_child(player)
+	player.play(from_position)
+
+
+func _play_positive_effect_sound() -> void:
+	var now := Time.get_ticks_msec()
+	if now - last_positive_effect_sound_msec < POSITIVE_EFFECT_SOUND_COOLDOWN_MSEC:
+		return
+	last_positive_effect_sound_msec = now
+	_play_card_sound(POSITIVE_EFFECT_SOUND, POSITIVE_EFFECT_VOLUME_DB, randf_range(0.98, 1.02))
 
 
 func _start_heal_event_animation(event: Dictionary) -> float:
 	var amount := int(event.get("amount", 0))
 	if amount <= 0:
 		return 0.0
+	_play_positive_effect_sound()
 	if String(event.get("target_kind", "unit")) == "chef":
 		var chef_node := player_chef if String(event.get("target_side", "player")) == "player" else opponent_chef
-		_spawn_floating_number(chef_node.global_position + Vector3(0.0, 0.65, 0.0), "+%d" % amount, Color("#68e39a"))
-		_spawn_particle_burst(chef_node.global_position + Vector3(0.0, 0.5, 0.0), Color("#68e39a"), 12, "+")
+		_spawn_floating_number(chef_node.global_position + Vector3(0.0, 0.65, 0.0), "+%d" % amount, PALETTE.TEAL)
+		_spawn_cloud_puff_world(chef_node.global_position + Vector3(0.0, 0.5, 0.0), PALETTE.CREAM, PALETTE.TEAL, 0.62)
+		_spawn_particle_burst(chef_node.global_position + Vector3(0.0, 0.5, 0.0), PALETTE.SKY, 8, "+")
 		_animate_positive_reaction(chef_node)
 		return 0.42
 	var card_node := _card_node_for_instance(int(event.get("target_instance_id", -1)))
 	if card_node == null:
 		return 0.0
-	_spawn_floating_number(card_node.global_position + Vector3(0.0, 0.55, 0.0), "+%d" % amount, Color("#68e39a"))
-	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), Color("#68e39a"), 10, "+")
+	_spawn_floating_number(card_node.global_position + Vector3(0.0, 0.55, 0.0), "+%d" % amount, PALETTE.TEAL)
+	_spawn_cloud_puff_world(card_node.global_position + Vector3(0.0, 0.42, 0.0), PALETTE.CREAM, PALETTE.TEAL, 0.56)
+	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), PALETTE.SKY, 7, "+")
 	_animate_positive_reaction(card_node)
 	return 0.42
 
@@ -3151,12 +3648,15 @@ func _start_buff_event_animation(event: Dictionary) -> float:
 	var parts: Array[String] = []
 	var attack_delta := int(event.get("attack_delta", 0))
 	var health_delta := int(event.get("health_delta", 0))
+	if attack_delta > 0 or health_delta > 0:
+		_play_positive_effect_sound()
 	if attack_delta != 0:
 		parts.append("%s%d ATK" % ["+" if attack_delta > 0 else "", attack_delta])
 	if health_delta != 0:
 		parts.append("%s%d HP" % ["+" if health_delta > 0 else "", health_delta])
-	_spawn_floating_number(card_node.global_position + Vector3(0.0, 0.55, 0.0), "  ".join(parts), Color("#ffd166"))
-	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), Color("#ffd166"), 11, "✦")
+	_spawn_floating_number(card_node.global_position + Vector3(0.0, 0.55, 0.0), "  ".join(parts), PALETTE.FRESH_YELLOW)
+	_spawn_celestial_orbit_screen(_world_to_container(card_node.global_position + Vector3(0.0, 0.42, 0.0)), PALETTE.FRESH_YELLOW, Vector2(58.0, 34.0), 0.68)
+	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.42, 0.0), PALETTE.FRESH_YELLOW, 9, "✦")
 	_animate_positive_reaction(card_node)
 	return 0.46
 
@@ -3170,7 +3670,8 @@ func _start_removal_event_animation(event: Dictionary) -> float:
 	var discard_position: Vector3 = AUX_ZONE_POSITIONS["%s_discard" % side] + Vector3(0.0, 0.24, 0.0)
 	var travel_midpoint := origin_position.lerp(discard_position, 0.42) + Vector3(0.0, 0.76, 0.0)
 	var discard_scale := Vector3.ONE * 0.54
-	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.3, 0.0), Color("#9aa7b1"), 10, "◆")
+	_spawn_cloud_puff_world(card_node.global_position + Vector3(0.0, 0.3, 0.0), PALETTE.LAVENDER_GLASS, PALETTE.LAVENDER, 0.58)
+	_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.3, 0.0), PALETTE.LAVENDER, 7, "◆")
 	var travel := create_tween()
 	travel.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	travel.tween_property(card_node, "position", travel_midpoint, 0.2)
@@ -3185,7 +3686,8 @@ func _start_removal_event_animation(event: Dictionary) -> float:
 	pose.tween_property(card_node, "scale", discard_scale, 0.38)
 	pose.tween_property(card_node, "rotation_degrees:y", card_node.rotation_degrees.y + 220.0, 0.38)
 	get_tree().create_timer(0.54).timeout.connect(func() -> void:
-		_spawn_particle_burst(discard_position + Vector3(0.0, 0.14, 0.0), Color("#9aa7b1"), 12, "✦")
+		_spawn_cloud_puff_world(discard_position + Vector3(0.0, 0.14, 0.0), PALETTE.LAVENDER_GLASS, PALETTE.LAVENDER, 0.52)
+		_spawn_particle_burst(discard_position + Vector3(0.0, 0.14, 0.0), PALETTE.LAVENDER, 8, "✦")
 	)
 	var floating_art := card_node.find_child("FloatingArt", true, false) as MeshInstance3D
 	if floating_art != null:
@@ -3205,6 +3707,51 @@ func _start_removal_event_animation(event: Dictionary) -> float:
 	return 0.6
 
 
+func _start_opponent_discard_animation(event: Dictionary) -> float:
+	if String(event.get("side", "")) != "opponent":
+		return 0.0
+	var card_id := String(event.get("card_id", ""))
+	if card_id == "":
+		return 0.0
+	var discard_card := _make_card(card_id, true)
+	discard_card.name = "OpponentDiscardAnimation_%s" % card_id
+	var discard_order := int(event.get("discard_order", 0))
+	var discard_count: int = max(1, int(event.get("discard_count", 1)))
+	var spread := (float(discard_order) - float(discard_count - 1) * 0.5) * 0.42
+	var origin := Vector3(spread, 0.86, OPPONENT_HAND_Z + 0.25)
+	if String(event.get("from", "hand")) == "deck":
+		origin = AUX_ZONE_POSITIONS["opponent_deck"] + Vector3(0.0, 0.74, 0.0)
+	var destination := AUX_ZONE_POSITIONS["opponent_discard"] + Vector3(0.0, 0.25 + float(discard_order) * 0.025, 0.0)
+	discard_card.position = origin
+	discard_card.rotation_degrees = Vector3(62.0, -8.0 + spread * 18.0, 0.0)
+	discard_card.scale = Vector3.ONE * 0.58
+	animation_ghost_layer.add_child(discard_card)
+	_spawn_particle_burst(origin + Vector3(0.0, 0.18, 0.0), PALETTE.BLUSH, 6, "•")
+	var midpoint := origin.lerp(destination, 0.48) + Vector3(0.0, 0.72, 0.0)
+	var travel := create_tween()
+	travel.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	travel.tween_property(discard_card, "position", midpoint, 0.20)
+	travel.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	travel.tween_property(discard_card, "position", destination, 0.32)
+	var pose := create_tween().set_parallel(true)
+	pose.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	pose.tween_property(discard_card, "scale", Vector3.ONE * 0.68, 0.20)
+	pose.tween_property(discard_card, "rotation_degrees:y", 110.0, 0.20)
+	pose.chain().set_parallel(true)
+	pose.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	pose.tween_property(discard_card, "scale", Vector3.ONE * 0.54, 0.32)
+	pose.tween_property(discard_card, "rotation_degrees:y", 182.0, 0.32)
+	get_tree().create_timer(0.48).timeout.connect(func() -> void:
+		_spawn_cloud_puff_world(destination + Vector3(0.0, 0.14, 0.0), PALETTE.LAVENDER_GLASS, PALETTE.BLUSH, 0.5)
+		_spawn_particle_burst(destination + Vector3(0.0, 0.14, 0.0), PALETTE.BLUSH, 8, "✦")
+	)
+	get_tree().create_timer(0.66).timeout.connect(func() -> void:
+		if is_instance_valid(discard_card):
+			discard_card.queue_free()
+	)
+	return 0.62
+
+
 func _start_token_evaporation_animation(event: Dictionary) -> float:
 	var card_node := _card_node_for_instance(int(event.get("instance_id", -1)))
 	if card_node == null:
@@ -3214,7 +3761,8 @@ func _start_token_evaporation_animation(event: Dictionary) -> float:
 	var origin_global_position := card_node.global_position
 	var origin_scale := card_node.scale
 	var origin_rotation_y := card_node.rotation_degrees.y
-	var vapor_color := Color("#8FE5C8")
+	var vapor_color := PALETTE.TEAL
+	_spawn_cloud_puff_world(origin_global_position + Vector3(0.0, 0.32, 0.0), PALETTE.CREAM, PALETTE.TEAL, 0.68)
 	_spawn_particle_burst(origin_global_position + Vector3(0.0, 0.28, 0.0), vapor_color, 14, "•")
 	_spawn_floating_number(origin_global_position + Vector3(0.0, 0.58, 0.0), "EVAPORATES", vapor_color)
 
@@ -3288,7 +3836,7 @@ func _animate_positive_reaction(target_node: Node3D) -> void:
 
 
 func _spawn_damage_number(world_position: Vector3, amount: int) -> void:
-	_spawn_floating_number(world_position, "-%d" % amount, Color("#ff6b4a"))
+	_spawn_floating_number(world_position, "-%d" % amount, PALETTE.CORAL)
 
 
 func _spawn_floating_number(world_position: Vector3, text_value: String, color: Color) -> void:
@@ -3308,21 +3856,9 @@ func _spawn_floating_number(world_position: Vector3, text_value: String, color: 
 
 
 func _spawn_impact_flash(world_position: Vector3) -> void:
-	var flash := _label("✦", 46, Color("#ffe36d"))
-	flash.add_theme_color_override("font_outline_color", Color("#f05a2a"))
-	flash.add_theme_constant_override("outline_size", 9)
-	flash.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	flash.custom_minimum_size = Vector2(90, 70)
-	flash.position = _world_to_container(world_position) - Vector2(45, 35)
-	flash.pivot_offset = Vector2(45, 35)
-	flash.scale = Vector2(0.25, 0.25)
-	flash.z_index = 219
-	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	effect_layer.add_child(flash)
-	var tween := create_tween().set_parallel(true)
-	tween.tween_property(flash, "scale", Vector2(1.35, 1.35), 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(flash, "modulate:a", 0.0, 0.32).set_delay(0.08)
-	tween.finished.connect(flash.queue_free)
+	var screen_position := _world_to_container(world_position)
+	_spawn_impact_rays_screen(screen_position, PALETTE.CORAL, 9, 0.42)
+	_spawn_screen_particle_burst(screen_position, PALETTE.FRESH_YELLOW, 5, "✦")
 
 
 func _show_field_activation_indicator(event: Dictionary) -> void:
@@ -3330,6 +3866,8 @@ func _show_field_activation_indicator(event: Dictionary) -> void:
 	if card_id == "":
 		return
 	var activation_kind := String(event.get("type", "card_text_activation"))
+	if activation_kind in ["ability_activation", "card_text_activation"]:
+		_play_ability_activation_sound()
 	field_activation_indicator_count += 1
 	last_field_activation_card_id = card_id
 	last_field_activation_kind = activation_kind
@@ -3340,11 +3878,11 @@ func _show_field_activation_indicator(event: Dictionary) -> void:
 		card_node = find_child("%sDiscardTop" % side.capitalize(), true, false) as Node3D
 	if card_node == null and String(event.get("card_type", "")) == "environment":
 		card_node = find_child("%sEnvironmentCard" % side.capitalize(), true, false) as Node3D
-	var accent := Color("#ffd84d") if side == "player" else Color("#ee8ac6")
+	var accent := PALETTE.FRESH_YELLOW if side == "player" else PALETTE.BLUSH
 	var source_screen := effect_layer.size * 0.5
 	if card_node != null:
 		source_screen = _world_to_container(card_node.global_position + Vector3(0.0, 0.34, 0.0))
-		_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.22, 0.0), accent, 16, "✦")
+		_spawn_particle_burst(card_node.global_position + Vector3(0.0, 0.22, 0.0), accent, 10, "✦")
 	var indicator := PanelContainer.new()
 	indicator.name = "FieldActivationIndicator"
 	indicator.custom_minimum_size = Vector2(410.0, 78.0)
@@ -3352,12 +3890,12 @@ func _show_field_activation_indicator(event: Dictionary) -> void:
 	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	indicator.z_index = 238
 	var indicator_style := StyleBoxFlat.new()
-	indicator_style.bg_color = Color(0.025, 0.045, 0.06, 0.94)
+	indicator_style.bg_color = Color(PALETTE.CREAM, 0.97)
 	indicator_style.border_color = Color(accent.r, accent.g, accent.b, 0.96)
 	indicator_style.set_border_width_all(3)
 	indicator_style.set_corner_radius_all(20)
-	indicator_style.shadow_color = Color(accent.r, accent.g, accent.b, 0.28)
-	indicator_style.shadow_size = 12
+	indicator_style.shadow_color = Color(PALETTE.NAVY, 0.18)
+	indicator_style.shadow_size = 8
 	indicator.add_theme_stylebox_override("panel", indicator_style)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 20)
@@ -3366,9 +3904,9 @@ func _show_field_activation_indicator(event: Dictionary) -> void:
 	margin.add_theme_constant_override("margin_bottom", 10)
 	var copy := VBoxContainer.new()
 	copy.add_theme_constant_override("separation", 0)
-	var header := _label(String(event.get("activation_label", "ABILITY")), 14, accent)
+	var header := _label(String(event.get("activation_label", "ABILITY")), 14, PALETTE.NAVY_MUTED)
 	header.text = "✦  %s" % header.text
-	var card_name := _label(String(service.card(card_id).get("name", card_id)), 22, Color("#f5fbff"))
+	var card_name := _label(String(service.card(card_id).get("name", card_id)), 22, PALETTE.NAVY)
 	card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	copy.add_child(header)
 	copy.add_child(card_name)
@@ -3436,6 +3974,19 @@ func _show_field_activation_indicator(event: Dictionary) -> void:
 		aura.queue_free()
 
 
+func _play_ability_activation_sound() -> void:
+	if ability_activation_sound_player == null:
+		ability_activation_sound_player = AudioStreamPlayer.new()
+		ability_activation_sound_player.name = "AbilityActivationSound"
+		ability_activation_sound_player.stream = ABILITY_ACTIVATION_SOUND
+		ability_activation_sound_player.bus = &"SFX"
+		ability_activation_sound_player.volume_db = ABILITY_ACTIVATION_VOLUME_DB
+		add_child(ability_activation_sound_player)
+	else:
+		ability_activation_sound_player.stop()
+	ability_activation_sound_player.play()
+
+
 func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	var card_id := String(event.get("card_id", ""))
 	if card_id == "":
@@ -3449,9 +4000,9 @@ func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	var side := String(event.get("side", "player"))
 	var hold_seconds := _action_card_reveal_hold_seconds(side, service.card(card_id))
 	last_fullscreen_action_reveal_hold_seconds = hold_seconds
-	var accent := Color("#65d7ff") if card_type == "tool" else Color("#ffd166")
+	var accent := PALETTE.SKY if card_type == "tool" else PALETTE.FRESH_YELLOW
 	if side == "opponent":
-		accent = Color("#e58ac6")
+		accent = PALETTE.BLUSH
 	var dimmer := ColorRect.new()
 	dimmer.name = "ActionCardRevealDimmer"
 	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -3464,7 +4015,7 @@ func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	reveal_card.texture = CARD_BACK
 	reveal_card.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	reveal_card.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	reveal_card.size = Vector2(286.0, 407.0)
+	reveal_card.size = ACTION_REVEAL_CARD_SIZE
 	reveal_card.pivot_offset = reveal_card.size * 0.5
 	var source_world := Vector3(0.0, 0.9, PLAYER_HAND_Z if side == "player" else OPPONENT_HAND_Z)
 	reveal_card.position = _world_to_container(source_world) - reveal_card.pivot_offset
@@ -3474,6 +4025,18 @@ func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	reveal_card.z_index = 244
 	reveal_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	effect_layer.add_child(reveal_card)
+	var reveal_border := Panel.new()
+	reveal_border.name = "ActionCardRevealBorder"
+	reveal_card.add_child(reveal_border)
+	reveal_border.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	reveal_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var reveal_border_style := StyleBoxFlat.new()
+	reveal_border_style.bg_color = Color.TRANSPARENT
+	reveal_border_style.draw_center = false
+	reveal_border_style.border_color = _action_reveal_border_color()
+	reveal_border_style.set_border_width_all(8)
+	reveal_border_style.set_corner_radius_all(20)
+	reveal_border.add_theme_stylebox_override("panel", reveal_border_style)
 	var type_name := "ITEM" if card_type == "tool" else "CHEF"
 	var type_label := _label("%s • %s" % ["RIVAL PLAYS" if side == "opponent" else "YOU PLAY", type_name], 18, accent)
 	type_label.name = "ActionCardRevealType"
@@ -3481,7 +4044,7 @@ func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	type_label.add_theme_color_override("font_outline_color", Color("#080d12"))
 	type_label.add_theme_constant_override("outline_size", 8)
 	type_label.size = Vector2(360.0, 40.0)
-	type_label.position = Vector2(effect_layer.size.x * 0.5 - 180.0, effect_layer.size.y * 0.5 - 258.0)
+	type_label.position = Vector2(effect_layer.size.x * 0.5 - 180.0, effect_layer.size.y * 0.5 - reveal_card.size.y * 0.5 - 48.0)
 	type_label.modulate.a = 0.0
 	type_label.z_index = 245
 	type_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3517,6 +4080,19 @@ func _show_action_card_fullscreen_reveal(event: Dictionary) -> void:
 	reveal_card.queue_free()
 	type_label.queue_free()
 	dimmer.queue_free()
+
+
+func _action_reveal_border_color() -> Color:
+	var border_id := configured_card_border_id if production_match else "black"
+	match border_id:
+		"blue":
+			return PALETTE.PERIWINKLE
+		"yellow", "gold":
+			return PALETTE.HONEY
+		"silver":
+			return Color("#B8BBD0")
+		_:
+			return PALETTE.NAVY
 
 
 func _action_card_reveal_hold_seconds(side: String, _data: Dictionary) -> float:
@@ -3657,7 +4233,8 @@ func _show_game_breakdown(card_id: String, data: Dictionary, summary: Dictionary
 	open_flip.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	open_flip.tween_property(reveal_card, "scale:x", 1.0, 0.2)
 	await open_flip.finished
-	_spawn_screen_particle_burst(effect_layer.size * 0.5, Color("#e66da5"), 14, "✦")
+	_spawn_celestial_orbit_screen(effect_layer.size * 0.5, PALETTE.BLUSH, Vector2(210.0, 132.0), 0.9)
+	_spawn_screen_particle_burst(effect_layer.size * 0.5, PALETTE.BLUSH, 10, "✦")
 	while not reveal_skip_requested:
 		await get_tree().process_frame
 	reveal_active = false
@@ -3818,26 +4395,44 @@ func _spawn_particle_burst(world_position: Vector3, color: Color, count: int = 1
 func _spawn_screen_particle_burst(screen_position: Vector2, color: Color, count: int = 10, glyph: String = "•") -> void:
 	if effect_layer == null or count <= 0:
 		return
-	for particle_index in range(count):
-		var particle := Polygon2D.new()
-		var radius := 6.0 + float(particle_index % 4) * 1.5
-		particle.polygon = _particle_polygon(glyph, radius)
-		particle.color = color.lightened(float(particle_index % 3) * 0.09)
+	var actual_count := mini(count, 7) if reduced_motion else count
+	var supporting_colors: Array[Color] = [color, PALETTE.CREAM, PALETTE.FRESH_YELLOW]
+	for particle_index in range(actual_count):
+		var particle_style := glyph
+		if glyph == "✦" and particle_index % 3 == 2:
+			particle_style = "•"
+		elif glyph == "◆" and particle_index % 3 == 1:
+			particle_style = "✦"
+		var radius := 5.0 + float(particle_index % 4) * 1.55
+		var fill := supporting_colors[particle_index % supporting_colors.size()]
+		var particle := _outlined_particle(particle_style, radius, fill)
 		particle.position = screen_position
-		particle.scale = Vector2(0.35, 0.35)
+		particle.scale = Vector2(0.22, 0.22)
 		particle.z_index = 235
 		effect_layer.add_child(particle)
-		var angle := TAU * float(particle_index) / float(count) + float(particle_index % 3) * 0.17
+		var angle := TAU * float(particle_index) / float(actual_count) + float(particle_index % 3) * 0.17
 		var distance := 34.0 + float((particle_index * 17) % 54)
 		var destination := particle.position + Vector2(cos(angle), sin(angle)) * distance
-		var duration := 0.42 + float(particle_index % 4) * 0.035
+		var duration := (0.34 if reduced_motion else 0.46) + float(particle_index % 4) * 0.035
 		var tween := create_tween().set_parallel(true)
 		tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.tween_property(particle, "position", destination, duration)
-		tween.tween_property(particle, "scale", Vector2(1.0, 1.0), duration * 0.42)
-		tween.tween_property(particle, "rotation", angle * 0.35, duration)
+		tween.tween_property(particle, "scale", Vector2.ONE * (0.82 + float(particle_index % 3) * 0.12), duration * 0.42)
+		if not reduced_motion:
+			tween.tween_property(particle, "rotation", angle * 0.28, duration)
 		tween.tween_property(particle, "modulate:a", 0.0, duration * 0.55).set_delay(duration * 0.45)
 		tween.finished.connect(particle.queue_free)
+
+
+func _outlined_particle(style: String, radius: float, fill: Color, outline: Color = PALETTE.NAVY) -> Polygon2D:
+	var particle := Polygon2D.new()
+	particle.polygon = _particle_polygon(style, radius + VFX_OUTLINE_WIDTH)
+	particle.color = Color(outline.r, outline.g, outline.b, 0.88)
+	var center := Polygon2D.new()
+	center.polygon = _particle_polygon(style, radius)
+	center.color = fill
+	particle.add_child(center)
+	return particle
 
 
 func _particle_polygon(style: String, radius: float) -> PackedVector2Array:
@@ -3872,6 +4467,144 @@ func _particle_polygon(style: String, radius: float) -> PackedVector2Array:
 	return circle
 
 
+func _effect_line(points: PackedVector2Array, color: Color, width: float) -> Line2D:
+	var line := Line2D.new()
+	line.points = points
+	line.default_color = color
+	line.width = width
+	line.joint_mode = Line2D.LINE_JOINT_ROUND
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	line.antialiased = true
+	return line
+
+
+func _ellipse_arc_points(radius: Vector2, from_angle: float, to_angle: float, segments: int = 20) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for point_index in range(segments + 1):
+		var amount := float(point_index) / float(segments)
+		var angle := lerpf(from_angle, to_angle, amount)
+		points.append(Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	return points
+
+
+func _spawn_celestial_orbit_screen(
+	screen_position: Vector2,
+	accent: Color,
+	radius: Vector2 = Vector2(82.0, 48.0),
+	duration: float = 0.82
+) -> void:
+	if effect_layer == null:
+		return
+	var orbit := Node2D.new()
+	orbit.name = "CelestialActivationOrbit"
+	orbit.position = screen_position
+	orbit.scale = Vector2(0.72, 0.72)
+	orbit.z_index = 234
+	effect_layer.add_child(orbit)
+	var arcs := [
+		_ellipse_arc_points(radius, -2.78, -0.18, 18),
+		_ellipse_arc_points(radius * Vector2(0.86, 1.18), 0.34, 2.5, 15)
+	]
+	for arc_index in range(arcs.size()):
+		orbit.add_child(_effect_line(arcs[arc_index], Color(PALETTE.NAVY, 0.72), 6.0))
+		orbit.add_child(_effect_line(arcs[arc_index], Color(PALETTE.CREAM, 0.96), 3.8))
+		orbit.add_child(_effect_line(arcs[arc_index], Color(accent, 0.96), 2.0))
+	var star_angles := [-2.5, -1.05, 0.42, 2.12]
+	for star_index in range(star_angles.size()):
+		var angle: float = star_angles[star_index]
+		var star := _outlined_particle("✦", 5.5 + float(star_index % 2) * 2.0, PALETTE.FRESH_YELLOW if star_index == 1 else accent)
+		star.position = Vector2(cos(angle) * radius.x, sin(angle) * radius.y)
+		orbit.add_child(star)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(orbit, "scale", Vector2.ONE, duration * 0.34)
+	if not reduced_motion:
+		tween.tween_property(orbit, "rotation", 0.16, duration)
+	tween.tween_property(orbit, "modulate:a", 0.0, duration * 0.42).set_delay(duration * 0.58)
+	tween.finished.connect(orbit.queue_free)
+
+
+func _spawn_cloud_puff_world(
+	world_position: Vector3,
+	fill: Color = PALETTE.CREAM,
+	accent: Color = PALETTE.SKY,
+	duration: float = 0.58
+) -> void:
+	_spawn_cloud_puff_screen(_world_to_container(world_position), fill, accent, duration)
+
+
+func _spawn_cloud_puff_screen(
+	screen_position: Vector2,
+	fill: Color = PALETTE.CREAM,
+	accent: Color = PALETTE.SKY,
+	duration: float = 0.58
+) -> void:
+	if effect_layer == null:
+		return
+	var cloud := Node2D.new()
+	cloud.name = "IllustratedCloudPuff"
+	cloud.position = screen_position
+	cloud.scale = Vector2(0.55, 0.55)
+	cloud.z_index = 231
+	effect_layer.add_child(cloud)
+	var lobes := [
+		{"offset": Vector2(-18.0, 4.0), "radius": 12.0},
+		{"offset": Vector2(-7.0, -6.0), "radius": 16.0},
+		{"offset": Vector2(10.0, -4.0), "radius": 14.0},
+		{"offset": Vector2(20.0, 5.0), "radius": 10.0},
+		{"offset": Vector2(2.0, 8.0), "radius": 16.0}
+	]
+	for lobe_index in range(lobes.size()):
+		var lobe: Dictionary = lobes[lobe_index]
+		var outer := Polygon2D.new()
+		outer.polygon = _particle_polygon("•", float(lobe.radius) + VFX_OUTLINE_WIDTH)
+		outer.color = Color(PALETTE.NAVY, 0.78)
+		outer.position = lobe.offset
+		var inner := Polygon2D.new()
+		inner.polygon = _particle_polygon("•", float(lobe.radius))
+		inner.color = fill if lobe_index % 2 == 0 else fill.lerp(accent, 0.22)
+		outer.add_child(inner)
+		cloud.add_child(outer)
+	var twinkle := _outlined_particle("✦", 5.5, accent)
+	twinkle.position = Vector2(32.0, -16.0)
+	cloud.add_child(twinkle)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(cloud, "scale", Vector2.ONE, duration * 0.42)
+	tween.tween_property(cloud, "position:y", cloud.position.y - 26.0, duration)
+	tween.tween_property(cloud, "modulate:a", 0.0, duration * 0.42).set_delay(duration * 0.58)
+	tween.finished.connect(cloud.queue_free)
+
+
+func _spawn_impact_rays_screen(screen_position: Vector2, accent: Color, ray_count: int = 8, duration: float = 0.42) -> void:
+	if effect_layer == null:
+		return
+	var burst := Node2D.new()
+	burst.name = "IllustratedImpactRays"
+	burst.position = screen_position
+	burst.scale = Vector2(0.42, 0.42)
+	burst.z_index = 233
+	effect_layer.add_child(burst)
+	for ray_index in range(ray_count):
+		var angle := TAU * float(ray_index) / float(ray_count) + float(ray_index % 2) * 0.12
+		var inner_distance := 22.0 + float(ray_index % 3) * 3.0
+		var outer_distance := inner_distance + 19.0 + float((ray_index * 7) % 15)
+		var points := PackedVector2Array([
+			Vector2(cos(angle), sin(angle)) * inner_distance,
+			Vector2(cos(angle), sin(angle)) * outer_distance
+		])
+		burst.add_child(_effect_line(points, Color(PALETTE.NAVY, 0.82), 6.0))
+		burst.add_child(_effect_line(points, Color(accent, 0.98), 2.7))
+	var center_star := _outlined_particle("✦", 15.0, PALETTE.FRESH_YELLOW)
+	burst.add_child(center_star)
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(burst, "scale", Vector2.ONE, duration * 0.5)
+	tween.tween_property(burst, "modulate:a", 0.0, duration * 0.45).set_delay(duration * 0.55)
+	tween.finished.connect(burst.queue_free)
+
+
 func _start_camera_pulse(side: String, fov_amount: float = 2.0) -> void:
 	if camera == null:
 		return
@@ -3893,6 +4626,7 @@ func _start_camera_pulse(side: String, fov_amount: float = 2.0) -> void:
 func _reset_camera_pacing() -> void:
 	if camera_pacing_tween != null and camera_pacing_tween.is_valid():
 		camera_pacing_tween.kill()
+	camera_pacing_tween = null
 	if camera != null:
 		camera.global_transform = camera_home_transform
 		camera.fov = camera_home_fov
@@ -4381,7 +5115,6 @@ func _add_card_tray_card(card_id: String, callback: Callable, enabled: bool, sel
 	var button := Button.new()
 	button.name = "CardTrayCard_%d" % card_tray_cards.get_child_count()
 	button.custom_minimum_size = Vector2(170, 241)
-	button.tooltip_text = String(service.card(card_id).get("name", card_id))
 	button.disabled = not enabled
 	button.focus_mode = Control.FOCUS_NONE
 	_apply_card_tray_card_style(button, selected)
@@ -4401,7 +5134,7 @@ func _add_card_tray_card(card_id: String, callback: Callable, enabled: bool, sel
 	face.modulate = Color(1.0, 1.0, 1.0, 1.0 if enabled else 0.38)
 	button.add_child(face)
 	if selected:
-		var badge := _label("✓", 25, Color("#151008"))
+		var badge := _label("✓", 25, PALETTE.INK)
 		badge.name = "SelectedBadge"
 		badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		badge.offset_left = -38.0
@@ -4412,7 +5145,7 @@ func _add_card_tray_card(card_id: String, callback: Callable, enabled: bool, sel
 		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var badge_style := StyleBoxFlat.new()
-		badge_style.bg_color = Color("#ffd166")
+		badge_style.bg_color = PALETTE.APRICOT
 		badge_style.set_corner_radius_all(15)
 		badge.add_theme_stylebox_override("normal", badge_style)
 		button.add_child(badge)
@@ -4421,22 +5154,22 @@ func _add_card_tray_card(card_id: String, callback: Callable, enabled: bool, sel
 
 func _apply_card_tray_card_style(button: Button, selected: bool) -> void:
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color("#0b1117")
-	normal.border_color = Color("#ffd166") if selected else Color("#253946")
+	normal.bg_color = PALETTE.INK
+	normal.border_color = PALETTE.APRICOT if selected else PALETTE.SLATE
 	normal.set_border_width_all(4 if selected else 2)
 	normal.set_corner_radius_all(8)
 	button.add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color("#173b4b")
-	hover.border_color = Color("#7ee1ff")
+	hover.bg_color = PALETTE.TEAL_DARK
+	hover.border_color = PALETTE.TEAL_HOVER
 	hover.set_border_width_all(3)
 	button.add_theme_stylebox_override("hover", hover)
 	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color("#22566a")
+	pressed.bg_color = PALETTE.TEAL
 	button.add_theme_stylebox_override("pressed", pressed)
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color("#13171b")
-	disabled.border_color = Color("#31363b")
+	disabled.bg_color = PALETTE.DISABLED
+	disabled.border_color = PALETTE.BORDER_SOFT
 	button.add_theme_stylebox_override("disabled", disabled)
 
 
@@ -4525,12 +5258,12 @@ func _refresh_battle_log() -> void:
 	var entries: Array = state.get("log", [])
 	battle_log_button.text = "LOG  •  %d" % entries.size()
 	var lines: Array[String] = [
-		"[color=#f1c66e]CURRENT[/color]  %s" % String(state.get("message", "Choose a card or end your turn."))
+		"[color=#9D4B45]CURRENT[/color]  [color=#29365F]%s[/color]" % String(state.get("message", "Choose a card or end your turn."))
 	]
 	if entries.is_empty():
-		lines.append("[color=#71848d]No actions recorded yet.[/color]")
+		lines.append("[color=#53628A]No actions recorded yet.[/color]")
 	for entry_index in range(entries.size()):
-		lines.append("[color=#8fcce5]%02d[/color]  %s" % [entry_index + 1, String(entries[entry_index])])
+		lines.append("[color=#3D7794]%02d[/color]  [color=#29365F]%s[/color]" % [entry_index + 1, String(entries[entry_index])])
 	battle_log_text.text = "\n\n".join(lines)
 	if battle_log_panel.visible:
 		battle_log_text.scroll_to_line(maxi(0, lines.size() - 1))
@@ -4775,13 +5508,13 @@ func _add_action_button(text_value: String, callback: Callable, disabled := fals
 
 
 func _add_prompt_title(text_value: String) -> void:
-	var title := _label(text_value, 23, Color("#fff0c2"))
+	var title := _label(text_value, 23, PALETTE.NAVY)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_content.add_child(title)
 
 
 func _add_prompt_text(text_value: String) -> void:
-	var text_label := _label(text_value, 15, Color("#e6edf2"))
+	var text_label := _label(text_value, 15, PALETTE.INK)
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_content.add_child(text_label)
@@ -4802,33 +5535,87 @@ func _styled_button(text_value: String) -> Button:
 	button.add_theme_font_size_override("font_size", _scaled_font_size(14))
 	button.set_meta("readability_base_font_font_size", 14)
 	_apply_rounded_button_style(button)
+	_apply_current_ui_button_style(button, false)
+	_bind_illustrated_button_feedback(button)
 	return button
+
+
+func _bind_illustrated_button_feedback(button: Button) -> void:
+	if button == null or button.has_meta("illustrated_feedback_bound"):
+		return
+	button.set_meta("illustrated_feedback_bound", true)
+	button.resized.connect(func() -> void:
+		if is_instance_valid(button):
+			button.pivot_offset = button.size * 0.5
+	)
+	button.mouse_entered.connect(func() -> void:
+		if is_instance_valid(button) and not button.disabled and button.visible:
+			_spawn_button_twinkle(button)
+			_tween_button_scale(button, Vector2(1.025, 1.025), 0.14)
+	)
+	button.mouse_exited.connect(func() -> void:
+		if is_instance_valid(button):
+			_tween_button_scale(button, Vector2.ONE, 0.14)
+	)
+	button.button_down.connect(func() -> void:
+		if is_instance_valid(button) and not button.disabled:
+			_tween_button_scale(button, Vector2(0.96, 0.96), 0.08)
+	)
+	button.button_up.connect(func() -> void:
+		if is_instance_valid(button):
+			_tween_button_scale(button, Vector2.ONE, 0.18)
+	)
+
+
+func _tween_button_scale(button: Button, target_scale: Vector2, duration: float) -> void:
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(button, "scale", target_scale, duration)
+
+
+func _spawn_button_twinkle(button: Button) -> void:
+	if effect_layer == null or button.size.x < 24.0:
+		return
+	var effect_origin := effect_layer.global_position
+	var button_origin := button.global_position - effect_origin
+	var twinkle_position := button_origin + Vector2(button.size.x - 8.0, 8.0)
+	_spawn_screen_particle_burst(twinkle_position, PALETTE.SKY, 3, "✦")
 
 
 func _apply_rounded_button_style(button: Button) -> void:
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color("#173e52")
-	normal.border_color = Color("#e7a946")
+	normal.bg_color = PALETTE.LAVENDER_GLASS
+	normal.border_color = PALETTE.TEAL_DARK
 	normal.set_border_width_all(2)
-	normal.set_corner_radius_all(10)
+	normal.set_corner_radius_all(12)
+	normal.content_margin_left = 14
+	normal.content_margin_right = 14
+	normal.content_margin_top = 6
+	normal.content_margin_bottom = 7
+	normal.shadow_color = Color(0, 0, 0, 0.24)
+	normal.shadow_size = 4
+	normal.shadow_offset = Vector2(0, 2)
 	button.add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color("#245c73")
+	hover.bg_color = PALETTE.BLUSH
 	button.add_theme_stylebox_override("hover", hover)
 	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color("#102d3c")
+	pressed.bg_color = PALETTE.PERIWINKLE
+	pressed.content_margin_top = 8
+	pressed.content_margin_bottom = 5
+	pressed.shadow_size = 1
+	pressed.shadow_offset = Vector2(0, 1)
 	button.add_theme_stylebox_override("pressed", pressed)
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color("#111b21")
-	disabled.border_color = Color("#6f654f")
+	disabled.bg_color = PALETTE.DISABLED
+	disabled.border_color = PALETTE.BORDER_SOFT
 	button.add_theme_stylebox_override("disabled", disabled)
 	_apply_high_contrast_button_text(button)
 
 
 func _apply_high_contrast_button_text(button: Button) -> void:
-	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(color_name, Color.WHITE)
-	button.add_theme_color_override("font_disabled_color", Color("#F2E7D5"))
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:
+		button.add_theme_color_override(color_name, PALETTE.NAVY)
 
 
 func _apply_current_ui_button_style(button: Button, primary: bool) -> void:

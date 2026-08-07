@@ -25,14 +25,14 @@
 
 ## Content
 
-The Kitchen catalog contains 59 collectible cards:
+The public Kitchen demo catalog contains 87 collectible cards:
 
-- 25 Ingredients
-- 20 Meals
-- 5 Tools
-- 1 Spice
-- 3 Environments
-- 5 Chefs
+- 30 Ingredients
+- 23 Meals
+- 15 Tools
+- 5 Spices
+- 5 Environments
+- 9 Chefs
 
 Campaign rarity is derived from card type and the existing rare flag so boosters and singles work without maintaining a second card catalog.
 

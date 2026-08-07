@@ -16,7 +16,9 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	var attacker := _unit(table, "player", "spicy_sriracharrow", "plated", 1, true)
+	# Use a normal attacker here. Sriracharrow is Stalwart and is intentionally
+	# allowed to attack the opposing Chef through Plated blockers.
+	var attacker := _unit(table, "player", "spicy_hot_honey_bee", "plated", 1, true)
 	var blocker := _unit(table, "opponent", "hearty_bagver", "plated", 1, true)
 	table.state.player.plated = [attacker]
 	table.state.player.prep = []
@@ -72,10 +74,26 @@ func _run() -> void:
 		await create_timer(0.1).timeout
 
 	if failed:
+		for audio_node in table.find_children("*", "AudioStreamPlayer", true, false):
+			var audio_player := audio_node as AudioStreamPlayer
+			audio_player.stop()
+			audio_player.stream = null
+		await create_timer(0.12).timeout
+		table.queue_free()
+		await process_frame
+		await process_frame
 		quit(1)
 		return
 	print("Opponent hand face-attack smoke test passed.")
-	quit()
+	for audio_node in table.find_children("*", "AudioStreamPlayer", true, false):
+		var audio_player := audio_node as AudioStreamPlayer
+		audio_player.stop()
+		audio_player.stream = null
+	await create_timer(0.12).timeout
+	table.queue_free()
+	await process_frame
+	await process_frame
+	quit(0)
 
 
 func _left_click(position: Vector2) -> InputEventMouseButton:

@@ -3,6 +3,7 @@ extends SceneTree
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const LAYOUT_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-layout.png"
 const HOVER_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-hover.png"
+const KEYWORD_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-keyword.png"
 
 var failed := false
 
@@ -39,8 +40,8 @@ func _run() -> void:
 	_expect(hover_preview != null and not hover_preview.visible, "Hover preview was not created in its hidden resting state.")
 	_expect(collection_card != null and collection_card.tooltip_text == "", "Collection cards still exposed the redundant native tooltip.")
 	_expect(deck_card != null and deck_card.tooltip_text == "", "Deck cards still exposed the redundant native tooltip.")
-	_expect(collection_summary != null and collection_summary.get_theme_color("font_color") == Color("#174f59"), "Collection summary text did not use the readable dark color.")
-	_expect(metrics_summary != null and metrics_summary.get_theme_color("font_color") == Color("#5d5148"), "Deck metrics text did not use the readable dark color.")
+	_expect(collection_summary != null and collection_summary.get_theme_color("font_color") == Color("#29365F"), "Collection summary text did not use the visual-direction navy.")
+	_expect(metrics_summary != null and metrics_summary.get_theme_color("font_color") == Color("#53628A"), "Deck metrics text did not use the muted navy.")
 	_expect(main.find_child("DeckbuilderSideboardPanel", true, false) == null, "Season Deck Workshop exposed debug-only sideboard controls.")
 	_save_preview(LAYOUT_PREVIEW_PATH)
 
@@ -61,13 +62,15 @@ func _run() -> void:
 		if String(candidate.get_meta("card_id", "")) == "spicy_wasabi_wasp":
 			keyword_card = candidate as Control
 			break
-	_expect(keyword_card != null, "The layout test could not find its Stalwart card.")
+	_expect(keyword_card != null, "The layout test could not find Wastabi's Stalwart card.")
 	if keyword_card != null:
 		main.deckbuilder_screen._show_hover_preview(main, keyword_card, "spicy_wasabi_wasp")
 		await process_frame
 		_expect(main.find_child("DeckbuilderKeywordGlossary", true, false) != null, "A keyword card did not show the Deck Workshop glossary.")
-		_expect(main.find_child("DeckbuilderKeyword_stalwart", true, false) != null, "The Stalwart explanation did not appear beside its card.")
+		_expect(main.find_child("DeckbuilderKeyword_stalwart", true, false) != null, "The Stalwart explanation did not appear beside Wastabi.")
 		_expect(hover_preview.custom_minimum_size.x == 594.0, "The keyword preview did not widen to place its explanation beside the card.")
+		_expect(main.find_child("KeywordAccentBar", true, false) != null, "The keyword explanation did not include its semantic accent bar.")
+		_save_preview(KEYWORD_PREVIEW_PATH)
 
 	main.run.run_mode = "debug"
 	main._show_deckbuilder()
@@ -76,6 +79,10 @@ func _run() -> void:
 	_expect(main.find_child("DeckbuilderSideboardPanel", true, false) != null, "Debug Deck Workshop did not retain its Sideboard tab.")
 	_expect(main.find_child("DeckbuilderAddSideButton", true, false) != null, "Debug Deck Workshop did not retain its add-to-sideboard actions.")
 
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
+	main.queue_free()
+	await process_frame
 	if failed:
 		quit(1)
 		return

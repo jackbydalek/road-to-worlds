@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://d0odspq3roc71"]
+
+[ext_resource type="PackedScene" uid="uid://ct22y2gcqq283" path="res://assets/card_shop/window.glb" id="1_sceoy"]
+[ext_resource type="Texture2D" uid="uid://dh0jjo7xgomou" path="res://assets/card_shop/PandaMat.png" id="2_rv2xq"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m18ig"]
+albedo_texture = ExtResource("2_rv2xq")
+
+[node name="window" unique_id=1785792586 instance=ExtResource("1_sceoy")]
+
+[node name="CTP_Prop_BuildingWindow_01" parent="." index="0" unique_id=609433006]
+material_override = SubResource("StandardMaterial3D_m18ig")
+cast_shadow = 0

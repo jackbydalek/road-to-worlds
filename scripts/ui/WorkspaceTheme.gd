@@ -3,6 +3,7 @@ class_name WorkspaceTheme
 
 const UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 const BUTTON_VARIATIONS := {
 	"default": "KTSecondaryButton",
@@ -37,19 +38,19 @@ static func build(default_font: Font) -> Theme:
 
 	for input_type in ["LineEdit", "TextEdit"]:
 		result.set_stylebox("normal", input_type, UI.clean_style(UI.SURFACE, UI.BORDER_SOFT, 1, 6, Vector4(10, 7, 10, 7)))
-		result.set_stylebox("focus", input_type, UI.clean_style(Color.WHITE, UI.TEAL, 2, 6, Vector4(10, 7, 10, 7)))
+		result.set_stylebox("focus", input_type, UI.clean_style(PALETTE.GHOST, UI.TEAL, 2, 6, Vector4(10, 7, 10, 7)))
 		result.set_color("font_color", input_type, UI.INK)
 		result.set_color("font_placeholder_color", input_type, UI.MUTED_INK)
 		result.set_color("caret_color", input_type, UI.ORANGE)
 
 	result.set_stylebox("panel", "TooltipPanel", UI.clean_style(UI.SURFACE, UI.TEAL, 1, 7, Vector4(10, 8, 10, 8), 0, true))
 	result.set_color("font_color", "TooltipLabel", UI.INK)
-	result.set_stylebox("background", "ProgressBar", UI.clean_style(Color("#E5DED1"), UI.BORDER_SOFT, 1, 4))
+	result.set_stylebox("background", "ProgressBar", UI.clean_style(PALETTE.GHOST_PRESSED, UI.BORDER_SOFT, 1, 4))
 	result.set_stylebox("fill", "ProgressBar", UI.clean_style(UI.TEAL, UI.TEAL, 0, 4))
-	result.set_color("font_color", "ProgressBar", Color.WHITE)
+	result.set_color("font_color", "ProgressBar", PALETTE.GHOST)
 
 	for scroll_type in ["VScrollBar", "HScrollBar"]:
-		result.set_stylebox("scroll", scroll_type, UI.clean_style(Color("#E8E1D5"), Color.TRANSPARENT, 0, 4))
+		result.set_stylebox("scroll", scroll_type, UI.clean_style(PALETTE.GHOST_PRESSED, Color.TRANSPARENT, 0, 4))
 		result.set_stylebox("grabber", scroll_type, UI.clean_style(UI.TEAL, Color.TRANSPARENT, 0, 4))
 		result.set_stylebox("grabber_highlight", scroll_type, UI.clean_style(UI.MUSTARD, Color.TRANSPARENT, 0, 4))
 		result.set_stylebox("grabber_pressed", scroll_type, UI.clean_style(UI.ORANGE, Color.TRANSPARENT, 0, 4))
@@ -77,11 +78,11 @@ static func _apply_button(theme: Theme, type_name: String, variant: String) -> v
 	theme.set_color("font_color", type_name, text_color)
 	theme.set_color("font_hover_color", type_name, text_color)
 	theme.set_color("font_pressed_color", type_name, text_color)
-	theme.set_color("font_disabled_color", type_name, text_color if variant == "selected" else Color("#8D847A"))
+	theme.set_color("font_disabled_color", type_name, text_color if variant == "selected" else PALETTE.DISABLED_INK)
 	theme.set_color("icon_normal_color", type_name, text_color)
 	theme.set_color("icon_hover_color", type_name, text_color)
 	theme.set_color("icon_pressed_color", type_name, text_color)
-	theme.set_color("icon_disabled_color", type_name, Color("#8D847A"))
+	theme.set_color("icon_disabled_color", type_name, PALETTE.DISABLED_INK)
 	theme.set_font("font", type_name, SKETCH_UI.body_font(0.5))
 	theme.set_font_size("font_size", type_name, 13)
 	theme.set_constant("icon_max_width", type_name, 18)

@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://vkevaqs5usq2"]
+
+[ext_resource type="PackedScene" uid="uid://dg7e6svvp34y7" path="res://assets/card_shop/shop good color doornknob inside.glb" id="1_s3h6f"]
+[ext_resource type="Texture2D" uid="uid://bpvtyq5hct4ns" path="res://assets/card_shop/PandaMat new.png" id="2_f7aro"]
+[ext_resource type="Shader" path="res://assets/shaders/storefront_cool_palette.gdshader" id="3_cool_palette"]
+
+[sub_resource type="ShaderMaterial" id="StandardMaterial3D_u48go"]
+shader = ExtResource("3_cool_palette")
+shader_parameter/source_texture = ExtResource("2_f7aro")
+shader_parameter/window_sky = Color(0.557, 0.663, 0.902, 1)
+shader_parameter/window_blush = Color(0.949, 0.643, 0.722, 1)
+shader_parameter/frame_ink = Color(0.161, 0.212, 0.373, 1)
+shader_parameter/frame_secondary = Color(0.325, 0.384, 0.541, 1)
+shader_parameter/door_color = Color(0.651, 0.604, 0.718, 1)
+
+[node name="shop good color doornknob inside" unique_id=803839090 instance=ExtResource("1_s3h6f")]
+
+[node name="Env_CommercialBuilding_01" parent="Empty" parent_id_path=PackedInt32Array(1774113081) index="0" unique_id=1558447405]
+material_override = SubResource("StandardMaterial3D_u48go")
+cast_shadow = 0

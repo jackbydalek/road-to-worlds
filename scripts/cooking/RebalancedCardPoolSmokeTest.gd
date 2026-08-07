@@ -13,8 +13,8 @@ func _run() -> void:
 	if not service.load_content():
 		_fail("The rebalanced production card pool did not load.")
 		return
-	if service.cards_by_id.size() != 60:
-		_fail("Expected 59 authored cards plus the Fresh token.")
+	if service.cards_by_id.size() != 88:
+		_fail("Expected the canonical 87-card demo catalog plus the Fresh token.")
 		return
 	if service.decks.size() != 3:
 		_fail("Expected exactly the Spicy, Sweet, and Hearty starter decks.")
@@ -129,13 +129,11 @@ func _run() -> void:
 		_fail("Combat against an exposed unit did not use the original overflow damage calculation.")
 		return
 
-	var piercing_state: Dictionary = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 998)
-	piercing_state.player.plated = [_unit(410, "spicy_wasabi_wasp", "Wastabi", "ingredient", 2, 1)]
-	piercing_state.opponent.plated = [_unit(411, "hearty_ramen_ram", "Ramen", "ingredient", 1, 1)]
-	piercing_state.opponent.plated[0].defending = true
-	service._resolve_unit_battle(piercing_state, "player", piercing_state.player.plated[0], piercing_state.opponent.plated[0])
-	if int(piercing_state.opponent.life) != 19:
-		_fail("Wastabi's Piercing did not deal excess damage through a Defending unit.")
+	var wastabi_state: Dictionary = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 998)
+	wastabi_state.player.plated = [_unit(410, "spicy_wasabi_wasp", "Wastabi", "ingredient", 2, 1)]
+	wastabi_state.opponent.plated = [_unit(411, "hearty_ramen_ram", "Ramen", "ingredient", 1, 2)]
+	if not service.can_attack_opposing_chef(wastabi_state, 410):
+		_fail("Wastabi's Stalwart did not allow it to attack through opposing Plated cards.")
 		return
 
 	var defense_state: Dictionary = service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 999)
@@ -155,35 +153,21 @@ func _run() -> void:
 		_fail("Starting the next turn did not queue the card's return to upright.")
 		return
 
-	var bison_state: Dictionary = service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 9991)
-	var bison := _unit(418, "hearty_bison_burrito", "Bison Burrito", "meal", 4, 5)
-	bison_state.player.plated = [bison]
-	var bison_move_effects: Array = service.card("hearty_bison_burrito").get("on_move_to_plated", [])
-	service._resolve_effects(bison_state, "player", bison_move_effects, bison)
-	service._resolve_effects(bison_state, "player", bison_move_effects, bison)
-	if int(bison.attack) != 6 or int(bison.health) != 7:
-		_fail("Bison Burrito triggered more than once during the same turn.")
-		return
-	service._start_turn(bison_state, "player", false)
-	service._resolve_effects(bison_state, "player", bison_move_effects, bison)
-	if int(bison.attack) != 8 or int(bison.health) != 9:
-		_fail("Bison Burrito did not become available again on a later turn.")
+	var polar_state: Dictionary = service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 9991)
+	polar_state.player.plated = [
+		_unit(418, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6),
+		_unit(419, "hearty_bagver", "Bagver", "ingredient", 1, 1)
+	]
+	polar_state.player.plated[1].max_health = 2
+	service.activate_ability(polar_state, 418, "polar_pot_pie_heal")
+	if int(polar_state.player.plated[1].health) != 2:
+		_fail("Polar Pot Pie Bear did not heal another friendly unit.")
 		return
 
-	var stalwart_state: Dictionary = service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 1000)
-	stalwart_state.player.plated = [_unit(420, "sweet_soft_serve_crab", "Soft Serve Crab", "ingredient", 1, 4)]
-	stalwart_state.opponent.plated = [_unit(421, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1)]
-	if not service._can_attack_chef(stalwart_state, stalwart_state.player.plated[0]):
-		_fail("Soft Serve Crab's Stalwart did not bypass opposing Plated cards.")
+	var bodyguard_data: Dictionary = service.card("sweet_soft_serve_crab")
+	if not bodyguard_data.get("keywords", []).has("bodyguard") or int(bodyguard_data.health) != 2:
+		_fail("Soft Serve Crab did not load its canonical Bodyguard rule and 1/2 stats.")
 		return
-
-	var rolling_pin_state: Dictionary = service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 997)
-	rolling_pin_state.opponent.plated = [_unit(500, "spicy_sriracharrow", "Sriracharrow", "meal", 4, 3)]
-	service._resolve_effects(rolling_pin_state, "player", [{"type":"return_enemy_plated_unit"}], {}, 500)
-	if not rolling_pin_state.opponent.plated.is_empty() or not rolling_pin_state.opponent.hand.has("spicy_sriracharrow"):
-		_fail("Rolling Pin did not return the selected opposing Plated unit.")
-		return
-
 	print("Rebalanced card pool smoke test passed.")
 	quit(0)
 

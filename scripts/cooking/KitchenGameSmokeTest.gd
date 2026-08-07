@@ -59,7 +59,7 @@ func _run() -> void:
 		_fail("Serving a Meal did not queue its sacrifices before its play event.")
 		return
 	var effect_event_state: Dictionary = service.start_game("test_a", "test_b", 12003)
-	effect_event_state.player.life = 20
+	effect_event_state.player.life = 18
 	var friendly_target := _test_unit(601, "test_veg", "Friendly", "ingredient", 2, 1, true, 0)
 	friendly_target.max_health = 3
 	effect_event_state.player.prep = [friendly_target]
@@ -288,23 +288,23 @@ func _run() -> void:
 	# Stalwart attackers may bypass occupied Plated zones and hit the opposing chef.
 	var stalwart_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 698)
 	stalwart_state.player.turns_started = 2
-	stalwart_state.player.plated = [_test_unit(890, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 2)]
+	stalwart_state.player.plated = [_test_unit(890, "spicy_wasabi_wasp", "Wastabi", "ingredient", 2, 1, true, 2)]
 	stalwart_state.opponent.plated = [_test_unit(891, "hearty_french_bread_dog", "French Bread Dog", "ingredient", 1, 2, false, 2)]
 	production_service.select_attacker(stalwart_state, 890)
 	if not production_service.can_attack_opposing_chef(stalwart_state):
 		_fail("A selected Stalwart attacker was not allowed to attack through Plated cards.")
 		return
 	production_service.attack(stalwart_state, -1)
-	if int(stalwart_state.opponent.life) != 19 or int(stalwart_state.opponent.plated[0].health) != 2 or bool(stalwart_state.player.plated[0].ready):
+	if int(stalwart_state.opponent.life) != 18 or int(stalwart_state.opponent.plated[0].health) != 2 or bool(stalwart_state.player.plated[0].ready):
 		_fail("Stalwart did not damage the opposing chef directly while leaving its Plated card untouched.")
 		return
 	var ai_stalwart_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 6981)
 	ai_stalwart_state.player.plated = [_test_unit(892, "hearty_french_bread_dog", "French Bread Dog", "ingredient", 1, 2, false, 2)]
-	ai_stalwart_state.opponent.plated = [_test_unit(893, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, false, 2)]
+	ai_stalwart_state.opponent.plated = [_test_unit(893, "spicy_wasabi_wasp", "Wastabi", "ingredient", 2, 1, false, 2)]
 	ai_stalwart_state.opponent.hand = []
 	ai_stalwart_state.opponent.deck = []
 	production_service._ai_turn(ai_stalwart_state)
-	if int(ai_stalwart_state.player.life) != 19 or int(ai_stalwart_state.player.plated[0].health) != 2:
+	if int(ai_stalwart_state.player.life) != 18 or int(ai_stalwart_state.player.plated[0].health) != 2:
 		_fail("The opponent AI did not use Stalwart to bypass the player's Plated card.")
 		return
 
@@ -342,31 +342,17 @@ func _run() -> void:
 	var ramen_target_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 6982)
 	ramen_target_state.player.plated = [
 		_test_unit(894, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2),
-		_test_unit(895, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)
+		_test_unit(895, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 1, false, 3)
 	]
+	ramen_target_state.player.plated[1].max_health = 3
 	ramen_target_state.player.hand = ["hearty_ramen_ram"]
 	production_service.play_card(ramen_target_state, 0, "prep")
 	if not production_service.choice_target_ids(ramen_target_state).has(895):
 		_fail("Ramen did not pause for a friendly board target.")
 		return
 	production_service.choose_effect_target(ramen_target_state, 895)
-	if int(ramen_target_state.player.plated[0].attack) != 1 or int(ramen_target_state.player.plated[1].attack) != 3:
-		_fail("Ramen did not buff the chosen friendly card exclusively.")
-		return
-	var bacon_target_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 6983)
-	bacon_target_state.player.plated = [
-		_test_unit(896, "hearty_bagver", "Healthy Bagver", "ingredient", 1, 2, false, 2),
-		_test_unit(897, "hearty_macaroni_manatee", "Damaged Macaronatee", "ingredient", 2, 1, false, 2)
-	]
-	bacon_target_state.player.plated[1].max_health = 3
-	bacon_target_state.player.hand = ["hearty_bird_beakon"]
-	production_service.play_card(bacon_target_state, 0, "prep")
-	if production_service.choice_target_ids(bacon_target_state) != [897]:
-		_fail("Bacon offered a full-health card instead of only damaged friendly cards.")
-		return
-	production_service.choose_effect_target(bacon_target_state, 897)
-	if int(bacon_target_state.player.plated[1].health) != 3:
-		_fail("Bacon did not heal the selected card.")
+	if int(ramen_target_state.player.plated[0].health) != 2 or int(ramen_target_state.player.plated[1].health) != 3:
+		_fail("Ramen did not heal the chosen damaged friendly card exclusively.")
 		return
 	var jelly_target_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 6984)
 	jelly_target_state.opponent.hand = []
@@ -393,7 +379,7 @@ func _run() -> void:
 		_test_unit(902, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2),
 		_test_unit(903, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)
 	]
-	firecracker_target_state.opponent.plated = [_test_unit(904, "hearty_stewoose", "Stewoose", "meal", 1, 10, false, 2)]
+	firecracker_target_state.opponent.plated = [_test_unit(904, "hearty_lasagnama", "Lasagnama", "meal", 1, 10, false, 2)]
 	production_service.select_attacker(firecracker_target_state, 901)
 	production_service.attack(firecracker_target_state, 904)
 	if production_service.choice_target_ids(firecracker_target_state) != [902, 903] or firecracker_target_state.pending_resume.is_empty():
@@ -436,7 +422,7 @@ func _run() -> void:
 		return
 	var switchblade_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69861)
 	switchblade_state.player.turns_started = 2
-	var switchblade_plated := _test_unit(912, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 0)
+	var switchblade_plated := _test_unit(912, "spicy_jalapeno_jackal", "Jakapeno", "ingredient", 1, 2, true, 0)
 	switchblade_plated.table_slot = 1
 	var switchblade_prep := _test_unit(913, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 0)
 	switchblade_prep.table_slot = 2
@@ -466,7 +452,7 @@ func _run() -> void:
 		_fail("The normal once-per-turn switch was not available after Switchblade resolved.")
 		return
 	var grater_state: Dictionary = production_service.start_game("spicy_test_kitchen", "sweet_test_kitchen", 6987)
-	grater_state.opponent.plated = [_test_unit(907, "sweet_marshmallow_swallow", "Marshmallow Swallows", "ingredient", 3, 4, false, 2)]
+	grater_state.opponent.plated = [_test_unit(907, "sweet_soft_serve_crab", "Soft Serve Crab", "ingredient", 3, 4, false, 2)]
 	grater_state.opponent.plated[0].max_health = 4
 	grater_state.opponent.plated[0].spices = ["spice_sugar_glaze"]
 	grater_state.player.hand = ["item_grater"]
@@ -479,24 +465,27 @@ func _run() -> void:
 		_fail("Grater did not remove the chosen Spice and its bonuses.")
 		return
 	var blow_torch_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6988)
-	blow_torch_state.player.plated = [
-		_test_unit(908, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 2),
-		_test_unit(909, "hearty_bagver", "Bagver", "ingredient", 1, 2, true, 2)
-	]
+	blow_torch_state.player.life = 10
+	blow_torch_state.opponent.life = 20
 	blow_torch_state.opponent.prep = [_test_unit(910, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)]
 	blow_torch_state.opponent.plated = [_test_unit(911, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
 	blow_torch_state.player.hand = ["item_blow_torch"]
 	production_service.play_card(blow_torch_state, 0)
-	if production_service.choice_target_ids(blow_torch_state) != [908]:
-		_fail("Blow Torch did not begin with only a friendly Spicy Plated target.")
-		return
-	production_service.choose_effect_target(blow_torch_state, 908)
-	if production_service.choice_target_ids(blow_torch_state) != [910, 911] or blow_torch_state.player.prep.size() != 1:
-		_fail("Blow Torch did not move the chosen Spicy card and advance to its enemy target.")
+	if production_service.choice_target_ids(blow_torch_state) != [910, 911]:
+		_fail("Blow Torch did not offer opposing units while the opposing Chef had more health.")
 		return
 	production_service.choose_effect_target(blow_torch_state, 911)
 	if not blow_torch_state.pending_choice.is_empty() or not blow_torch_state.opponent.plated.is_empty() or not blow_torch_state.opponent.discard.has("hearty_dumpling_tortoise"):
-		_fail("Blow Torch did not destroy its second selected target.")
+		_fail("Blow Torch did not destroy its selected opposing unit.")
+		return
+	var blocked_blow_torch_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69881)
+	blocked_blow_torch_state.player.life = 20
+	blocked_blow_torch_state.opponent.life = 10
+	blocked_blow_torch_state.opponent.plated = [_test_unit(912, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
+	blocked_blow_torch_state.player.hand = ["item_blow_torch"]
+	production_service.play_card(blocked_blow_torch_state, 0)
+	if not production_service.choice_target_ids(blocked_blow_torch_state).is_empty() or blocked_blow_torch_state.opponent.plated.is_empty():
+		_fail("Blow Torch ignored its opposing-Chef-health condition.")
 		return
 
 	# Discard recovery uses explicit card pickers, while Tongs selects two opposing board cards.
@@ -513,15 +502,15 @@ func _run() -> void:
 		return
 	var chef_carl_choice_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 6990)
 	chef_carl_choice_state.player.hand = ["chef_carl"]
-	chef_carl_choice_state.player.discard = ["hearty_dumpling_tortoise", "hearty_stewoose", "hearty_bagver"]
+	chef_carl_choice_state.player.discard = ["hearty_dumpling_tortoise", "hearty_lasagnama", "hearty_bagver"]
 	production_service.play_card(chef_carl_choice_state, 0)
 	if production_service.discard_choice_indices(chef_carl_choice_state) != [0, 1]:
 		_fail("Chef Ramsey did not offer only Meals from the discard pile.")
 		return
 	production_service.toggle_discard_choice(chef_carl_choice_state, 0)
 	production_service.confirm_discard_choice(chef_carl_choice_state)
-	if chef_carl_choice_state.player.hand != ["hearty_dumpling_tortoise"]:
-		_fail("Chef Ramsey did not return the selected Meal.")
+	if chef_carl_choice_state.player.prep.size() != 1 or String(chef_carl_choice_state.player.prep[0].card_id) != "hearty_dumpling_tortoise":
+		_fail("Chef Ramsey did not return the selected Meal to the field.")
 		return
 	var measuring_choice_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69900)
 	measuring_choice_state.player.hand = ["item_measuring_cup", "spicy_hot_honey_bee", "item_wooden_spoon"]
@@ -543,6 +532,8 @@ func _run() -> void:
 	tongs_choice_state.player.hand = ["item_tongs"]
 	var tongs_plated := _test_unit(914, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, true, 1)
 	var tongs_prep := _test_unit(915, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)
+	tongs_plated.table_slot = 2
+	tongs_prep.table_slot = 1
 	tongs_choice_state.opponent.plated = [tongs_plated]
 	tongs_choice_state.opponent.prep = [tongs_prep]
 	production_service.play_card(tongs_choice_state, 0)
@@ -557,47 +548,47 @@ func _run() -> void:
 	if int(tongs_choice_state.opponent.plated[0].instance_id) != 915 or int(tongs_choice_state.opponent.prep[0].instance_id) != 914:
 		_fail("Tongs did not switch the selected opposing Prep and Plated foods.")
 		return
-	if int(tongs_choice_state.opponent.plated[0].get("table_slot", -1)) != 1 or int(tongs_choice_state.opponent.prep[0].get("table_slot", -1)) != 2:
+	if int(tongs_choice_state.opponent.plated[0].get("table_slot", -1)) != 2 or int(tongs_choice_state.opponent.prep[0].get("table_slot", -1)) != 1:
 		_fail("Tongs did not preserve the switched foods' destination slots.")
 		return
 
 	# Production Spices attach real bonuses and each Environment applies its authored engine effect.
 	var spice_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 69902)
-	spice_state.player.prep = [_test_unit(912, "sweet_marshmallow_swallow", "Marshmallow Swallows", "ingredient", 2, 3, false, 2)]
+	spice_state.player.prep = [_test_unit(912, "sweet_sugar_glider", "Sugar Glider", "ingredient", 2, 3, false, 2)]
 	spice_state.player.hand = ["spice_sugar_glaze"]
 	production_service.select_spice_target(spice_state, 912)
 	production_service.play_card(spice_state, 0)
 	if int(spice_state.player.prep[0].attack) != 3 or int(spice_state.player.prep[0].health) != 4 or spice_state.player.prep[0].spices != ["spice_sugar_glaze"]:
 		_fail("Sugar Glaze did not attach and grant its production +1/+1 bonus.")
 		return
-	var blazing_wok_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69903)
-	blazing_wok_state.player.turns_started = 2
-	blazing_wok_state.player.environment = "environment_blazing_wok"
-	blazing_wok_state.player.prep = [_test_unit(913, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
-	blazing_wok_state.player.hand = ["spicy_sriracharrow"]
-	production_service.play_card(blazing_wok_state, 0, "plated")
-	production_service.toggle_ingredient_selection(blazing_wok_state, 913)
-	production_service.confirm_meal_play(blazing_wok_state)
-	if int(blazing_wok_state.player.plated[0].attack) != 6:
-		_fail("Blazing Wok did not give a served Meal +1 Attack.")
+	var taqueria_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69903)
+	taqueria_state.player.turns_started = 2
+	taqueria_state.player.environment = "environment_spicy_taqueria"
+	taqueria_state.player.prep = [_test_unit(913, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
+	taqueria_state.player.hand = ["spicy_sriracharrow"]
+	production_service.play_card(taqueria_state, 0, "plated")
+	production_service.toggle_ingredient_selection(taqueria_state, 913)
+	production_service.confirm_meal_play(taqueria_state)
+	if int(taqueria_state.player.plated[0].attack) != 8:
+		_fail("spicy taquería did not give a served Spicy Meal +2 Attack.")
 		return
-	var slow_cooker_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 69904)
-	slow_cooker_state.player.environment = "environment_slow_cooker"
-	slow_cooker_state.player.prep = [_test_unit(914, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)]
-	production_service._start_turn(slow_cooker_state, "player", false)
-	if int(slow_cooker_state.player.prep[0].attack) != 2 or int(slow_cooker_state.player.prep[0].health) != 3:
-		_fail("Slow Cooker did not grow friendly Ingredients at turn start.")
+	var diner_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 69904)
+	diner_state.player.environment = "environment_hearty_diner"
+	diner_state.player.prep = [_test_unit(914, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)]
+	production_service._start_turn(diner_state, "player", false)
+	if int(diner_state.player.prep[0].attack) != 2 or int(diner_state.player.prep[0].health) != 3:
+		_fail("hearty diner did not grow friendly Hearty Ingredients at turn start.")
 		return
-	var dessert_display_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 69905)
-	dessert_display_state.player.turns_started = 2
-	dessert_display_state.player.environment = "environment_dessert_display"
-	dessert_display_state.player.prep = [_test_unit(915, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2)]
-	dessert_display_state.player.hand = ["sweet_pup_tart"]
-	production_service.play_card(dessert_display_state, 0, "plated")
-	production_service.toggle_ingredient_selection(dessert_display_state, 915)
-	production_service.confirm_meal_play(dessert_display_state)
-	if int(dessert_display_state.player.plated[0].health) != 6 or int(dessert_display_state.player.plated[0].max_health) != 6:
-		_fail("Dessert Display did not give a served Meal +1 Health.")
+	var bakery_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 69905)
+	bakery_state.player.turns_started = 2
+	bakery_state.player.environment = "environment_sweet_bakery"
+	bakery_state.player.prep = [_test_unit(915, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2)]
+	bakery_state.player.hand = ["sweet_pup_tart"]
+	production_service.play_card(bakery_state, 0, "plated")
+	production_service.toggle_ingredient_selection(bakery_state, 915)
+	production_service.confirm_meal_play(bakery_state)
+	if int(bakery_state.player.plated[0].health) != 6 or int(bakery_state.player.plated[0].max_health) != 6:
+		_fail("sweet bakery did not give a served Sweet Meal +2 Health.")
 		return
 
 	# Discard-cost searches transition from payment into a filtered deck choice.
@@ -622,8 +613,9 @@ func _run() -> void:
 	tool_drawer_state.player.deck = ["item_wooden_spoon", "hearty_bagver", "item_recipe_prep", "sweet_pup_tart", "item_strainer"]
 	production_service.play_card(tool_drawer_state, 0)
 	var expected_reveal := ["item_strainer", "sweet_pup_tart", "item_recipe_prep", "hearty_bagver"]
-	if production_service.search_display_cards(tool_drawer_state) != expected_reveal:
-		_fail("Tool Drawer did not reveal exactly the top four cards in top-first order.")
+	var actual_reveal: Array = production_service.search_display_cards(tool_drawer_state)
+	if actual_reveal != expected_reveal:
+		_fail("Tool Drawer did not reveal exactly the top four cards in top-first order: %s" % [actual_reveal])
 		return
 	if production_service.search_candidates(tool_drawer_state) != ["item_strainer", "item_recipe_prep"]:
 		_fail("Tool Drawer offered a non-Tool or a Tool below the top four cards.")
@@ -655,19 +647,19 @@ func _run() -> void:
 		return
 
 	# Production activated abilities support sacrifice, targeting, and once-per-turn use.
-	var jakapeno_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 700)
-	jakapeno_state.player.hand = ["spicy_jalapeno_jackal"]
-	jakapeno_state.player.deck = ["hearty_bagver", "spicy_sriracharrow", "spicy_hot_honey_bee"]
-	production_service.play_card(jakapeno_state, 0, "prep")
-	var jakapeno_id := int(jakapeno_state.player.prep[0].instance_id)
-	production_service.activate_ability(jakapeno_state, jakapeno_id, "jakapeno_search")
-	var spicy_search_candidates: Array[String] = production_service.search_candidates(jakapeno_state)
-	if not jakapeno_state.player.prep.is_empty() or jakapeno_state.pending_search.is_empty() or spicy_search_candidates.size() != 2 or spicy_search_candidates.has("hearty_bagver") or jakapeno_state.player.discard.count("spicy_jalapeno_jackal") != 1:
-		_fail("Jakapeno did not sacrifice itself and offer only viable Spicy search choices.")
+	var jalapeno_panther_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 700)
+	jalapeno_panther_state.player.hand = ["spicy_jalapeno_panther"]
+	jalapeno_panther_state.player.deck = ["hearty_bagver", "spicy_sriracharrow", "spicy_hot_honey_bee"]
+	production_service.play_card(jalapeno_panther_state, 0, "prep")
+	var jalapeno_panther_id := int(jalapeno_panther_state.player.prep[0].instance_id)
+	production_service.activate_ability(jalapeno_panther_state, jalapeno_panther_id, "jalapeno_panther_search")
+	var spicy_search_candidates: Array[String] = production_service.search_candidates(jalapeno_panther_state)
+	if not jalapeno_panther_state.player.prep.is_empty() or jalapeno_panther_state.pending_search.is_empty() or spicy_search_candidates.size() != 2 or spicy_search_candidates.has("hearty_bagver") or jalapeno_panther_state.player.discard.count("spicy_jalapeno_panther") != 1:
+		_fail("Jalapeño Panther did not sacrifice itself and offer only viable Spicy search choices.")
 		return
-	production_service.select_search_card(jakapeno_state, "spicy_sriracharrow")
-	if not jakapeno_state.pending_search.is_empty() or jakapeno_state.player.hand != ["spicy_sriracharrow"] or not jakapeno_state.player.deck.has("spicy_hot_honey_bee"):
-		_fail("Jakapeno did not add the selected Spicy card to the hand.")
+	production_service.select_search_card(jalapeno_panther_state, "spicy_sriracharrow")
+	if not jalapeno_panther_state.pending_search.is_empty() or jalapeno_panther_state.player.hand != ["spicy_sriracharrow"] or not jalapeno_panther_state.player.deck.has("spicy_hot_honey_bee"):
+		_fail("Jalapeño Panther did not add the selected Spicy card to the hand.")
 		return
 
 	# Multiple searches queue and resolve in printed order.
@@ -705,208 +697,66 @@ func _run() -> void:
 		_fail("Chef Carmy did not discard the old hand and draw four cards.")
 		return
 
-	# Revised production stats and simple effect amounts load exactly as authored.
-	var vanilla_data: Dictionary = production_service.card("sweet_vanilla_gorilla")
-	var strawberry_data: Dictionary = production_service.card("sweet_strawberry_sharkcake")
-	var pandacake_data: Dictionary = production_service.card("sweet_pandacake")
-	var cinnamon_data: Dictionary = production_service.card("sweet_cinnamon_snail")
-	var pup_tart_data: Dictionary = production_service.card("sweet_pup_tart")
-	var stewoose_data: Dictionary = production_service.card("hearty_stewoose")
-	if int(vanilla_data.attack) != 1 or int(vanilla_data.health) != 2 or int(strawberry_data.attack) != 5 or int(strawberry_data.health) != 6:
-		_fail("Vanilla Extract Gorilla or Strawberry Sharkcake did not load its revised stats.")
-		return
-	if int(pandacake_data.health) != 6 or int(cinnamon_data.attack) != 4 or int(cinnamon_data.health) != 6 or int(pup_tart_data.attack) != 4:
-		_fail("Pandacake, Cinnamon Snail, or Pup Tart did not load its revised stats.")
-		return
-	if int(stewoose_data.attack) != 4 or int(stewoose_data.health) != 8:
-		_fail("Stewoose did not load its revised 4/8 stats.")
-		return
-	if int(production_service.card("sweet_sugar_glider").on_sacrifice[0].amount) != 1 or int(production_service.card("spicy_firecracker_shrimp").on_attack[0].amount) != 2 or int(production_service.card("hearty_baked_potato_pangolin").on_play[0].attack) != 2 or int(production_service.card("hearty_bagver").on_sacrifice[0].amount) != 1:
-		_fail("Sugar Glider, Firecracker Shrimp, Baked Potangolin, or Bagver kept an old effect amount.")
-		return
-
-	# Wastabi damages only the opposing Plated zone.
-	var wastabi_state: Dictionary = production_service.start_game("spicy_test_kitchen", "sweet_test_kitchen", 70015)
-	wastabi_state.player.hand = ["spicy_wasabi_wasp"]
-	wastabi_state.player.plated = [_test_unit(950, "spicy_hot_honey_bee", "Friendly Bee", "ingredient", 1, 1, false, 2)]
-	wastabi_state.opponent.prep = [_test_unit(951, "sweet_caramel_camel", "Prep Camel", "ingredient", 1, 1, false, 2)]
-	wastabi_state.opponent.plated = [_test_unit(952, "sweet_toffee_collie", "Plated Collie", "ingredient", 1, 1, false, 2)]
-	production_service.play_card(wastabi_state, 0, "prep")
-	if int(wastabi_state.player.plated[0].health) != 1 or int(wastabi_state.opponent.prep[0].health) != 1 or not wastabi_state.opponent.plated.is_empty():
-		_fail("Wastabi did not damage only opposing Plated units.")
+	# Canonical catalog rules and stats load exactly as authored.
+	var canonical_stats := {
+		"spicy_jalapeno_jackal": Vector2i(3, 2),
+		"spicy_sriracharrow": Vector2i(6, 4),
+		"spicy_firecracker_shrimp": Vector2i(6, 4),
+		"sweet_caramel_camel": Vector2i(1, 1),
+		"sweet_jellyfish": Vector2i(1, 2),
+		"sweet_sugar_glider": Vector2i(1, 1),
+		"hearty_macaroni_manatee": Vector2i(2, 3),
+		"hearty_ramen_ram": Vector2i(1, 2),
+		"hearty_bagver": Vector2i(1, 2),
+		"sweet_strawberry_sharkcake": Vector2i(5, 5),
+		"fresh_saladmander": Vector2i(4, 4)
+	}
+	for canonical_card_id in canonical_stats:
+		var canonical_card: Dictionary = production_service.card(canonical_card_id)
+		var expected_stats: Vector2i = canonical_stats[canonical_card_id]
+		if int(canonical_card.get("attack", -1)) != expected_stats.x or int(canonical_card.get("health", -1)) != expected_stats.y:
+			_fail("%s did not load its canonical %d/%d stats." % [canonical_card_id, expected_stats.x, expected_stats.y])
+			return
+	if not production_service.card("spicy_wasabi_wasp").get("keywords", []).has("stalwart"):
+		_fail("Wastabi did not load its canonical Stalwart keyword.")
 		return
 
-	# Vanilla draws one normally and two with three other Sweet units.
-	var vanilla_low_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7002)
-	vanilla_low_state.player.hand = ["sweet_vanilla_gorilla"]
-	vanilla_low_state.player.deck = ["sweet_pup_tart", "sweet_sugar_glider", "sweet_caramel_camel"]
-	production_service.play_card(vanilla_low_state, 0, "prep")
-	if vanilla_low_state.player.hand.size() != 1 or vanilla_low_state.player.deck.size() != 2:
-		_fail("Vanilla Extract Gorilla did not draw exactly one without three other Sweet units.")
+	# Bison Burrito receives its canonical bonus when moving from Prep to Plated.
+	var bison_move_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 702)
+	bison_move_state.player.prep = [_test_unit(902, "hearty_bison_burrito", "Bison Burrito", "meal", 4, 5, false, 2)]
+	production_service.move_unit(bison_move_state, 902, "plated")
+	if bison_move_state.player.plated.is_empty() or int(bison_move_state.player.plated[0].attack) != 6 or int(bison_move_state.player.plated[0].health) != 7:
+		_fail("Bison Burrito did not gain +2/+2 when it moved from Prep to Plated.")
 		return
-	var vanilla_high_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7003)
-	vanilla_high_state.player.prep = [
-		_test_unit(910, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2),
-		_test_unit(911, "sweet_caramel_camel", "Choco Bat", "ingredient", 1, 1, false, 2),
-		_test_unit(912, "sweet_toffee_collie", "Toffee Collie", "ingredient", 1, 1, false, 2)
+
+	# Polar Pot Pie Bear heals each other friendly unit once per turn while Plated.
+	var polar_heal_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 703)
+	polar_heal_state.player.plated = [
+		_test_unit(905, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6, true, 2),
+		_test_unit(906, "hearty_bagver", "Bagver", "ingredient", 1, 1, false, 2)
 	]
-	vanilla_high_state.player.hand = ["sweet_vanilla_gorilla"]
-	vanilla_high_state.player.deck = ["sweet_pup_tart", "sweet_marshmallow_swallow", "sweet_nutmeg_newt"]
-	production_service.play_card(vanilla_high_state, 0, "plated")
-	if vanilla_high_state.player.hand.size() != 2 or vanilla_high_state.player.deck.size() != 1:
-		_fail("Vanilla Extract Gorilla did not draw two with three other Sweet units.")
+	polar_heal_state.player.plated[1].max_health = 2
+	polar_heal_state.player.prep = [_test_unit(907, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 1, false, 2)]
+	polar_heal_state.player.prep[0].max_health = 3
+	production_service.activate_ability(polar_heal_state, 905, "polar_pot_pie_heal")
+	if int(polar_heal_state.player.plated[0].health) != 6 or int(polar_heal_state.player.plated[1].health) != 2 or int(polar_heal_state.player.prep[0].health) != 2:
+		_fail("Polar Pot Pie Bear did not heal each other friendly unit.")
+		return
+	production_service.activate_ability(polar_heal_state, 905, "polar_pot_pie_heal")
+	if int(polar_heal_state.player.prep[0].health) != 2:
+		_fail("Polar Pot Pie Bear activated more than once in the same turn.")
 		return
 
-	# Ghost Pepython draws only if its play effect actually discarded a card.
-	var ghost_empty_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 7004)
-	ghost_empty_state.player.hand = ["spicy_ghost_pepper_python"]
-	ghost_empty_state.player.deck = ["spicy_sriracharrow", "spicy_hot_honey_bee", "spicy_jalapeno_panther"]
-	production_service.play_card(ghost_empty_state, 0, "prep")
-	if not ghost_empty_state.player.hand.is_empty() or ghost_empty_state.player.deck.size() != 3:
-		_fail("Ghost Pepython drew cards despite discarding no cards.")
+	# Cinnamon Snail's healing reduction applies only while it is Plated.
+	var cinnamon_state: Dictionary = production_service.start_game("sweet_test_kitchen", "hearty_test_kitchen", 704)
+	cinnamon_state.player.plated = [_test_unit(908, "sweet_cinnamon_snail", "Cinnamon Snail", "meal", 5, 6, false, 2)]
+	if production_service._healing_amount(cinnamon_state, "opponent", 2) != 0:
+		_fail("Plated Cinnamon Snail did not reduce opposing healing by 2.")
 		return
-	var ghost_discard_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 7005)
-	ghost_discard_state.player.hand = ["spicy_ghost_pepper_python", "hearty_bagver"]
-	ghost_discard_state.player.deck = ["spicy_sriracharrow", "spicy_hot_honey_bee", "spicy_jalapeno_panther"]
-	production_service.play_card(ghost_discard_state, 0, "prep")
-	if ghost_discard_state.player.hand.size() != 3 or not ghost_discard_state.player.deck.is_empty() or ghost_discard_state.player.discard.count("hearty_bagver") != 1:
-		_fail("Ghost Pepython did not discard at least one card and then draw three.")
+	cinnamon_state.player.prep.append(cinnamon_state.player.plated.pop_front())
+	if production_service._healing_amount(cinnamon_state, "opponent", 2) != 2:
+		_fail("Cinnamon Snail reduced opposing healing while it was in Prep.")
 		return
-
-	# Prep auras apply their revised bonuses to Plated units and disappear when inactive.
-	var bison_aura_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 7006)
-	bison_aura_state.player.prep = [_test_unit(920, "hearty_bison_burrito", "Bison Burrito", "meal", 3, 3, false, 2)]
-	bison_aura_state.player.plated = [_test_unit(921, "hearty_stewoose", "Stewoose", "meal", 5, 8, true, 2)]
-	production_service._refresh_stat_auras(bison_aura_state)
-	if int(bison_aura_state.player.plated[0].attack) != 6 or int(bison_aura_state.player.plated[0].health) != 9:
-		_fail("Bison Burrito did not grant its revised +1/+1 Prep aura.")
-		return
-	production_service.move_unit(bison_aura_state, 920, "plated")
-	if int(bison_aura_state.player.plated[0].attack) != 5 or int(bison_aura_state.player.plated[0].health) != 8:
-		_fail("Bison Burrito's aura did not turn off after leaving Prep.")
-		return
-	var panda_aura_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7007)
-	panda_aura_state.player.prep = [
-		_test_unit(922, "sweet_pandacake", "Pandacake", "meal", 5, 6, false, 2),
-		_test_unit(923, "sweet_sugar_glider", "Sugar Glider", "ingredient", 1, 2, false, 2)
-	]
-	panda_aura_state.player.plated = [_test_unit(924, "sweet_pup_tart", "Pup Tart", "meal", 4, 5, true, 2)]
-	production_service._refresh_stat_auras(panda_aura_state)
-	if int(panda_aura_state.player.plated[0].health) != 7 or int(panda_aura_state.player.prep[1].health) != 2:
-		_fail("Pandacake did not give only other Plated units +2 Health.")
-		return
-
-	# Mastiff Potato grows only on its first Prep-to-Plated move.
-	var mastiff_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 7008)
-	mastiff_state.player.prep = [_test_unit(925, "hearty_mastiff_potato", "Mastiff Potato", "meal", 4, 6, false, 2)]
-	production_service.move_unit(mastiff_state, 925, "plated")
-	if int(mastiff_state.player.plated[0].attack) != 6 or int(mastiff_state.player.plated[0].health) != 8:
-		_fail("Mastiff Potato did not gain +2/+2 on its first move to Plated.")
-		return
-	production_service._start_turn(mastiff_state, "player", false)
-	production_service.move_unit(mastiff_state, 925, "prep")
-	production_service._start_turn(mastiff_state, "player", false)
-	production_service.move_unit(mastiff_state, 925, "plated")
-	if int(mastiff_state.player.plated[0].attack) != 6 or int(mastiff_state.player.plated[0].health) != 8:
-		_fail("Mastiff Potato gained +2/+2 more than once.")
-		return
-
-	# Cinnamon taxes opposing recipes only while it is Plated.
-	var cinnamon_state: Dictionary = production_service.start_game("sweet_test_kitchen", "hearty_test_kitchen", 7009)
-	cinnamon_state.opponent.plated = [_test_unit(926, "sweet_cinnamon_snail", "Cinnamon Snail", "meal", 5, 6, false, 2)]
-	if production_service._effective_recipe(cinnamon_state, "player", strawberry_data).size() != 3:
-		_fail("Plated Cinnamon Snail did not add an Ingredient to the opposing recipe.")
-		return
-	cinnamon_state.opponent.prep.append(cinnamon_state.opponent.plated.pop_front())
-	if production_service._effective_recipe(cinnamon_state, "player", strawberry_data).size() != 2:
-		_fail("Cinnamon Snail continued taxing recipes while in Prep.")
-		return
-
-	# Baked Potangolin's +2 Attack expires at the end of the turn.
-	var baked_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 7010)
-	baked_state.player.plated = [_test_unit(927, "hearty_stewoose", "Stewoose", "meal", 5, 8, true, 2)]
-	baked_state.player.hand = ["hearty_baked_potato_pangolin"]
-	production_service.play_card(baked_state, 0, "prep")
-	if production_service.choice_target_ids(baked_state) != [927]:
-		_fail("Baked Potangolin did not request a friendly Plated target.")
-		return
-	production_service.choose_effect_target(baked_state, 927)
-	if int(baked_state.player.plated[0].attack) != 7:
-		_fail("Baked Potangolin did not grant +2 Attack for the turn.")
-		return
-	production_service._clear_temporary_buffs(baked_state.player)
-	if int(baked_state.player.plated[0].attack) != 5:
-		_fail("Baked Potangolin's temporary Attack did not expire.")
-		return
-
-	# Toffee Collie and Donutphin trigger only after damaging the opposing chef.
-	var chef_damage_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7011)
-	chef_damage_state.player.turns_started = 2
-	chef_damage_state.player.plated = [_test_unit(928, "sweet_toffee_collie", "Toffee Collie", "ingredient", 1, 1, true, 2)]
-	chef_damage_state.opponent.plated = [_test_unit(929, "spicy_jalapeno_panther", "Jalapeño Panther", "ingredient", 2, 3, false, 2)]
-	production_service.select_attacker(chef_damage_state, 928)
-	production_service.attack(chef_damage_state, 929)
-	if bool(chef_damage_state.opponent.items_disabled):
-		_fail("Toffee Collie disabled Items without damaging the opposing chef.")
-		return
-	var direct_damage_state: Dictionary = production_service.start_game("sweet_test_kitchen", "spicy_test_kitchen", 7012)
-	direct_damage_state.player.turns_started = 2
-	direct_damage_state.player.plated = [
-		_test_unit(930, "sweet_toffee_collie", "Toffee Collie", "ingredient", 1, 1, true, 2),
-		_test_unit(931, "sweet_donutphin", "Donutphin", "meal", 3, 4, true, 2)
-	]
-	production_service.select_attacker(direct_damage_state, 930)
-	production_service.attack(direct_damage_state, -1)
-	production_service.select_attacker(direct_damage_state, 931)
-	production_service.attack(direct_damage_state, -1)
-	if not bool(direct_damage_state.opponent.items_disabled) or not bool(direct_damage_state.opponent.chefs_disabled):
-		_fail("Toffee Collie or Donutphin did not trigger after damaging the opposing chef.")
-		return
-
-	var vindaloo_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 701)
-	vindaloo_state.player.prep = [_test_unit(900, "spicy_vindaloo_beluga", "Vindaloo Beluga", "meal", 3, 3, false, 2)]
-	vindaloo_state.opponent.prep = [_test_unit(904, "hearty_bagver", "Prep Bagver", "ingredient", 1, 2, false, 2)]
-	vindaloo_state.opponent.plated = [_test_unit(901, "hearty_stewoose", "Stewoose", "meal", 6, 5, false, 2)]
-	production_service.activate_ability(vindaloo_state, 900, "vindaloo_sacrifice")
-	if vindaloo_state.pending_ability.is_empty() or String(vindaloo_state.pending_ability.target_zone) != "plated" or vindaloo_state.player.prep.is_empty():
-		_fail("Vindaloo Beluga did not wait for a Plated enemy target before paying its cost.")
-		return
-	production_service.choose_ability_target(vindaloo_state, 904)
-	if vindaloo_state.pending_ability.is_empty() or vindaloo_state.player.prep.is_empty():
-		_fail("Vindaloo Beluga accepted a Prep target or paid its sacrifice for an invalid target.")
-		return
-	production_service.choose_ability_target(vindaloo_state, 901)
-	if not vindaloo_state.pending_ability.is_empty() or not vindaloo_state.player.prep.is_empty() or int(vindaloo_state.opponent.plated[0].health) != 1 or vindaloo_state.opponent.prep.is_empty():
-		_fail("Vindaloo Beluga did not sacrifice itself and deal 4 to the selected Plated target.")
-		return
-
-	var polar_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 702)
-	polar_state.player.prep = [_test_unit(903, "hearty_bagver", "Bagver", "ingredient", 1, 1, false, 2)]
-	polar_state.player.plated = [_test_unit(902, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 8, 6, false, 2)]
-	polar_state.player.prep[0].max_health = 3
-	polar_state.player.plated[0].max_health = 8
-	production_service.activate_ability(polar_state, 902, "pot_pie_heal")
-	if int(polar_state.player.prep[0].health) != 2 or int(polar_state.player.plated[0].health) != 6:
-		_fail("Plated Polar Pot Pie Bear did not heal each other unit for exactly 1 while excluding itself.")
-		return
-	polar_state.player.prep[0].health = 1
-	production_service.activate_ability(polar_state, 902, "pot_pie_heal")
-	if int(polar_state.player.prep[0].health) != 1:
-		_fail("Polar Pot Pie Bear used its once-per-turn ability twice.")
-		return
-	production_service._start_turn(polar_state, "player", false)
-	production_service.activate_ability(polar_state, 902, "pot_pie_heal")
-	if int(polar_state.player.prep[0].health) != 2:
-		_fail("Polar Pot Pie Bear's ability did not reset on the next turn.")
-		return
-	polar_state.player.prep.append(polar_state.player.plated.pop_front())
-	production_service._start_turn(polar_state, "player", false)
-	polar_state.player.prep[0].health = 1
-	production_service.activate_ability(polar_state, 902, "pot_pie_heal")
-	if int(polar_state.player.prep[0].health) != 1:
-		_fail("Polar Pot Pie Bear used its ability while it was in Prep.")
-		return
-
 	var production_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 777)
 	for unused in range(5):
 		if bool(production_state.game_over):
@@ -922,7 +772,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	# The service also registers one non-collectible Fresh token at runtime.
-	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 90:
+	if String(prototype.state.phase) != "player_main" or prototype.service.cards_by_id.size() != 88:
 		_fail("Production card catalog did not load into a playable game.")
 		return
 	if _count_prefix(prototype, "CookingPlayerPrepSlot_") != 3 or _count_prefix(prototype, "CookingPlayerPlatedSlot_") != 2:
@@ -1003,8 +853,8 @@ func _run() -> void:
 	if arena_hand_face == null or arena_board_face == null:
 		_fail("Spicy Ingredient card faces did not render in the playable hand and board zones.")
 		return
-	if arena_hand_rules == null or not arena_hand_rules.visible:
-		_fail("The playable hand used a compact placeholder instead of the full card face.")
+	if arena_hand_rules == null:
+		_fail("The playable hand card face is missing its authored rules component.")
 		return
 	if arena_card_icon == null or not arena_card_icon.get_theme_font("font").has_char(0x1F336):
 		_fail("The playable card's top-left affinity icon did not use the Noto emoji subset.")
@@ -1032,8 +882,12 @@ func _run() -> void:
 	var arena_play_button := arena_action_buttons[0] as Button if not arena_action_buttons.is_empty() else null
 	var arena_button_style := arena_play_button.get_theme_stylebox("normal") as StyleBoxFlat if arena_play_button != null else null
 	var arena_inspector := arena_prototype.find_child("CookingInspectPanel", true, false) as PanelContainer
+	var arena_inspector_rules := arena_inspector.find_child("CardRules", true, false) as Label if arena_inspector != null else null
 	if arena_actions == null or arena_play_button == null or arena_button_style == null or arena_button_style.corner_radius_top_left < 8 or arena_inspector == null or String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
 		_fail("Clicking the full hand card did not immediately open details and reveal rounded play buttons above it.")
+		return
+	if arena_inspector_rules == null or not arena_inspector_rules.visible:
+		_fail("The card inspector did not show the full authored rules text for a compact hand card.")
 		return
 	if arena_prototype.find_child("CookingHandDetails_0", true, false) != null:
 		_fail("The hand action strip still rendered a redundant Details button.")
@@ -1194,18 +1048,18 @@ func _run() -> void:
 	prototype._drop_on_unit_slot(spice_drag, prototype.state.player.plated[0], "plated", true)
 	await process_frame
 	await process_frame
-	if int(prototype.state.player.plated[0].attack) != 2 or prototype.state.player.plated[0].spices != ["spice_cayenne_crunch"]:
+	if int(prototype.state.player.plated[0].attack) != 3 or prototype.state.player.plated[0].spices != ["spice_cayenne_crunch"]:
 		_fail("Dragging a Spice did not attach it and apply its bonus.")
 		return
-	prototype.state.player.hand = ["environment_blazing_wok"]
-	var environment_drag := {"kind": "hand_card", "hand_index": 0, "card_id": "environment_blazing_wok"}
+	prototype.state.player.hand = ["environment_spicy_taqueria"]
+	var environment_drag := {"kind": "hand_card", "hand_index": 0, "card_id": "environment_spicy_taqueria"}
 	if not prototype._can_drop_environment(environment_drag):
 		_fail("A hand Environment was not accepted by the Environment drag target.")
 		return
 	prototype._drop_environment(environment_drag)
 	await process_frame
 	await process_frame
-	if String(prototype.state.player.environment) != "environment_blazing_wok":
+	if String(prototype.state.player.environment) != "environment_spicy_taqueria":
 		_fail("Dragging an Environment did not establish it.")
 		return
 	prototype.state.player.plated[0].ready = true
@@ -1239,7 +1093,7 @@ func _run() -> void:
 	# The rendered face-attack action recognizes Stalwart while defenders remain Plated.
 	prototype.state.opponent.life = 20
 	prototype.state.player.turns_started = 2
-	prototype.state.player.plated = [_test_unit(939, "spicy_red_pepper_panda", "Red Pepper Panda", "ingredient", 1, 2, true, 2)]
+	prototype.state.player.plated = [_test_unit(939, "spicy_wasabi_wasp", "Wastabi", "ingredient", 2, 1, true, 2)]
 	prototype.state.opponent.plated = [_test_unit(938, "hearty_french_bread_dog", "French Bread Dog", "ingredient", 1, 2, false, 2)]
 	prototype.service.select_attacker(prototype.state, 939)
 	prototype._refresh()
@@ -1249,20 +1103,21 @@ func _run() -> void:
 	if stalwart_face_attack == null or stalwart_face_attack.disabled or not stalwart_face_attack.text.contains("Stalwart"):
 		_fail("The kitchen UI did not enable or identify Stalwart's direct chef attack.")
 		return
-	var stalwart_drag := {"kind": "unit", "instance_id": 939, "card_id": "spicy_red_pepper_panda", "from_zone": "plated"}
+	var stalwart_drag := {"kind": "unit", "instance_id": 939, "card_id": "spicy_wasabi_wasp", "from_zone": "plated"}
 	if not prototype._can_drop_on_opponent_face(stalwart_drag):
 		_fail("A Stalwart attacker was not accepted by the opposing-chef drag target through Plated cards.")
 		return
 	prototype._drop_on_opponent_face(stalwart_drag)
 	await process_frame
 	await process_frame
-	if int(prototype.state.opponent.life) != 19 or int(prototype.state.opponent.plated[0].health) != 2:
+	if int(prototype.state.opponent.life) != 18 or int(prototype.state.opponent.plated[0].health) != 2:
 		_fail("The rendered Stalwart attack did not bypass the opposing Plated card.")
 		return
 
 	# Board, discard, and revealed-hand choices all render their legal interactive targets.
 	prototype.state.player.prep = []
-	prototype.state.player.plated = [_test_unit(941, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)]
+	prototype.state.player.plated = [_test_unit(941, "hearty_bagver", "Bagver", "ingredient", 1, 1, false, 2)]
+	prototype.state.player.plated[0].max_health = 2
 	prototype.state.opponent.prep = []
 	prototype.state.opponent.plated = []
 	prototype.state.player.hand = ["hearty_ramen_ram"]
@@ -1277,11 +1132,11 @@ func _run() -> void:
 	choose_ramen_target.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	if int(prototype.state.player.plated[0].attack) != 2 or not prototype.state.pending_choice.is_empty():
+	if int(prototype.state.player.plated[0].health) != 2 or not prototype.state.pending_choice.is_empty():
 		_fail("The rendered board-target picker did not resolve Ramen on the chosen card.")
 		return
 	prototype.state.player.hand = ["chef_carl"]
-	prototype.state.player.discard = ["hearty_dumpling_tortoise", "hearty_stewoose", "hearty_bagver"]
+	prototype.state.player.discard = ["hearty_dumpling_tortoise", "hearty_lasagnama", "hearty_bagver"]
 	prototype.state.player.chef_used = false
 	prototype.service.play_card(prototype.state, 0)
 	prototype._refresh()
@@ -1302,8 +1157,8 @@ func _run() -> void:
 	confirm_discard_pile.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	if prototype.state.player.hand != ["hearty_stewoose"]:
-		_fail("Chef Ramsey's rendered picker did not return the selected Meal.")
+	if prototype.state.player.prep.size() != 2 or String(prototype.state.player.prep[1].card_id) != "hearty_lasagnama":
+		_fail("Chef Ramsey's rendered picker did not return the selected Meal to the field.")
 		return
 	prototype.state.player.hand = ["item_tongs"]
 	prototype.state.opponent.prep = [_test_unit(960, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2)]
@@ -1451,30 +1306,30 @@ func _run() -> void:
 		return
 
 	# Activated field abilities render and can be used from the board.
-	prototype.state.player.hand = ["spicy_jalapeno_jackal"]
+	prototype.state.player.hand = ["spicy_jalapeno_panther"]
 	prototype.state.player.deck = ["hearty_bagver", "spicy_sriracharrow", "spicy_hot_honey_bee"]
 	prototype.service.play_card(prototype.state, 0, "prep")
-	var ui_jakapeno_id := int(prototype.state.player.prep[0].instance_id)
+	var ui_jalapeno_panther_id := int(prototype.state.player.prep[0].instance_id)
 	prototype._refresh()
 	await process_frame
 	await process_frame
-	var activate_jakapeno := prototype.find_child("CookingActivateAbility_%d_jakapeno_search" % ui_jakapeno_id, true, false) as Button
-	if activate_jakapeno == null or activate_jakapeno.disabled:
-		_fail("Jakapeno did not render an enabled Activate button on the field.")
+	var activate_jalapeno_panther := prototype.find_child("CookingActivateAbility_%d_jalapeno_panther_search" % ui_jalapeno_panther_id, true, false) as Button
+	if activate_jalapeno_panther == null or activate_jalapeno_panther.disabled:
+		_fail("Jalapeño Panther did not render an enabled Activate button on the field.")
 		return
-	activate_jakapeno.emit_signal("pressed")
+	activate_jalapeno_panther.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	var take_sriracharrow := prototype.find_child("CookingTakeSearchCard_spicy_sriracharrow", true, false) as Button
 	var invalid_hearty_choice := prototype.find_child("CookingTakeSearchCard_hearty_bagver", true, false) as Button
 	if take_sriracharrow == null or invalid_hearty_choice != null or prototype.state.pending_search.is_empty():
-		_fail("Jakapeno's rendered search did not show only viable deck choices.")
+		_fail("Jalapeño Panther's rendered search did not show only viable deck choices.")
 		return
 	take_sriracharrow.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	if not prototype.state.player.prep.is_empty() or prototype.state.player.hand != ["spicy_sriracharrow"] or not prototype.state.pending_search.is_empty():
-		_fail("Jakapeno's deck picker did not add the chosen card to the hand.")
+		_fail("Jalapeño Panther's deck picker did not add the chosen card to the hand.")
 		return
 
 	print("Kitchen Table TCG smoke test passed.")

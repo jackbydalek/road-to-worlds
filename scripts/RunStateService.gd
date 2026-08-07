@@ -2,6 +2,7 @@ extends RefCounted
 class_name RunStateService
 
 const SAVE_VERSION := 1
+const REDUCED_STARTING_MONEY := 5
 
 var cards_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
@@ -40,7 +41,7 @@ func create_run(archetype_id: String, starter_deck: Dictionary, kitchen_opponent
 	var starter_collection := {}
 	for card_id in starter_deck.keys():
 		starter_collection[card_id] = starter_deck[card_id]
-	var lives := 1 if run_mode == "season" else starting_lives_for_difficulty(difficulty_id)
+	var lives := starting_lives_for_difficulty(difficulty_id)
 	var calendar := DEMO_SEASON_CALENDAR.duplicate() if run_mode == "season" else default_season_calendar()
 
 	return {
@@ -97,13 +98,13 @@ func _initial_meta() -> Dictionary:
 
 
 func starting_money_for_difficulty(difficulty_id: String) -> int:
-	if difficulty_id == "yellow":
-		return max(0, int(round(float(starting_money) * 0.65)))
+	if difficulty_id in ["yellow", "silver", "gold"]:
+		return mini(starting_money, REDUCED_STARTING_MONEY)
 	return starting_money
 
 
 func starting_lives_for_difficulty(difficulty_id: String) -> int:
-	if difficulty_id == "silver":
+	if difficulty_id in ["silver", "gold"]:
 		return 1
 	return 3
 
@@ -215,6 +216,16 @@ func sell_extra_copies(target_run: Dictionary) -> int:
 
 func has_saved_run() -> bool:
 	return FileAccess.file_exists(save_path) or FileAccess.file_exists(_backup_path())
+
+
+func clear_saved_run() -> Dictionary:
+	for path in [save_path, _backup_path(), _temporary_path()]:
+		if not FileAccess.file_exists(path):
+			continue
+		var error := DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		if error != OK:
+			return {"ok": false, "message": "Could not remove the saved run."}
+	return {"ok": true, "message": "Run abandoned."}
 
 
 func save_run(target_run: Dictionary, resume_screen: String = "") -> Dictionary:

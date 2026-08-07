@@ -4,45 +4,65 @@
 
 [sub_resource type="Environment" id="Environment_tabletop"]
 background_mode = 1
-background_color = Color(0.9137255, 0.8745098, 0.7882353, 1)
+background_color = Color(0.976, 0.941, 0.922, 1)
 ambient_light_source = 3
-ambient_light_color = Color(0.56, 0.69, 0.88, 1)
-ambient_light_energy = 0.5
+ambient_light_color = Color(1, 0.92, 0.87, 1)
+ambient_light_energy = 0.58
 
 [sub_resource type="StandardMaterial3D" id="Material_table"]
-albedo_color = Color(0.105, 0.068, 0.054, 1)
-metallic = 0.08
-roughness = 0.72
+shading_mode = 0
+albedo_color = Color(0.82, 0.77, 0.89, 1)
+metallic = 0.0
+roughness = 0.94
 
 [sub_resource type="BoxMesh" id="Mesh_table"]
 material = SubResource("Material_table")
-size = Vector3(12.8, 0.35, 10.5)
+size = Vector3(12.8, 0.35, 11.5)
+
+[sub_resource type="StandardMaterial3D" id="Material_table_edge"]
+shading_mode = 0
+albedo_color = Color(0.161, 0.212, 0.373, 1)
+metallic = 0.0
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_table_edge"]
+material = SubResource("Material_table_edge")
+size = Vector3(13.05, 0.18, 11.75)
 
 [sub_resource type="StandardMaterial3D" id="Material_player_prep"]
 transparency = 1
-albedo_color = Color(0.13, 0.67, 0.84, 0.2)
-roughness = 0.6
+shading_mode = 0
+albedo_color = Color(0.408, 0.773, 0.91, 0.36)
+roughness = 0.88
 
 [sub_resource type="BoxMesh" id="Mesh_prep_zone"]
 size = Vector3(1.58, 0.035, 1.52)
 
 [sub_resource type="StandardMaterial3D" id="Material_player_plated"]
 transparency = 1
-albedo_color = Color(0.98, 0.43, 0.16, 0.2)
-roughness = 0.6
+shading_mode = 0
+albedo_color = Color(0.937, 0.494, 0.463, 0.34)
+roughness = 0.88
 
 [sub_resource type="BoxMesh" id="Mesh_plated_zone"]
 size = Vector3(1.58, 0.035, 1.52)
 
-[sub_resource type="StandardMaterial3D" id="Material_opponent"]
+[sub_resource type="StandardMaterial3D" id="Material_opponent_prep"]
 transparency = 1
-albedo_color = Color(0.58, 0.27, 0.76, 0.18)
-roughness = 0.6
+shading_mode = 0
+albedo_color = Color(0.557, 0.663, 0.902, 0.34)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Material_opponent_plated"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.949, 0.643, 0.722, 0.34)
+roughness = 0.88
 
 [sub_resource type="StandardMaterial3D" id="Material_chef_player"]
-albedo_color = Color(0.12, 0.55, 0.69, 1)
-metallic = 0.25
-roughness = 0.42
+albedo_color = Color(0.408, 0.773, 0.91, 1)
+metallic = 0.08
+roughness = 0.64
 
 [sub_resource type="CylinderMesh" id="Mesh_chef"]
 top_radius = 0.58
@@ -50,9 +70,9 @@ bottom_radius = 0.68
 height = 0.18
 
 [sub_resource type="StandardMaterial3D" id="Material_chef_opponent"]
-albedo_color = Color(0.64, 0.22, 0.3, 1)
-metallic = 0.25
-roughness = 0.42
+albedo_color = Color(0.937, 0.494, 0.463, 1)
+metallic = 0.08
+roughness = 0.64
 
 [node name="Tabletop3DPrototype" type="Control" unique_id=7624887]
 custom_minimum_size = Vector2(0, 780)
@@ -86,15 +106,22 @@ environment = SubResource("Environment_tabletop")
 
 [node name="KeyLight" type="DirectionalLight3D" parent="ViewportContainer/WorldViewport/World" unique_id=103798304]
 transform = Transform3D(0.8571673, 0.41667455, -0.3027318, 0, 0.5877853, 0.809017, 0.5150381, -0.6934629, 0.5038304, 0, 0, 0)
-light_color = Color(1, 0.86, 0.7, 1)
-light_energy = 1.45
+light_color = Color(1, 0.88, 0.79, 1)
+light_energy = 0.68
 shadow_enabled = true
 
 [node name="FillLight" type="OmniLight3D" parent="ViewportContainer/WorldViewport/World" unique_id=60131874]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 5.5, 3.8)
-light_color = Color(0.38, 0.68, 1, 1)
-light_energy = 5.0
+light_color = Color(0.70, 0.82, 1, 1)
+light_energy = 0.82
 omni_range = 14.0
+
+[node name="TableLamp" type="OmniLight3D" parent="ViewportContainer/WorldViewport/World"]
+position = Vector3(0, 6.8, 0.4)
+light_color = Color(1, 0.79, 0.73, 1)
+light_energy = 0.95
+omni_range = 13.0
+shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="ViewportContainer/WorldViewport/World" unique_id=599173441]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.5, 8.35)
@@ -102,12 +129,17 @@ current = true
 fov = 42.0
 
 [node name="Table" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World" unique_id=1556251163]
+position = Vector3(0, 0, 0.5)
 mesh = SubResource("Mesh_table")
+
+[node name="TableEdge" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World"]
+position = Vector3(0, -0.2, 0.5)
+mesh = SubResource("Mesh_table_edge")
 
 [node name="Zones" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=194906294]
 
 [node name="PlayerPrep" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=158967865]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, 1.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, 2.25)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPrep" unique_id=589803034]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.72, 0, 0)
@@ -127,13 +159,13 @@ mesh = SubResource("Mesh_prep_zone")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.15, 0.25, 0)
 billboard = 1
 visible = false
-modulate = Color(0.38, 0.87, 1, 1)
+modulate = Color(0.51, 0.60, 0.82, 1)
 text = "PREP"
-font_size = 28
-outline_size = 8
+font_size = 36
+outline_size = 11
 
 [node name="PlayerPlated" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=1315631575]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -0.65)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, 0.15)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPlated" unique_id=1054688156]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
@@ -149,58 +181,58 @@ mesh = SubResource("Mesh_plated_zone")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.25, 0)
 billboard = 1
 visible = false
-modulate = Color(1, 0.58, 0.3, 1)
+modulate = Color(0.77, 0.47, 0.66, 1)
 text = "PLATED"
-font_size = 28
-outline_size = 8
+font_size = 36
+outline_size = 11
 
 [node name="OpponentPlated" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=911238150]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -2.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -2.25)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1586093162]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
-material_override = SubResource("Material_opponent")
+material_override = SubResource("Material_opponent_plated")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Slot2" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1061984284]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
-material_override = SubResource("Material_opponent")
+material_override = SubResource("Material_opponent_plated")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1757616386]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0.25, 0)
 billboard = 1
 visible = false
-modulate = Color(0.92, 0.6, 1, 1)
+modulate = Color(0.76, 0.66, 0.88, 1)
 text = "PLATED"
-font_size = 26
-outline_size = 8
+font_size = 34
+outline_size = 10
 
 [node name="OpponentPrep" type="Node3D" parent="ViewportContainer/WorldViewport/World/Zones" unique_id=1126898678]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -4.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -4.45)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=562390361]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.72, 0, 0)
-material_override = SubResource("Material_opponent")
+material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Slot2" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=1911603249]
-material_override = SubResource("Material_opponent")
+material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Slot3" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=1046090940]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.72, 0, 0)
-material_override = SubResource("Material_opponent")
+material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Label3D" type="Label3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=1096383554]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.15, 0.25, 0)
 billboard = 1
 visible = false
-modulate = Color(0.82, 0.55, 0.95, 1)
+modulate = Color(0.68, 0.54, 0.79, 1)
 text = "PREP"
-font_size = 26
-outline_size = 8
+font_size = 34
+outline_size = 10
 
 [node name="PlayerChef" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=941425673]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.644406, 0.3, 2.9101782)
@@ -213,8 +245,10 @@ mesh = SubResource("Mesh_chef")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 billboard = 1
 text = "YOU"
-font_size = 44
-outline_size = 10
+font_size = 58
+outline_size = 15
+modulate = Color(1, 1, 1, 1)
+outline_modulate = Color(0.160784, 0.211765, 0.372549, 1)
 
 [node name="OpponentChef" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=1626924052]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.05, 0.3, -4.52)
@@ -227,8 +261,10 @@ mesh = SubResource("Mesh_chef")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 billboard = 1
 text = "RIVAL"
-font_size = 44
-outline_size = 10
+font_size = 58
+outline_size = 15
+modulate = Color(1, 1, 1, 1)
+outline_modulate = Color(0.160784, 0.211765, 0.372549, 1)
 
 [node name="CardLayer" type="Node3D" parent="ViewportContainer/WorldViewport/World" unique_id=1294236409]
 
@@ -312,6 +348,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Restart"
 
+[node name="SettingsButton" type="Button" parent="Interface/TopBar/Margin/TopRow"]
+custom_minimum_size = Vector2(104, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Settings"
+
 [node name="ExitButton" type="Button" parent="Interface/TopBar/Margin/TopRow" unique_id=538710607]
 custom_minimum_size = Vector2(106, 42)
 layout_mode = 2
@@ -352,8 +394,15 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 10
 
-[node name="Actions" type="VBoxContainer" parent="Interface/ActionPanel/Margin" unique_id=1112844339]
+[node name="InspectorScroll" type="ScrollContainer" parent="Interface/ActionPanel/Margin"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Actions" type="VBoxContainer" parent="Interface/ActionPanel/Margin/InspectorScroll" unique_id=1112844339]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
 [node name="CardTrayOverlay" type="Control" parent="Interface" unique_id=172086404]
@@ -375,7 +424,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-color = Color(0.01, 0.035, 0.055, 0.34)
+color = Color(0.06, 0.03, 0.12, 0.52)
 
 [node name="TrayPanel" type="PanelContainer" parent="Interface/CardTrayOverlay" unique_id=1640054453]
 layout_mode = 1
@@ -422,7 +471,7 @@ text = "Close"
 
 [node name="Prompt" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content" unique_id=114750319]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.86, 0.93, 0.97, 1)
+theme_override_colors/font_color = Color(0.90, 0.86, 0.94, 1)
 theme_override_font_sizes/font_size = 16
 text = "Cards in your discard pile"
 horizontal_alignment = 1
@@ -450,7 +499,7 @@ theme_override_constants/separation = 10
 [node name="SelectionStatus" type="Label" parent="Interface/CardTrayOverlay/TrayPanel/Margin/Content/Footer" unique_id=1426079674]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.64, 0.87, 0.96, 1)
+theme_override_colors/font_color = Color(0.64, 0.70, 0.88, 1)
 theme_override_font_sizes/font_size = 15
 vertical_alignment = 1
 
@@ -502,9 +551,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -470.0
-offset_top = -52.0
+offset_top = -46.0
 offset_right = 470.0
-offset_bottom = -6.0
+offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 1
@@ -523,7 +572,7 @@ theme_override_constants/separation = 12
 [node name="StatusContext" type="Label" parent="Interface/StatusPanel/Margin/StatusRow"]
 custom_minimum_size = Vector2(105, 34)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.56, 0.87, 0.96, 1)
+theme_override_colors/font_color = Color(0.58, 0.66, 0.85, 1)
 theme_override_font_sizes/font_size = 13
 text = "YOUR MOVE"
 horizontal_alignment = 1

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 var failed := false
 
@@ -65,11 +66,31 @@ func _run() -> void:
 	await process_frame
 	outcome = main.find_child("TournamentResultOutcome", true, false) as Label
 	_expect(outcome != null and outcome.text == "SEASON ENDED", "The defeat ceremony does not explain the outcome.")
+	var paper_background := main.find_child("PaperBackground", true, false) as ColorRect
+	var pastel_background := main.find_child("PastelWorkspaceBackground", true, false) as ColorRect
+	_expect(
+		paper_background != null and not paper_background.visible
+		and pastel_background != null and pastel_background.visible,
+		"The season-ended screen still uses the paper background."
+	)
+	var defeat_hero := main.find_child("TournamentResultHero", true, false) as PanelContainer
+	var defeat_hero_style := defeat_hero.get_theme_stylebox("panel") as StyleBoxFlat if defeat_hero != null else null
+	_expect(
+		defeat_hero_style != null
+		and defeat_hero_style.bg_color.get_luminance() > 0.75
+		and defeat_hero_style.border_color.is_equal_approx(PALETTE.NAVY)
+		and defeat_hero_style.corner_radius_top_left >= 16,
+		"The season-ended hero does not use the smooth pastel card treatment."
+	)
 	primary = main.find_child("SeasonResultPrimaryAction", true, false) as Button
 	_expect(primary != null and primary.text == "Start New Run", "Defeat does not offer a clear restart action.")
+	var primary_style := primary.get_theme_stylebox("normal") as StyleBoxFlat if primary != null else null
+	_expect(primary_style != null and primary_style.bg_color.is_equal_approx(PALETTE.CORAL), "The restart action is not using the coral primary-action treatment.")
 	_expect(_tree_contains_text(main, "Review Deck"), "Defeat does not offer a run-review action.")
 	_expect(not _tree_contains_text(main, "Visit Card Shop"), "Defeat still offers an invalid shop route.")
 
+	main._release_audio_streams()
+	await create_timer(0.12).timeout
 	main.queue_free()
 	await process_frame
 	if failed:

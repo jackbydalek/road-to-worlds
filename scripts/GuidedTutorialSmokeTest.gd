@@ -25,9 +25,9 @@ func _run() -> void:
 	tutorial._on_end_turn_pressed()
 	_expect(tutorial.tutorial_step_index == 4 and String(tutorial.state.player.prep[0].card_id) == "spicy_hot_honey_bee", "End Turn did not fast-forward to the fixed recipe hand.")
 
-	tutorial._tutorial_complete_action("select_hand", {"card_id": "environment_blazing_wok", "instance_id": -1})
-	await tutorial._play_hand_card(_hand_index(tutorial, "environment_blazing_wok"), "prep")
-	_expect(String(tutorial.state.player.environment) == "environment_blazing_wok", "The Environment lesson did not resolve.")
+	tutorial._tutorial_complete_action("select_hand", {"card_id": "environment_spicy_taqueria", "instance_id": -1})
+	await tutorial._play_hand_card(_hand_index(tutorial, "environment_spicy_taqueria"), "prep")
+	_expect(String(tutorial.state.player.environment) == "environment_spicy_taqueria", "The Environment lesson did not resolve.")
 
 	tutorial._tutorial_complete_action("select_hand", {"card_id": "spicy_sriracharrow", "instance_id": -1})
 	await tutorial._play_hand_card(_hand_index(tutorial, "spicy_sriracharrow"), "prep", 1)
@@ -70,7 +70,13 @@ func _run() -> void:
 	_expect(bool(tutorial.state.game_over) and String(tutorial.state.winner) == "player", "The direct Chef attack did not win the tutorial.")
 	_expect(String(tutorial._tutorial_step().action) == "finish", "The tutorial did not reach its completion screen.")
 
+	for audio_node in tutorial.find_children("*", "AudioStreamPlayer", true, false):
+		var audio_player := audio_node as AudioStreamPlayer
+		audio_player.stop()
+		audio_player.stream = null
+	await create_timer(0.12).timeout
 	tutorial.queue_free()
+	await process_frame
 	if failures.is_empty():
 		print("Guided tutorial smoke test passed.")
 		quit(0)

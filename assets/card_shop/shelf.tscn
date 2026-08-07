@@ -1,10 +1,13 @@
 [gd_scene format=3 uid="uid://bpft2f2u7plqq"]
 
 [ext_resource type="PackedScene" uid="uid://dg4le333vum46" path="res://assets/card_shop/shelf.glb" id="1_spiq2"]
-[ext_resource type="Texture2D" uid="uid://dh0jjo7xgomou" path="res://assets/card_shop/PandaMat.png" id="2_7h7pu"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_g4kxh"]
-albedo_texture = ExtResource("2_7h7pu")
+albedo_color = Color(0.325, 0.384, 0.541, 1)
+emission_enabled = true
+emission = Color(0.161, 0.212, 0.373, 1)
+emission_energy_multiplier = 0.08
+roughness = 0.9
 
 [node name="shelf" unique_id=1807172770 instance=ExtResource("1_spiq2")]
 

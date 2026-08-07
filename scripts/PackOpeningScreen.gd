@@ -3,8 +3,14 @@ class_name PackOpeningScreen
 
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
 
-const PACK_OPENING_SCENE := preload("res://scenes/PackOpeningScene.tscn")
-const CARD_BACK := preload("res://assets/cards/card_backs/living_table.png")
+const PACK_OPENING_SCENE_PATH := "res://scenes/PackOpeningScene.tscn"
+const CARD_BACK_PATH := "res://assets/cards/card_backs/living_table.png"
+const CARD_BACK_FRAME_PATH := "res://assets/cards/card_backs/card_back_frame.svg"
+const PACK_OPEN_SOUND_PATHS := [
+	"res://assets/audio/kenney_casino/cards-pack-open-1.ogg",
+	"res://assets/audio/kenney_casino/cards-pack-open-2.ogg"
+]
+const PACK_OPEN_VOLUME_DB := -4.0
 const BOOSTER_ID := "base_standard_pack"
 const PRIZE_BOOSTER_ID := "season_prize_pack"
 const SCENE_SIZE := Vector2(1360, 680)
@@ -75,9 +81,11 @@ func _add_store_exit(host) -> void:
 
 
 func _add_scene(host) -> Node:
+	var display_scale := _display_scale(host)
+	var display_size := SCENE_SIZE * display_scale
 	var frame := PanelContainer.new()
 	frame.name = "PackOpeningSceneFrame"
-	frame.custom_minimum_size = SCENE_SIZE
+	frame.custom_minimum_size = display_size
 	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	frame.add_theme_stylebox_override(
 		"panel",
@@ -92,25 +100,29 @@ func _add_scene(host) -> Node:
 
 	var canvas := Control.new()
 	canvas.name = "PackOpeningSceneHost"
-	canvas.custom_minimum_size = SCENE_SIZE
+	canvas.custom_minimum_size = display_size
 	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	canvas.clip_contents = true
 	frame.add_child(canvas)
 
-	var root := PACK_OPENING_SCENE.instantiate()
+	var root := _instantiate_pack_scene()
 	root.name = "PackOpeningScene"
+	root.scale = Vector2.ONE * display_scale
 	canvas.add_child(root)
 	return root
 
 
 func _add_shop_overlay_scene(shop_world: Control) -> Node:
+	var viewport_size := shop_world.get_viewport_rect().size
+	var display_scale := minf(1.0, minf((viewport_size.x - 24.0) / SCENE_SIZE.x, (viewport_size.y - 24.0) / SCENE_SIZE.y))
+	var display_size := SCENE_SIZE * maxf(0.5, display_scale)
 	overlay_frame = PanelContainer.new()
 	overlay_frame.name = "InScenePackOpening"
 	overlay_frame.set_anchors_preset(Control.PRESET_CENTER)
-	overlay_frame.offset_left = -680.0
-	overlay_frame.offset_top = -340.0
-	overlay_frame.offset_right = 680.0
-	overlay_frame.offset_bottom = 340.0
+	overlay_frame.offset_left = -display_size.x * 0.5
+	overlay_frame.offset_top = -display_size.y * 0.5
+	overlay_frame.offset_right = display_size.x * 0.5
+	overlay_frame.offset_bottom = display_size.y * 0.5
 	overlay_frame.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay_frame.add_theme_stylebox_override(
 		"panel",
@@ -124,24 +136,34 @@ func _add_shop_overlay_scene(shop_world: Control) -> Node:
 
 	var canvas := Control.new()
 	canvas.name = "PackOpeningSceneHost"
-	canvas.custom_minimum_size = SCENE_SIZE
+	canvas.custom_minimum_size = display_size
 	canvas.clip_contents = true
 	overlay_frame.add_child(canvas)
-	var root := PACK_OPENING_SCENE.instantiate()
+	var root := _instantiate_pack_scene()
 	root.name = "PackOpeningScene"
+	root.scale = Vector2.ONE * maxf(0.5, display_scale)
 	canvas.add_child(root)
 	return root
+
+
+func _display_scale(host) -> float:
+	var viewport_size: Vector2 = host.get_viewport_rect().size
+	var available := viewport_size - Vector2(24.0, 24.0)
+	return maxf(0.5, minf(1.0, minf(available.x / SCENE_SIZE.x, available.y / SCENE_SIZE.y)))
+
+
+func _instantiate_pack_scene() -> Node:
+	var packed_scene := load(PACK_OPENING_SCENE_PATH) as PackedScene
+	assert(packed_scene != null, "Unable to load pack opening scene: %s" % PACK_OPENING_SCENE_PATH)
+	return packed_scene.instantiate()
 
 
 func _cache_nodes(host) -> void:
 	pack_button = _find_node_by_name(scene_root, "PackButton") as Button
 	if pack_button != null:
-		pack_button.add_theme_stylebox_override("normal", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color.WHITE, Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
-		pack_button.add_theme_stylebox_override("hover", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#FFF5DA"), Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
-		pack_button.add_theme_stylebox_override("pressed", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#E4D5B6"), Vector4(18, 12, 18, 12), Vector4(14, 10, 14, 7)))
-		pack_button.add_theme_stylebox_override("disabled", SKETCH_UI.texture_style(SKETCH_UI.BUTTON_COMPACT_PRIMARY, Color("#B5AEA1"), Vector4(18, 12, 18, 12), Vector4(14, 8, 14, 9)))
+		host._style_button(pack_button, "action")
+		pack_button.flat = true
 		pack_button.add_theme_font_override("font", SKETCH_UI.display_font(0.72))
-		pack_button.add_theme_color_override("font_color", SKETCH_UI.INK)
 	reveal_all_button = _find_node_by_name(scene_root, "RevealAllButton") as Button
 	done_button = _find_node_by_name(scene_root, "DoneButton") as Button
 	for action_button in [reveal_all_button, done_button]:
@@ -264,6 +286,7 @@ func _on_pack_pressed(host) -> void:
 			_render(host)
 			return
 		host._set_footer(String(result.get("message", "")))
+		_refresh_shop_counter(host)
 		_open_pack_to_table(host)
 		return
 
@@ -273,8 +296,28 @@ func _on_pack_pressed(host) -> void:
 func _open_pack_to_table(host) -> void:
 	host.run.pack_opened = true
 	_render(host)
+	_play_pack_open_sound(host)
 	_animate_pack_open()
 	_animate_spread()
+
+
+func _play_pack_open_sound(host) -> void:
+	var player := AudioStreamPlayer.new()
+	player.name = "PackOpenSound"
+	var sound_path: String = PACK_OPEN_SOUND_PATHS[randi_range(0, PACK_OPEN_SOUND_PATHS.size() - 1)]
+	player.stream = load(sound_path) as AudioStream
+	player.bus = &"SFX"
+	player.volume_db = PACK_OPEN_VOLUME_DB
+	player.finished.connect(player.queue_free)
+	host.add_child(player)
+	player.play()
+
+
+func _refresh_shop_counter(host) -> void:
+	# The in-store pack overlay leaves the shop HUD visible, so reflect a paid
+	# pack purchase as soon as its wrapper is opened rather than after the reveal.
+	if overlay_shop_world != null and is_instance_valid(overlay_shop_world) and overlay_shop_world.has_method("update_shop_context"):
+		overlay_shop_world.call("update_shop_context", host._shop_overworld_context())
 
 
 func _on_card_slot_pressed(host, index: int) -> void:
@@ -348,10 +391,18 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 		card_back.name = "PackCardBack%d" % index
 		card_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card_back.set_anchors_preset(Control.PRESET_FULL_RECT)
-		card_back.texture = CARD_BACK
+		card_back.texture = load(CARD_BACK_PATH) as Texture2D
 		card_back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		card_back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		face.add_child(card_back)
+		var card_back_frame := TextureRect.new()
+		card_back_frame.name = "PackCardBackFrame%d" % index
+		card_back_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_back_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+		card_back_frame.texture = load(CARD_BACK_FRAME_PATH) as Texture2D
+		card_back_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		card_back_frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		face.add_child(card_back_frame)
 		return
 	if revealed and host._card_uses_authored_face(card):
 		var authored_face: Control = host._make_card_face(card, CARD_SLOT_SIZE, true)

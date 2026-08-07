@@ -2,13 +2,26 @@
 
 [ext_resource type="PackedScene" uid="uid://bhl64s4mwp825" path="res://assets/card_shop/Table.glb" id="1_g83f8"]
 [ext_resource type="Texture2D" uid="uid://dh0jjo7xgomou" path="res://assets/card_shop/PandaMat.png" id="2_xckcj"]
+[ext_resource type="Shader" path="res://assets/shaders/lofi_material_remap.gdshader" id="3_remap"]
+[ext_resource type="Shader" path="res://assets/shaders/lofi_outline.gdshader" id="4_outline"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_a4xnn"]
-shading_mode = 0
-albedo_texture = ExtResource("2_xckcj")
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_table_outline"]
+shader = ExtResource("4_outline")
+shader_parameter/outline_color = Color(0.161, 0.212, 0.373, 1)
+shader_parameter/outline_width = 0.032
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_table"]
+next_pass = SubResource("ShaderMaterial_table_outline")
+shader = ExtResource("3_remap")
+shader_parameter/source_texture = ExtResource("2_xckcj")
+shader_parameter/shadow_color = Color(0.40, 0.32, 0.50, 1)
+shader_parameter/mid_color = Color(0.95, 0.64, 0.75, 1)
+shader_parameter/highlight_color = Color(0.96, 0.80, 0.86, 1)
+shader_parameter/midpoint = 0.46
+shader_parameter/material_roughness = 0.92
 
 [node name="Table" unique_id=279500675 instance=ExtResource("1_g83f8")]
 
 [node name="Prop_Table_11" parent="." index="0" unique_id=1961603307]
-material_override = SubResource("StandardMaterial3D_a4xnn")
+material_override = SubResource("ShaderMaterial_table")
 gi_mode = 0
