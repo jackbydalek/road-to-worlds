@@ -143,6 +143,13 @@ func _run() -> void:
 		main.find_child("BuyPack", true, false) as Button,
 		main.find_child("Leave", true, false) as Button,
 	]
+	var pack_action := actions[1] as Button
+	_expect(
+		pack_action != null
+		and pack_action.text == "Open Pack - $5"
+		and not pack_action.disabled,
+		"The storefront pack action did not show its $5 price or was unavailable with the starting balance."
+	)
 	for button_value in actions:
 		var button := button_value as Button
 		_expect(

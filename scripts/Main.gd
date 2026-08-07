@@ -3254,9 +3254,14 @@ func _show_shop_overworld() -> void:
 
 func _shop_overworld_context() -> Dictionary:
 	var active: Dictionary = run.get("active_tournament", {})
+	var booster_price := 0
+	if boosters_by_id.has(BASE_BOOSTER_ID):
+		booster_price = int(boosters_by_id[BASE_BOOSTER_ID].get("price", 0))
 	return {
 		"money": int(run.get("money", 0)),
 		"prize_packs": int(run.get("prize_packs", 0)),
+		"booster_price": booster_price,
+		"pack_needs_attention": _current_pack_needs_attention(),
 		"event_name": String(_selected_season_event().get("name", "Weekly Locals")),
 		"difficulty_name": String(_difficulty_data(_run_difficulty_id()).get("name", "Black")),
 		"tournament_active": _season_tournament_active(),

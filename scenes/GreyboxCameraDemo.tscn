@@ -1053,7 +1053,7 @@ text = "Browse Singles"
 
 [node name="BuyPack" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1445308757]
 layout_mode = 2
-text = "Buy a Booster"
+text = "Open Pack - $5"
 
 [node name="Leave" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=551306247]
 layout_mode = 2
