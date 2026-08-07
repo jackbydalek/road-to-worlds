@@ -5578,14 +5578,15 @@ func _show_thanks_for_playing() -> void:
 	hero_copy.add_child(eyebrow)
 	var champion_title := Label.new()
 	champion_title.name = "FinaleChampionTitle"
-	champion_title.text = "THANKS FOR PLAYING!"
+	champion_title.text = "Thanks for Playing the Demo!"
 	champion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	champion_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
 	champion_title.add_theme_font_size_override("font_size", 50)
 	champion_title.add_theme_color_override("font_color", PALETTE.NAVY)
 	hero_copy.add_child(champion_title)
 	var hero_detail := Label.new()
-	hero_detail.text = "You made it through the demo season. Thanks for taking a seat at our card café!"
+	hero_detail.name = "FinaleHeroDetail"
+	hero_detail.text = "Hope you liked it! The fact that people are actually getting to the end of my demo is dope so thank you!"
 	hero_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hero_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
@@ -5650,28 +5651,21 @@ func _show_thanks_for_playing() -> void:
 	road_copy.add_theme_constant_override("separation", 4)
 	road_ahead.add_child(road_copy)
 	var road_heading := Label.new()
-	road_heading.text = "THE ROAD AHEAD"
+	road_heading.text = "The Road Ahead"
 	road_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	road_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.75))
 	road_heading.add_theme_font_size_override("font_size", 24)
 	road_heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	road_copy.add_child(road_heading)
 	var road_detail := Label.new()
-	road_detail.text = "More cards, tougher rivals, and new tournament stops are waiting beyond the demo."
+	road_detail.name = "FinaleRoadDetail"
+	road_detail.text = "Still working on getting multiple packs in and making the path all the way to worlds. Join the discord or comment your feedback to help make the game better!"
 	road_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	road_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	road_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
 	road_detail.add_theme_font_size_override("font_size", 15)
 	road_detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	road_copy.add_child(road_detail)
-	var summary := Label.new()
-	summary.name = "FinaleRunSummary"
-	summary.text = "Join the community and help shape what comes next."
-	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.28))
-	summary.add_theme_font_size_override("font_size", 14)
-	summary.add_theme_color_override("font_color", PALETTE.TEAL_DARK)
-	road_copy.add_child(summary)
 
 	var community_links := HBoxContainer.new()
 	community_links.name = "FinaleCommunityLinks"
@@ -5764,11 +5758,12 @@ func _add_finale_milestone(parent: Node, symbol: String, title: String, status: 
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(heading)
 	var detail := Label.new()
+	detail.name = "FinaleMilestoneStatus"
 	detail.text = status
 	detail.custom_minimum_size = Vector2(100, 0)
 	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.32))
-	detail.add_theme_font_size_override("font_size", 14)
+	detail.add_theme_font_size_override("font_size", 18)
 	detail.add_theme_color_override("font_color", accent.darkened(0.28))
 	detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(detail)

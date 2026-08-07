@@ -151,7 +151,23 @@ func _run() -> void:
 	)
 	main._show_thanks_for_playing()
 	await process_frame
-	_expect(main.find_child("FinaleChampionTitle", true, false) != null, "The finale is missing its champion hero.")
+	var finale_title := main.find_child("FinaleChampionTitle", true, false) as Label
+	var finale_hero_detail := main.find_child("FinaleHeroDetail", true, false) as Label
+	var finale_road_detail := main.find_child("FinaleRoadDetail", true, false) as Label
+	_expect(
+		finale_title != null and finale_title.text == "Thanks for Playing the Demo!",
+		"The finale is missing its personal demo thank-you title."
+	)
+	_expect(
+		finale_hero_detail != null
+		and finale_hero_detail.text == "Hope you liked it! The fact that people are actually getting to the end of my demo is dope so thank you!",
+		"The finale is missing its personal thank-you message."
+	)
+	_expect(
+		finale_road_detail != null
+		and finale_road_detail.text == "Still working on getting multiple packs in and making the path all the way to worlds. Join the discord or comment your feedback to help make the game better!",
+		"The finale is missing the updated Road Ahead message."
+	)
 	_expect(main.find_child("FinaleTeaser", true, false) != null, "The finale is missing its Road Ahead teaser.")
 	_expect(main.find_child("FinaleDeckButton", true, false) != null, "The finale cannot open the winning deck.")
 	_expect(main.find_child("ThanksMainMenuButton", true, false) != null, "The finale cannot return to the title.")
@@ -168,6 +184,16 @@ func _run() -> void:
 		finale_milestones != null and finale_milestones.columns == 2,
 		"The finale milestones were not consolidated into the two-column season scrapbook."
 	)
+	var milestone_statuses := main.find_children("FinaleMilestoneStatus", "Label", true, false)
+	var readable_milestone_statuses := milestone_statuses.size() == 4
+	for milestone_status_value in milestone_statuses:
+		var milestone_status := milestone_status_value as Label
+		readable_milestone_statuses = (
+			readable_milestone_statuses
+			and milestone_status != null
+			and milestone_status.get_theme_font_size("font_size") >= 18
+		)
+	_expect(readable_milestone_statuses, "The finale milestone values are too small to scan.")
 	var finale_teaser := main.find_child("FinaleTeaser", true, false) as PanelContainer
 	var finale_teaser_style := finale_teaser.get_theme_stylebox("panel") as StyleBoxFlat if finale_teaser != null else null
 	_expect(
