@@ -41,21 +41,17 @@ func _run() -> void:
 	if shop_world == null:
 		quit(1)
 		return
-	var storefront_logo := main.find_child("StorefrontLogo", true, false) as MeshInstance3D
-	var storefront_logo_material := storefront_logo.get_active_material(0) as StandardMaterial3D if storefront_logo != null else null
-	var storefront_logo_crop := storefront_logo_material.albedo_texture as AtlasTexture if storefront_logo_material != null else null
+	var cafe_sign_text := main.find_child("CafeSignText", true, false) as Label3D
 	_expect(
-		storefront_logo != null
-		and storefront_logo_crop != null
-		and storefront_logo_crop.atlas != null
-		and storefront_logo_crop.atlas.resource_path == "res://assets/logos/topdeck-to-worlds-storefront.png",
-		"The card store is not using the supplied Topdeck to Worlds logo."
+		main.find_child("StorefrontLogo", true, false) == null
+		and cafe_sign_text != null
+		and cafe_sign_text.text == "Coffee n' Cards",
+		"The card store did not preserve its separate Coffee n' Cards sign."
 	)
 	_expect(
-		main.find_child("CafeSignText", true, false) == null
-		and main.find_child("SignSparkleLeft", true, false) == null
-		and main.find_child("SignSparkleRight", true, false) == null,
-		"The old storefront sign text or its duplicate sparkle effects are still present."
+		main.find_child("CafeSignBack", true, false) is MeshInstance3D
+		and main.find_child("CafeSignFace", true, false) is MeshInstance3D,
+		"The Coffee n' Cards lettering is missing its physical café sign."
 	)
 	_expect(
 		int(shop_world.shop_view_render_counts.singles) == 0

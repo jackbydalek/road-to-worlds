@@ -23,6 +23,8 @@ func _run() -> void:
 	await process_frame
 
 	var sign := menu.get_node("ShopSign") as PanelContainer
+	var title_logo := menu.get_node("ShopSign/TitleLogo") as TextureRect
+	var title_logo_crop := title_logo.texture as AtlasTexture if title_logo != null else null
 	var start := menu.get_node("PosterLayer/GameStartButton") as Button
 	var how_to := menu.get_node("PosterLayer/TitleHowToPlayButton") as Button
 	var credits := menu.get_node("PosterLayer/CreditsPosterButton") as Button
@@ -33,6 +35,12 @@ func _run() -> void:
 	var credits_style := credits.get_theme_stylebox("normal") as StyleBoxFlat
 
 	_expect(sign_style.bg_color.is_equal_approx(Color(NAVY, 0.97)), "The title sign retained its brown café backing.")
+	_expect(
+		title_logo_crop != null
+		and title_logo_crop.atlas != null
+		and title_logo_crop.atlas.resource_path == "res://assets/logos/topdeck-to-worlds-storefront.png",
+		"The supplied Topdeck to Worlds logo was not confined to the main-menu sign."
+	)
 	_expect(start_style.bg_color.is_equal_approx(Color(CORAL, 0.98)) and start_style.border_color.is_equal_approx(NAVY), "Start Game did not use the coral-and-navy direction.")
 	_expect(how_to_style.bg_color.is_equal_approx(Color(LAVENDER_GLASS, 0.98)) and how_to_style.border_color.is_equal_approx(PERIWINKLE), "How to Play did not use the lavender-and-periwinkle direction.")
 	_expect(credits_style.bg_color.is_equal_approx(Color(BLUSH, 0.96)) and credits_style.border_color.is_equal_approx(NAVY), "Credits did not use the blush-and-navy direction.")

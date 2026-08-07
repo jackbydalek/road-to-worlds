@@ -4,7 +4,12 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/components/StorefrontBackdrop.tscn" id="2_storefront"]
 [ext_resource type="FontFile" uid="uid://dnbvqa12yomhk" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="3_display"]
 [ext_resource type="FontFile" uid="uid://de6offqn05r66" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
-[ext_resource type="Texture2D" uid="uid://ca4gssd1b28wh" path="res://assets/logos/topdeck-to-worlds-pastel.png" id="5_temp_logo"]
+[ext_resource type="Texture2D" path="res://assets/logos/topdeck-to-worlds-storefront.png" id="5_title_logo"]
+
+[sub_resource type="AtlasTexture" id="Texture_title_logo_crop"]
+atlas = ExtResource("5_title_logo")
+region = Rect2(0, 180, 2160, 1100)
+filter_clip = true
 
 [sub_resource type="StyleBoxFlat" id="Style_sign"]
 bg_color = Color(0.160784, 0.211765, 0.372549, 0.97)
@@ -187,7 +192,7 @@ theme_override_styles/panel = SubResource("Style_sign")
 [node name="TitleLogo" type="TextureRect" parent="ShopSign" unique_id=1392392393]
 modulate = Color(1, 1, 1, 1)
 layout_mode = 2
-texture = ExtResource("5_temp_logo")
+texture = SubResource("Texture_title_logo_crop")
 expand_mode = 1
 stretch_mode = 5
 
