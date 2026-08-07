@@ -49,7 +49,7 @@ func _test_canonical_subset() -> void:
 	]
 	for card_id in removed_prototype_ids:
 		_expect(service.card(card_id).is_empty(), "Removed prototype card %s is still registered." % card_id)
-	_expect(service.card("fresh_harvest_hydra").get("recipe", []) == ["fresh", "any"] and String(service.card("fresh_harvest_hydra").get("required_meal_archetype", "")) == "fresh", "Harvest Hydra lost its canonical Ingredient recipe or Fresh Meal sacrifice.")
+	_expect(service.card("fresh_harvest_hydra").get("recipe", []) == ["fresh", "fresh", "any"] and String(service.card("fresh_harvest_hydra").get("required_meal_archetype", "")) == "", "Harvest Hydra did not require two Fresh Ingredients plus any Ingredient.")
 	_expect(service.card("fresh_saladmander").get("recipe", []) == ["fresh"], "Saladmander lost its one-Fresh recipe.")
 
 

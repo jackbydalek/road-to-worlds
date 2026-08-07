@@ -172,7 +172,7 @@ func _run() -> void:
 	var required_meal_face := CARD_FACE_SCRIPT.new()
 	required_meal_face.configure(catalog.cards_by_id.fresh_harvest_hydra, "black", false)
 	var required_meal_requirements := required_meal_face.find_child("CardRequirements", true, false) as Label
-	_expect(required_meal_requirements != null and required_meal_requirements.text == "🍋‍🟩 Meal + 🍋‍🟩 + *", "Harvest Hydra's Fresh Meal sacrifice was not included in its recipe line.")
+	_expect(required_meal_requirements != null and required_meal_requirements.text == "2× 🍋‍🟩 + *", "Harvest Hydra's two-Fresh-plus-any recipe was not displayed correctly.")
 	mixed_recipe_face.free()
 	required_meal_face.free()
 

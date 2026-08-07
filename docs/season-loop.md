@@ -54,6 +54,6 @@ Finishing or forfeiting the match produces a tournament result. After a win, eit
 
 Every completed round pays cash immediately, beginning at $2 in round one and increasing by $1 each round. That money is available during between-round store visits. This escalating round income is separate from the money and prize packs awarded for clearing the full event.
 
-Black and Blue begin with the standard $20. Yellow's economy modifier, inherited by Silver and Gold, sets the opening balance to $5. Difficulty does not reduce the cash subsequently earned from rounds or event rewards.
+Black and Blue begin with $8. Yellow's economy modifier, inherited by Silver and Gold, sets the opening balance to $5. Difficulty does not reduce the cash subsequently earned from rounds or event rewards.
 
 Debug tournaments use the same deck quality, opponent, matchup, record, economy, and reward systems but may resolve quickly without playing each match.

@@ -63,11 +63,12 @@ func _run() -> void:
 	_expect(main.current_screen == "season_setup", "New Game did not open season setup.")
 	var reduced_money: int = main.run_state_service.starting_money_for_difficulty("yellow")
 	_expect(
-		main.run_state_service.starting_money_for_difficulty("blue") == main.run_state_service.starting_money
+		main.run_state_service.starting_money_for_difficulty("white") == 8
+		and main.run_state_service.starting_money_for_difficulty("blue") == 8
 		and reduced_money == 5
 		and main.run_state_service.starting_money_for_difficulty("silver") == reduced_money
 		and main.run_state_service.starting_money_for_difficulty("gold") == reduced_money,
-		"Yellow's $5 starting-money modifier did not carry into Silver and Gold."
+		"Black and Blue did not start at $8, or the $5 modifier did not carry through Yellow, Silver, and Gold."
 	)
 	_expect(
 		main.run_state_service.starting_lives_for_difficulty("blue") == 3
