@@ -24,9 +24,6 @@ const HOVER_DELAY_SECONDS := 0.38
 var scene_root: Node
 var status_label: Label
 var pack_button: Button
-var pack_stage: Panel
-var pack_action_badge: PanelContainer
-var pack_action_label: Label
 var reveal_all_button: Button
 var done_button: Button
 var card_fan: Control
@@ -163,9 +160,6 @@ func _instantiate_pack_scene() -> Node:
 
 func _cache_nodes(host) -> void:
 	pack_button = _find_node_by_name(scene_root, "PackButton") as Button
-	pack_stage = _find_node_by_name(scene_root, "PackStage") as Panel
-	pack_action_badge = _find_node_by_name(scene_root, "PackActionBadge") as PanelContainer
-	pack_action_label = _find_node_by_name(scene_root, "PackActionLabel") as Label
 	if pack_button != null:
 		host._style_button(pack_button, "action")
 		pack_button.flat = true
@@ -188,9 +182,6 @@ func _cache_nodes(host) -> void:
 	status_label.add_theme_font_override("font", SKETCH_UI.body_font(0.1))
 	status_label.add_theme_color_override("font_color", SKETCH_UI.INK)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if pack_action_label != null:
-		pack_action_label.add_theme_font_override("font", SKETCH_UI.display_font(0.76))
-		pack_action_label.add_theme_color_override("font_color", Color("#29365F"))
 
 	card_slots = []
 	for index in range(8):
@@ -242,12 +233,6 @@ func _render(host) -> void:
 			pack_button.modulate.a = 1.0
 			pack_button.scale = Vector2.ONE
 			pack_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	if pack_stage != null:
-		pack_stage.visible = pack.is_empty() or not opened
-	if pack_action_badge != null:
-		pack_action_badge.visible = pack_button != null and pack_button.visible
-	if pack_action_label != null:
-		pack_action_label.text = _pack_action_copy(host, pack, pack_action)
 
 	if reveal_all_button != null:
 		reveal_all_button.visible = opened and not complete
@@ -661,19 +646,6 @@ func _pack_action(host) -> String:
 	if int(host.run.get("money", 0)) >= _booster_price(host):
 		return "buy"
 	return "blocked"
-
-
-func _pack_action_copy(host, pack: Array, action: String) -> String:
-	if not pack.is_empty():
-		if String(host.run.get("current_pack_source", "booster")) == "prize":
-			return "OPEN PRIZE PACK"
-		return "OPEN BOOSTER — $%d" % _booster_price(host)
-	match action:
-		"prize":
-			return "OPEN PRIZE PACK"
-		"buy", "blocked":
-			return "OPEN BOOSTER — $%d" % _booster_price(host)
-	return "OPEN BOOSTER"
 
 
 func _revealed_count(pack: Array) -> int:
