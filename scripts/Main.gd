@@ -31,6 +31,8 @@ const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
 const ARCHETYPE_ORDER := ["spicy", "hearty", "sweet", "fresh"]
 const PACK_AFFINITY_ORDER := ["spicy", "hearty", "sweet", "fresh", "funky"]
+const SET_LIST_AFFINITY_ORDER := ["spicy", "hearty", "sweet", "fresh", "funky", "neutral"]
+const SET_LIST_CARD_TYPE_ORDER := ["ingredient", "meal", "chef", "tool", "environment", "spice"]
 const DRAFT_NIGHT_ID := "draft_night"
 const DEMO_STARTER_ORDER := ["spicy", "hearty", "sweet", DRAFT_NIGHT_ID]
 const DIFFICULTY_ORDER := ["white", "blue", "yellow", "silver", "gold"]
@@ -3362,6 +3364,32 @@ func _shop_overworld_set_entries() -> Array:
 		if expansion_cards.is_empty():
 			continue
 		expansion_cards.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var a_affinity := String(a.get("affinity", "neutral"))
+			var b_affinity := String(b.get("affinity", "neutral"))
+			var a_affinity_rank := SET_LIST_AFFINITY_ORDER.find(a_affinity)
+			var b_affinity_rank := SET_LIST_AFFINITY_ORDER.find(b_affinity)
+			if a_affinity_rank < 0:
+				a_affinity_rank = SET_LIST_AFFINITY_ORDER.size()
+			if b_affinity_rank < 0:
+				b_affinity_rank = SET_LIST_AFFINITY_ORDER.size()
+			if a_affinity_rank != b_affinity_rank:
+				return a_affinity_rank < b_affinity_rank
+			if a_affinity != b_affinity:
+				return a_affinity.naturalnocasecmp_to(b_affinity) < 0
+
+			var a_type := String(a.get("card_type", "card"))
+			var b_type := String(b.get("card_type", "card"))
+			var a_type_rank := SET_LIST_CARD_TYPE_ORDER.find(a_type)
+			var b_type_rank := SET_LIST_CARD_TYPE_ORDER.find(b_type)
+			if a_type_rank < 0:
+				a_type_rank = SET_LIST_CARD_TYPE_ORDER.size()
+			if b_type_rank < 0:
+				b_type_rank = SET_LIST_CARD_TYPE_ORDER.size()
+			if a_type_rank != b_type_rank:
+				return a_type_rank < b_type_rank
+			if a_type != b_type:
+				return a_type.naturalnocasecmp_to(b_type) < 0
+
 			var name_order := String(a.get("sort_name", a.get("name", ""))).naturalnocasecmp_to(
 				String(b.get("sort_name", b.get("name", "")))
 			)

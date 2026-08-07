@@ -169,10 +169,7 @@ func _run() -> void:
 	_expect(catalog_set_entries.size() == 1, "The current catalog was not grouped into one published expansion.")
 	if not catalog_set_entries.is_empty():
 		var sorted_cards: Array = (catalog_set_entries[0] as Dictionary).get("cards", [])
-		for index in range(1, sorted_cards.size()):
-			var previous_name := String((sorted_cards[index - 1] as Dictionary).get("sort_name", ""))
-			var current_name := String((sorted_cards[index] as Dictionary).get("sort_name", ""))
-			_expect(previous_name.naturalnocasecmp_to(current_name) <= 0, "The Core Set card list was not alphabetized.")
+		_expect(_set_list_cards_are_ordered(main, sorted_cards), "The Core Set was not sorted by affiliation, card type, then name.")
 	var future_expansion := {"id": "second_course", "name": "Second Course", "code": "RTW2", "release_order": 1}
 	var future_card: Dictionary = (main.cards[0] as Dictionary).duplicate(true)
 	future_card["id"] = "future_set_test_card"
@@ -207,7 +204,10 @@ func _run() -> void:
 	var set_list_panel := main.find_child("InSceneSetList", true, false) as PanelContainer
 	var core_section := main.find_child("InSceneSetSection_core", true, false) as VBoxContainer
 	var core_heading := main.find_child("InSceneSetHeading_core", true, false) as Label
-	var core_grid := main.find_child("InSceneSetGrid_core", true, false) as GridContainer
+	var core_grids := core_section.find_children("InSceneSetGrid_core_*", "GridContainer", true, false) if core_section != null else []
+	var spicy_affinity := main.find_child("InSceneSetAffinity_core_spicy", true, false) as VBoxContainer
+	var spicy_ingredients := main.find_child("InSceneSetType_core_spicy_ingredient", true, false) as Label
+	var neutral_chefs := main.find_child("InSceneSetType_core_neutral_chef", true, false) as Label
 	var set_list_back := main.find_child("InSceneSetListBack", true, false) as Button
 	var set_list_rows := main.find_children("InSceneSetListCard_*", "PanelContainer", true, false)
 	var set_list_faces := main.find_children("InSceneSetListCardFace_*", "Control", true, false)
@@ -229,10 +229,16 @@ func _run() -> void:
 		"The visual card grid pushed the set-list navigation outside its panel."
 	)
 	_expect(
-		core_grid != null
-		and core_grid.columns == 6
+		not core_grids.is_empty()
+		and core_grids.all(func(grid_value) -> bool: return (grid_value as GridContainer).columns == 6)
 		and set_list_faces.size() == main.cards.size(),
-		"The set list did not render the complete Core Set as a six-column visual card grid."
+		"The set list did not render the complete Core Set as six-column visual card grids."
+	)
+	_expect(
+		spicy_affinity != null
+		and spicy_ingredients != null
+		and neutral_chefs != null,
+		"The set list did not expose affiliation groups with card-type subsections."
 	)
 	if not set_list_faces.is_empty():
 		_expect(
@@ -258,7 +264,11 @@ func _run() -> void:
 		and compact_set_list_rect.end.y <= 540.0,
 		"The set list did not fit the compact supported storefront size: %s (minimum %s)." % [compact_set_list_rect, set_list_panel.get_combined_minimum_size()]
 	)
-	_expect(core_grid != null and core_grid.columns == 5, "The visual set list did not reflow to five columns at the compact size.")
+	_expect(
+		not core_grids.is_empty()
+		and core_grids.all(func(grid_value) -> bool: return (grid_value as GridContainer).columns == 5),
+		"The visual set list did not reflow its card-type grids to five columns at the compact size."
+	)
 	shop_world.call("_layout_set_list_panel")
 	shop_world.call("_return_to_shopkeeper_menu")
 	await process_frame
@@ -325,6 +335,32 @@ func _run() -> void:
 		return
 	print("Storefront menu smoke test passed.")
 	quit()
+
+
+func _set_list_cards_are_ordered(main, cards: Array) -> bool:
+	var previous_key := ""
+	for card_value in cards:
+		var card: Dictionary = card_value
+		var affinity := String(card.get("affinity", "neutral"))
+		var card_type := String(card.get("card_type", "card"))
+		var affinity_rank: int = main.SET_LIST_AFFINITY_ORDER.find(affinity)
+		var type_rank: int = main.SET_LIST_CARD_TYPE_ORDER.find(card_type)
+		if affinity_rank < 0:
+			affinity_rank = main.SET_LIST_AFFINITY_ORDER.size()
+		if type_rank < 0:
+			type_rank = main.SET_LIST_CARD_TYPE_ORDER.size()
+		var key := "%03d|%s|%03d|%s|%s|%s" % [
+			affinity_rank,
+			affinity,
+			type_rank,
+			card_type,
+			String(card.get("sort_name", card.get("name", ""))).to_lower(),
+			String(card.get("id", "")),
+		]
+		if not previous_key.is_empty() and previous_key.naturalnocasecmp_to(key) > 0:
+			return false
+		previous_key = key
+	return true
 
 
 func _find_label(root_node: Node, text: String) -> Label:

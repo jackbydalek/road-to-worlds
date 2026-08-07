@@ -1128,7 +1128,7 @@ func _render_set_list() -> void:
 	for set_entry_value in set_entries:
 		total_cards += (set_entry_value as Dictionary).get("cards", []).size()
 	set_list_status_label.text = "%d CARD%s" % [total_cards, "" if total_cards == 1 else "S"]
-	set_list_message_label.text = "Every released card, grouped by expansion. Hover a card to inspect it."
+	set_list_message_label.text = "Grouped by expansion, then affiliation, then card type. Hover a card to inspect it."
 
 	if set_entries.is_empty():
 		var empty := Label.new()
@@ -1172,17 +1172,105 @@ func _render_set_list() -> void:
 		section_label.add_theme_color_override("font_color", PALETTE.NAVY)
 		section_header.add_child(section_label)
 
-		var card_grid := GridContainer.new()
-		card_grid.name = "InSceneSetGrid_%s" % expansion_id
-		card_grid.columns = _set_list_column_count(get_viewport_rect().size.x)
-		card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card_grid.add_theme_constant_override("h_separation", 8)
-		card_grid.add_theme_constant_override("v_separation", 10)
-		section.add_child(card_grid)
-		set_list_grids.append(card_grid)
-
+		var affinity_counts := {}
 		for card_entry_value in expansion_cards:
-			_add_set_list_card_tile(card_grid, card_entry_value, expansion_id)
+			var card_entry: Dictionary = card_entry_value
+			var affinity := String(card_entry.get("affinity", "neutral"))
+			affinity_counts[affinity] = int(affinity_counts.get(affinity, 0)) + 1
+
+		var current_affinity := ""
+		var current_card_type := ""
+		var affinity_body: VBoxContainer
+		var card_grid: GridContainer
+		for card_entry_value in expansion_cards:
+			var card_entry: Dictionary = card_entry_value
+			var affinity := String(card_entry.get("affinity", "neutral"))
+			var card_type := String(card_entry.get("card_type", "card"))
+			if affinity != current_affinity:
+				current_affinity = affinity
+				current_card_type = ""
+				affinity_body = _add_set_list_affinity_group(
+					section,
+					expansion_id,
+					affinity,
+					int(affinity_counts.get(affinity, 0))
+				)
+			if card_type != current_card_type:
+				current_card_type = card_type
+				card_grid = _add_set_list_type_grid(affinity_body, expansion_id, affinity, card_type)
+			_add_set_list_card_tile(card_grid, card_entry, expansion_id)
+
+
+func _add_set_list_affinity_group(
+	parent: VBoxContainer,
+	expansion_id: String,
+	affinity: String,
+	card_count: int
+) -> VBoxContainer:
+	var group := VBoxContainer.new()
+	group.name = "InSceneSetAffinity_%s_%s" % [expansion_id, affinity]
+	group.set_meta("affinity", affinity)
+	group.add_theme_constant_override("separation", 7)
+	parent.add_child(group)
+
+	var accent := _set_list_affinity_color(affinity)
+	var header := PanelContainer.new()
+	header.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			PALETTE.CREAM.lerp(accent, 0.16),
+			accent.darkened(0.18),
+			2,
+			9,
+			Vector4(12, 7, 12, 7)
+		)
+	)
+	group.add_child(header)
+	var label := Label.new()
+	label.name = "InSceneSetAffinityHeading_%s_%s" % [expansion_id, affinity]
+	label.text = "%s  •  %d card%s" % [affinity.capitalize(), card_count, "" if card_count == 1 else "s"]
+	label.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_color_override("font_color", PALETTE.NAVY)
+	header.add_child(label)
+	return group
+
+
+func _add_set_list_type_grid(
+	parent: VBoxContainer,
+	expansion_id: String,
+	affinity: String,
+	card_type: String
+) -> GridContainer:
+	var type_label := Label.new()
+	type_label.name = "InSceneSetType_%s_%s_%s" % [expansion_id, affinity, card_type]
+	type_label.text = card_type.capitalize().to_upper()
+	type_label.add_theme_font_override("font", SKETCH_UI.body_font(0.46))
+	type_label.add_theme_font_size_override("font_size", 13)
+	type_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	parent.add_child(type_label)
+
+	var grid := GridContainer.new()
+	grid.name = "InSceneSetGrid_%s_%s_%s" % [expansion_id, affinity, card_type]
+	grid.set_meta("affinity", affinity)
+	grid.set_meta("card_type", card_type)
+	grid.columns = _set_list_column_count(get_viewport_rect().size.x)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 10)
+	parent.add_child(grid)
+	set_list_grids.append(grid)
+	return grid
+
+
+func _set_list_affinity_color(affinity: String) -> Color:
+	match affinity:
+		"spicy": return Color("#C96C60")
+		"hearty": return PALETTE.SAGE
+		"sweet": return Color("#8299D0")
+		"fresh": return PALETTE.FRESH_YELLOW
+		"funky": return PALETTE.FUNKY_PLUM
+		_: return PALETTE.LAVENDER
 
 
 func _add_set_list_card_tile(parent: GridContainer, card_entry_value: Variant, expansion_id: String) -> void:
