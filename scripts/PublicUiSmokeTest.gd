@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const TEST_SETTINGS_PATH := "user://topdeck_to_worlds_public_ui_settings_test"
 const SETTINGS_PREVIEW_PATH := "/tmp/topdeck-to-worlds-settings.png"
 
@@ -154,11 +155,35 @@ func _run() -> void:
 	_expect(main.find_child("FinaleTeaser", true, false) != null, "The finale is missing its Road Ahead teaser.")
 	_expect(main.find_child("FinaleDeckButton", true, false) != null, "The finale cannot open the winning deck.")
 	_expect(main.find_child("ThanksMainMenuButton", true, false) != null, "The finale cannot return to the title.")
+	var finale_hero := main.find_child("FinaleHero", true, false) as PanelContainer
+	var finale_hero_style := finale_hero.get_theme_stylebox("panel") as StyleBoxFlat if finale_hero != null else null
+	_expect(
+		finale_hero_style != null
+		and finale_hero_style.border_color.is_equal_approx(PALETTE.NAVY)
+		and finale_hero_style.corner_radius_top_left >= 16,
+		"The finale hero does not use the rounded navy cafe-card treatment."
+	)
+	var finale_milestones := main.find_child("FinaleAchievementList", true, false) as GridContainer
+	_expect(
+		finale_milestones != null and finale_milestones.columns == 2,
+		"The finale milestones were not consolidated into the two-column season scrapbook."
+	)
+	var finale_teaser := main.find_child("FinaleTeaser", true, false) as PanelContainer
+	var finale_teaser_style := finale_teaser.get_theme_stylebox("panel") as StyleBoxFlat if finale_teaser != null else null
+	_expect(
+		finale_teaser_style != null
+		and finale_teaser_style.border_color.is_equal_approx(PALETTE.PERIWINKLE)
+		and finale_teaser_style.corner_radius_top_left >= 12,
+		"The finale Road Ahead panel does not use the lavender/periwinkle cafe treatment."
+	)
 	var discord_button := main.find_child("FinaleDiscordButton", true, false) as Button
+	var discord_style := discord_button.get_theme_stylebox("normal") as StyleBoxFlat if discord_button != null else null
 	_expect(
 		discord_button != null
 		and not discord_button.disabled
 		and discord_button.text == "Join the Discord"
+		and discord_style != null
+		and discord_style.bg_color.is_equal_approx(PALETTE.CORAL)
 		and main.DISCORD_INVITE_URL == "https://discord.gg/EK6AmYgnPZ",
 		"The finale does not expose the configured public Discord invite."
 	)

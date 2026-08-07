@@ -5547,110 +5547,131 @@ func _show_thanks_for_playing() -> void:
 	var finale := VBoxContainer.new()
 	finale.name = "SeasonFinale"
 	finale.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	finale.add_theme_constant_override("separation", 12)
+	finale.add_theme_constant_override("separation", 11)
 	content.add_child(finale)
 
-	var hero := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 218),
-		Color("#FFFEFA"),
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.MUSTARD,
-		Vector4(56, 34, 56, 38),
-		1
-	)
+	var hero := PanelContainer.new()
 	hero.name = "FinaleHero"
+	hero.custom_minimum_size = Vector2(0, 184)
+	hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hero.add_theme_stylebox_override(
+		"panel",
+		_finale_panel_style(
+			Color(PALETTE.CREAM, 0.97),
+			PALETTE.NAVY,
+			20,
+			Vector4(42, 24, 42, 26),
+			0.18
+		)
+	)
 	finale.add_child(hero)
 	var hero_copy := VBoxContainer.new()
 	hero_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	hero_copy.add_theme_constant_override("separation", 3)
+	hero_copy.add_theme_constant_override("separation", 5)
 	hero.add_child(hero_copy)
 	var eyebrow := Label.new()
-	eyebrow.text = "DEMO COMPLETE"
+	eyebrow.text = "DEMO COMPLETE  •  SEASON SCRAPBOOK"
 	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.5))
-	eyebrow.add_theme_font_size_override("font_size", 17)
-	eyebrow.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
+	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.46))
+	eyebrow.add_theme_font_size_override("font_size", 16)
+	eyebrow.add_theme_color_override("font_color", PALETTE.TEAL_DARK)
 	hero_copy.add_child(eyebrow)
 	var champion_title := Label.new()
 	champion_title.name = "FinaleChampionTitle"
-	champion_title.text = "THANKS FOR PLAYING"
+	champion_title.text = "THANKS FOR PLAYING!"
 	champion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	champion_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.94))
-	champion_title.add_theme_font_size_override("font_size", 56)
-	champion_title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	champion_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
+	champion_title.add_theme_font_size_override("font_size", 50)
+	champion_title.add_theme_color_override("font_color", PALETTE.NAVY)
 	hero_copy.add_child(champion_title)
 	var hero_detail := Label.new()
-	hero_detail.text = "Thanks for finishing the demo — it means the world to me! Join the Discord to share feedback and follow what comes next."
+	hero_detail.text = "You made it through the demo season. Thanks for taking a seat at our card café!"
 	hero_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hero_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
 	hero_detail.add_theme_font_size_override("font_size", 16)
-	hero_detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+	hero_detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	hero_copy.add_child(hero_detail)
+	var hero_accent := ColorRect.new()
+	hero_accent.custom_minimum_size = Vector2(180, 5)
+	hero_accent.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hero_accent.color = PALETTE.CORAL
+	hero_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_copy.add_child(hero_accent)
 
 	var achievement_heading := Label.new()
-	achievement_heading.text = "YOUR ROAD SO FAR"
+	achievement_heading.text = "YOUR SEASON AT A GLANCE"
+	achievement_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	achievement_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
 	achievement_heading.add_theme_font_size_override("font_size", 19)
-	achievement_heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	achievement_heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	finale.add_child(achievement_heading)
 
-	var achievement_list := VBoxContainer.new()
+	var achievement_list := GridContainer.new()
 	achievement_list.name = "FinaleAchievementList"
-	achievement_list.add_theme_constant_override("separation", 5)
+	achievement_list.columns = 2
+	achievement_list.add_theme_constant_override("h_separation", 10)
+	achievement_list.add_theme_constant_override("v_separation", 10)
 	finale.add_child(achievement_list)
-	_add_finale_milestone(achievement_list, "✓", "WEEKLY LOCALS", "Cleared", SKETCH_UI_SCRIPT.TEAL)
-	_add_finale_milestone(achievement_list, "★", "LEAGUE CUP", "Champion", SKETCH_UI_SCRIPT.MUSTARD)
+	_add_finale_milestone(achievement_list, "✓", "WEEKLY LOCALS", "Cleared", PALETTE.TEAL)
+	_add_finale_milestone(achievement_list, "★", "LEAGUE CUP", "Champion", PALETTE.FRESH_YELLOW)
 	_add_finale_milestone(
 		achievement_list,
 		"▣",
 		"WINNING DECK",
 		"%d cards" % _deck_total(run.get("deck", {})),
-		SKETCH_UI_SCRIPT.TEAL
+		PALETTE.PERIWINKLE
 	)
 	_add_finale_milestone(
 		achievement_list,
 		"$",
 		"FINAL EARNINGS",
 		"$%d" % int(run.get("money", 0)),
-		SKETCH_UI_SCRIPT.ORANGE
+		PALETTE.CORAL
 	)
 
-	var road_ahead := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 94),
-		Color("#FFF8E9"),
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.MUSTARD,
-		Vector4(34, 20, 34, 22),
-		0
-	)
+	var road_ahead := PanelContainer.new()
 	road_ahead.name = "FinaleTeaser"
+	road_ahead.custom_minimum_size = Vector2(0, 112)
+	road_ahead.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	road_ahead.add_theme_stylebox_override(
+		"panel",
+		_finale_panel_style(
+			Color(PALETTE.LAVENDER_GLASS, 0.92),
+			PALETTE.PERIWINKLE,
+			16,
+			Vector4(30, 16, 30, 18),
+			0.14
+		)
+	)
 	finale.add_child(road_ahead)
 	var road_copy := VBoxContainer.new()
-	road_copy.add_theme_constant_override("separation", 5)
+	road_copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	road_copy.add_theme_constant_override("separation", 4)
 	road_ahead.add_child(road_copy)
 	var road_heading := Label.new()
 	road_heading.text = "THE ROAD AHEAD"
 	road_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	road_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
-	road_heading.add_theme_font_size_override("font_size", 25)
-	road_heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	road_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.75))
+	road_heading.add_theme_font_size_override("font_size", 24)
+	road_heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	road_copy.add_child(road_heading)
 	var road_detail := Label.new()
-	road_detail.text = "Adding more cards, finishing the gameplay loop, and improving the presentation!"
+	road_detail.text = "More cards, tougher rivals, and new tournament stops are waiting beyond the demo."
 	road_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	road_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	road_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
 	road_detail.add_theme_font_size_override("font_size", 15)
-	road_detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+	road_detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	road_copy.add_child(road_detail)
 	var summary := Label.new()
 	summary.name = "FinaleRunSummary"
-	summary.text = "Thanks for playing the demo and for helping shape what comes next!"
+	summary.text = "Join the community and help shape what comes next."
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.24))
-	summary.add_theme_font_size_override("font_size", 16)
-	summary.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	finale.add_child(summary)
+	summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.28))
+	summary.add_theme_font_size_override("font_size", 14)
+	summary.add_theme_color_override("font_color", PALETTE.TEAL_DARK)
+	road_copy.add_child(summary)
 
 	var community_links := HBoxContainer.new()
 	community_links.name = "FinaleCommunityLinks"
@@ -5660,15 +5681,16 @@ func _show_thanks_for_playing() -> void:
 		var steam_button := _make_button("Wishlist on Steam")
 		steam_button.name = "FinaleSteamWishlistButton"
 		steam_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		steam_button.custom_minimum_size.y = 40
+		steam_button.custom_minimum_size.y = 46
+		_style_season_result_button(steam_button, false)
 		_connect_pressed(steam_button, func() -> void: OS.shell_open(STEAM_STORE_URL))
 		community_links.add_child(steam_button)
 	if not DISCORD_INVITE_URL.is_empty():
 		var discord_button := _make_button("Join the Discord")
 		discord_button.name = "FinaleDiscordButton"
 		discord_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		discord_button.custom_minimum_size.y = 40
-		_style_button(discord_button, "action")
+		discord_button.custom_minimum_size.y = 46
+		_style_season_result_button(discord_button, true)
 		_connect_pressed(discord_button, func() -> void: OS.shell_open(DISCORD_INVITE_URL))
 		community_links.add_child(discord_button)
 
@@ -5679,12 +5701,15 @@ func _show_thanks_for_playing() -> void:
 	var deck_button := _make_button("Review Winning Deck")
 	deck_button.name = "FinaleDeckButton"
 	deck_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deck_button.custom_minimum_size.y = 46
+	_style_season_result_button(deck_button, false)
 	_connect_pressed(deck_button, _show_deckbuilder)
 	actions.add_child(deck_button)
 	var title_button := _make_button("Return to Main Menu")
 	title_button.name = "ThanksMainMenuButton"
 	title_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(title_button, "target")
+	title_button.custom_minimum_size.y = 46
+	_style_season_result_button(title_button, false)
 	_connect_pressed(title_button, _show_start)
 	actions.add_child(title_button)
 
@@ -5697,37 +5722,80 @@ func _show_thanks_for_playing() -> void:
 
 
 func _add_finale_milestone(parent: Node, symbol: String, title: String, status: String, accent: Color) -> void:
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 50),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		accent,
-		Vector4(22, 8, 22, 9),
-		parent.get_child_count() % 2
-	)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 78)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override(
+		"panel",
+		_finale_panel_style(
+			PALETTE.CREAM.lerp(accent, 0.10),
+			PALETTE.NAVY,
+			15,
+			Vector4(18, 12, 18, 12),
+			0.12
+		)
+	)
 	parent.add_child(panel)
 	var copy := HBoxContainer.new()
 	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	copy.add_theme_constant_override("separation", 16)
+	copy.add_theme_constant_override("separation", 12)
 	panel.add_child(copy)
+	var symbol_badge := PanelContainer.new()
+	symbol_badge.custom_minimum_size = Vector2(44, 44)
+	symbol_badge.add_theme_stylebox_override(
+		"panel",
+		_finale_panel_style(Color(accent, 0.22), accent, 12, Vector4(8, 6, 8, 6), 0.0)
+	)
+	copy.add_child(symbol_badge)
+	var symbol_label := Label.new()
+	symbol_label.text = symbol
+	symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	symbol_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	symbol_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
+	symbol_label.add_theme_font_size_override("font_size", 23)
+	symbol_label.add_theme_color_override("font_color", PALETTE.NAVY)
+	symbol_badge.add_child(symbol_label)
 	var heading := Label.new()
-	heading.text = "%s  %s" % [symbol, title]
+	heading.text = title
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
-	heading.add_theme_font_size_override("font_size", 21)
-	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
+	heading.add_theme_font_size_override("font_size", 19)
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(heading)
 	var detail := Label.new()
 	detail.text = status
-	detail.custom_minimum_size = Vector2(180, 0)
+	detail.custom_minimum_size = Vector2(100, 0)
 	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.32))
 	detail.add_theme_font_size_override("font_size", 14)
-	detail.add_theme_color_override("font_color", accent.darkened(0.2))
+	detail.add_theme_color_override("font_color", accent.darkened(0.28))
 	detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(detail)
+
+
+func _finale_panel_style(
+	fill: Color,
+	border: Color,
+	radius: int,
+	margins: Vector4,
+	shadow_strength: float
+) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(radius)
+	style.content_margin_left = margins.x
+	style.content_margin_top = margins.y
+	style.content_margin_right = margins.z
+	style.content_margin_bottom = margins.w
+	style.anti_aliasing = true
+	if shadow_strength > 0.0:
+		style.shadow_color = Color(PALETTE.NAVY, shadow_strength)
+		style.shadow_size = 6
+		style.shadow_offset = Vector2(0, 3)
+	return style
 
 
 func _add_finale_teaser(parent: Node, title: String, detail: String) -> void:
