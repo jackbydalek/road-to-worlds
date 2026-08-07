@@ -46,6 +46,7 @@ func _run() -> void:
 	var deck_hud := main.find_child("ShopHudDeckButton", true, false) as Button
 	var save_hud := main.find_child("ShopHudSaveButton", true, false) as Button
 	var settings_hud := main.find_child("ShopHudSettingsButton", true, false) as Button
+	var card_viewer := main.find_child("ShopCardHoverPreview", true, false) as PanelContainer
 	var autosave := main.find_child("AutosaveIndicator", true, false) as Label
 	var shop_tooltips_clear := true
 	for control_value in shop_world.find_children("*", "Control", true, false):
@@ -62,6 +63,10 @@ func _run() -> void:
 	_expect(
 		cash_hud != null and cash_hud.get_theme_stylebox("normal") is StyleBoxFlat,
 		"The store HUD controls still used the rough sketch treatment."
+	)
+	_expect(
+		card_viewer != null and card_viewer.get_theme_stylebox("panel") is StyleBoxEmpty,
+		"The enlarged shop card viewer still has a rough sketch outline."
 	)
 	_expect(
 		deck_hud != null and deck_hud.icon.resource_path == "res://assets/ui/shop_hud/deck_edit.png"

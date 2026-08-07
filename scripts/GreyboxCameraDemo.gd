@@ -699,9 +699,14 @@ func close_external_overlay(overlay: Control) -> void:
 
 
 func _add_card_hover_preview() -> void:
-	card_hover_preview = SKETCH_UI.make_rough_panel(
-		Vector2(326, 466), SKETCH_UI.PAPER, SKETCH_UI.INK, SKETCH_UI.TEAL, Vector4(12, 12, 12, 12), 1
-	)
+	card_hover_preview = PanelContainer.new()
+	card_hover_preview.custom_minimum_size = Vector2(326, 466)
+	var viewer_spacing := StyleBoxEmpty.new()
+	viewer_spacing.content_margin_left = 12.0
+	viewer_spacing.content_margin_top = 12.0
+	viewer_spacing.content_margin_right = 12.0
+	viewer_spacing.content_margin_bottom = 12.0
+	card_hover_preview.add_theme_stylebox_override("panel", viewer_spacing)
 	card_hover_preview.name = "ShopCardHoverPreview"
 	card_hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_hover_preview.z_index = 400
