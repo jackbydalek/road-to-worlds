@@ -2,6 +2,7 @@ extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const BOOSTER_BOX_TEXTURE := preload("res://assets/season_setup/booster_box.png")
 const TEST_SAVE_PATH := "user://topdeck_to_worlds_game_start_flow_test.json"
 
 var failed := false
@@ -202,6 +203,16 @@ func _run() -> void:
 	_expect(
 		draft_label != null and draft_label.text.contains("DRAFT NIGHT") and draft_label.text.contains("BOOSTER BOX"),
 		"The starter shelf did not expose the redesigned Draft Night badge."
+	)
+	var booster_box_image := BOOSTER_BOX_TEXTURE.get_image()
+	var booster_box_decompressed := booster_box_image != null and booster_box_image.decompress() == OK
+	_expect(
+		booster_box_image != null
+		and booster_box_decompressed
+		and booster_box_image.get_width() >= 725
+		and booster_box_image.get_height() == 720
+		and booster_box_image.get_pixel(96, 450).get_luminance() < 0.12,
+		"Draft Night loaded the old booster-box atlas instead of the dark-backed display texture."
 	)
 	var draft_star := main.find_child("DraftNightStar", true, false) as TextureRect
 	_expect(draft_star != null and draft_star.texture.resource_path == "res://assets/ui/wired_title/draft_star.svg", "Draft Night did not use the sketch star.")
