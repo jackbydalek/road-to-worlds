@@ -40,11 +40,33 @@ func _run() -> void:
 	await process_frame
 
 	var singles_grid := main.find_child("InSceneSinglesGrid", true, false) as GridContainer
+	var singles_case := main.find_child("InSceneSinglesCase", true, false) as PanelContainer
+	var singles_actions := main.find_child("InSceneSinglesActions", true, false) as Control
 	var select_buttons := main.find_children("InSceneSingleSelect_*", "Button", true, false)
 	var buy_buttons := main.find_children("BuyInScene_*", "Button", true, false)
 	_expect(singles_grid != null and singles_grid.get_child_count() == 8, "The singles case did not show all eight live cards.")
 	_expect(select_buttons.size() == 8, "Every single did not receive a card-selection target.")
 	_expect(buy_buttons.size() == 8 and buy_buttons.all(func(button) -> bool: return not (button as Button).visible), "Buy buttons were visible before a card was selected.")
+	_expect(main.find_children("SinglesPriceBadge", "PanelContainer", true, false).size() == 8, "The café-styled singles case did not give every card a price badge.")
+	var case_style := singles_case.get_theme_stylebox("panel") as StyleBoxFlat if singles_case != null else null
+	_expect(
+		case_style != null
+		and case_style.border_color.is_equal_approx(Color("#29365F"))
+		and case_style.border_width_left >= 2
+		and case_style.corner_radius_top_left >= 14,
+		"The singles case lost its cream-and-navy café frame."
+	)
+	for viewport_size in [Vector2i(1280, 720), Vector2i(1440, 900)]:
+		root.size = viewport_size
+		await process_frame
+		shop_world.call("_layout_singles_panel")
+		await process_frame
+		_expect(
+			singles_case != null
+			and singles_actions != null
+			and singles_case.get_global_rect().encloses(singles_actions.get_global_rect()),
+			"The singles-case navigation extends outside %dx%d." % [viewport_size.x, viewport_size.y]
+		)
 
 	if select_buttons.is_empty():
 		quit(1)

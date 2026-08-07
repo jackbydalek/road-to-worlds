@@ -187,8 +187,10 @@ func _ready() -> void:
 	shot_label.text = _overview_description()
 	_apply_shop_context()
 	resized.connect(_position_shopkeeper_hotspot)
+	resized.connect(_layout_singles_panel)
 	resized.connect(_layout_set_list_panel)
 	call_deferred("_position_shopkeeper_hotspot")
+	call_deferred("_layout_singles_panel")
 	call_deferred("_layout_set_list_panel")
 
 
@@ -828,50 +830,88 @@ func _add_singles_panel() -> void:
 	singles_panel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			Color("#FFFCF6F7"),
-			SKETCH_UI.TEAL,
-			1,
-			10,
+			Color(PALETTE.CREAM, 0.97),
+			PALETTE.NAVY,
+			2,
+			16,
 			Vector4.ZERO,
-			4,
+			6,
 			true
 		)
 	)
 	$Interface.add_child(singles_panel)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 22)
-	margin.add_theme_constant_override("margin_right", 22)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_bottom", 18)
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
 	singles_panel.add_child(margin)
 
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
+	content.add_theme_constant_override("separation", 8)
 	margin.add_child(content)
 
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 12)
+	header.add_theme_constant_override("separation", 16)
 	content.add_child(header)
+	var title_stack := VBoxContainer.new()
+	title_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_stack.add_theme_constant_override("separation", 0)
+	header.add_child(title_stack)
+	var eyebrow := Label.new()
+	eyebrow.name = "InSceneSinglesEyebrow"
+	eyebrow.text = "CARD CAFÉ  •  SHOPKEEPER'S WEEKLY PICKS"
+	eyebrow.add_theme_font_override("font", SKETCH_UI.body_font(0.56))
+	eyebrow.add_theme_font_size_override("font_size", 12)
+	eyebrow.add_theme_color_override("font_color", PALETTE.PERIWINKLE)
+	title_stack.add_child(eyebrow)
 	var heading := Label.new()
-	heading.text = "SHOPKEEPER'S SINGLES CASE"
-	heading.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
-	heading.add_theme_font_size_override("font_size", 24)
-	heading.add_theme_color_override("font_color", SKETCH_UI.INK)
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(heading)
+	heading.name = "InSceneSinglesHeading"
+	heading.text = "SINGLES CASE"
+	heading.add_theme_font_override("font", SKETCH_UI.body_font(0.72))
+	heading.add_theme_font_size_override("font_size", 28)
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	title_stack.add_child(heading)
+	var wallet_badge := PanelContainer.new()
+	wallet_badge.name = "InSceneSinglesWalletBadge"
+	wallet_badge.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			Color(PALETTE.LAVENDER_GLASS, 0.94),
+			PALETTE.PERIWINKLE,
+			2,
+			12,
+			Vector4(16, 8, 16, 8),
+			0,
+			true
+		)
+	)
+	header.add_child(wallet_badge)
 	singles_wallet_label = Label.new()
-	singles_wallet_label.add_theme_font_size_override("font_size", 22)
-	singles_wallet_label.add_theme_color_override("font_color", SKETCH_UI.ORANGE)
-	header.add_child(singles_wallet_label)
+	singles_wallet_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	singles_wallet_label.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	singles_wallet_label.add_theme_font_size_override("font_size", 18)
+	singles_wallet_label.add_theme_color_override("font_color", PALETTE.NAVY)
+	wallet_badge.add_child(singles_wallet_label)
 
 	singles_message_label = Label.new()
-	singles_message_label.text = "Click a card to buy a copy. The store stays visible behind the case."
-	singles_message_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
+	singles_message_label.name = "InSceneSinglesMessage"
+	singles_message_label.text = "Choose a card to reveal its purchase button. Hover to inspect the full card."
+	singles_message_label.add_theme_font_override("font", SKETCH_UI.body_font(0.44))
+	singles_message_label.add_theme_font_size_override("font_size", 14)
+	singles_message_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	singles_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(singles_message_label)
+	var header_rule := HSeparator.new()
+	header_rule.add_theme_stylebox_override(
+		"separator",
+		WORKSPACE_UI.clean_style(Color(PALETTE.PERIWINKLE, 0.42), Color.TRANSPARENT, 0, 1)
+	)
+	content.add_child(header_rule)
 
 	var scroll := ScrollContainer.new()
+	scroll.name = "InSceneSinglesScroll"
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	content.add_child(scroll)
@@ -879,27 +919,69 @@ func _add_singles_panel() -> void:
 	singles_grid.name = "InSceneSinglesGrid"
 	singles_grid.columns = 4
 	singles_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	singles_grid.add_theme_constant_override("h_separation", 8)
-	singles_grid.add_theme_constant_override("v_separation", 8)
+	singles_grid.add_theme_constant_override("h_separation", 10)
+	singles_grid.add_theme_constant_override("v_separation", 10)
 	scroll.add_child(singles_grid)
 
+	var footer_rule := HSeparator.new()
+	footer_rule.add_theme_stylebox_override(
+		"separator",
+		WORKSPACE_UI.clean_style(Color(PALETTE.BLUSH, 0.44), Color.TRANSPARENT, 0, 1)
+	)
+	content.add_child(footer_rule)
 	var actions := HBoxContainer.new()
+	actions.name = "InSceneSinglesActions"
 	actions.add_theme_constant_override("separation", 8)
 	content.add_child(actions)
 	var back_button := Button.new()
 	back_button.name = "InSceneSinglesCaseBack"
-	back_button.text = "Back to Shopkeeper"
-	WORKSPACE_UI.style_button(back_button)
+	back_button.text = "←  BACK TO SHOPKEEPER"
+	back_button.custom_minimum_size = Vector2(210, 38)
+	WORKSPACE_UI.style_button(back_button, "secondary")
 	back_button.pressed.connect(_return_to_shopkeeper_menu)
 	actions.add_child(back_button)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(spacer)
 	var store_button := Button.new()
-	store_button.text = "Exit to Card Store"
-	WORKSPACE_UI.style_button(store_button)
+	store_button.name = "InSceneSinglesStoreButton"
+	store_button.text = "RETURN TO CARD STORE"
+	store_button.custom_minimum_size = Vector2(210, 38)
+	WORKSPACE_UI.style_button(store_button, "secondary")
 	store_button.pressed.connect(_show_overview)
 	actions.add_child(store_button)
+
+
+func _layout_singles_panel() -> void:
+	if singles_panel == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	var edge_margin := 20.0 if viewport_size.x < 1100.0 else 44.0
+	var panel_size := Vector2(
+		minf(1120.0, maxf(320.0, viewport_size.x - edge_margin * 2.0)),
+		minf(740.0, maxf(360.0, viewport_size.y - edge_margin * 2.0))
+	)
+	var panel_origin := (viewport_size - panel_size) * 0.5
+	singles_panel.anchor_left = 0.0
+	singles_panel.anchor_top = 0.0
+	singles_panel.anchor_right = 0.0
+	singles_panel.anchor_bottom = 0.0
+	singles_panel.offset_left = panel_origin.x
+	singles_panel.offset_top = panel_origin.y
+	singles_panel.offset_right = panel_origin.x + panel_size.x
+	singles_panel.offset_bottom = panel_origin.y + panel_size.y
+	if singles_grid != null:
+		singles_grid.columns = _singles_column_count(viewport_size.x)
+
+
+func _singles_column_count(viewport_width: float) -> int:
+	if viewport_width >= 1100.0:
+		return 4
+	if viewport_width >= 850.0:
+		return 3
+	if viewport_width >= 600.0:
+		return 2
+	return 1
 
 
 func _add_trade_panel() -> void:
@@ -1070,11 +1152,11 @@ func _render_singles_case(message: String = "") -> void:
 	for child in singles_grid.get_children():
 		singles_grid.remove_child(child)
 		child.queue_free()
-	singles_wallet_label.text = "WALLET  $%d" % int(shop_context.get("money", 0))
+	singles_wallet_label.text = "WALLET  •  $%d" % int(shop_context.get("money", 0))
 	if message != "":
 		singles_message_label.text = message
 	else:
-		singles_message_label.text = "Click a card to buy a copy. The store stays visible behind the case."
+		singles_message_label.text = "Choose a card to reveal its purchase button. Hover to inspect the full card."
 	var singles: Array = shop_context.get("singles", [])
 	if not singles.any(func(entry_value) -> bool:
 		return String((entry_value as Dictionary).get("id", "")) == selected_single_id
@@ -1462,23 +1544,25 @@ func _overlay_row_style(background_hex: String, border_hex: String) -> StyleBoxF
 func _add_single_card_tile(entry_value: Variant) -> void:
 	var entry: Dictionary = entry_value
 	var card_id := String(entry.get("id", ""))
-	var rarity := String(entry.get("rarity", "common"))
 	var price := int(entry.get("price", 0))
 	var card: Dictionary = entry.get("card", {})
+	var affinity := String(card.get("archetype", entry.get("archetype", "neutral")))
+	var affinity_accent := _set_list_affinity_color(affinity)
 	var tile := PanelContainer.new()
 	tile.name = "InSceneSingle_%s" % card_id
 	tile.set_meta("card_id", card_id)
 	tile.custom_minimum_size = Vector2(245, 270)
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tile.set_meta("tile_fill", WORKSPACE_UI.SURFACE.lerp(_rarity_background(rarity), 0.07))
-	tile.set_meta("tile_accent", _rarity_accent(rarity).darkened(0.32))
+	tile.set_meta("tile_fill", PALETTE.CREAM.lerp(affinity_accent, 0.09))
+	tile.set_meta("tile_accent", affinity_accent.darkened(0.16))
+	tile.set_meta("affinity", affinity)
 	singles_grid.add_child(tile)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
-	margin.add_theme_constant_override("margin_top", 9)
-	margin.add_theme_constant_override("margin_bottom", 9)
+	margin.add_theme_constant_override("margin_left", 11)
+	margin.add_theme_constant_override("margin_right", 11)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	tile.add_child(margin)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
@@ -1506,8 +1590,8 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 		fallback.set_anchors_preset(Control.PRESET_FULL_RECT)
 		card_stack.add_child(fallback)
 
-	var sticker: PanelContainer = WORKSPACE_UI.make_price_sticker(price, Vector2(66, 44))
-	sticker.position = Vector2(74, 45)
+	var sticker := _make_singles_price_badge(price)
+	sticker.position = Vector2(72, 43)
 	card_stack.add_child(sticker)
 	var select_button := Button.new()
 	select_button.name = "InSceneSingleSelect_%s" % card_id
@@ -1528,18 +1612,66 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 	select_button.mouse_exited.connect(_hide_card_hover_preview)
 	card_stack.add_child(select_button)
 
-	var owned_label := Label.new()
-	owned_label.text = "Owned %d  •  Deck %d" % [int(entry.get("owned", 0)), int(entry.get("deck", 0))]
-	owned_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
-	box.add_child(owned_label)
+	var ownership_row := HBoxContainer.new()
+	ownership_row.name = "InSceneSingleOwnership_%s" % card_id
+	ownership_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	ownership_row.add_theme_constant_override("separation", 6)
+	box.add_child(ownership_row)
+	var owned_badge := WORKSPACE_UI.make_badge(
+		"COLLECTION  %d" % int(entry.get("owned", 0)),
+		Color(PALETTE.LAVENDER_GLASS, 0.86),
+		PALETTE.NAVY_MUTED
+	)
+	ownership_row.add_child(owned_badge)
+	var deck_badge := WORKSPACE_UI.make_badge(
+		"IN DECK  %d" % int(entry.get("deck", 0)),
+		Color(PALETTE.SKY, 0.20),
+		PALETTE.NAVY_MUTED
+	)
+	ownership_row.add_child(deck_badge)
 	var buy_button := Button.new()
 	buy_button.name = "BuyInScene_%s" % card_id
-	buy_button.text = "Buy"
+	buy_button.text = "ADD TO COLLECTION  •  $%d" % price
 	buy_button.disabled = int(shop_context.get("money", 0)) < price
 	buy_button.visible = false
 	WORKSPACE_UI.style_button(buy_button, "primary")
 	buy_button.pressed.connect(func() -> void: single_purchase_requested.emit(card_id))
 	box.add_child(buy_button)
+
+
+func _make_singles_price_badge(price: int) -> PanelContainer:
+	var on_sale := price > 5
+	var badge := PanelContainer.new()
+	badge.name = "SinglesPriceBadge"
+	badge.set_meta("price", price)
+	badge.set_meta("shows_sale", on_sale)
+	badge.custom_minimum_size = Vector2(72 if not on_sale else 86, 38)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.z_index = 20
+	badge.rotation = deg_to_rad(3.0)
+	badge.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			Color(PALETTE.CORAL, 0.96) if on_sale else Color(PALETTE.FRESH_YELLOW, 0.94),
+			PALETTE.NAVY,
+			2,
+			10,
+			Vector4(7, 5, 7, 5),
+			0,
+			true
+		)
+	)
+	var amount := Label.new()
+	amount.name = "PriceAmount"
+	amount.text = ("SALE  •  $%d" if on_sale else "$%d") % price
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	amount.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	amount.add_theme_font_override("font", SKETCH_UI.body_font(0.58))
+	amount.add_theme_font_size_override("font_size", 13 if on_sale else 17)
+	amount.add_theme_color_override("font_color", PALETTE.NAVY)
+	badge.add_child(amount)
+	return badge
 
 
 func _select_in_scene_single(card_id: String) -> void:
@@ -1570,34 +1702,18 @@ func _update_in_scene_single_selection() -> void:
 		tile.add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI.clean_style(
-				fill,
-				WORKSPACE_UI.MUSTARD if selected else accent,
+				fill.lerp(PALETTE.SKY, 0.12) if selected else fill,
+				PALETTE.SKY if selected else accent,
 				3 if selected else 1,
-				8 if selected else 7,
+				14,
 				Vector4.ZERO,
-				4 if selected else 3,
+				6 if selected else 4,
 				selected
 			)
 		)
 		var buy_button := tile.find_child("BuyInScene_*", true, false) as Button
 		if buy_button != null:
 			buy_button.visible = selected
-
-
-func _rarity_background(rarity: String) -> Color:
-	match rarity:
-		"mythic": return Color("#3A2948")
-		"rare": return Color("#41364F")
-		"uncommon": return Color("#26384A")
-		_: return Color("#29233C")
-
-
-func _rarity_accent(rarity: String) -> Color:
-	match rarity:
-		"mythic": return Color("#D38BBC")
-		"rare": return Color("#C2B1D7")
-		"uncommon": return Color("#8299D0")
-		_: return Color("#D7CBE0")
 
 
 func _add_world_hotspots() -> void:
