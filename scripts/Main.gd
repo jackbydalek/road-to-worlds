@@ -19,6 +19,8 @@ const RESOLUTION_OPTIONS := [
 	Vector2i(1920, 1080),
 	Vector2i(2560, 1440),
 ]
+const DEFAULT_TEXT_SCALE := 1.0
+const DEFAULT_BATTLE_TEXT_SCALE := 1.0
 const TEXT_SCALE_OPTIONS := [0.9, 1.0, 1.1, 1.25]
 const BATTLE_TEXT_SCALE_OPTIONS := [1.0, 1.25, 1.5]
 const PLAY_SPEED_OPTIONS := [
@@ -177,8 +179,8 @@ var player_settings: Dictionary = {
 	"master_volume": 80.0,
 	"music_volume": 70.0,
 	"sfx_volume": 85.0,
-	"text_scale": 1.0,
-	"battle_text_scale": 1.0,
+	"text_scale": DEFAULT_TEXT_SCALE,
+	"battle_text_scale": DEFAULT_BATTLE_TEXT_SCALE,
 	"play_speed": "normal",
 	"high_contrast": false,
 	"reduced_motion": false,
@@ -319,8 +321,8 @@ func _default_player_settings() -> Dictionary:
 		"master_volume": 80.0,
 		"music_volume": 70.0,
 		"sfx_volume": 85.0,
-		"text_scale": 1.0,
-		"battle_text_scale": 1.0,
+		"text_scale": DEFAULT_TEXT_SCALE,
+		"battle_text_scale": DEFAULT_BATTLE_TEXT_SCALE,
 		"play_speed": "normal",
 		"high_contrast": false,
 		"reduced_motion": false,
@@ -346,7 +348,11 @@ func _load_player_settings() -> void:
 			if not parsed.has("play_speed"):
 				player_settings.play_speed = String(legacy_config.get_value("readability", "rival_pacing", "normal"))
 			if not parsed.has("battle_text_scale"):
-				player_settings.battle_text_scale = float(legacy_config.get_value("readability", "text_scale", 1.0))
+				player_settings.battle_text_scale = float(legacy_config.get_value(
+					"readability",
+					"text_scale",
+					DEFAULT_BATTLE_TEXT_SCALE
+				))
 	_sanitize_player_settings()
 
 
@@ -370,8 +376,8 @@ func _sanitize_player_settings() -> void:
 	player_settings.master_volume = clampf(float(player_settings.get("master_volume", 80.0)), 0.0, 100.0)
 	player_settings.music_volume = clampf(float(player_settings.get("music_volume", 70.0)), 0.0, 100.0)
 	player_settings.sfx_volume = clampf(float(player_settings.get("sfx_volume", 85.0)), 0.0, 100.0)
-	var requested_scale := float(player_settings.get("text_scale", 1.0))
-	var closest_scale := 1.0
+	var requested_scale := float(player_settings.get("text_scale", DEFAULT_TEXT_SCALE))
+	var closest_scale := DEFAULT_TEXT_SCALE
 	var closest_distance := INF
 	for option in TEXT_SCALE_OPTIONS:
 		var distance := absf(float(option) - requested_scale)
@@ -379,8 +385,8 @@ func _sanitize_player_settings() -> void:
 			closest_distance = distance
 			closest_scale = float(option)
 	player_settings.text_scale = closest_scale
-	var requested_battle_scale := float(player_settings.get("battle_text_scale", 1.0))
-	var closest_battle_scale := 1.0
+	var requested_battle_scale := float(player_settings.get("battle_text_scale", DEFAULT_BATTLE_TEXT_SCALE))
+	var closest_battle_scale := DEFAULT_BATTLE_TEXT_SCALE
 	var closest_battle_distance := INF
 	for option in BATTLE_TEXT_SCALE_OPTIONS:
 		var battle_distance := absf(float(option) - requested_battle_scale)
@@ -480,7 +486,7 @@ func _apply_accessibility_to_tree() -> void:
 func _apply_accessibility_to_control(node: Control) -> void:
 	if not is_instance_valid(node):
 		return
-	var text_scale := float(player_settings.get("text_scale", 1.0))
+	var text_scale := float(player_settings.get("text_scale", DEFAULT_TEXT_SCALE))
 	if node.has_theme_font_size_override("font_size"):
 		if not node.has_meta("accessibility_base_font_size"):
 			node.set_meta("accessibility_base_font_size", node.get_theme_font_size("font_size"))

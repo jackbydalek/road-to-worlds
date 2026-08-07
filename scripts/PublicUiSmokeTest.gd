@@ -57,6 +57,8 @@ func _run() -> void:
 		"season",
 		"white"
 	)
+	main.player_settings = main._default_player_settings()
+	main._apply_player_settings(false)
 	main._show_settings()
 	await process_frame
 	_expect(main.current_screen == "settings", "Settings did not open.")
@@ -77,6 +79,18 @@ func _run() -> void:
 		"AbandonRunConfirmation",
 	]:
 		_expect(main.find_child(node_name, true, false) != null, "Settings is missing %s." % node_name)
+	var text_scale_select := main.find_child("TextScaleSelect", true, false) as OptionButton
+	var battle_text_scale_select := main.find_child("BattleTextScaleSelect", true, false) as OptionButton
+	_expect(
+		text_scale_select != null
+		and text_scale_select.get_item_text(text_scale_select.selected) == "100%",
+		"The default menu text size was not 100%."
+	)
+	_expect(
+		battle_text_scale_select != null
+		and battle_text_scale_select.get_item_text(battle_text_scale_select.selected) == "100%",
+		"The default battle text size was not 100%."
+	)
 	var abandon_button := main.find_child("SettingsAbandonRunButton", true, false) as Button
 	var abandon_confirmation := main.find_child("AbandonRunConfirmation", true, false) as HBoxContainer
 	_expect(abandon_button != null and not abandon_button.disabled, "An active season could not be abandoned from Settings.")

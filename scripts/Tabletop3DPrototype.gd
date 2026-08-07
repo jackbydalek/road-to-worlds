@@ -107,7 +107,9 @@ const RIVAL_PACING_OPTIONS := [
 	{"id": "normal", "label": "NORMAL", "base_seconds": 1.2, "seconds_per_word": 0.16, "max_seconds": 3.5, "action_gap": 0.42},
 	{"id": "slow", "label": "SLOW", "base_seconds": 1.8, "seconds_per_word": 0.22, "max_seconds": 5.0, "action_gap": 0.7}
 ]
-const TEXT_SCALE_OPTIONS := [1.0, 1.25, 1.5]
+const DEFAULT_TEXT_SCALE := 1.0
+const DEFAULT_TEXT_SCALE_INDEX := 0
+const TEXT_SCALE_OPTIONS := [DEFAULT_TEXT_SCALE, 1.25, 1.5]
 const BASE_TEXT_READABILITY_SCALE := 1.15
 const KEYWORD_TOOLTIPS := {
 	"stalwart": {"title": "Stalwart", "body": "This card can attack the opposing Chef even while they control Plated cards."},
@@ -293,7 +295,7 @@ var latest_rival_card_data: Dictionary = {}
 var latest_rival_summary: Dictionary = {}
 var game_breakdown_active := false
 var rival_pacing_index := 1
-var text_scale_index := 0
+var text_scale_index := DEFAULT_TEXT_SCALE_INDEX
 var reveal_active := false
 var reveal_skip_requested := false
 var fullscreen_action_reveal_count := 0
@@ -1226,7 +1228,7 @@ func _load_readability_settings() -> void:
 		if String(RIVAL_PACING_OPTIONS[option_index].id) == pacing_id:
 			rival_pacing_index = option_index
 			break
-	var saved_scale := float(config.get_value("readability", "text_scale", 1.0))
+	var saved_scale := float(config.get_value("readability", "text_scale", DEFAULT_TEXT_SCALE))
 	var closest_distance := INF
 	for option_index in range(TEXT_SCALE_OPTIONS.size()):
 		var distance := absf(float(TEXT_SCALE_OPTIONS[option_index]) - saved_scale)
