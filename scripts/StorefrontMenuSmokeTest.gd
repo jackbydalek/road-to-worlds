@@ -41,6 +41,22 @@ func _run() -> void:
 	if shop_world == null:
 		quit(1)
 		return
+	var storefront_logo := main.find_child("StorefrontLogo", true, false) as MeshInstance3D
+	var storefront_logo_material := storefront_logo.get_active_material(0) as StandardMaterial3D if storefront_logo != null else null
+	var storefront_logo_crop := storefront_logo_material.albedo_texture as AtlasTexture if storefront_logo_material != null else null
+	_expect(
+		storefront_logo != null
+		and storefront_logo_crop != null
+		and storefront_logo_crop.atlas != null
+		and storefront_logo_crop.atlas.resource_path == "res://assets/logos/topdeck-to-worlds-storefront.png",
+		"The card store is not using the supplied Topdeck to Worlds logo."
+	)
+	_expect(
+		main.find_child("CafeSignText", true, false) == null
+		and main.find_child("SignSparkleLeft", true, false) == null
+		and main.find_child("SignSparkleRight", true, false) == null,
+		"The old storefront sign text or its duplicate sparkle effects are still present."
+	)
 	_expect(
 		int(shop_world.shop_view_render_counts.singles) == 0
 		and int(shop_world.shop_view_render_counts.trade) == 0

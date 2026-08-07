@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://c6fyxij63wre6" path="res://assets/cards/frames/hearty_ingredient/black.png" id="9_hearty_card"]
 [ext_resource type="PackedScene" uid="uid://vkevaqs5usq2" path="res://assets/card_shop/shop_good_color_doornknob_inside.tscn" id="13_aywef"]
 [ext_resource type="PackedScene" path="res://scenes/props/StylizedPlantVariant.tscn" id="14_stylized_plant"]
+[ext_resource type="Texture2D" path="res://assets/logos/topdeck-to-worlds-storefront.png" id="15_storefront_logo"]
 
 [sub_resource type="Environment" id="Environment_demo"]
 background_mode = 1
@@ -61,21 +62,20 @@ roughness = 0.94
 material = SubResource("Material_wall_trim")
 size = Vector3(11.8, 0.88, 0.08)
 
-[sub_resource type="StandardMaterial3D" id="Material_sign_back"]
-albedo_color = Color(0.16, 0.21, 0.37, 1)
-roughness = 0.9
+[sub_resource type="AtlasTexture" id="Texture_storefront_logo_crop"]
+atlas = ExtResource("15_storefront_logo")
+region = Rect2(0, 180, 2160, 1100)
+filter_clip = true
 
-[sub_resource type="BoxMesh" id="Mesh_sign_back"]
-material = SubResource("Material_sign_back")
-size = Vector3(3.05, 0.8, 0.08)
+[sub_resource type="StandardMaterial3D" id="Material_storefront_logo"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = SubResource("Texture_storefront_logo_crop")
 
-[sub_resource type="StandardMaterial3D" id="Material_sign_face"]
-albedo_color = Color(1, 0.94, 0.86, 1)
-roughness = 0.92
-
-[sub_resource type="BoxMesh" id="Mesh_sign_face"]
-material = SubResource("Material_sign_face")
-size = Vector3(2.86, 0.62, 0.08)
+[sub_resource type="QuadMesh" id="Mesh_storefront_logo"]
+material = SubResource("Material_storefront_logo")
+size = Vector2(4, 2.04)
 
 [sub_resource type="StandardMaterial3D" id="Material_playmat"]
 shading_mode = 0
@@ -272,39 +272,10 @@ transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0.04589826, -4.84)
 cast_shadow = 0
 mesh = SubResource("Mesh_back_trim")
 
-[node name="CafeSignBack" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=2053392132]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 2.62, -4.79)
+[node name="StorefrontLogo" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/PastelDressing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 2.65, -4.38)
 cast_shadow = 0
-mesh = SubResource("Mesh_sign_back")
-
-[node name="CafeSignFace" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=98402827]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 2.62, -4.72)
-cast_shadow = 0
-mesh = SubResource("Mesh_sign_face")
-
-[node name="CafeSignText" type="Label3D" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=1875464809]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 2.62, -4.66)
-pixel_size = 0.006
-modulate = Color(0.16, 0.21, 0.37, 1)
-text = "CARD CAFÉ"
-font_size = 72
-outline_size = 0
-
-[node name="SignSparkleLeft" type="Label3D" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=1888392731]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 2.75, -4.65)
-pixel_size = 0.006
-modulate = Color(0.94, 0.49, 0.46, 1)
-text = "✦"
-font_size = 52
-outline_size = 0
-
-[node name="SignSparkleRight" type="Label3D" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=1151813332]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.08, 2.48, -4.65)
-pixel_size = 0.006
-modulate = Color(0.42, 0.77, 0.91, 1)
-text = "✦"
-font_size = 44
-outline_size = 0
+mesh = SubResource("Mesh_storefront_logo")
 
 [node name="WindowMonstera" parent="ViewportContainer/SubViewport/World/PastelDressing" unique_id=1311815191 instance=ExtResource("14_stylized_plant")]
 transform = Transform3D(0.913545, 0, 0.406737, 0, 1, 0, -0.406737, 0, 0.913545, -4.92, 0, -4.25)
