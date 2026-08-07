@@ -34,6 +34,8 @@ const SHOPKEEPER_OUTLINE_WIDTH := 0.012
 const SHOPKEEPER_RADIAL_OUTLINE_WIDTH := 0.06
 const SHOPKEEPER_OUTLINE_ORIGIN := Vector3(0.0, 1.9, 0.0)
 const CASE_CARD_RENDER_SIZE := Vector2i(250, 355)
+const SET_LIST_CARD_SIZE := Vector2(126, 179)
+const SET_LIST_TILE_MINIMUM := Vector2(150, 226)
 const CASE_CARD_VARIANTS := {
 	"Spicy": {
 		"id": "case_spicy",
@@ -106,6 +108,7 @@ var set_list_panel: PanelContainer
 var set_list_body: VBoxContainer
 var set_list_status_label: Label
 var set_list_message_label: Label
+var set_list_grids: Array[GridContainer] = []
 var shopkeeper_hotspot: Button
 var shopkeeper_arrow: Control
 var shopkeeper_arrow_tween: Tween
@@ -723,13 +726,13 @@ func _queue_card_hover_preview(source: Control, card: Dictionary) -> void:
 	_show_card_hover_preview(source, card)
 
 
-func _show_card_hover_preview(source: Control, card: Dictionary) -> void:
+func _show_card_hover_preview(source: Control, card: Dictionary, difficulty_id: String = "white") -> void:
 	if card_hover_preview == null or card_hover_preview_body == null or card.is_empty():
 		return
 	for child in card_hover_preview_body.get_children():
 		child.queue_free()
 	var card_face := CARD_FACE_SCRIPT.new()
-	card_face.configure(card, "white", false)
+	card_face.configure(card, difficulty_id, false)
 	card_face.custom_minimum_size = Vector2(300, 426)
 	card_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_hover_preview_body.add_child(card_face)
@@ -899,9 +902,23 @@ func _layout_set_list_panel(available_size: Vector2 = Vector2.ZERO) -> void:
 		minf(1080.0, maxf(320.0, viewport_size.x - edge_margin * 2.0)),
 		minf(700.0, maxf(320.0, viewport_size.y - edge_margin * 2.0))
 	)
+	var column_count := _set_list_column_count(viewport_size.x)
+	for grid in set_list_grids:
+		if is_instance_valid(grid):
+			grid.columns = column_count
 	set_list_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	set_list_panel.position = (viewport_size - panel_size) * 0.5
 	set_list_panel.size = panel_size
+
+
+func _set_list_column_count(viewport_width: float) -> int:
+	if viewport_width >= 1200.0:
+		return 6
+	if viewport_width >= 900.0:
+		return 5
+	if viewport_width >= 700.0:
+		return 4
+	return 3
 
 
 func _create_detail_overlay(node_name: String, accent_hex: String) -> Dictionary:
@@ -1102,6 +1119,7 @@ func _render_set_list() -> void:
 	if set_list_body == null:
 		return
 	_clear_dynamic_list(set_list_body)
+	set_list_grids.clear()
 	var heading := set_list_panel.find_child("InSceneSetListHeading", true, false) as Label
 	if heading != null:
 		heading.text = "VIEW SET LIST"
@@ -1110,7 +1128,7 @@ func _render_set_list() -> void:
 	for set_entry_value in set_entries:
 		total_cards += (set_entry_value as Dictionary).get("cards", []).size()
 	set_list_status_label.text = "%d CARD%s" % [total_cards, "" if total_cards == 1 else "S"]
-	set_list_message_label.text = "Every released card, grouped by expansion. Cards are listed alphabetically within each set."
+	set_list_message_label.text = "Every released card, grouped by expansion. Hover a card to inspect it."
 
 	if set_entries.is_empty():
 		var empty := Label.new()
@@ -1154,36 +1172,117 @@ func _render_set_list() -> void:
 		section_label.add_theme_color_override("font_color", PALETTE.NAVY)
 		section_header.add_child(section_label)
 
+		var card_grid := GridContainer.new()
+		card_grid.name = "InSceneSetGrid_%s" % expansion_id
+		card_grid.columns = _set_list_column_count(get_viewport_rect().size.x)
+		card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card_grid.add_theme_constant_override("h_separation", 8)
+		card_grid.add_theme_constant_override("v_separation", 10)
+		section.add_child(card_grid)
+		set_list_grids.append(card_grid)
+
 		for card_entry_value in expansion_cards:
-			var card_entry: Dictionary = card_entry_value
-			var card_id := String(card_entry.get("id", ""))
-			var row := PanelContainer.new()
-			row.name = "InSceneSetListCard_%s" % card_id
-			row.set_meta("card_id", card_id)
-			row.set_meta("expansion_id", expansion_id)
-			row.add_theme_stylebox_override(
-				"panel",
-				WORKSPACE_UI.clean_style(
-					PALETTE.CREAM,
-					PALETTE.PERIWINKLE.lightened(0.18),
-					1,
-					8,
-					Vector4(12, 7, 12, 7)
-				)
-			)
-			section.add_child(row)
-			var label := Label.new()
-			label.text = "%s  •  %s  •  %s  •  %s" % [
-				String(card_entry.get("name", "Card")),
-				String(card_entry.get("card_type", "card")).capitalize(),
-				String(card_entry.get("affinity", "neutral")).capitalize(),
-				String(card_entry.get("rarity", "common")).capitalize(),
-			]
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			label.add_theme_font_override("font", SKETCH_UI.body_font(0.48))
-			label.add_theme_font_size_override("font_size", 16)
-			label.add_theme_color_override("font_color", PALETTE.NAVY)
-			row.add_child(label)
+			_add_set_list_card_tile(card_grid, card_entry_value, expansion_id)
+
+
+func _add_set_list_card_tile(parent: GridContainer, card_entry_value: Variant, expansion_id: String) -> void:
+	var card_entry: Dictionary = card_entry_value
+	var card_id := String(card_entry.get("id", ""))
+	var card: Dictionary = card_entry.get("card", {})
+	var tile := PanelContainer.new()
+	tile.name = "InSceneSetListCard_%s" % card_id
+	tile.set_meta("card_id", card_id)
+	tile.set_meta("expansion_id", expansion_id)
+	tile.custom_minimum_size = SET_LIST_TILE_MINIMUM
+	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tile.mouse_filter = Control.MOUSE_FILTER_STOP
+	tile.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	tile.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			PALETTE.CREAM,
+			PALETTE.NAVY,
+			2,
+			11,
+			Vector4.ZERO,
+			0,
+			true
+		)
+	)
+	parent.add_child(tile)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 6)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	tile.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 5)
+	margin.add_child(content)
+
+	var face_center := CenterContainer.new()
+	face_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	face_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(face_center)
+	var card_stack := Control.new()
+	card_stack.custom_minimum_size = SET_LIST_CARD_SIZE
+	card_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face_center.add_child(card_stack)
+	if not card.is_empty() and CARD_FACE_SCRIPT.supports_card(card):
+		var face := CARD_FACE_SCRIPT.new()
+		face.name = "InSceneSetListCardFace_%s" % card_id
+		face.configure(card, String(card_entry.get("difficulty", "white")), false)
+		face.custom_minimum_size = SET_LIST_CARD_SIZE
+		face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_stack.add_child(face)
+	else:
+		var fallback := Label.new()
+		fallback.name = "InSceneSetListCardFallback_%s" % card_id
+		fallback.text = String(card_entry.get("name", card_id))
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fallback.set_anchors_preset(Control.PRESET_FULL_RECT)
+		fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_stack.add_child(fallback)
+
+	var classification := Label.new()
+	classification.text = "%s  •  %s" % [
+		String(card_entry.get("card_type", "card")).capitalize(),
+		String(card_entry.get("affinity", "neutral")).capitalize(),
+	]
+	classification.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	classification.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	classification.add_theme_font_override("font", SKETCH_UI.body_font(0.40))
+	classification.add_theme_font_size_override("font_size", 13)
+	classification.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	classification.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(classification)
+
+	var hover_entry := card_entry.duplicate(true)
+	tile.mouse_entered.connect(func() -> void: _queue_set_list_hover_preview(tile, hover_entry))
+	tile.mouse_exited.connect(_hide_card_hover_preview)
+
+
+func _queue_set_list_hover_preview(source: Control, card_entry: Dictionary) -> void:
+	card_hover_request_id += 1
+	var request_id := card_hover_request_id
+	await get_tree().create_timer(CARD_HOVER_DELAY_SECONDS).timeout
+	if (
+		request_id != card_hover_request_id
+		or not is_instance_valid(source)
+		or set_list_panel == null
+		or not set_list_panel.visible
+		or not source.get_global_rect().has_point(get_viewport().get_mouse_position())
+	):
+		return
+	_show_card_hover_preview(
+		source,
+		card_entry.get("card", {}),
+		String(card_entry.get("difficulty", "white"))
+	)
 
 
 func _clear_dynamic_list(list: VBoxContainer) -> void:

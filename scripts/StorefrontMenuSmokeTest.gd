@@ -207,7 +207,10 @@ func _run() -> void:
 	var set_list_panel := main.find_child("InSceneSetList", true, false) as PanelContainer
 	var core_section := main.find_child("InSceneSetSection_core", true, false) as VBoxContainer
 	var core_heading := main.find_child("InSceneSetHeading_core", true, false) as Label
+	var core_grid := main.find_child("InSceneSetGrid_core", true, false) as GridContainer
+	var set_list_back := main.find_child("InSceneSetListBack", true, false) as Button
 	var set_list_rows := main.find_children("InSceneSetListCard_*", "PanelContainer", true, false)
+	var set_list_faces := main.find_children("InSceneSetListCardFace_*", "Control", true, false)
 	_expect(set_list_panel != null and set_list_panel.visible, "View Set List did not open its in-store overlay.")
 	_expect(shop_world.current_menu_view() == "set_list", "The storefront did not preserve the set-list view state.")
 	_expect(
@@ -219,6 +222,23 @@ func _run() -> void:
 		"The set list did not group cards under the registered Core Set metadata."
 	)
 	_expect(set_list_rows.size() == main.cards.size(), "The set list did not include every published card.")
+	_expect(
+		set_list_back != null
+		and set_list_back.visible
+		and set_list_panel.get_global_rect().encloses(set_list_back.get_global_rect()),
+		"The visual card grid pushed the set-list navigation outside its panel."
+	)
+	_expect(
+		core_grid != null
+		and core_grid.columns == 6
+		and set_list_faces.size() == main.cards.size(),
+		"The set list did not render the complete Core Set as a six-column visual card grid."
+	)
+	if not set_list_faces.is_empty():
+		_expect(
+			(set_list_faces[0] as Control).custom_minimum_size == Vector2(126, 179),
+			"Set-list thumbnails did not match the compact Deck Workshop card treatment."
+		)
 	var listed_card_ids := {}
 	for row_value in set_list_rows:
 		var row := row_value as PanelContainer
@@ -238,6 +258,7 @@ func _run() -> void:
 		and compact_set_list_rect.end.y <= 540.0,
 		"The set list did not fit the compact supported storefront size: %s (minimum %s)." % [compact_set_list_rect, set_list_panel.get_combined_minimum_size()]
 	)
+	_expect(core_grid != null and core_grid.columns == 5, "The visual set list did not reflow to five columns at the compact size.")
 	shop_world.call("_layout_set_list_panel")
 	shop_world.call("_return_to_shopkeeper_menu")
 	await process_frame

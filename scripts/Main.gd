@@ -3328,6 +3328,8 @@ func _shop_overworld_set_entries() -> Array:
 			"id": String(card.get("id", "")),
 			"name": _card_display_name(card),
 			"sort_name": String(card.get("name", "")),
+			"card": card.duplicate(true),
+			"difficulty": _run_difficulty_id(),
 			"card_type": String(card.get("card_type", "card")),
 			"affinity": _card_archetype(card),
 			"rarity": String(card.get("rarity", "common")),
