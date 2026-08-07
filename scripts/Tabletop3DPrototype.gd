@@ -119,32 +119,19 @@ const KEYWORD_TOOLTIPS := {
 	"hand_trap": {"title": "Handtrap", "body": "Discard this card from your hand to perform its action in response to an opponent's action."}
 }
 const TUTORIAL_STEPS := [
-	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 20 life. The first player skips their opening draw; the second player draws normally. On later turns, draw one card, then draw up to two if your hand is still smaller. Ingredients and Meals occupy Prep or Plated.", "prompt": "Press Begin to learn by playing a fixed practice hand.", "action": "continue", "scenario": "opening"},
-	{"lesson": 2, "title": "Play an Ingredient", "body": "Ingredients build recipes. New Ingredients are PREPARING until the start of your next turn.", "prompt": "Click the glowing Hot Honey Bee in your hand.", "action": "select_hand", "card_id": "spicy_hot_honey_bee"},
-	{"lesson": 2, "title": "Choose a Safe Zone", "body": "Prep protects a card from normal attacks while it matures. Plated cards can fight, but can also be attacked.", "prompt": "In Card Info, choose Play → Prep 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
+	{"lesson": 1, "title": "Welcome to the Table", "body": "Both Chefs normally begin at 20 life. The first player skips their opening draw; the second player draws normally. On later turns, draw one card, then draw up to two if your hand is still smaller. Most play happens by dragging cards directly where you want them to go.", "prompt": "Press Begin to practice with a fixed hand.", "action": "continue", "scenario": "opening"},
+	{"lesson": 2, "title": "Drag an Ingredient", "body": "Ingredients build recipes. Prep protects a card from normal attacks while it matures; Plated cards can fight, but can also be attacked.", "prompt": "Drag the glowing Hot Honey Bee from your hand to glowing Prep slot 2.", "action": "play_hand", "card_id": "spicy_hot_honey_bee", "zone": "prep", "slot": 1},
 	{"lesson": 2, "title": "Let It Mature", "body": "At the start of your next turn, the Ingredient becomes RECIPE READY. Normal matches give the rival a full turn in between.", "prompt": "Press END TURN. The lesson will fast-forward the scripted rival turn.", "action": "end_turn"},
-	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. Playing another replaces the old one.", "prompt": "Click the glowing spicy taquería.", "action": "select_hand", "card_id": "environment_spicy_taqueria", "scenario": "recipe"},
-	{"lesson": 3, "title": "Use the Environment", "body": "spicy taquería gives each Spicy food you serve +2 Attack.", "prompt": "Choose Use Environment in Card Info.", "action": "play_hand", "card_id": "environment_spicy_taqueria"},
-	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe.", "prompt": "Click the glowing Sriracharrow in your hand.", "action": "select_hand", "card_id": "spicy_sriracharrow"},
-	{"lesson": 4, "title": "Choose Its Zone", "body": "You may serve one Meal each turn. This one will enter Prep, using the slot its Ingredient is about to vacate.", "prompt": "Choose Serve → Prep 2 (Sacrifice).", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
+	{"lesson": 3, "title": "Set an Environment", "body": "Environments stay in their own slot and change the rules of your kitchen. spicy taquería gives each Spicy food you serve +2 Attack.", "prompt": "Drag the glowing spicy taquería from your hand to your Environment slot on the left.", "action": "play_hand", "card_id": "environment_spicy_taqueria", "scenario": "recipe"},
+	{"lesson": 4, "title": "Serve a Meal", "body": "Meals are stronger units, but they require RECIPE READY Ingredients that match every symbol in their recipe. You may serve one Meal each turn.", "prompt": "Drag the glowing Sriracharrow from your hand to glowing Prep slot 2.", "action": "begin_meal", "card_id": "spicy_sriracharrow", "zone": "prep", "slot": 1},
 	{"lesson": 4, "title": "Pay the Recipe", "body": "The cyan glow marks legal recipe Ingredients. The selected Ingredient will be sacrificed to your discard pile.", "prompt": "Click the glowing Hot Honey Bee on your table.", "action": "select_recipe", "card_id": "spicy_hot_honey_bee"},
 	{"lesson": 4, "title": "Confirm the Meal", "body": "Sriracharrow needs one Spicy Ingredient. The selected Bee satisfies the full recipe.", "prompt": "Press Serve Meal in the message strip.", "action": "confirm_meal"},
-	{"lesson": 5, "title": "Prep Versus Plated", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Click your glowing Sriracharrow.", "action": "select_field", "card_id": "spicy_sriracharrow"},
-	{"lesson": 5, "title": "Move Into Combat", "body": "Moving into Plated makes a unit available for combat immediately, unless another rule says otherwise.", "prompt": "Click the glowing Plated 1 slot.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
-	{"lesson": 6, "title": "Support Cards", "body": "Spices attach to a unit. Tools resolve once and go to discard. Chef cards are powerful actions limited to one per turn.", "prompt": "Click your glowing Sriracharrow first.", "action": "select_field", "card_id": "spicy_sriracharrow", "scenario": "support"},
-	{"lesson": 6, "title": "Choose a Spice Target", "body": "A Spice needs a friendly unit selected before it can be played.", "prompt": "Choose Season This Card.", "action": "select_spice_target", "card_id": "spicy_sriracharrow"},
-	{"lesson": 6, "title": "Play a Spice", "body": "Cayenne Crunch stays attached and gives the selected Meal +1 Attack.", "prompt": "Click the glowing Cayenne Crunch in your hand.", "action": "select_hand", "card_id": "spice_cayenne_crunch"},
-	{"lesson": 6, "title": "Attach the Spice", "body": "The action is locked to the Meal you selected.", "prompt": "Choose Season Selected.", "action": "play_hand", "card_id": "spice_cayenne_crunch"},
-	{"lesson": 6, "title": "Use a Tool", "body": "Tools are one-shot effects. Wooden Spoon draws one card, then goes to your discard pile.", "prompt": "Click the glowing Wooden Spoon.", "action": "select_hand", "card_id": "item_wooden_spoon"},
-	{"lesson": 6, "title": "Resolve the Tool", "body": "Tools do not occupy a board slot.", "prompt": "Choose Use Tool.", "action": "play_hand", "card_id": "item_wooden_spoon"},
-	{"lesson": 6, "title": "Use a Chef", "body": "Chef Giada draws three cards. You may use only one Chef card each turn.", "prompt": "Click the glowing Chef Giada.", "action": "select_hand", "card_id": "chef_mary"},
-	{"lesson": 6, "title": "Resolve the Chef", "body": "Chef cards also resolve immediately and go to your discard pile.", "prompt": "Choose Use Chef.", "action": "play_hand", "card_id": "chef_mary"},
-	{"lesson": 7, "title": "Choose an Attacker", "body": "Only ready Plated units can normally attack. Each attacker can attack once per turn.", "prompt": "Click the glowing left Sriracharrow.", "action": "select_field", "instance_id": 1, "scenario": "combat"},
-	{"lesson": 7, "title": "Declare the Attack", "body": "Selecting an attacker makes legal defenders glow.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 1},
-	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "If the rival has a Plated unit, you must attack a legal defender before attacking their Chef. A unit that skips attacking ends the turn Defending and stops overflow unless hit by Piercing. A unit that attacked is exposed to normal overflow. Stalwart can attack the Chef through Plated cards.", "prompt": "Click the glowing opposing Bagver.", "action": "attack_unit", "target_instance_id": 3},
-	{"lesson": 7, "title": "Choose Your Second Attacker", "body": "Your first Meal is spent, but the second is still ready.", "prompt": "Click the glowing right Sriracharrow.", "action": "select_field", "instance_id": 2},
-	{"lesson": 7, "title": "Declare the Final Attack", "body": "The rival Plated zone is empty, so a direct Chef attack is now legal.", "prompt": "Choose Choose Attacker.", "action": "select_attacker", "instance_id": 2},
-	{"lesson": 7, "title": "Attack the Rival Chef", "body": "Reducing the opposing Chef to 0 life wins the match.", "prompt": "Click the glowing rival Chef.", "action": "attack_chef"},
+	{"lesson": 5, "title": "Move Into Combat", "body": "A unit in Prep is safe but normally cannot attack. You may move one unit between Prep and Plated each turn.", "prompt": "Drag your glowing Sriracharrow from Prep to glowing Plated slot 1.", "action": "move_unit", "card_id": "spicy_sriracharrow", "zone": "plated", "slot": 0},
+	{"lesson": 6, "title": "Attach a Spice", "body": "Spices attach to a unit and stay with it. Cayenne Crunch gives the Meal +1 Attack.", "prompt": "Drag the glowing Cayenne Crunch from your hand directly onto Sriracharrow.", "action": "play_hand", "card_id": "spice_cayenne_crunch", "target_instance_id": 1, "scenario": "support"},
+	{"lesson": 6, "title": "Use a Tool", "body": "Tools are one-shot effects. Wooden Spoon draws one card, then goes to your discard pile.", "prompt": "Drag the glowing Wooden Spoon from your hand onto the open table.", "action": "play_hand", "card_id": "item_wooden_spoon"},
+	{"lesson": 6, "title": "Use a Chef", "body": "Chef Giada draws three cards. Chef cards resolve immediately and you may use only one each turn.", "prompt": "Drag the glowing Chef Giada from your hand onto the open table.", "action": "play_hand", "card_id": "chef_mary"},
+	{"lesson": 7, "title": "Clear Their Plated Zone", "body": "Only ready Plated units can normally attack. If the rival has a Plated unit, attack a legal defender before attacking their Chef. Stalwart can bypass this rule.", "prompt": "Drag the glowing left Sriracharrow directly onto the opposing Bagver.", "action": "attack_unit", "attacker_instance_id": 1, "target_instance_id": 3, "scenario": "combat"},
+	{"lesson": 7, "title": "Attack the Rival Chef", "body": "Your first Meal is spent, but the second is ready. Reducing the opposing Chef to 0 life wins the match.", "prompt": "Drag the glowing right Sriracharrow directly onto the rival Chef.", "action": "attack_chef", "attacker_instance_id": 2},
 	{"lesson": 7, "title": "Tutorial Complete", "body": "You played an Ingredient, matured and sacrificed it, served and moved a Meal, used support cards, cleared a defender, and won with a direct attack.", "prompt": "Return to the title screen when you are ready.", "action": "finish"}
 ]
 const ZONE_CENTERS := {
@@ -599,14 +586,10 @@ func _build_tutorial_interface() -> void:
 	tutorial_panel.offset_top = 84.0
 	tutorial_panel.offset_right = 430.0
 	tutorial_panel.offset_bottom = 310.0
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color("#24213F", 0.96)
-	panel_style.border_color = Color("#8299D0")
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(18)
-	panel_style.shadow_color = Color(0, 0, 0, 0.55)
-	panel_style.shadow_size = 14
-	tutorial_panel.add_theme_stylebox_override("panel", panel_style)
+	tutorial_panel.add_theme_stylebox_override(
+		"panel",
+		UI_THEME_SCRIPT.light_glass_style(PALETTE.PERIWINKLE, 2)
+	)
 	$Interface.add_child(tutorial_panel)
 
 	var margin := MarginContainer.new()
@@ -619,14 +602,14 @@ func _build_tutorial_interface() -> void:
 	content.add_theme_constant_override("separation", 7)
 	margin.add_child(content)
 
-	tutorial_progress_label = _label("", 12, Color("#8299D0"))
+	tutorial_progress_label = _label("", 12, PALETTE.PERIWINKLE)
 	content.add_child(tutorial_progress_label)
-	tutorial_title_label = _label("", 24, Color("#E9DFEE"))
+	tutorial_title_label = _label("", 24, PALETTE.NAVY)
 	content.add_child(tutorial_title_label)
-	tutorial_body_label = _label("", 14, Color("#D7CBE0"))
+	tutorial_body_label = _label("", 14, PALETTE.NAVY_MUTED)
 	tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_body_label)
-	tutorial_prompt_label = _label("", 15, Color("#D5C16D"))
+	tutorial_prompt_label = _label("", 15, PALETTE.CORAL)
 	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(tutorial_prompt_label)
 	tutorial_action_button = _styled_button("Begin")
@@ -688,7 +671,7 @@ func _tutorial_action_matches(action: String, details: Dictionary = {}) -> bool:
 	var expected := _tutorial_step()
 	if String(expected.get("action", "")) != action:
 		return false
-	for key in ["card_id", "instance_id", "zone", "slot", "target_instance_id"]:
+	for key in ["card_id", "instance_id", "zone", "slot", "target_instance_id", "attacker_instance_id"]:
 		if expected.has(key) and expected[key] != details.get(key):
 			return false
 	return true
@@ -699,7 +682,7 @@ func _tutorial_reject_action() -> void:
 	state.message = "Tutorial locked: " + prompt
 	_refresh_bottom_status()
 	if is_instance_valid(tutorial_prompt_label):
-		tutorial_prompt_label.modulate = Color("#ff8f7a")
+		tutorial_prompt_label.modulate = PALETTE.CORAL
 		var tween := create_tween()
 		tween.tween_property(tutorial_prompt_label, "modulate", Color.WHITE, 0.35)
 
@@ -2173,17 +2156,24 @@ func _apply_tutorial_card_highlight(root: Node3D, kind: String, side: String, ca
 	var step := _tutorial_step()
 	var action := String(step.get("action", ""))
 	var should_highlight := false
-	if kind == "hand" and side == "player" and action == "select_hand":
+	if kind == "hand" and side == "player" and action in ["play_hand", "begin_meal"]:
 		should_highlight = String(step.get("card_id", "")) == card_id
 	elif kind == "field":
-		if action in ["select_field", "select_recipe"]:
+		if action in ["move_unit", "select_recipe"]:
 			should_highlight = side == "player"
 			if step.has("instance_id"):
 				should_highlight = should_highlight and int(step.instance_id) == instance_id
 			elif step.has("card_id"):
 				should_highlight = should_highlight and String(step.card_id) == card_id
+		elif action == "play_hand" and step.has("target_instance_id"):
+			should_highlight = side == "player" and int(step.target_instance_id) == instance_id
 		elif action == "attack_unit":
-			should_highlight = side == "opponent" and int(step.get("target_instance_id", -1)) == instance_id
+			should_highlight = (
+				(side == "player" and int(step.get("attacker_instance_id", -1)) == instance_id)
+				or (side == "opponent" and int(step.get("target_instance_id", -1)) == instance_id)
+			)
+		elif action == "attack_chef":
+			should_highlight = side == "player" and int(step.get("attacker_instance_id", -1)) == instance_id
 	if not should_highlight:
 		return
 	var body := root.get_node("CardBody") as MeshInstance3D
@@ -2515,11 +2505,30 @@ func _mouse_to_table(container_position: Vector2) -> Variant:
 func _can_drag_card(card_node: Node3D) -> bool:
 	if animation_busy or String(state.get("phase", "")) != "player_main" or _has_blocking_prompt():
 		return false
-	if tutorial_mode:
-		# The guided lesson uses explicit click-and-button actions so the selected
-		# card and exact legal destination stay unambiguous.
+	if String(card_node.get_meta("side", "")) != "player" or String(card_node.get_meta("kind", "")) not in ["hand", "field"]:
 		return false
-	return String(card_node.get_meta("side", "")) == "player" and String(card_node.get_meta("kind", "")) in ["hand", "field"]
+	return _tutorial_card_is_drag_source(card_node) if tutorial_mode else true
+
+
+func _tutorial_card_is_drag_source(card_node: Node3D) -> bool:
+	var step := _tutorial_step()
+	var action := String(step.get("action", ""))
+	var kind := String(card_node.get_meta("kind", ""))
+	if kind == "hand":
+		return (
+			action in ["play_hand", "begin_meal"]
+			and String(card_node.get_meta("card_id", "")) == String(step.get("card_id", ""))
+		)
+	if kind == "field":
+		var instance_id := int(card_node.get_meta("instance_id", -1))
+		if action == "move_unit":
+			return (
+				(not step.has("instance_id") or int(step.instance_id) == instance_id)
+				and (not step.has("card_id") or String(step.card_id) == String(card_node.get_meta("card_id", "")))
+			)
+		if action in ["attack_unit", "attack_chef"]:
+			return int(step.get("attacker_instance_id", -1)) == instance_id
+	return false
 
 
 func _begin_drag(point: Vector3) -> void:
@@ -2534,7 +2543,11 @@ func _begin_drag(point: Vector3) -> void:
 	pressed_card.scale = Vector3.ONE
 	pressed_card.position.y = DRAG_Y
 	current_zone = String(pressed_card.get_meta("zone", "hand"))
-	status_label.text = "Drag to your Prep or Plated lane. Drag an attacker onto a rival defender or chef."
+	status_label.text = (
+		String(_tutorial_step().get("prompt", "Drag the glowing card to its glowing target."))
+		if tutorial_mode
+		else "Drag to your Prep or Plated lane. Drag an attacker onto a rival defender or chef."
+	)
 	_refresh_status_context()
 	_refresh_status_panel_visibility()
 
@@ -2560,6 +2573,9 @@ func _finish_drag(point: Variant, screen_position: Vector2 = Vector2(-10000.0, -
 	var requested_hand_play := -1
 	var requested_hand_destination := ""
 	var requested_hand_slot := -1
+	var requested_move_instance := -1
+	var requested_move_destination := ""
+	var requested_move_slot := -1
 	var requested_attacker := -1
 	var requested_attack_target := -2
 	var kind := String(pressed_card.get_meta("kind", ""))
@@ -2567,20 +2583,38 @@ func _finish_drag(point: Variant, screen_position: Vector2 = Vector2(-10000.0, -
 		var hand_index := int(pressed_card.get_meta("hand_index", -1))
 		var card_data := service.card(String(pressed_card.get_meta("card_id", "")))
 		var card_type := String(card_data.get("card_type", ""))
-		if destination in ["player_prep", "player_plated"]:
+		if card_type == "spice" and drop_point != null:
+			var spice_target := _field_target_near(drop_point as Vector3, "player", "plated")
+			if spice_target < 0:
+				spice_target = _field_target_near(drop_point as Vector3, "player", "prep")
+			if spice_target >= 0:
+				service.select_spice_target(state, spice_target)
+				requested_hand_play = hand_index
+				requested_hand_destination = "prep"
+		elif destination in ["player_prep", "player_plated"]:
 			requested_hand_play = hand_index
 			requested_hand_destination = destination.trim_prefix("player_")
 			requested_hand_slot = destination_slot
-		elif card_type in ["tool", "chef", "environment"]:
+		elif card_type == "environment" and (
+			not tutorial_mode
+			or _point_near_auxiliary_zone(drop_point, "player_environment")
+			or _screen_hits_auxiliary_zone(screen_position, "player_environment")
+		):
+			requested_hand_play = hand_index
+			requested_hand_destination = "prep"
+		elif card_type in ["tool", "chef"] and drop_point != null:
 			requested_hand_play = hand_index
 			requested_hand_destination = "prep"
 	elif kind == "field":
 		var instance_id := int(pressed_card.get_meta("instance_id", -1))
 		if destination in ["player_prep", "player_plated"]:
-			_move_unit(instance_id, destination.trim_prefix("player_"), destination_slot)
+			requested_move_instance = instance_id
+			requested_move_destination = destination.trim_prefix("player_")
+			requested_move_slot = destination_slot
 		elif destination == "opponent_plated":
-			requested_attacker = instance_id
 			requested_attack_target = _field_target_near(drop_point as Vector3, "opponent", "plated")
+			if requested_attack_target >= 0:
+				requested_attacker = instance_id
 		elif (
 			drop_point != null
 			and (
@@ -2601,11 +2635,16 @@ func _finish_drag(point: Variant, screen_position: Vector2 = Vector2(-10000.0, -
 	pressed_card = null
 	selected_ref = {}
 	if requested_hand_play >= 0:
-		_play_hand_card(requested_hand_play, requested_hand_destination, requested_hand_slot)
+		await _play_hand_card(requested_hand_play, requested_hand_destination, requested_hand_slot)
+		return
+	if requested_move_instance >= 0:
+		await _move_unit(requested_move_instance, requested_move_destination, requested_move_slot)
 		return
 	if requested_attacker >= 0:
-		_perform_attack(requested_attack_target, requested_attacker)
+		await _perform_attack(requested_attack_target, requested_attacker)
 		return
+	if tutorial_mode:
+		_tutorial_reject_action()
 	_render_match()
 
 
@@ -2658,6 +2697,14 @@ func _field_target_near(point: Vector3, side: String, zone: String) -> int:
 
 func _point_near_chef(point: Vector3, chef_position: Vector3) -> bool:
 	return Vector2(point.x, point.z).distance_to(Vector2(chef_position.x, chef_position.z)) < 1.25
+
+
+func _point_near_auxiliary_zone(point: Variant, zone_key: String) -> bool:
+	if point == null or not AUX_ZONE_POSITIONS.has(zone_key):
+		return false
+	var table_point := point as Vector3
+	var center: Vector3 = AUX_ZONE_POSITIONS[zone_key]
+	return Vector2(table_point.x, table_point.z).distance_to(Vector2(center.x, center.z)) < 1.25
 
 
 func _handle_card_click(card_node: Node3D) -> void:
@@ -2939,12 +2986,18 @@ func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> vo
 	if animation_busy:
 		return
 	var tutorial_action := "attack_chef" if target_instance_id < 0 else "attack_unit"
-	if tutorial_mode and not _tutorial_action_matches(tutorial_action, {"target_instance_id": target_instance_id}):
+	var attacker_id := attacker_override if attacker_override >= 0 else int(state.get("selected_attacker", -1))
+	var tutorial_details := {
+		"target_instance_id": target_instance_id,
+		"attacker_instance_id": attacker_id,
+	}
+	if tutorial_mode and not _tutorial_action_matches(tutorial_action, tutorial_details):
 		_tutorial_reject_action()
+		_render_match()
 		return
 	if attacker_override >= 0:
 		service.select_attacker(state, attacker_override)
-	var attacker_id := int(state.get("selected_attacker", -1))
+	attacker_id = int(state.get("selected_attacker", -1))
 	if attacker_id < 0:
 		var selection_feedback := String(state.message)
 		_render_match()
@@ -2958,7 +3011,7 @@ func _perform_attack(target_instance_id: int, attacker_override: int = -1) -> vo
 	await _drain_animation_event_queue()
 	animation_busy = false
 	if attack_succeeded:
-		_tutorial_complete_action(tutorial_action, {"target_instance_id": target_instance_id})
+		_tutorial_complete_action(tutorial_action, tutorial_details)
 	_render_match()
 	if not attack_succeeded:
 		_show_invalid_action(attack_feedback)
@@ -4727,8 +4780,11 @@ func _play_hand_card(hand_index: int, destination: String, destination_slot: int
 	var card_type := String(card_data.get("card_type", ""))
 	var tutorial_action := "begin_meal" if card_type == "meal" else "play_hand"
 	var tutorial_details := {"card_id": played_card_id, "zone": destination, "slot": destination_slot}
+	if card_type == "spice" and int(state.get("selected_spice_target", -1)) >= 0:
+		tutorial_details.target_instance_id = int(state.selected_spice_target)
 	if tutorial_mode and not _tutorial_action_matches(tutorial_action, tutorial_details):
 		_tutorial_reject_action()
+		_render_match()
 		return
 	if card_type in ["ingredient", "meal"]:
 		if destination_slot < 0:
@@ -4880,6 +4936,7 @@ func _move_unit(instance_id: int, destination: String, destination_slot: int = -
 	var tutorial_details := {"instance_id": instance_id, "card_id": String(unit.get("card_id", "")), "zone": destination, "slot": destination_slot}
 	if tutorial_mode and not _tutorial_action_matches("move_unit", tutorial_details):
 		_tutorial_reject_action()
+		_render_match()
 		return
 	if destination_slot < 0:
 		state.message = "Choose an exact %s slot." % destination.capitalize()
