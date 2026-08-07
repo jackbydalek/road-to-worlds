@@ -114,6 +114,8 @@ var card_effect_lab: RefCounted
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
+var expansions: Array = []
+var expansions_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var boosters_by_id: Dictionary = {}
 var tournaments_by_id: Dictionary = {}
@@ -674,6 +676,8 @@ func _load_content() -> void:
 
 	cards = content_catalog.cards
 	cards_by_id = content_catalog.cards_by_id
+	expansions = content_catalog.expansions
+	expansions_by_id = content_catalog.expansions_by_id
 	archetypes_by_id = content_catalog.archetypes_by_id
 	boosters_by_id = content_catalog.boosters_by_id
 	tournaments_by_id = content_catalog.tournaments_by_id
@@ -3267,6 +3271,7 @@ func _shop_overworld_context() -> Dictionary:
 		"tournament_active": _season_tournament_active(),
 		"tournament_round": int(active.get("round", 1)),
 		"singles": _shop_overworld_single_entries(),
+		"set_entries": _shop_overworld_set_entries(),
 		"trade_entries": _shop_overworld_trade_entries(),
 		"meta_entries": _shop_overworld_meta_entries(),
 		"reports": run.get("reports", []).duplicate(true)
@@ -3310,6 +3315,66 @@ func _shop_overworld_single_entries() -> Array:
 			"deck": _deck_count(card_id)
 		})
 	return entries
+
+
+func _shop_overworld_set_entries() -> Array:
+	var grouped_cards := {}
+	for card_value in cards:
+		var card: Dictionary = card_value
+		var expansion_id := String(card.get("expansion_id", "core"))
+		if not grouped_cards.has(expansion_id):
+			grouped_cards[expansion_id] = []
+		grouped_cards[expansion_id].append({
+			"id": String(card.get("id", "")),
+			"name": _card_display_name(card),
+			"sort_name": String(card.get("name", "")),
+			"card_type": String(card.get("card_type", "card")),
+			"affinity": _card_archetype(card),
+			"rarity": String(card.get("rarity", "common")),
+		})
+
+	var ordered_expansions: Array = expansions.duplicate(true)
+	for expansion_id_value in grouped_cards.keys():
+		var expansion_id := String(expansion_id_value)
+		if expansions_by_id.has(expansion_id):
+			continue
+		ordered_expansions.append({
+			"id": expansion_id,
+			"name": expansion_id.replace("_", " ").capitalize(),
+			"code": expansion_id.to_upper(),
+			"release_order": 9999,
+		})
+	ordered_expansions.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_order := int(a.get("release_order", 0))
+		var b_order := int(b.get("release_order", 0))
+		if a_order == b_order:
+			return String(a.get("name", "")) < String(b.get("name", ""))
+		return a_order < b_order
+	)
+
+	var set_entries: Array = []
+	for expansion_value in ordered_expansions:
+		var expansion: Dictionary = expansion_value
+		var expansion_id := String(expansion.get("id", ""))
+		var expansion_cards: Array = grouped_cards.get(expansion_id, [])
+		if expansion_cards.is_empty():
+			continue
+		expansion_cards.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var name_order := String(a.get("sort_name", a.get("name", ""))).naturalnocasecmp_to(
+				String(b.get("sort_name", b.get("name", "")))
+			)
+			if name_order == 0:
+				return String(a.get("id", "")) < String(b.get("id", ""))
+			return name_order < 0
+		)
+		set_entries.append({
+			"id": expansion_id,
+			"name": String(expansion.get("name", expansion_id)),
+			"code": String(expansion.get("code", expansion_id.to_upper())),
+			"release_order": int(expansion.get("release_order", 0)),
+			"cards": expansion_cards,
+		})
+	return set_entries
 
 
 func _buy_single_from_overworld(card_id: String) -> void:

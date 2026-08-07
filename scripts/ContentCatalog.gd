@@ -55,6 +55,8 @@ const ARCHETYPE_DATA := {
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
+var expansions: Array = []
+var expansions_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var boosters_by_id: Dictionary = {}
 var tournaments_by_id: Dictionary = {}
@@ -63,6 +65,8 @@ var tournaments_by_id: Dictionary = {}
 func load_all() -> bool:
 	cards = []
 	cards_by_id = {}
+	expansions = []
+	expansions_by_id = {}
 	archetypes_by_id = {}
 	boosters_by_id = {}
 	tournaments_by_id = {}
@@ -73,9 +77,34 @@ func load_all() -> bool:
 	if card_data.is_empty() or booster_data.is_empty() or tournament_data.is_empty():
 		return false
 
+	var default_expansion_id := String(card_data.get("default_expansion_id", "core"))
+	for source_expansion in card_data.get("expansions", []):
+		var expansion: Dictionary = source_expansion.duplicate(true)
+		var expansion_id := String(expansion.get("id", ""))
+		if expansion_id.is_empty():
+			continue
+		expansions.append(expansion)
+		expansions_by_id[expansion_id] = expansion
+	if expansions.is_empty():
+		var fallback_expansion := {
+			"id": default_expansion_id,
+			"name": "Core Set",
+			"code": "CORE",
+			"release_order": 0,
+		}
+		expansions.append(fallback_expansion)
+		expansions_by_id[default_expansion_id] = fallback_expansion
+	expansions.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_order := int(a.get("release_order", 0))
+		var b_order := int(b.get("release_order", 0))
+		if a_order == b_order:
+			return String(a.get("name", "")) < String(b.get("name", ""))
+		return a_order < b_order
+	)
+
 	for source_card in card_data.get("cards", []):
 		var card: Dictionary = source_card.duplicate(true)
-		_decorate_card(card)
+		_decorate_card(card, default_expansion_id)
 		cards.append(card)
 		cards_by_id[String(card.get("id", ""))] = card
 
@@ -113,7 +142,7 @@ func _build_archetypes(deck_data: Dictionary) -> void:
 		archetypes_by_id[archetype_id] = archetype
 
 
-func _decorate_card(card: Dictionary) -> void:
+func _decorate_card(card: Dictionary, default_expansion_id: String = "core") -> void:
 	var card_type := String(card.get("card_type", "tool"))
 	var rarity := "common"
 	if card_type == "chef":
@@ -123,6 +152,7 @@ func _decorate_card(card: Dictionary) -> void:
 	elif card_type in ["meal", "spice", "environment"]:
 		rarity = "uncommon"
 	card["rarity"] = rarity
+	card["expansion_id"] = String(card.get("expansion_id", default_expansion_id))
 	card["deckLimit"] = 3
 	card["cost"] = card.get("recipe", []).size() if card_type == "meal" else int(card.get("discard_cost", 0))
 	card["value"] = {"common": 2, "uncommon": 4, "rare": 7, "mythic": 10}.get(rarity, 2)

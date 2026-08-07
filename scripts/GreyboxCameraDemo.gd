@@ -81,6 +81,7 @@ const CASE_CARD_VARIANTS := {
 @onready var station_description: Label = $Interface/CombatPanel/Margin/Content/Explanation
 @onready var buy_singles_button: Button = $Interface/MenuPanel/Margin/Content/BuySingles
 @onready var buy_pack_button: Button = $Interface/MenuPanel/Margin/Content/BuyPack
+@onready var view_set_list_button: Button = $Interface/MenuPanel/Margin/Content/ViewSetList
 @onready var leave_menu_button: Button = $Interface/MenuPanel/Margin/Content/Leave
 @onready var overview_round_button: Button = $Interface/OverviewRoundButton
 
@@ -101,6 +102,10 @@ var trade_action_button: Button
 var meta_panel: PanelContainer
 var meta_list: VBoxContainer
 var meta_report_list: VBoxContainer
+var set_list_panel: PanelContainer
+var set_list_body: VBoxContainer
+var set_list_status_label: Label
+var set_list_message_label: Label
 var shopkeeper_hotspot: Button
 var shopkeeper_arrow: Control
 var shopkeeper_arrow_tween: Tween
@@ -146,6 +151,7 @@ func _ready() -> void:
 	settings_hud_button.pressed.connect(func() -> void: settings_requested.emit())
 	buy_singles_button.pressed.connect(_show_singles_case)
 	buy_pack_button.pressed.connect(func() -> void: packs_requested.emit())
+	view_set_list_button.pressed.connect(_show_set_list)
 	leave_menu_button.text = "Back to Store"
 	leave_menu_button.pressed.connect(_show_overview)
 	overview_round_button.name = "StoreOverviewRoundButton"
@@ -154,6 +160,7 @@ func _ready() -> void:
 	_add_singles_panel()
 	_add_trade_panel()
 	_add_meta_panel()
+	_add_set_list_panel()
 	_add_card_hover_preview()
 	_add_world_hotspots()
 	_add_cafe_sparkles()
@@ -167,8 +174,11 @@ func _ready() -> void:
 	_render_singles_case()
 	_render_trade_binder()
 	_render_meta_analysis()
+	_render_set_list()
 	resized.connect(_position_shopkeeper_hotspot)
+	resized.connect(_layout_set_list_panel)
 	call_deferred("_position_shopkeeper_hotspot")
+	call_deferred("_layout_set_list_panel")
 
 
 func _process(delta: float) -> void:
@@ -407,6 +417,7 @@ func _style_shopkeeper_menu() -> void:
 
 	_style_shopkeeper_action(buy_singles_button, "primary")
 	_style_shopkeeper_action(buy_pack_button, "target")
+	_style_shopkeeper_action(view_set_list_button, "secondary")
 	_style_shopkeeper_action(leave_menu_button, "secondary")
 	_style_overview_round_button()
 
@@ -547,6 +558,7 @@ func configure_shop(context: Dictionary) -> void:
 		_render_singles_case()
 		_render_trade_binder()
 		_render_meta_analysis()
+		_render_set_list()
 
 
 func update_shop_context(context: Dictionary, message: String = "", message_target: String = "singles") -> void:
@@ -555,6 +567,7 @@ func update_shop_context(context: Dictionary, message: String = "", message_targ
 	_render_singles_case(message if message_target == "singles" else "")
 	_render_trade_binder(message if message_target == "trade" else "")
 	_render_meta_analysis()
+	_render_set_list()
 
 
 func current_menu_view() -> String:
@@ -566,6 +579,8 @@ func current_menu_view() -> String:
 		return "trade"
 	if meta_panel != null and meta_panel.visible:
 		return "meta"
+	if set_list_panel != null and set_list_panel.visible:
+		return "set_list"
 	if menu_panel.visible:
 		return "shopkeeper"
 	return "overview"
@@ -607,8 +622,13 @@ func restore_menu_view(view: String) -> void:
 			shot_label.text = "META ANALYSIS — local field shares and shop talk"
 			meta_panel.visible = true
 			meta_panel.modulate.a = 1.0
+		"set_list":
+			_render_set_list()
+			shot_label.text = "SET LIST — every released card, grouped by expansion"
+			set_list_panel.visible = true
+			set_list_panel.modulate.a = 1.0
 		_:
-			shot_label.text = "SHOPKEEPER — packs, singles, trades, meta, and events"
+			shot_label.text = "SHOPKEEPER — packs, singles, and the complete set list"
 			menu_panel.visible = true
 			menu_panel.modulate.a = 1.0
 
@@ -639,7 +659,7 @@ func _apply_shop_context() -> void:
 		else:
 			buy_pack_button.text = "Open Pack - $%d" % booster_price
 			buy_pack_button.disabled = money < booster_price
-	if not menu_panel.visible and not station_panel.visible and (singles_panel == null or not singles_panel.visible) and (trade_panel == null or not trade_panel.visible) and (meta_panel == null or not meta_panel.visible):
+	if not menu_panel.visible and not station_panel.visible and (singles_panel == null or not singles_panel.visible) and (trade_panel == null or not trade_panel.visible) and (meta_panel == null or not meta_panel.visible) and (set_list_panel == null or not set_list_panel.visible):
 		shot_label.text = "CARD STORE  •  %s frame  •  %s  •  %d prize pack(s)" % [difficulty, event_name, prize_packs]
 
 
@@ -844,6 +864,46 @@ func _add_meta_panel() -> void:
 	(overlay.exit as Button).pressed.connect(_show_overview)
 
 
+func _add_set_list_panel() -> void:
+	var overlay := _create_detail_overlay("InSceneSetList", PALETTE.PERIWINKLE.to_html(false))
+	set_list_panel = overlay.panel
+	set_list_body = overlay.body
+	set_list_status_label = overlay.status
+	set_list_message_label = overlay.message
+	set_list_panel.add_theme_stylebox_override(
+		"panel",
+		WORKSPACE_UI.clean_style(
+			PALETTE.CREAM,
+			PALETTE.NAVY,
+			2,
+			14,
+			Vector4.ZERO,
+			6,
+			true
+		)
+	)
+	(overlay.primary as Button).visible = false
+	(overlay.back as Button).text = "Back to Shopkeeper"
+	WORKSPACE_UI.style_button(overlay.back as Button, "secondary")
+	WORKSPACE_UI.style_button(overlay.exit as Button, "secondary")
+	(overlay.back as Button).pressed.connect(_return_to_shopkeeper_menu)
+	(overlay.exit as Button).pressed.connect(_show_overview)
+
+
+func _layout_set_list_panel(available_size: Vector2 = Vector2.ZERO) -> void:
+	if set_list_panel == null:
+		return
+	var viewport_size := available_size if available_size.x > 0.0 and available_size.y > 0.0 else get_viewport_rect().size
+	var edge_margin := 24.0 if viewport_size.x < 1100.0 else 48.0
+	var panel_size := Vector2(
+		minf(1080.0, maxf(320.0, viewport_size.x - edge_margin * 2.0)),
+		minf(700.0, maxf(320.0, viewport_size.y - edge_margin * 2.0))
+	)
+	set_list_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	set_list_panel.position = (viewport_size - panel_size) * 0.5
+	set_list_panel.size = panel_size
+
+
 func _create_detail_overlay(node_name: String, accent_hex: String) -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.name = node_name
@@ -1036,6 +1096,94 @@ func _render_meta_analysis() -> void:
 		report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		report.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
 		meta_report_list.add_child(report)
+
+
+func _render_set_list() -> void:
+	if set_list_body == null:
+		return
+	_clear_dynamic_list(set_list_body)
+	var heading := set_list_panel.find_child("InSceneSetListHeading", true, false) as Label
+	if heading != null:
+		heading.text = "VIEW SET LIST"
+	var set_entries: Array = shop_context.get("set_entries", [])
+	var total_cards := 0
+	for set_entry_value in set_entries:
+		total_cards += (set_entry_value as Dictionary).get("cards", []).size()
+	set_list_status_label.text = "%d CARD%s" % [total_cards, "" if total_cards == 1 else "S"]
+	set_list_message_label.text = "Every released card, grouped by expansion. Cards are listed alphabetically within each set."
+
+	if set_entries.is_empty():
+		var empty := Label.new()
+		empty.text = "No published sets are available yet."
+		empty.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+		set_list_body.add_child(empty)
+		return
+
+	for set_entry_value in set_entries:
+		var set_entry: Dictionary = set_entry_value
+		var expansion_id := String(set_entry.get("id", "set"))
+		var expansion_cards: Array = set_entry.get("cards", [])
+		var section := VBoxContainer.new()
+		section.name = "InSceneSetSection_%s" % expansion_id
+		section.set_meta("expansion_id", expansion_id)
+		section.add_theme_constant_override("separation", 6)
+		set_list_body.add_child(section)
+
+		var section_header := PanelContainer.new()
+		section_header.add_theme_stylebox_override(
+			"panel",
+			WORKSPACE_UI.clean_style(
+				PALETTE.LAVENDER_GLASS,
+				PALETTE.PERIWINKLE,
+				2,
+				10,
+				Vector4(14, 9, 14, 9)
+			)
+		)
+		section.add_child(section_header)
+		var section_label := Label.new()
+		section_label.name = "InSceneSetHeading_%s" % expansion_id
+		section_label.text = "%s  •  %s  •  %d card%s" % [
+			String(set_entry.get("name", "Expansion")),
+			String(set_entry.get("code", expansion_id.to_upper())),
+			expansion_cards.size(),
+			"" if expansion_cards.size() == 1 else "s",
+		]
+		section_label.add_theme_font_override("font", SKETCH_UI.body_font(0.66))
+		section_label.add_theme_font_size_override("font_size", 19)
+		section_label.add_theme_color_override("font_color", PALETTE.NAVY)
+		section_header.add_child(section_label)
+
+		for card_entry_value in expansion_cards:
+			var card_entry: Dictionary = card_entry_value
+			var card_id := String(card_entry.get("id", ""))
+			var row := PanelContainer.new()
+			row.name = "InSceneSetListCard_%s" % card_id
+			row.set_meta("card_id", card_id)
+			row.set_meta("expansion_id", expansion_id)
+			row.add_theme_stylebox_override(
+				"panel",
+				WORKSPACE_UI.clean_style(
+					PALETTE.CREAM,
+					PALETTE.PERIWINKLE.lightened(0.18),
+					1,
+					8,
+					Vector4(12, 7, 12, 7)
+				)
+			)
+			section.add_child(row)
+			var label := Label.new()
+			label.text = "%s  •  %s  •  %s  •  %s" % [
+				String(card_entry.get("name", "Card")),
+				String(card_entry.get("card_type", "card")).capitalize(),
+				String(card_entry.get("affinity", "neutral")).capitalize(),
+				String(card_entry.get("rarity", "common")).capitalize(),
+			]
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.add_theme_font_override("font", SKETCH_UI.body_font(0.48))
+			label.add_theme_font_size_override("font_size", 16)
+			label.add_theme_color_override("font_color", PALETTE.NAVY)
+			row.add_child(label)
 
 
 func _clear_dynamic_list(list: VBoxContainer) -> void:
@@ -1590,12 +1738,12 @@ func _return_to_shopkeeper_menu() -> void:
 	if overlay_tween != null and overlay_tween.is_valid():
 		overlay_tween.kill()
 	var outgoing_overlay: Control
-	for candidate in [singles_panel, trade_panel, meta_panel]:
+	for candidate in [singles_panel, trade_panel, meta_panel, set_list_panel]:
 		if candidate != null and candidate.visible:
 			outgoing_overlay = candidate
 			break
 	station_panel.visible = false
-	shot_label.text = "SHOPKEEPER — packs, singles, trades, meta, and events"
+	shot_label.text = "SHOPKEEPER — packs, singles, and the complete set list"
 	menu_panel.visible = true
 	menu_panel.modulate.a = 0.0
 	overlay_tween = create_tween().set_parallel(true)
@@ -1628,6 +1776,13 @@ func _show_meta_analysis() -> void:
 	_render_meta_analysis()
 	shot_label.text = "META ANALYSIS — local field shares and shop talk"
 	_fade_in_overlay(meta_panel)
+
+
+func _show_set_list() -> void:
+	_hide_overlays()
+	_render_set_list()
+	shot_label.text = "SET LIST — every released card, grouped by expansion"
+	_fade_in_overlay(set_list_panel)
 
 
 func _show_station(target: Marker3D, target_size: float, description: String, heading: String, body: String, actions: Array) -> void:
@@ -1697,6 +1852,8 @@ func _hide_overlays() -> void:
 		trade_panel.visible = false
 	if meta_panel != null:
 		meta_panel.visible = false
+	if set_list_panel != null:
+		set_list_panel.visible = false
 	if external_overlay != null:
 		external_overlay.visible = false
 

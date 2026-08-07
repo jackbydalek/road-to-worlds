@@ -1055,6 +1055,10 @@ text = "Browse Singles"
 layout_mode = 2
 text = "Open Pack - $5"
 
+[node name="ViewSetList" type="Button" parent="Interface/MenuPanel/Margin/Content"]
+layout_mode = 2
+text = "View Set List"
+
 [node name="Leave" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=551306247]
 layout_mode = 2
 text = "Leave Shop"

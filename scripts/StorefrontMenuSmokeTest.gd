@@ -141,6 +141,7 @@ func _run() -> void:
 	var actions := [
 		main.find_child("BuySingles", true, false) as Button,
 		main.find_child("BuyPack", true, false) as Button,
+		main.find_child("ViewSetList", true, false) as Button,
 		main.find_child("Leave", true, false) as Button,
 	]
 	var pack_action := actions[1] as Button
@@ -159,6 +160,87 @@ func _run() -> void:
 			and button.get_theme_stylebox("normal") is StyleBox,
 			"A storefront action did not use the cleaned, full-height menu treatment."
 		)
+
+	_expect(main.expansions_by_id.has("core"), "The card catalog did not register the Core Set expansion.")
+	for card_value in main.cards:
+		var card: Dictionary = card_value
+		_expect(String(card.get("expansion_id", "")) == "core", "%s was not assigned to the Core Set." % String(card.get("id", "Card")))
+	var catalog_set_entries: Array = main._shop_overworld_set_entries()
+	_expect(catalog_set_entries.size() == 1, "The current catalog was not grouped into one published expansion.")
+	if not catalog_set_entries.is_empty():
+		var sorted_cards: Array = (catalog_set_entries[0] as Dictionary).get("cards", [])
+		for index in range(1, sorted_cards.size()):
+			var previous_name := String((sorted_cards[index - 1] as Dictionary).get("sort_name", ""))
+			var current_name := String((sorted_cards[index] as Dictionary).get("sort_name", ""))
+			_expect(previous_name.naturalnocasecmp_to(current_name) <= 0, "The Core Set card list was not alphabetized.")
+	var future_expansion := {"id": "second_course", "name": "Second Course", "code": "RTW2", "release_order": 1}
+	var future_card: Dictionary = (main.cards[0] as Dictionary).duplicate(true)
+	future_card["id"] = "future_set_test_card"
+	future_card["name"] = "Future Test Card"
+	future_card["expansion_id"] = "second_course"
+	main.expansions.append(future_expansion)
+	main.expansions_by_id["second_course"] = future_expansion
+	main.cards.append(future_card)
+	var future_set_entries: Array = main._shop_overworld_set_entries()
+	_expect(
+		future_set_entries.size() == 2
+		and String((future_set_entries[1] as Dictionary).get("id", "")) == "second_course"
+		and ((future_set_entries[1] as Dictionary).get("cards", []) as Array).size() == 1,
+		"A future expansion did not sort after the Core Set or receive its tagged card."
+	)
+	main.cards.pop_back()
+	main.expansions.pop_back()
+	main.expansions_by_id.erase("second_course")
+	var set_list_action := actions[2] as Button
+	_expect(set_list_action != null and set_list_action.text == "View Set List", "The shopkeeper menu is missing View Set List.")
+	if set_list_action != null:
+		var set_action_rect := set_list_action.get_global_rect()
+		var menu_rect := menu_panel.get_global_rect()
+		_expect(
+			set_action_rect.position.y >= menu_rect.position.y
+			and set_action_rect.end.y <= menu_rect.end.y,
+			"View Set List overflowed the shopkeeper panel."
+		)
+	if set_list_action != null:
+		set_list_action.emit_signal("pressed")
+	await process_frame
+	var set_list_panel := main.find_child("InSceneSetList", true, false) as PanelContainer
+	var core_section := main.find_child("InSceneSetSection_core", true, false) as VBoxContainer
+	var core_heading := main.find_child("InSceneSetHeading_core", true, false) as Label
+	var set_list_rows := main.find_children("InSceneSetListCard_*", "PanelContainer", true, false)
+	_expect(set_list_panel != null and set_list_panel.visible, "View Set List did not open its in-store overlay.")
+	_expect(shop_world.current_menu_view() == "set_list", "The storefront did not preserve the set-list view state.")
+	_expect(
+		core_section != null
+		and core_section.get_meta("expansion_id", "") == "core"
+		and core_heading != null
+		and "Core Set" in core_heading.text
+		and "RTW" in core_heading.text,
+		"The set list did not group cards under the registered Core Set metadata."
+	)
+	_expect(set_list_rows.size() == main.cards.size(), "The set list did not include every published card.")
+	var listed_card_ids := {}
+	for row_value in set_list_rows:
+		var row := row_value as PanelContainer
+		listed_card_ids[String(row.get_meta("card_id", ""))] = true
+	for card_value in main.cards:
+		var card: Dictionary = card_value
+		_expect(listed_card_ids.has(String(card.get("id", ""))), "%s is missing from the set list." % String(card.get("name", "Card")))
+	shop_world.call("_layout_set_list_panel", Vector2(960, 540))
+	await process_frame
+	await process_frame
+	var compact_set_list_rect := Rect2(set_list_panel.position, set_list_panel.size) if set_list_panel != null else Rect2()
+	_expect(
+		set_list_panel != null
+		and compact_set_list_rect.position.x >= 0.0
+		and compact_set_list_rect.position.y >= 0.0
+		and compact_set_list_rect.end.x <= 960.0
+		and compact_set_list_rect.end.y <= 540.0,
+		"The set list did not fit the compact supported storefront size: %s (minimum %s)." % [compact_set_list_rect, set_list_panel.get_combined_minimum_size()]
+	)
+	shop_world.call("_layout_set_list_panel")
+	shop_world.call("_return_to_shopkeeper_menu")
+	await process_frame
 
 	main.run.active_tournament = {
 		"active": true,

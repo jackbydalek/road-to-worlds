@@ -1,5 +1,14 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "default_expansion_id": "core",
+  "expansions": [
+    {
+      "id": "core",
+      "name": "Core Set",
+      "code": "RTW",
+      "release_order": 0
+    }
+  ],
   "cards": [
     {"id":"spicy_hot_honey_bee","name":"Hot Honey Bee","card_type":"ingredient","archetype":"spicy","ingredient_types":["spicy"],"rare":false,"attack":1,"health":1,"text":"When played, deal 1 damage to the opposing Chef.","art_frames":["res://assets/cards/art/spicy_hot_honey_bee/frame_00.png","res://assets/cards/art/spicy_hot_honey_bee/frame_01.png","res://assets/cards/art/spicy_hot_honey_bee/frame_02.png","res://assets/cards/art/spicy_hot_honey_bee/frame_03.png","res://assets/cards/art/spicy_hot_honey_bee/frame_04.png","res://assets/cards/art/spicy_hot_honey_bee/frame_05.png"],"art_frame_duration":0.07,"on_play":[{"type":"damage_enemy_player","amount":1}]},
     {"id":"spicy_jalapeno_jackal","name":"Jakapeno","subtitle":"Jalapeño Jackal","card_type":"ingredient","archetype":"spicy","ingredient_types":["spicy"],"rare":false,"attack":3,"health":2,"text":"","art_frames":["res://assets/cards/art/spicy_jalapeno_jackal/frame_00.png","res://assets/cards/art/spicy_jalapeno_jackal/frame_01.png","res://assets/cards/art/spicy_jalapeno_jackal/frame_02.png","res://assets/cards/art/spicy_jalapeno_jackal/frame_03.png","res://assets/cards/art/spicy_jalapeno_jackal/frame_04.png","res://assets/cards/art/spicy_jalapeno_jackal/frame_05.png"],"art_frame_duration":0.07},
