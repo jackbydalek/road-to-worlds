@@ -58,11 +58,44 @@ func _run() -> void:
 	_expect(main.current_screen == "game_start", "Game Start did not open the saved-run gateway.")
 	var game_status_scene := main.find_child("GameStartGateway", true, false) as Control
 	_expect(game_status_scene != null and game_status_scene.scene_file_path == "res://scenes/ui/GameStatusMenu.tscn", "Game Status was not instantiated from its editable scene.")
+	var gateway_storefront := game_status_scene.get_node_or_null("StorefrontBackdrop") as StorefrontBackdrop if game_status_scene != null else null
+	var gateway_storefront_viewport := gateway_storefront.get_node_or_null("ViewportContainer/SubViewport") as SubViewport if gateway_storefront != null else null
+	_expect(
+		gateway_storefront != null
+		and gateway_storefront.current_view == "door"
+		and gateway_storefront_viewport != null
+		and gateway_storefront_viewport.render_target_update_mode in [SubViewport.UPDATE_ALWAYS, SubViewport.UPDATE_ONCE],
+		"The saved-season gateway did not keep a live door backdrop through its layout handoff."
+	)
 	var empty_continue := main.find_child("ContinueRunButton", true, false) as Button
 	_expect(empty_continue != null and empty_continue.disabled, "Continue was enabled without a valid autosave.")
 	_expect(main.find_child("NewGameButton", true, false) is Button, "The saved-run gateway did not offer New Game.")
 	var status_banner := main.find_child("GameStatusBanner", true, false) as PanelContainer
 	_expect(status_banner != null, "The saved-run gateway did not use the sketch status banner.")
+
+	if game_status_scene != null:
+		game_status_scene.call("_request_back_to_title")
+	await create_timer(0.9).timeout
+	await process_frame
+	await process_frame
+	_expect(main.current_screen == "start", "Returning from the saved-season gateway did not restore the title.")
+	var returned_title := main.find_child("BootLanding", true, false) as Control
+	var returned_storefront := returned_title.get_node_or_null("StorefrontBackdrop") as StorefrontBackdrop if returned_title != null else null
+	var returned_storefront_viewport := returned_storefront.get_node_or_null("ViewportContainer/SubViewport") as SubViewport if returned_storefront != null else null
+	_expect(
+		returned_storefront != null
+		and returned_storefront.current_view == "overview"
+		and returned_storefront_viewport != null
+		and returned_storefront_viewport.render_target_update_mode in [SubViewport.UPDATE_ALWAYS, SubViewport.UPDATE_ONCE],
+		"Returning to title froze a transparent storefront frame."
+	)
+	if "--capture-gateway" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		var returned_preview := root.get_texture().get_image()
+		_expect(
+			returned_preview != null and returned_preview.save_png("/tmp/topdeck-to-worlds-returned-title.png") == OK,
+			"The returned-title visual QA capture could not be written."
+		)
 
 	main._show_season_run_setup()
 	await process_frame

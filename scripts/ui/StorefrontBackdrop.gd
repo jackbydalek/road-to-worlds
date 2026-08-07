@@ -27,6 +27,7 @@ const VIEW_DATA := {
 
 var camera_tween: Tween
 var current_view := "overview"
+var static_render_request_id := 0
 
 
 func _ready() -> void:
@@ -35,7 +36,9 @@ func _ready() -> void:
 	material.roughness = 0.86
 	material.metallic = 0.0
 	_apply_material(shop_model, material)
+	resized.connect(_request_static_render)
 	set_view_immediate(initial_view)
+	call_deferred("_request_static_render")
 
 
 func set_view_immediate(view_name: String) -> void:
@@ -51,7 +54,7 @@ func set_view_immediate(view_name: String) -> void:
 	else:
 		camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 		camera.fov = float(data.fov)
-	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_request_static_render()
 
 
 func transition_to(view_name: String) -> void:
@@ -71,6 +74,29 @@ func transition_to(view_name: String) -> void:
 	camera_tween.tween_property(camera_rig, "transform", _view_transform(data), TRANSITION_SECONDS)
 	camera_tween.tween_property(camera, "fov", float(data.fov), TRANSITION_SECONDS)
 	await camera_tween.finished
+	_request_static_render()
+
+
+func _request_static_render() -> void:
+	if not is_node_ready() or not is_instance_valid(storefront_viewport):
+		return
+	static_render_request_id += 1
+	var request_id := static_render_request_id
+	# Screen replacement and container layout happen across frame boundaries.
+	# Keep the SubViewport live through that handoff, then cache one correctly
+	# sized frame instead of freezing the initial transparent texture.
+	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_settle_static_render.call_deferred(request_id)
+
+
+func _settle_static_render(request_id: int) -> void:
+	await get_tree().process_frame
+	if (
+		request_id != static_render_request_id
+		or not is_inside_tree()
+		or not is_instance_valid(storefront_viewport)
+	):
+		return
 	storefront_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
