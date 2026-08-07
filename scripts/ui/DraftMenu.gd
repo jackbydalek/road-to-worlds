@@ -2,13 +2,14 @@ extends VBoxContainer
 class_name DraftMenu
 
 const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 signal abandon_requested
 
 
 func _ready() -> void:
 	_apply_regular_panel_styles()
-	WORKSPACE_UI.style_button(%AbandonDraftButton, "danger")
+	WORKSPACE_UI.style_button(%AbandonDraftButton, "secondary")
 	%AbandonDraftButton.pressed.connect(abandon_requested.emit)
 
 
@@ -16,24 +17,36 @@ func _apply_regular_panel_styles() -> void:
 	$DraftModePanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			WORKSPACE_UI.SURFACE,
-			WORKSPACE_UI.TEAL,
+			PALETTE.CREAM,
+			PALETTE.NAVY,
 			2,
-			10,
-			Vector4(22, 14, 22, 16),
-			5,
+			16,
+			Vector4(22, 10, 18, 10),
+			7,
 			true
 		)
 	)
+	%DraftProgress.add_theme_color_override("font_color", PALETTE.NAVY)
+	%DraftProgress.add_theme_stylebox_override(
+		"normal",
+		WORKSPACE_UI.clean_style(
+			Color(PALETTE.LAVENDER_GLASS, 0.94),
+			PALETTE.PERIWINKLE,
+			2,
+			12,
+			Vector4(16, 7, 16, 7)
+		)
+	)
+	%DraftInstruction.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	for slot in %DraftOfferRow.get_children():
 		(slot as PanelContainer).add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI.clean_style(
-				WORKSPACE_UI.SURFACE,
-				WORKSPACE_UI.BORDER_SOFT,
+				Color(PALETTE.CREAM, 0.96),
+				PALETTE.NAVY,
 				2,
-				10,
-				Vector4(14, 14, 14, 16),
+				16,
+				Vector4(12, 10, 12, 12),
 				0,
 				true
 			)
@@ -41,33 +54,33 @@ func _apply_regular_panel_styles() -> void:
 	$DraftWorkspace/DraftDeckRail.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			WORKSPACE_UI.SURFACE,
-			WORKSPACE_UI.TEAL,
+			Color(PALETTE.LAVENDER_GLASS, 0.9),
+			PALETTE.NAVY,
 			2,
-			10,
-			Vector4(18, 16, 18, 18),
-			4,
+			16,
+			Vector4(16, 14, 16, 16),
+			6,
 			true
 		)
 	)
 	$DraftDistributionCharts/DraftTypeChartPanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			WORKSPACE_UI.SURFACE,
-			WORKSPACE_UI.PALETTE.SLATE,
+			Color(PALETTE.CREAM, 0.94),
+			PALETTE.PERIWINKLE,
 			2,
-			10,
-			Vector4(18, 14, 18, 16)
+			14,
+			Vector4(16, 10, 16, 12)
 		)
 	)
 	$DraftDistributionCharts/DraftFlavorChartPanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			WORKSPACE_UI.SURFACE,
-			WORKSPACE_UI.TEAL,
+			Color(PALETTE.CREAM, 0.94),
+			PALETTE.SKY,
 			2,
-			10,
-			Vector4(18, 14, 18, 16)
+			14,
+			Vector4(16, 10, 16, 12)
 		)
 	)
 

@@ -3,7 +3,7 @@ set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 version="$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' "$project_dir/project.godot" | head -n 1)"
-web_dir="${1:-$project_dir/builds/kitchen-table-road-to-worlds-$version}"
+web_dir="${1:-$project_dir/builds/topdeck-to-worlds-$version}"
 port="${PORT:-8060}"
 
 if [[ ! -s "$web_dir/index.html" ]]; then

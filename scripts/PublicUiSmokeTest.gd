@@ -1,8 +1,8 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
-const TEST_SETTINGS_PATH := "user://road_to_worlds_public_ui_settings_test"
-const SETTINGS_PREVIEW_PATH := "/tmp/road-to-worlds-settings.png"
+const TEST_SETTINGS_PATH := "user://topdeck_to_worlds_public_ui_settings_test"
+const SETTINGS_PREVIEW_PATH := "/tmp/topdeck-to-worlds-settings.png"
 
 var failed := false
 

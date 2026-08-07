@@ -1,10 +1,10 @@
-# Kitchen Table Style Tile v1 — Generation Prompt
+# Topdeck Style Tile v1 — Generation Prompt
 
 Use case: infographic-diagram
 
-Asset type: production game visual-identity style tile for the Godot card game “Kitchen Table: Road to Worlds”
+Asset type: production game visual-identity style tile for the Godot card game “Topdeck to Worlds”
 
-Primary request: Create one polished, cohesive, landscape 16:9 brand style tile for a playful collectible card game about hand-drawn food-animal creatures, neighborhood card-shop culture, kitchen-table matches, and progressing from weekly locals to Worlds.
+Primary request: Create one polished, cohesive, landscape 16:9 brand style tile for a playful collectible card game about hand-drawn food-animal creatures, neighborhood card-shop culture, Topdeck matches, and progressing from weekly locals to Worlds.
 
 Scene/backdrop: warm cream recycled paper board laid over a walnut tabletop, with a tidy editorial grid and small pieces of tape, ink stamps, recipe-card dividers, card sleeves, and subtle crumbs; sophisticated and presentation-ready, not cluttered.
 
@@ -16,7 +16,7 @@ Color palette: parchment cream #F7E9C8, dark cocoa ink #241B17, walnut #57372E, 
 
 Typography: condensed hand-painted display lettering paired with an extremely legible friendly sans-serif for rules and body copy.
 
-Text (verbatim, use only these short labels): “KITCHEN TABLE”, “ROAD TO WORLDS”, “DISPLAY / HEADLINES”, “RULES / UI”, “SPICY”, “HEARTY”, “SWEET”, “FRESH”, “FUNKY”, “PLAY”, “DRAFT”, “WEEKLY LOCALS”.
+Text (verbatim, use only these short labels): “Topdeck”, “Topdeck to Worlds”, “DISPLAY / HEADLINES”, “RULES / UI”, “SPICY”, “HEARTY”, “SWEET”, “FRESH”, “FUNKY”, “PLAY”, “DRAFT”, “WEEKLY LOCALS”.
 
 Icon concepts: Spicy is a chili flame, Hearty is a steaming bowl, Sweet is a wrapped candy, Fresh is a lime leaf, Funky is a pickle with sparkle; all redrawn in the same chunky hand-inked line style, not emoji.
 

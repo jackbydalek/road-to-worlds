@@ -1,9 +1,9 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
-const LAYOUT_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-layout.png"
-const HOVER_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-hover.png"
-const KEYWORD_PREVIEW_PATH := "/tmp/road-to-worlds-deckbuilder-keyword.png"
+const LAYOUT_PREVIEW_PATH := "/tmp/topdeck-to-worlds-deckbuilder-layout.png"
+const HOVER_PREVIEW_PATH := "/tmp/topdeck-to-worlds-deckbuilder-hover.png"
+const KEYWORD_PREVIEW_PATH := "/tmp/topdeck-to-worlds-deckbuilder-keyword.png"
 
 var failed := false
 

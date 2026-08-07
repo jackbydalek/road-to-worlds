@@ -9,7 +9,7 @@ if [[ ! -x "$godot_bin" ]]; then
 	exit 1
 fi
 
-release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/kitchen-table-release.XXXXXX")"
+release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/topdeck-to-worlds-release.XXXXXX")"
 cleanup() {
 	rm -rf "$release_tmp"
 }
@@ -24,6 +24,9 @@ run_test() {
 		"$godot_bin" --headless --path "$project_dir" --script "res://$script_path"
 	fi
 }
+
+printf '[demo gate] Verify product branding\n'
+"$project_dir/scripts/release/check_branding.sh"
 
 printf '[demo gate] Import and parse project\n'
 "$godot_bin" --headless --editor --path "$project_dir" --quit

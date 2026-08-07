@@ -101,7 +101,7 @@ const HAND_CARD_GAP := 0.14
 const CARD_FACE_TEXTURE_SIZE := Vector2i(320, 455)
 const FLOATING_ART_HEIGHT := 0.62
 const REACTION_WINDOW_SECONDS := 5.0
-const READABILITY_SETTINGS_PATH := "user://road_to_worlds_readability.cfg"
+const READABILITY_SETTINGS_PATH := "user://topdeck_to_worlds_readability.cfg"
 const RIVAL_PACING_OPTIONS := [
 	{"id": "fast", "label": "FAST", "base_seconds": 0.7, "seconds_per_word": 0.08, "max_seconds": 1.8, "action_gap": 0.22},
 	{"id": "normal", "label": "NORMAL", "base_seconds": 1.2, "seconds_per_word": 0.16, "max_seconds": 3.5, "action_gap": 0.42},

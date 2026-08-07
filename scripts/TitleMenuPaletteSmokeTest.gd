@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TITLE_MENU := preload("res://scenes/ui/TitleMenu.tscn")
-const PREVIEW_PATH := "/tmp/road-to-worlds-title-menu-palette.png"
+const PREVIEW_PATH := "/tmp/topdeck-to-worlds-title-menu-palette.png"
 const NAVY := Color("#29365F")
 const CORAL := Color("#EF7E76")
 const BLUSH := Color("#F2A4B8")

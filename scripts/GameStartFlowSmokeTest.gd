@@ -2,7 +2,7 @@ extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
-const TEST_SAVE_PATH := "user://road_to_worlds_game_start_flow_test.json"
+const TEST_SAVE_PATH := "user://topdeck_to_worlds_game_start_flow_test.json"
 
 var failed := false
 
@@ -221,7 +221,7 @@ func _run() -> void:
 		await RenderingServer.frame_post_draw
 		var gateway_preview := root.get_texture().get_image()
 		_expect(
-			gateway_preview != null and gateway_preview.save_png("/tmp/road-to-worlds-saved-season.png") == OK,
+			gateway_preview != null and gateway_preview.save_png("/tmp/topdeck-to-worlds-saved-season.png") == OK,
 			"The saved-season visual QA capture could not be written."
 		)
 	game_status_scene.call("_layout_gateway", Vector2(540, 640))

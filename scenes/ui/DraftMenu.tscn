@@ -5,7 +5,7 @@
 [ext_resource type="FontFile" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
 
 [node name="DraftMenu" type="VBoxContainer"]
-custom_minimum_size = Vector2(0, 820)
+custom_minimum_size = Vector2(0, 610)
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,11 +14,11 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 script = ExtResource("1_script")
 
 [node name="DraftModePanel" type="PanelContainer" parent="."]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 
 [node name="Heading" type="HBoxContainer" parent="DraftModePanel"]
@@ -29,11 +29,13 @@ theme_override_constants/separation = 12
 [node name="HeadingCopy" type="VBoxContainer" parent="DraftModePanel/Heading"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
 [node name="Title" type="Label" parent="DraftModePanel/Heading/HeadingCopy"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 25
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_font_sizes/font_size = 29
 text = "PICK A CARD"
 
 [node name="DraftInstruction" type="Label" parent="DraftModePanel/Heading/HeadingCopy"]
@@ -41,43 +43,44 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.32, 0.29, 0.25, 1)
 theme_override_fonts/font = ExtResource("4_body")
+theme_override_font_sizes/font_size = 14
 
 [node name="DraftProgress" type="Label" parent="DraftModePanel/Heading"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 21
 vertical_alignment = 1
 
 [node name="DraftWorkspace" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="DraftOfferRow" type="HBoxContainer" parent="DraftWorkspace"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="DraftOfferSlot0" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
-custom_minimum_size = Vector2(218, 344)
+custom_minimum_size = Vector2(190, 318)
 layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="DraftOfferSlot1" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
-custom_minimum_size = Vector2(218, 344)
+custom_minimum_size = Vector2(190, 318)
 layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="DraftOfferSlot2" type="PanelContainer" parent="DraftWorkspace/DraftOfferRow"]
-custom_minimum_size = Vector2(218, 344)
+custom_minimum_size = Vector2(190, 318)
 layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="DraftDeckRail" type="PanelContainer" parent="DraftWorkspace"]
-custom_minimum_size = Vector2(292, 330)
+custom_minimum_size = Vector2(264, 318)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 4
@@ -85,7 +88,7 @@ size_flags_vertical = 4
 [node name="DraftDistributionCharts" type="HBoxContainer" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="DraftTypeChartPanel" type="PanelContainer" parent="DraftDistributionCharts"]
 layout_mode = 2
@@ -97,10 +100,10 @@ size_flags_horizontal = 3
 
 [node name="AbandonDraftButton" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 58)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 22
-text = "ABANDON DRAFT"
+theme_override_font_sizes/font_size = 15
+text = "LEAVE DRAFT"

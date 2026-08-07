@@ -268,7 +268,7 @@ static func make_title_panel(title: String, subtitle: String, minimum_size: Vect
 	panel.add_child(copy)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "A KITCHEN TABLE CARD GAME"
+	eyebrow.text = "A COZY COMPETITIVE CARD GAME"
 	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	eyebrow.add_theme_font_override("font", body_font(0.45))
 	eyebrow.add_theme_font_size_override("font_size", 16)

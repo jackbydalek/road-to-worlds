@@ -1,6 +1,6 @@
 # Technical Architecture
 
-The project has two layers: a persistent season shell and the Kitchen Table match engine.
+The project has two layers: a persistent season shell and the card-match engine.
 
 ## Season Shell
 
@@ -44,7 +44,7 @@ Physical card faces are cached once per unique card in a match. Their SubViewpor
 
 ## Content Boundary
 
-`data/cards.json` remains authoritative for printed Kitchen Table rules. The season catalog decorates copies of those definitions at load time with campaign-only properties such as rarity, shop value, deck limit, role, and abstract deck-quality stats. Those extra properties are not duplicated into the match catalog.
+`data/cards.json` remains authoritative for printed card rules. The season catalog decorates copies of those definitions at load time with campaign-only properties such as rarity, shop value, deck limit, role, and abstract deck-quality stats. Those extra properties are not duplicated into the match catalog.
 
 ## Validation
 

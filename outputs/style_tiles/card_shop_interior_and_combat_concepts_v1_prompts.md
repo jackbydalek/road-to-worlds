@@ -4,7 +4,7 @@
 
 Use case: infographic-diagram
 
-Asset type: indoor environment layout and architectural concept sheet for the original low-poly card-shop game “Kitchen Table: Road to Worlds”
+Asset type: indoor environment layout and architectural concept sheet for the original low-poly card-shop game “Topdeck to Worlds”
 
 Primary request: Visualize the interior of a bright contemporary local card shop as a practical low-poly game level. Create one polished landscape 16:9 concept sheet with three coordinated views: a clean top-down floor plan, an isometric cutaway of the entire shop, and a small eye-level interior vignette. Make the spatial relationships obvious and believable.
 
@@ -30,7 +30,7 @@ Constraints: production-ready spatial reference, accurate furniture scale, clear
 
 Use case: ui-mockup
 
-Asset type: in-engine card-combat presentation concept for the original low-poly game “Kitchen Table: Road to Worlds”
+Asset type: in-engine card-combat presentation concept for the original low-poly game “Topdeck to Worlds”
 
 Primary request: Visualize what a full card battle should look like inside the bright contemporary low-poly card shop. Create one polished landscape 16:9 gameplay concept board. The main image is a dynamic three-quarter camera from just above the player’s seated shoulder, looking across a modern light-oak feature table with a teal felt playmat toward a friendly low-poly rival. The real shop remains clearly present around the match—glass storefront daylight, white walls, product shelves, track lights, event board, a few low-poly spectators, and colorful tournament tables—so combat feels like an exciting physical event in the overworld rather than a separate dark arena.
 

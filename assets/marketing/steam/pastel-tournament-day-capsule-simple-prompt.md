@@ -2,13 +2,13 @@
 
 Use case: precise-object-edit
 
-Asset type: simplified horizontal Steam capsule for “Kitchen Table: Road to Worlds.”
+Asset type: simplified horizontal Steam capsule for “Topdeck to Worlds.”
 
 Input image: `pastel-tournament-day-capsule-master.png` is the edit target.
 
 Primary request: simplify the existing capsule substantially while preserving its core identity and strongest idea.
 
-Keep unchanged: the exact title text and spelling “KITCHEN TABLE” / “ROAD TO WORLDS”; title placement on the left; the same rose-haired young player on the right; their cheerful expression, cream-and-coral varsity jacket, hands, pose, and teal booster pack held like a viewfinder; the three floating food cards above the pack; the warm pastel palette; the wide landscape framing.
+Keep unchanged: the exact title text and spelling “TOPDECK TO WORLDS”; title placement on the left; the same rose-haired young player on the right; their cheerful expression, cream-and-coral varsity jacket, hands, pose, and teal booster pack held like a viewfinder; the three floating food cards above the pack; the warm pastel palette; the wide landscape framing.
 
 Changes: remove every background player, the foreground table, coffee cup, loose cards, deck stack, stickers, most plants, shelves, and small props. Replace the busy café interior with large warm cream, pale blush, and pale sky/periwinkle color fields. Retain only a simple window, one pale-wood shelf, and one small championship trophy. Use five or fewer small sparkles or blossoms around the three cards. Simplify clothing patches and card details while keeping them recognizable.
 

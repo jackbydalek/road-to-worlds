@@ -52,7 +52,7 @@ jobs:
       - name: Upload versioned itch artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kitchen-table-road-to-worlds-itch-web
+          name: topdeck-to-worlds-itch-web
           path: builds/*-itch-web.zip
           if-no-files-found: error
           retention-days: 14

@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled;
 
-// Converts ordinary asset colors into the compact, illustrated Road to Worlds
+// Converts ordinary asset colors into the compact, illustrated Topdeck to Worlds
 // palette. Texture details remain readable, but gradients collapse into a few
 // painted value bands instead of looking like conventional PBR rendering.
 uniform sampler2D source_texture : source_color, filter_nearest_mipmap;

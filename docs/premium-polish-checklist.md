@@ -7,7 +7,7 @@ This checklist tracks the player-facing polish pass started on 2026-07-30.
 - [x] Hide player-facing debug entry points unless the game is launched with `--dev` or `--debug-menu`.
 - [x] Replace exposed programmer-facing copy with short player-facing copy.
 - [x] Replace the large “Saving…” toast with a small animated save-status glyph.
-- [x] Replace the abrupt completion panel with a composed League Cup finale and Road to Worlds teaser.
+- [x] Replace the abrupt completion panel with a composed League Cup finale and championship teaser.
 - [x] Add a persistent Settings screen.
   - [x] Fullscreen toggle.
   - [x] Window resolution selector.
@@ -61,7 +61,7 @@ This checklist tracks the player-facing polish pass started on 2026-07-30.
 
 ## Notes
 
-- Settings are stored separately from season saves in `user://kitchen_table_settings.json`.
+- Settings are stored separately from season saves in `user://topdeck_to_worlds_settings.json`.
 - The Music and SFX buses are created automatically so the controls are ready for future audio assets.
 - Reduced menu motion currently removes button bounce, save-glyph rotation, draft flourishes, the round wipe, booster spreading/flipping flourishes, rare-card shake, the finale fade, and the shopkeeper arrow bob.
 - Verified with public and `--dev` UI audits, game-start flow, storefront UI, autosave/resume, public startup, and 1440×900 graphical captures.

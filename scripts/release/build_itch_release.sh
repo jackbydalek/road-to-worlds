@@ -16,8 +16,8 @@ if [[ -z "$version" || ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
 fi
 
 build_dir="$project_dir/builds"
-artifact="$build_dir/kitchen-table-road-to-worlds-${version}-itch-web.zip"
-stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/kitchen-table-itch.XXXXXX")"
+artifact="$build_dir/topdeck-to-worlds-${version}-itch-web.zip"
+stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/topdeck-to-worlds-itch.XXXXXX")"
 cleanup() {
 	rm -rf "$stage_dir"
 }

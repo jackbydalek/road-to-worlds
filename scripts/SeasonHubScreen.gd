@@ -60,7 +60,7 @@ func _add_nexus_header(host, parent: Node, event: Dictionary, metrics: Dictionar
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	copy.add_theme_constant_override("separation", -1)
 	row.add_child(copy)
-	var eyebrow := NEXUS_UI.make_section_label("ROAD TO WORLDS  •  SEASON CIRCUIT", NEXUS_UI.TEAL_DARK, 15)
+	var eyebrow := NEXUS_UI.make_section_label("TOPDECK TO WORLDS  •  SEASON CIRCUIT", NEXUS_UI.TEAL_DARK, 15)
 	copy.add_child(eyebrow)
 	var title := NEXUS_UI.make_section_label("EVENT CALENDAR", NEXUS_UI.INK, 34)
 	copy.add_child(title)
@@ -204,7 +204,7 @@ func _add_nexus_selected_event(host, parent: Node, event: Dictionary, event_id: 
 	row.add_child(copy)
 	copy.add_child(NEXUS_UI.make_section_label("CURRENT DESTINATION", NEXUS_UI.TEAL, 15))
 	copy.add_child(NEXUS_UI.make_section_label(String(event.get("name", event_id)), NEXUS_UI.INK, 29))
-	copy.add_child(NEXUS_UI.make_body_label(String(event.get("summary", "Your next step on the road to Worlds.")), NEXUS_UI.MUTED, 14))
+	copy.add_child(NEXUS_UI.make_body_label(String(event.get("summary", "Your next step toward the championship.")), NEXUS_UI.MUTED, 14))
 	copy.add_child(NEXUS_UI.make_body_label(
 		"Week %d  •  %d rounds  •  Need %d wins  •  Free entry" % [
 			int(event.get("calendarWeek", 1)),

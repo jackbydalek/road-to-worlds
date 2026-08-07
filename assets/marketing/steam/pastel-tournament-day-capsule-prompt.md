@@ -2,7 +2,7 @@
 
 Use case: ads-marketing
 
-Asset type: polished horizontal Steam main capsule / key art for the original indie game “Kitchen Table: Road to Worlds,” designed for a 1232×706 crop with generous safe margins.
+Asset type: polished horizontal Steam main capsule / key art for the original indie game “Topdeck to Worlds,” designed for a 1232×706 crop with generous safe margins.
 
 Input images: the four user-supplied illustrations are mood and visual-language references only. Borrow only broad qualities: powdery pastel blocking, expressive deep-blue linework, delicate sparkle motifs, youthful fashion-illustration energy, flat cel shading, and playful handheld-game/sticker culture. Do not reproduce any reference character, pose, signature, composition, garment, or prop exactly.
 
@@ -18,7 +18,7 @@ Lighting and mood: warm late-morning café daylight; optimistic, welcoming, and 
 
 Color palette: use the code-level project palette as authority: espresso ink `#3A241F` and deep navy `#29365F` for linework only; cream `#FFF7F1` and steamed-milk `#F5EBD8` for large surfaces; coral `#EF7E76`, blush `#F2A4B8`, periwinkle `#8EA9E6`, sky `#68C5E8`, muted teal `#638B83`, honey `#D8B35F`, with tiny lavender `#A69AB7` accents. Deep blue must not become a broad background.
 
-Text (verbatim): “KITCHEN TABLE” as a small curved kicker above “ROAD TO WORLDS” in large rounded hand-lettered display capitals. Spell exactly. No other readable text.
+Text (verbatim): “TOPDECK TO WORLDS” in large rounded hand-lettered display capitals. Spell exactly. No other readable text.
 
 Constraints: communicate collectible cards, cozy café, food affinities, local tournaments, and aspiration toward Worlds. Preserve abundant breathing room around the title. Original characters and iconography only.
 

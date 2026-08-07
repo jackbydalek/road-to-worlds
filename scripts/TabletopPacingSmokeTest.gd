@@ -1,10 +1,10 @@
 extends SceneTree
 
-const READABILITY_PREVIEW_PATH := "/tmp/road_to_worlds_tabletop_readability_preview.png"
-const GAMEPLAY_FLOW_PREVIEW_PATH := "/tmp/road_to_worlds_meal_power_entrance.png"
-const ACTION_SPIN_PREVIEW_PATH := "/tmp/road_to_worlds_action_card_spin.png"
-const ACTIVATION_PREVIEW_PATH := "/tmp/road_to_worlds_field_activation.png"
-const INSPECTOR_PREVIEW_PATH := "/tmp/road_to_worlds_card_inspector.png"
+const READABILITY_PREVIEW_PATH := "/tmp/topdeck_to_worlds_tabletop_readability_preview.png"
+const GAMEPLAY_FLOW_PREVIEW_PATH := "/tmp/topdeck_to_worlds_meal_power_entrance.png"
+const ACTION_SPIN_PREVIEW_PATH := "/tmp/topdeck_to_worlds_action_card_spin.png"
+const ACTIVATION_PREVIEW_PATH := "/tmp/topdeck_to_worlds_field_activation.png"
+const INSPECTOR_PREVIEW_PATH := "/tmp/topdeck_to_worlds_card_inspector.png"
 
 var failures: Array[String] = []
 

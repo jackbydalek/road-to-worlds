@@ -1,4 +1,4 @@
-# Road to Worlds — Visual Direction
+# Topdeck to Worlds — Visual Direction
 
 This is the reference for UI, environment, character, card-frame, and promotional-art decisions. The target is a bright, welcoming illustrated card café: soft pastel color blocking, expressive navy linework, warm daylight, glassy paper-like controls, and small playful details. It should feel cozy and contemporary, never like a dark arcade or a closed shop.
 

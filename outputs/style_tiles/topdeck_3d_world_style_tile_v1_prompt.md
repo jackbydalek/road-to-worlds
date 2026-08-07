@@ -1,8 +1,8 @@
-# Kitchen Table 3D World Style Tile v1 — Generation Prompt
+# Topdeck 3D World Style Tile v1 — Generation Prompt
 
 Use case: infographic-diagram
 
-Asset type: production 3D-world art-direction style tile for the original Godot card game “Kitchen Table: Road to Worlds”
+Asset type: production 3D-world art-direction style tile for the original Godot card game “Topdeck to Worlds”
 
 Primary request: Create one polished landscape 16:9 style tile showing an original late-1990s console-era low-poly 3D adventure world that surrounds a cozy hand-illustrated trading-card game. The world should feel chunky, colorful, optimistic, expressive, highly readable, and appealing rather than like an unfinished greybox.
 

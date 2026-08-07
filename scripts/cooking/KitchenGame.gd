@@ -263,7 +263,7 @@ func _build_header(parent: Control) -> void:
 	row.add_theme_constant_override("separation", 8)
 	parent.add_child(row)
 	_fill_authored_anchor(row)
-	var title := _label("KITCHEN TABLE — PREP & PLATED", 22, Color("#173e52"))
+	var title := _label("PREP & PLATED", 22, Color("#173e52"))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(title)
 	var matchup := _label("%s  vs  %s" % [service.deck_name(String(state.player.deck_id)), service.deck_name(String(state.opponent.deck_id))], 14, Color("#4b5e66"))

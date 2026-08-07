@@ -24,7 +24,7 @@ The demo advances through Weekly Locals and the League Cup. Each tournament has 
 
 ## Demo Endpoint
 
-The public demo is a focused vertical slice: How to Play, the 3D card store, Weekly Locals, prize packs, the League Cup, final prize packs, and Thanks for Playing. State Championship and the later Road to Worlds remain future full-game progression.
+The public demo is a focused vertical slice: How to Play, the 3D card store, Weekly Locals, prize packs, the League Cup, final prize packs, and Thanks for Playing. State Championship and the later championship circuit remain future full-game progression.
 
 Difficulty is chosen through the card-frame selection. The existing frame modifiers still affect economy, opponents, or opening-player rules, while the demo's one-loss elimination rule applies to every frame.
 

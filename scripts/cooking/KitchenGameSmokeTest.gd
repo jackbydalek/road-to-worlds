@@ -1332,7 +1332,7 @@ func _run() -> void:
 		_fail("Jalapeño Panther's deck picker did not add the chosen card to the hand.")
 		return
 
-	print("Kitchen Table TCG smoke test passed.")
+	print("Topdeck gameplay smoke test passed.")
 	quit(0)
 
 

@@ -2,7 +2,7 @@ extends SceneTree
 
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
-const PREVIEW_PATH := "/tmp/road-to-worlds-meal-color-readability.png"
+const PREVIEW_PATH := "/tmp/topdeck-to-worlds-meal-color-readability.png"
 const CARD_PAIRS := [
 	["spicy_firecracker_shrimp", "spicy_hot_honey_bee"],
 	["hearty_gravy_gazelle", "hearty_bagver"],

@@ -9,7 +9,7 @@ Generated with the built-in image tool using each supplied drawing as a style-tr
 - Broad flat fills, one tiny shadow patch, and no realistic texture.
 - Two or three dominant palette colors per mascot.
 - Centered with generous margins and a silhouette readable at 64 px.
-- The source concept remains recognizable at a broad level, while anatomy, proportions, motifs, and details are changed into an original Road to Worlds creature.
+- The source concept remains recognizable at a broad level, while anatomy, proportions, motifs, and details are changed into an original Topdeck to Worlds creature.
 - No text, border, scenery, watermark, or signature.
 
 ## Characters

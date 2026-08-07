@@ -1,6 +1,6 @@
-# Kitchen Table: Road to Worlds
+# Topdeck to Worlds
 
-Kitchen Table: Road to Worlds combines a competitive-season campaign with the Kitchen Table TCG match system. Build a Spicy, Hearty, or Sweet deck, buy cards and boosters, tune the list, and play live Kitchen Matches through a calendar that runs from Weekly Locals to Worlds.
+Topdeck to Worlds combines a competitive-season campaign with a tactical card-game match system. Build a Spicy, Hearty, or Sweet deck, buy cards and boosters, tune the list, and play live Kitchen Matches through a calendar that runs from Weekly Locals to Worlds.
 
 Current demo version: `0.1.0-demo.1`. The production catalog is locked to the 87 cards in `data/cards.json`; the rules service also creates one non-collectible Fresh Ingredient token at runtime.
 
@@ -47,7 +47,7 @@ See [Season Loop](docs/season-loop.md) and [Kitchen Match Rules](docs/game-rules
 
 - `scenes/Main.tscn` and `scripts/Main.gd` — season shell and debug menu
 - `scenes/Tabletop3DPrototype.tscn` and `scripts/Tabletop3DPrototype.gd` — the sole campaign and debug-match presentation on the production 3D Living Table
-- `scripts/cooking/CookingCombatService.gd` — Kitchen Table rules and AI
+- `scripts/cooking/CookingCombatService.gd` — match rules and AI
 - `scripts/CardEffectLab.gd` — Debug Sandbox scenarios for the canonical catalog's highest-risk effects
 - `scripts/ContentCatalog.gd` — kitchen-card-to-season metadata adapter
 - `scripts/RunStateService.gd`, `SeasonFlowService.gd`, and `TournamentService.gd` — campaign progression
@@ -72,7 +72,7 @@ Build the versioned, itch-ready Web ZIP (this runs the release gate first):
 scripts/release/build_itch_release.sh
 ```
 
-The artifact is written to `builds/kitchen-table-road-to-worlds-<version>-itch-web.zip`, with `index.html` at the ZIP root. Complete the [Chrome, Safari, and Firefox QA matrix](docs/browser-qa.md) against that exact artifact before publishing.
+The artifact is written to `builds/topdeck-to-worlds-<version>-itch-web.zip`, with `index.html` at the ZIP root. Complete the [Chrome, Safari, and Firefox QA matrix](docs/browser-qa.md) against that exact artifact before publishing.
 
 Pull requests and pushes to `main` or `codex/**` run the same gate in GitHub Actions and retain the versioned itch ZIP for 14 days.
 

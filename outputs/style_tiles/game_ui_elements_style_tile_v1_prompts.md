@@ -4,7 +4,7 @@
 
 Use case: ui-mockup
 
-Asset type: production UI visual-identity style tile for the original game “Kitchen Table: Road to Worlds”
+Asset type: production UI visual-identity style tile for the original game “Topdeck to Worlds”
 
 Primary request: Create one polished landscape 16:9 UI style tile that defines the complete interface language for a game combining a bright modern low-poly card-shop overworld with cozy hand-illustrated physical cards. The UI should feel like contemporary local-game-store signage, matte retail fixtures, acrylic card stands, printed event flyers, and premium card sleeves—not like a generic dark developer dashboard or an old fantasy scrapbook.
 
@@ -38,7 +38,7 @@ Constraints: practical production UI reference, cohesive with the established br
 
 Use case: precise-object-edit
 
-Asset type: corrected final UI style tile for “Kitchen Table: Road to Worlds”
+Asset type: corrected final UI style tile for “Topdeck to Worlds”
 
 Primary edit: Change only the small environment imagery inside “HUD – OVERWORLD” and “BACKGROUNDS” samples A and D so they depict the established bright modern low-poly card shop rather than a dark rustic wood-dominated store.
 

@@ -2,10 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 
-const workspace = "/Users/jack.bydalek/Documents/Road to Worlds";
+const workspace = process.cwd();
 const sourcePath = path.join(workspace, "data/cards.json");
 const outputDir = path.join(workspace, "outputs/card_inventory_2026-07-18");
-const outputPath = path.join(outputDir, "road_to_worlds_implemented_cards.xlsx");
+const outputPath = path.join(outputDir, "topdeck_to_worlds_implemented_cards.xlsx");
 const previewDir = path.join(workspace, ".codex-tmp/card_inventory/previews");
 
 const catalog = JSON.parse(await fs.readFile(sourcePath, "utf8"));
@@ -102,7 +102,7 @@ for (const sheet of [summary, cardSheet, deckSheet]) {
 
 // Summary sheet
 summary.mergeCells("A1:H1");
-summary.getRange("A1").values = [["Road to Worlds — Implemented Card Catalog"]];
+summary.getRange("A1").values = [["Topdeck to Worlds — Implemented Card Catalog"]];
 summary.getRange("A1:H1").format = {
   fill: titleFill,
   font: { name: titleFont, size: 20, bold: true, color: "#FFFFFF" },

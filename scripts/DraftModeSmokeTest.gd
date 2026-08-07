@@ -1,6 +1,8 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const PREVIEW_PATH := "/tmp/topdeck-to-worlds-draft-menu.png"
 
 var failed := false
 
@@ -10,7 +12,7 @@ func _init() -> void:
 
 
 func _run() -> void:
-	root.size = Vector2i(1440, 900)
+	root.size = Vector2i(1280, 720)
 	var main = MAIN_SCENE.instantiate()
 	root.add_child(main)
 	await process_frame
@@ -37,6 +39,28 @@ func _run() -> void:
 	_expect(main.current_screen == "draft", "Starting a draft did not open the draft screen.")
 	var draft_scene := main.find_child("DraftWorkspaceScreen", true, false) as Control
 	_expect(draft_scene != null and draft_scene.scene_file_path == "res://scenes/ui/DraftMenu.tscn", "Draft Night was not instantiated from its editable scene.")
+	_expect(main.title_label.text == "Topdeck to Worlds", "The draft shell did not use the approved product name.")
+	_expect(main.status_label.text == "Draft Night", "The draft shell did not identify the active workspace.")
+	_expect(not main.footer_label.visible, "The redundant draft footer still consumed vertical space.")
+	if draft_scene != null:
+		var leave_node := main.find_child("AbandonDraftButton", true, false) as Control
+		_expect(
+			leave_node != null and main.scroll.get_global_rect().encloses(leave_node.get_global_rect()),
+			"The draft workspace's leave action started outside the visible workspace."
+		)
+		_expect(not main.scroll.get_h_scroll_bar().visible, "The draft workspace required horizontal scrolling at its supported minimum size.")
+	var draft_mode_panel := main.find_child("DraftModePanel", true, false) as PanelContainer
+	var draft_mode_style := draft_mode_panel.get_theme_stylebox("panel") as StyleBoxFlat if draft_mode_panel != null else null
+	_expect(
+		draft_mode_style != null
+		and draft_mode_style.border_color.is_equal_approx(PALETTE.NAVY)
+		and draft_mode_style.corner_radius_top_left >= 12,
+		"The draft heading did not use the rounded navy café-panel treatment."
+	)
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+		var preview := root.get_texture().get_image()
+		_expect(preview != null and preview.save_png(PREVIEW_PATH) == OK, "The draft workspace preview could not be captured.")
 	_expect(main.draft_offer.size() == main.DRAFT_OFFER_SIZE, "The opening draft offer did not contain three cards.")
 	_expect(main.find_child("DraftOfferRow", true, false) != null, "The opening draft offer was not rendered.")
 	var offered_panel := _find_live(main, "DraftOffer_%s" % String(main.draft_offer[0])) as Control

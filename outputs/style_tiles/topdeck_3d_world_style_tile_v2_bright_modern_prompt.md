@@ -1,8 +1,8 @@
-# Kitchen Table 3D World Style Tile v2 — Bright Modern Shop Edit Prompt
+# Topdeck 3D World Style Tile v2 — Bright Modern Shop Edit Prompt
 
 Use case: style-transfer
 
-Asset type: revised 3D-world art-direction style tile for “Kitchen Table: Road to Worlds”
+Asset type: revised 3D-world art-direction style tile for “Topdeck to Worlds”
 
 Input image: edit target—the existing 3D world style tile. Preserve its overall landscape style-board format, clean modular grid, low-poly rendering vocabulary, friendly character proportions, practical art-direction modules, established teal/orange/cream affinity palette, and the “COZY CARDS / CHUNKY WORLD” concept.
 

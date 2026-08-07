@@ -2,7 +2,7 @@ extends SceneTree
 
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
-const PREVIEW_PATH := "/tmp/road_to_worlds_card_face_preview.png"
+const PREVIEW_PATH := "/tmp/topdeck_to_worlds_card_face_preview.png"
 
 var failed := false
 

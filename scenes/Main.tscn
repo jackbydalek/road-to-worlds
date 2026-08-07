@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://road_to_worlds_main"]
+[gd_scene load_steps=2 format=3 uid="uid://topdeck_to_worlds_main"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 
@@ -10,4 +10,3 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
-

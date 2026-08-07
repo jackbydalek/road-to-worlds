@@ -2,7 +2,7 @@
 
 Use case: ui-mockup
 
-Asset type: convincing in-game screenshot for the original Godot game “Kitchen Table: Road to Worlds”
+Asset type: convincing in-game screenshot for the original Godot game “Topdeck to Worlds”
 
 Primary request: Create a polished 16:9 gameplay screenshot showing the player exploring the interior of a bright contemporary low-poly card shop. Present the whole room as a charming cutaway diorama viewed from an elevated three-quarter third-person camera, with the front wall removed for clarity, but make it feel like a real playable game screen rather than a concept sheet.
 

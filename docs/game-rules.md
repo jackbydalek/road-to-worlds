@@ -1,4 +1,4 @@
-# Kitchen Table TCG Rules
+# Topdeck Gameplay Rules
 
 These are the rules used by every live match in Season Run and by the Debug Sandbox's Kitchen Match. Campaign collection, shop, deckbuilding, and tournament progression are described in [Season Loop](season-loop.md).
 

@@ -3,7 +3,7 @@ extends SceneTree
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const GAME_PALETTE := preload("res://scripts/ui/GamePalette.gd")
-const PREVIEW_PATH := "/tmp/road-to-worlds-card-frame-redesign.png"
+const PREVIEW_PATH := "/tmp/topdeck-to-worlds-card-frame-redesign.png"
 
 var failed := false
 

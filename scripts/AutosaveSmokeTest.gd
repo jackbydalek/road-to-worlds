@@ -1,7 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
-const TEST_SAVE_PATH := "user://road_to_worlds_autosave_smoke.json"
+const TEST_SAVE_PATH := "user://topdeck_to_worlds_autosave_smoke.json"
 
 var failed := false
 

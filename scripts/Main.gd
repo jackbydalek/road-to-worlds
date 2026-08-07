@@ -5,9 +5,9 @@ const MAX_MAIN_DECK_SIZE := 30
 const STARTING_CHEF_LIFE := 20
 const SIDEBOARD_SIZE := 6
 const STARTING_MONEY := 8
-const SAVE_PATH := "user://kitchen_table_season_run.json"
-const SETTINGS_PATH := "user://kitchen_table_settings.json"
-const LEGACY_BATTLE_SETTINGS_PATH := "user://road_to_worlds_readability.cfg"
+const SAVE_PATH := "user://topdeck_to_worlds_season_run.json"
+const SETTINGS_PATH := "user://topdeck_to_worlds_settings.json"
+const LEGACY_BATTLE_SETTINGS_PATH := "user://topdeck_to_worlds_readability.cfg"
 const DEVELOPMENT_FLAGS := ["--dev", "--debug-menu"]
 ## Populate these when the public pages are ready. The finale keeps honest
 ## coming-soon labels instead of presenting disabled controls as working links.
@@ -614,7 +614,7 @@ func _build_shell() -> void:
 	shell.add_child(header_bar)
 
 	title_label = Label.new()
-	title_label.text = "Kitchen Table: Road to Worlds"
+	title_label.text = "Topdeck to Worlds"
 	title_label.add_theme_font_size_override("font_size", 28)
 	title_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.INK)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2093,7 +2093,7 @@ func _populate_draft_offer_row(offer_row: HBoxContainer) -> void:
 		choice_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		choice_panel.add_theme_stylebox_override("panel", _draft_offer_panel_style(false))
 		if _card_uses_authored_face(card):
-			var face := _make_card_face(card, Vector2(188, 267), true)
+			var face := _make_card_face(card, Vector2(176, 250), true)
 			face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			face.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			choice.add_child(face)
@@ -2125,11 +2125,11 @@ func _populate_draft_offer_row(offer_row: HBoxContainer) -> void:
 
 func _draft_offer_panel_style(hovered: bool) -> StyleBoxFlat:
 	return WORKSPACE_UI_SCRIPT.clean_style(
-		WORKSPACE_UI_SCRIPT.PALETTE.APRICOT_SOFT if hovered else WORKSPACE_UI_SCRIPT.SURFACE,
-		WORKSPACE_UI_SCRIPT.PALETTE.BRICK if hovered else WORKSPACE_UI_SCRIPT.BORDER_SOFT,
+		Color(PALETTE.BLUSH, 0.34) if hovered else Color(PALETTE.CREAM, 0.96),
+		PALETTE.SKY if hovered else PALETTE.NAVY,
 		3 if hovered else 2,
-		10,
-		Vector4(14, 14, 14, 16),
+		16,
+		Vector4(12, 10, 12, 12),
 		0,
 		true
 	)
@@ -2153,7 +2153,7 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 		)
 		rail_panel.name = "DraftDeckRail"
 		parent.add_child(rail_panel)
-	rail_panel.custom_minimum_size = Vector2(292, 330)
+	rail_panel.custom_minimum_size = Vector2(264, 318)
 	rail_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
 	rail_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var rail := VBoxContainer.new()
@@ -2163,17 +2163,17 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 	heading.text = "YOUR DECK"
 	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
 	heading.add_theme_font_size_override("font_size", 24)
-	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	heading.add_theme_color_override("font_color", PALETTE.NAVY)
 	rail.add_child(heading)
 	var hint := Label.new()
 	hint.text = "%d/%d cards  •  Hover to inspect" % [_draft_total(), DRAFT_DECK_SIZE]
 	hint.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
 	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
+	hint.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
 	rail.add_child(hint)
 
 	var scroll_box := ScrollContainer.new()
-	scroll_box.custom_minimum_size = Vector2(0, 244)
+	scroll_box.custom_minimum_size = Vector2(0, 228)
 	scroll_box.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	rail.add_child(scroll_box)
 	var grid := GridContainer.new()
@@ -2198,7 +2198,7 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 		tile.add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI_SCRIPT.clean_style(
-				WORKSPACE_UI_SCRIPT.SURFACE,
+				Color(PALETTE.CREAM, 0.96),
 				_affinity_color(_card_archetype(card)).darkened(0.28),
 				2,
 				7,
@@ -2468,7 +2468,7 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 	chart_title.text = title
 	chart_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
 	chart_title.add_theme_font_size_override("font_size", 19)
-	chart_title.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
+	chart_title.add_theme_color_override("font_color", PALETTE.NAVY)
 	chart.add_child(chart_title)
 	var columns := HBoxContainer.new()
 	columns.name = title.to_pascal_case() + "Graph"
@@ -2496,10 +2496,10 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 		bar_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		column.add_child(bar_center)
 		var bar_track := PanelContainer.new()
-		bar_track.custom_minimum_size = Vector2(38, 88)
+		bar_track.custom_minimum_size = Vector2(38, 68)
 		var track_style := StyleBoxFlat.new()
-		track_style.bg_color = WORKSPACE_UI_SCRIPT.PALETTE.GHOST_PRESSED
-		track_style.border_color = WORKSPACE_UI_SCRIPT.PALETTE.SLATE
+		track_style.bg_color = Color(PALETTE.LAVENDER_GLASS, 0.82)
+		track_style.border_color = PALETTE.NAVY_MUTED
 		track_style.set_border_width_all(1)
 		track_style.set_corner_radius_all(5)
 		bar_track.add_theme_stylebox_override("panel", track_style)
@@ -2549,11 +2549,11 @@ func _draft_pick(card_id: String, source: Control = null) -> void:
 	if source != null and is_instance_valid(source) and not _running_automated_test() and not _reduced_motion_enabled():
 		draft_pick_animating = true
 		source.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var flying_card := _make_card_face(cards_by_id[card_id], Vector2(188, 267), false)
+		var flying_card := _make_card_face(cards_by_id[card_id], Vector2(176, 250), false)
 		flying_card.name = "DraftPickAnimation"
 		flying_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		flying_card.z_index = 1700
-		flying_card.global_position = source.get_global_rect().get_center() - Vector2(94, 133)
+		flying_card.global_position = source.get_global_rect().get_center() - Vector2(88, 125)
 		add_child(flying_card)
 		var rail := find_child("DraftDeckRail", true, false) as Control
 		var destination := Vector2(get_viewport_rect().size.x - 95, 150)
@@ -3103,9 +3103,9 @@ func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
 	if title_label != null:
-		title_label.add_theme_color_override("font_color", PALETTE.NAVY if current_screen in ["settings", "result"] else UI_THEME_SCRIPT.INK)
+		title_label.add_theme_color_override("font_color", PALETTE.NAVY if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.INK)
 	if status_label != null:
-		status_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED if current_screen in ["settings", "result"] else UI_THEME_SCRIPT.TEAL_DEEP)
+		status_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.TEAL_DEEP)
 	theme = (
 		workspace_ui_theme
 		if _uses_workspace_interface()
@@ -3121,7 +3121,7 @@ func _apply_screen_chrome() -> void:
 	var pack_screen := current_screen == "packs"
 	var finale_screen := current_screen == "thanks"
 	var immersive_screen := pack_screen or finale_screen
-	var hide_footer := title_flow or compact_duel or compact_deck or season_menu or immersive_screen or (current_screen == "shop" and _run_mode() == "season")
+	var hide_footer := title_flow or compact_duel or compact_deck or season_menu or immersive_screen or current_screen == "draft" or (current_screen == "shop" and _run_mode() == "season")
 	var shell_background := get_node_or_null("PaperBackground") as ColorRect
 	var pastel_workspace_background := get_node_or_null("PastelWorkspaceBackground") as ColorRect
 	var pastel_workspace_screens := [
@@ -4232,7 +4232,7 @@ func _show_tournament() -> void:
 			String(difficulty.get("rules_text", ""))
 		])
 	if _run_mode() == "season":
-		_add_body_text(panel, "Season mode uses live Kitchen Table matches for each round.")
+		_add_body_text(panel, "Season mode uses live card matches for each round.")
 	else:
 		_add_body_text(panel, "Debug mode auto-resolves the full event for quick testing.")
 	_add_body_text(panel, "Entry: Free | Current money: $%d" % int(run.get("money", 0)))
@@ -4347,7 +4347,7 @@ func _start_season_tournament_round(reuse_current_opponent: bool = false, reuse_
 	active["current_ai_difficulty"] = ai_difficulty
 	active["round_result_recorded"] = false
 	run.active_tournament = active
-	_set_footer("%s round %d started. Win the Kitchen Table match to add a win to your record." % [
+	_set_footer("%s round %d started. Win the match to add a win to your record." % [
 		String(active.get("event_name", "Tournament")),
 		round_number
 	])
@@ -6346,8 +6346,10 @@ func _update_status() -> void:
 				status_label.text = "New Season"
 			"settings":
 				status_label.text = "Settings"
+			"draft":
+				status_label.text = "Draft Night"
 			_:
-				status_label.text = "Road to Worlds"
+				status_label.text = "Main Menu"
 		return
 	var main_count := _deck_total(run.deck)
 	var difficulty := _difficulty_data(_run_difficulty_id())
