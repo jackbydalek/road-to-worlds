@@ -43,7 +43,9 @@ const PRODUCT_PREVIEW_ROTATION_SPEED := 0.55
 
 
 func _ready() -> void:
-	_flatten_display_lighting($ShelfViewportContainer/ShelfViewport/World)
+	var display_world := $ShelfViewportContainer/ShelfViewport/World
+	_flatten_display_lighting(display_world)
+	_apply_cafe_shelf_palette(display_world.get_node("DisplayShelf"))
 	%SeasonSetupBackButton.pressed.connect(back_requested.emit)
 	%SpicyStarterButton.pressed.connect(func() -> void: starter_selected_requested.emit(0))
 	%HeartyStarterButton.pressed.connect(func() -> void: starter_selected_requested.emit(1))
@@ -78,6 +80,16 @@ func _flatten_display_lighting(node: Node) -> void:
 					mesh_instance.set_surface_override_material(surface_index, flat_surface)
 	for child in node.get_children():
 		_flatten_display_lighting(child)
+
+
+func _apply_cafe_shelf_palette(node: Node) -> void:
+	if node is MeshInstance3D:
+		var shelf_material := StandardMaterial3D.new()
+		shelf_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		shelf_material.albedo_color = PALETTE.PERIWINKLE.lightened(0.28)
+		(node as MeshInstance3D).material_override = shelf_material
+	for child in node.get_children():
+		_apply_cafe_shelf_palette(child)
 
 
 func configure(data: Dictionary, starter_art: Control) -> void:
@@ -166,9 +178,9 @@ func _apply_starter_selection(selected_index: int) -> void:
 	for index in range(STARTER_BUTTON_NAMES.size()):
 		var button := get_node("%%%s" % STARTER_BUTTON_NAMES[index]) as Button
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(PALETTE.APRICOT, 0.34) if index == selected_index else Color(0, 0, 0, 0)
-		style.border_color = PALETTE.TEAL if index == selected_index else Color(0, 0, 0, 0)
-		style.set_border_width_all(5 if index == selected_index else 0)
-		style.set_corner_radius_all(12)
+		style.bg_color = Color(PALETTE.BLUSH, 0.16) if index == selected_index else Color(PALETTE.LAVENDER_GLASS, 0.08)
+		style.border_color = PALETTE.SKY if index == selected_index else Color(PALETTE.PERIWINKLE, 0.38)
+		style.set_border_width_all(3 if index == selected_index else 2)
+		style.set_corner_radius_all(16)
 		button.add_theme_stylebox_override("normal", style)
-		button.add_theme_color_override("font_color", PALETTE.TEAL if index == selected_index else PALETTE.INK)
+		button.add_theme_color_override("font_color", PALETTE.NAVY)

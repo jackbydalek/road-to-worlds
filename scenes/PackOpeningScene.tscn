@@ -1,28 +1,112 @@
-[gd_scene load_steps=2 format=3 uid="uid://cpk43dopsnng8"]
+[gd_scene load_steps=10 format=3 uid="uid://cpk43dopsnng8"]
 
 [ext_resource type="Texture2D" path="res://assets/card pack/magnificent_meals.png" id="1_pack_art"]
+[ext_resource type="Shader" path="res://assets/shaders/chill_pack_art.gdshader" id="2_chill_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_chill_pack"]
+shader = ExtResource("2_chill_shader")
+
+[sub_resource type="StyleBoxFlat" id="Style_screen"]
+bg_color = Color(1, 0.968627, 0.945098, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.160784, 0.211765, 0.372549, 0.82)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.16)
+shadow_size = 7
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="Style_stage"]
+bg_color = Color(0.909804, 0.890196, 0.960784, 0.72)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.560784, 0.662745, 0.901961, 0.88)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.12)
+shadow_size = 8
+shadow_offset = Vector2(0, 5)
+
+[sub_resource type="StyleBoxFlat" id="Style_status"]
+bg_color = Color(1, 0.968627, 0.945098, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.560784, 0.662745, 0.901961, 0.68)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_action_badge"]
+bg_color = Color(0.937255, 0.494118, 0.462745, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.160784, 0.211765, 0.372549, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.24)
+shadow_size = 7
+shadow_offset = Vector2(0, 4)
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
 
 [node name="Control" type="Node2D" unique_id=375189134]
 
 [node name="TableBackground" type="ColorRect" parent="." unique_id=275513703]
-offset_left = 6.0
-offset_top = 6.0
-offset_right = 1354.0
-offset_bottom = 674.0
-color = Color(0.9137255, 0.8627451, 0.76862746, 1)
+offset_right = 1360.0
+offset_bottom = 680.0
+color = Color(0.909804, 0.890196, 0.960784, 1)
+
+[node name="PackScreenCard" type="Panel" parent="."]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 1348.0
+offset_bottom = 668.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_screen")
+
+[node name="PackStage" type="Panel" parent="."]
+offset_left = 400.0
+offset_top = 94.0
+offset_right = 960.0
+offset_bottom = 592.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stage")
 
 [node name="PackButton" type="Button" parent="." unique_id=1458735756]
 z_index = 100
 offset_left = 485.0
-offset_top = 80.0
+offset_top = 92.0
 offset_right = 875.0
-offset_bottom = 600.0
+offset_bottom = 584.0
 mouse_filter = 0
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.09, 0.08, 0.07, 1)
 theme_override_font_sizes/font_size = 28
 
 [node name="MagnificentMealsArtwork" type="TextureRect" parent="PackButton"]
+material = SubResource("ShaderMaterial_chill_pack")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -33,6 +117,30 @@ mouse_filter = 2
 texture = ExtResource("1_pack_art")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="PackActionBadge" type="PanelContainer" parent="PackButton"]
+z_index = 2
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = -72.0
+offset_right = -30.0
+offset_bottom = -14.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_action_badge")
+
+[node name="PackActionLabel" type="Label" parent="PackButton/PackActionBadge"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_font_sizes/font_size = 22
+text = "OPEN BOOSTER — $5"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="CardFan" type="Control" parent="." unique_id=1065774735]
 layout_mode = 3
@@ -107,12 +215,18 @@ offset_right = 1408.0
 offset_bottom = 412.0
 rotation = 0.13
 
-[node name="PackStatusLabel" type="Label" parent="." unique_id=1840105955]
-offset_left = 44.0
+[node name="PackStatusPanel" type="PanelContainer" parent="."]
+offset_left = 36.0
 offset_top = 28.0
-offset_right = 824.0
-offset_bottom = 78.0
+offset_right = 928.0
+offset_bottom = 82.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_status")
+
+[node name="PackStatusLabel" type="Label" parent="PackStatusPanel" unique_id=1840105955]
+layout_mode = 2
 text = "PackStatusLabel"
+vertical_alignment = 1
 
 [node name="DoneButton" type="Button" parent="." unique_id=2101028036]
 offset_left = 570.8

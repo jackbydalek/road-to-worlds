@@ -10,18 +10,26 @@
 [ext_resource type="PackedScene" path="res://assets/season_setup/booster_box.tscn" id="8_booster"]
 [sub_resource type="Environment" id="Environment_display"]
 background_mode = 1
-background_color = Color(0.945, 0.89, 0.78, 1)
+background_color = Color(1, 0.968627, 0.945098, 1)
 ambient_light_source = 3
-ambient_light_color = Color(1, 0.91, 0.74, 1)
-ambient_light_energy = 1.24
+ambient_light_color = Color(0.909804, 0.890196, 0.960784, 1)
+ambient_light_energy = 0.9
+adjustment_enabled = true
+adjustment_brightness = 1.04
+adjustment_contrast = 0.86
+adjustment_saturation = 0.48
 
 [sub_resource type="Environment" id="Environment_product_preview"]
 background_mode = 1
 background_color = Color(0.968627, 0.968627, 1, 0)
+adjustment_enabled = true
+adjustment_brightness = 1.04
+adjustment_contrast = 0.86
+adjustment_saturation = 0.48
 
 [sub_resource type="StandardMaterial3D" id="Material_backdrop"]
 shading_mode = 0
-albedo_color = Color(0.957, 0.914, 0.827, 1)
+albedo_color = Color(1, 0.968627, 0.945098, 1)
 
 [sub_resource type="BoxMesh" id="Mesh_backdrop"]
 material = SubResource("Material_backdrop")
@@ -47,24 +55,31 @@ content_margin_right = 24.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="Style_hit"]
-bg_color = Color(0, 0, 0, 0)
-border_color = Color(0, 0, 0, 0)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0.909804, 0.890196, 0.960784, 0.32)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.560784, 0.662745, 0.901961, 0.38)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.1)
+shadow_size = 6
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="Style_hit_hover"]
-bg_color = Color(0.847, 0.702, 0.373, 0.18)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.659, 0.412, 0.278, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0.94902, 0.643137, 0.721569, 0.15)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.407843, 0.772549, 0.909804, 0.94)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="Style_modal"]
 bg_color = Color(0.965, 0.95, 1, 0.95)
@@ -109,12 +124,12 @@ shadow_size = 5
 shadow_offset = Vector2(0, 3)
 
 [sub_resource type="StyleBoxFlat" id="Style_draft_label"]
-bg_color = Color(0.91, 0.82, 0.68, 1)
+bg_color = Color(0.909804, 0.890196, 0.960784, 0.96)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.659, 0.412, 0.278, 1)
+border_color = Color(0.160784, 0.211765, 0.372549, 0.72)
 corner_radius_top_left = 9
 corner_radius_top_right = 9
 corner_radius_bottom_right = 9
@@ -223,24 +238,25 @@ current = true
 size = 3.45
 
 [node name="DisplayShelf" parent="ShelfViewportContainer/ShelfViewport/World" unique_id=1698948088 instance=ExtResource("4_shelf")]
+visible = false
 transform = Transform3D(2.35, 0, 0, 0, 2.35, 0, 0, 0, 2.35, 0, 0.05, 0)
 
 [node name="ShelfWindowLight" type="OmniLight3D" parent="ShelfViewportContainer/ShelfViewport/World"]
 position = Vector3(0, 3.1, 2.8)
-light_color = Color(1.0, 0.76, 0.48, 1)
-light_energy = 4.6
+light_color = Color(1, 0.968627, 0.945098, 1)
+light_energy = 1.2
 omni_range = 6.5
 
 [node name="ShelfKeyLight" type="DirectionalLight3D" parent="ShelfViewportContainer/ShelfViewport/World"]
 rotation_degrees = Vector3(-42, -24, 0)
-light_color = Color(1.0, 0.88, 0.68, 1)
-light_energy = 1.5
+light_color = Color(0.909804, 0.890196, 0.960784, 1)
+light_energy = 0.8
 shadow_enabled = true
 
 [node name="ShelfNeonFill" type="OmniLight3D" parent="ShelfViewportContainer/ShelfViewport/World"]
 position = Vector3(-3.4, 2.4, 1.4)
-light_color = Color(0.72, 0.86, 0.72, 1)
-light_energy = 2.4
+light_color = Color(0.407843, 0.772549, 0.909804, 1)
+light_energy = 0.7
 omni_range = 6.0
 
 [node name="SpicyStarterModel" parent="ShelfViewportContainer/ShelfViewport/World" unique_id=988981465 instance=ExtResource("5_spicy")]
@@ -263,7 +279,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.95, 0.72, 0.45, 0.02)
+color = Color(0.909804, 0.890196, 0.960784, 0.035)
 
 [node name="SeasonStarterCard" type="Control" parent="." unique_id=1958515021]
 unique_name_in_owner = true
@@ -301,7 +317,7 @@ horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="SeasonSetupBanner/Copy" unique_id=572287869]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.25, 0.51, 0.43, 1)
+theme_override_colors/font_color = Color(0.329412, 0.384314, 0.541176, 1)
 theme_override_fonts/font = ExtResource("3_body")
 theme_override_font_sizes/font_size = 16
 text = "Select a deck—or the booster box for Draft Night."

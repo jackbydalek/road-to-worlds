@@ -619,6 +619,8 @@ func _apply_shop_context() -> void:
 	var event_name := String(shop_context.get("event_name", "Weekly Locals"))
 	var money := int(shop_context.get("money", 0))
 	var prize_packs := int(shop_context.get("prize_packs", 0))
+	var booster_price := int(shop_context.get("booster_price", 5))
+	var pack_needs_attention := bool(shop_context.get("pack_needs_attention", false))
 	var difficulty := String(shop_context.get("difficulty_name", "Black"))
 	cash_hud_button.text = "$%d" % money
 	_update_overview_round_button()
@@ -627,6 +629,16 @@ func _apply_shop_context() -> void:
 		menu_cash_status_label.text = "$%d cash" % money
 	if menu_prize_status_label != null:
 		menu_prize_status_label.text = "%d prize pack%s" % [prize_packs, "" if prize_packs == 1 else "s"]
+	if buy_pack_button != null:
+		if pack_needs_attention:
+			buy_pack_button.text = "Continue Pack"
+			buy_pack_button.disabled = false
+		elif prize_packs > 0:
+			buy_pack_button.text = "Open Prize Pack"
+			buy_pack_button.disabled = false
+		else:
+			buy_pack_button.text = "Open Booster — $%d" % booster_price
+			buy_pack_button.disabled = money < booster_price
 	if not menu_panel.visible and not station_panel.visible and (singles_panel == null or not singles_panel.visible) and (trade_panel == null or not trade_panel.visible) and (meta_panel == null or not meta_panel.visible):
 		shot_label.text = "CARD STORE  •  %s frame  •  %s  •  %d prize pack(s)" % [difficulty, event_name, prize_packs]
 

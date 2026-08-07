@@ -167,7 +167,7 @@ func _update_authored_button_labels(host, scene_root: Node, event: Dictionary, l
 			packs.text = "Open Prize Pack"
 			packs.disabled = false
 		else:
-			packs.text = "Buy Pack $%d" % price
+			packs.text = "Open Booster — $%d" % price
 			packs.disabled = int(host.run.get("money", 0)) < price
 
 	var trade := _find_node_by_name(scene_root, "TradeBindersButton") as Button

@@ -53,6 +53,21 @@ func _test_pack_and_finale_layouts() -> void:
 		if pack_frame != null and pack_scroll != null:
 			_expect(not pack_scroll.get_v_scroll_bar().visible and not pack_scroll.get_h_scroll_bar().visible, "The pack-opening table requires scrolling at %s." % context)
 			_expect(pack_scroll.get_global_rect().encloses(pack_frame.get_global_rect()), "The pack-opening frame extends beyond %s." % context)
+		var pack_art := main.find_child("MagnificentMealsArtwork", true, false) as TextureRect
+		var pack_stage := main.find_child("PackStage", true, false) as Panel
+		_expect(pack_art != null and pack_art.material is ShaderMaterial, "The pack wrapper did not use the calmer packaging treatment at %s." % context)
+		_expect(pack_stage != null and pack_stage.get_theme_stylebox("panel") is StyleBoxFlat, "The pack-opening screen is missing its pastel product stage at %s." % context)
+
+		main.run.current_pack = []
+		main.run.pack_index = 0
+		main.run.pack_opened = false
+		main._show_packs()
+		await process_frame
+		var pack_action_label := main.find_child("PackActionLabel", true, false) as Label
+		_expect(
+			pack_action_label != null and pack_action_label.text == "OPEN BOOSTER — $5",
+			"The sealed booster did not show its $5 action price at %s." % context
+		)
 
 		main._show_season_run()
 		await process_frame

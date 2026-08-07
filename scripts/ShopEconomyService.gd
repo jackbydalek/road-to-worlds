@@ -23,6 +23,7 @@ func buy_and_open_pack(target_run: Dictionary, booster_id: String, current_prima
 		return { "ok": false, "message": "Not enough money for a booster." }
 	target_run.money = int(target_run.money) - int(booster.price)
 	start_pack(target_run, generate_pack(booster_id, current_primary))
+	target_run.current_pack_source = "paid"
 	return { "ok": true, "message": "You bought a %s. Time to sweat the rare slot." % booster.get("name", "booster") }
 
 
@@ -31,6 +32,7 @@ func open_prize_pack(target_run: Dictionary, booster_id: String, current_primary
 		return { "ok": false, "message": "No prize packs waiting." }
 	target_run.prize_packs = int(target_run.prize_packs) - 1
 	start_pack(target_run, generate_pack(booster_id, current_primary))
+	target_run.current_pack_source = "prize"
 	return { "ok": true, "message": "Prize pack opened. Free cardboard always feels a little better." }
 
 
@@ -43,6 +45,7 @@ func start_pack(target_run: Dictionary, pack: Array) -> void:
 	target_run.revealed_pack = []
 	target_run.pack_index = 0
 	target_run.pack_opened = false
+	target_run.current_pack_source = "booster"
 
 
 func generate_pack(booster_id: String, current_primary: String) -> Array:
