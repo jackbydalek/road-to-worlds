@@ -3,6 +3,7 @@ extends SceneTree
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const BOOSTER_BOX_TEXTURE := preload("res://assets/season_setup/booster_box.png")
+const BOOSTER_BOX_SCENE := preload("res://assets/season_setup/booster_box.tscn")
 const TEST_SAVE_PATH := "user://topdeck_to_worlds_game_start_flow_test.json"
 
 var failed := false
@@ -211,9 +212,18 @@ func _run() -> void:
 		and booster_box_decompressed
 		and booster_box_image.get_width() >= 725
 		and booster_box_image.get_height() == 720
-		and booster_box_image.get_pixel(96, 450).get_luminance() < 0.12,
-		"Draft Night loaded the old booster-box atlas instead of the dark-backed display texture."
+		and booster_box_image.get_pixel(96, 450).a < 0.12,
+		"Draft Night loaded a booster-box atlas whose backing is still opaque."
 	)
+	var draft_booster_box := BOOSTER_BOX_SCENE.instantiate()
+	var draft_booster_mesh := draft_booster_box.get_node_or_null("Cube") as MeshInstance3D
+	var draft_booster_material := draft_booster_mesh.material_override as StandardMaterial3D if draft_booster_mesh != null else null
+	_expect(
+		draft_booster_material != null
+		and draft_booster_material.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR,
+		"Draft Night does not render the transparent booster backing as a depth-safe cutout."
+	)
+	draft_booster_box.free()
 	var draft_star := main.find_child("DraftNightStar", true, false) as TextureRect
 	_expect(draft_star != null and draft_star.texture.resource_path == "res://assets/ui/wired_title/draft_star.svg", "Draft Night did not use the sketch star.")
 	_expect(main.find_child("StarterDeckSymbol", true, false) == null, "Draft Night displayed a starter affinity symbol instead of its star.")
