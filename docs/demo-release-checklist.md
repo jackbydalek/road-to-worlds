@@ -38,7 +38,7 @@ Version: `0.1.0-demo.1`
 - Public Steam page URL: not configured.
 - Store-page screenshots/capsules and platform-specific upload steps remain a manual publishing task.
 - Seven Meals did not include stats in the supplied source list. Confirm the current inherited values before balance lock: Relishoon 4/5, Sauerkrat 2/3, Cinnamon Snail 5/6, Pandacake 4/5, Gravy Gazelle 2/4, Polar Pot Pie Bear 3/6, and Bison Burrito 4/5.
-- Dedicated art is present for 61 of 87 canonical cards. Public boosters and singles are automatically constrained to those 61 finished cards. The remaining 26 stay playable in the canonical catalog but should receive final art before calling the full visual content complete:
+- Dedicated art is present for 61 of 87 canonical cards. Boosters and singles intentionally draw from all 87 canonical cards, so the remaining 26 may appear with fallback artwork and should receive final art before calling the full visual content complete:
   - Ingredients: Feta Ferret, Arrabbeta.
   - Meals: Jambaye-aye, Relishoon, Pika-le, Pudding Puma, Yolke Bowl, Hot Sauchuar.
   - Chefs: Chef Gusteau, Chef Brown, Chef Duff, Chef Emril.

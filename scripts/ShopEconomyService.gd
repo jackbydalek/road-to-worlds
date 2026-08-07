@@ -83,21 +83,19 @@ func pick_card_by_rarity(rarity: String, current_primary: String, affinity_restr
 	var pool := []
 	for card in cards:
 		if (
-			_public_reward_eligible(card)
-			and card.get("rarity", "") == rarity
+			card.get("rarity", "") == rarity
 			and (not affinity_restricted or card_is_affinity_reward_eligible(card, current_primary))
 		):
 			pool.append(card.id)
 
 	if pool.is_empty() and affinity_restricted:
 		for card in cards:
-			if _public_reward_eligible(card) and card_is_affinity_reward_eligible(card, current_primary):
+			if card_is_affinity_reward_eligible(card, current_primary):
 				pool.append(card.id)
 
 	if pool.is_empty():
 		for card in cards:
-			if _public_reward_eligible(card):
-				pool.append(card.id)
+			pool.append(card.id)
 	if pool.is_empty():
 		return ""
 
@@ -260,8 +258,6 @@ func generate_shop_inventory(target_run: Dictionary, current_primary: String) ->
 func pick_shop_card(rarity: String, current_primary: String, excluded: Array) -> String:
 	var pool := []
 	for card in cards:
-		if not _public_reward_eligible(card):
-			continue
 		if card.rarity != rarity:
 			continue
 		if excluded.has(card.id):
@@ -276,17 +272,12 @@ func pick_shop_card(rarity: String, current_primary: String, excluded: Array) ->
 
 	if pool.is_empty():
 		for card in cards:
-			if _public_reward_eligible(card) and not excluded.has(card.id):
+			if not excluded.has(card.id):
 				pool.append(card.id)
 
 	if pool.is_empty():
 		return ""
 	return pool[rng.randi_range(0, pool.size() - 1)]
-
-
-func _public_reward_eligible(card: Dictionary) -> bool:
-	return bool(card.get("public_reward_eligible", false))
-
 
 func card_price(target_run: Dictionary, card_id: String) -> int:
 	var card: Dictionary = cards_by_id[card_id]

@@ -20,7 +20,7 @@ The automated `ResponsiveLayoutSmokeTest` covers those viewport and text-scale c
 - [ ] All seven tutorial steps remain readable at 125% zoom.
 - [ ] Start a run with $5 on the intended lower-income tiers and verify earned money is added after play.
 - [ ] Store navigation accepts mouse and keyboard input; the shopkeeper zoom, heart, and particle transitions finish cleanly.
-- [ ] Singles and boosters only reveal cards with finished artwork; pack cards remain inside the viewport.
+- [ ] Singles and boosters can reveal any canonical card; dedicated and fallback artwork both remain inside the viewport.
 - [ ] In a match, open the card inspector and verify the full rules text is visible at every supported size.
 - [ ] Complete a round and finale; buttons remain visible and community link works.
 - [ ] Music, UI sounds, combat sounds, healing/buff sound, mute, and volume settings behave correctly.

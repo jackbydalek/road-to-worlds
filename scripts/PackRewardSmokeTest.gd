@@ -23,9 +23,27 @@ func _init() -> void:
 			for entry in pack:
 				var card_id := String((entry as Dictionary).get("cardId", ""))
 				_expect(
-					bool(catalog.cards_by_id.get(card_id, {}).get("public_reward_eligible", false)),
-					"%s exposed unfinished card art for %s." % [booster_id, card_id]
+					catalog.cards_by_id.has(card_id),
+					"%s generated an unknown card ID: %s." % [booster_id, card_id]
 				)
+
+	# Every canonical collectible must remain selectable regardless of whether it
+	# has dedicated artwork yet. Isolating each card makes this deterministic and
+	# protects both reward paths from accidentally reintroducing an art filter.
+	for card_value in catalog.cards:
+		var card: Dictionary = card_value
+		var isolated_rng := RandomNumberGenerator.new()
+		isolated_rng.seed = 7252026
+		var isolated_economy: RefCounted = SHOP_ECONOMY_SERVICE_SCRIPT.new()
+		isolated_economy.setup([card], {String(card.id): card}, catalog.boosters_by_id, isolated_rng)
+		_expect(
+			isolated_economy.pick_card_by_rarity(String(card.rarity), "spicy", false) == String(card.id),
+			"Booster selection excluded canonical card %s." % String(card.id)
+		)
+		_expect(
+			isolated_economy.pick_shop_card(String(card.rarity), "spicy", []) == String(card.id),
+			"Singles selection excluded canonical card %s." % String(card.id)
+		)
 
 	for affinity in AFFINITY_ORDER:
 		for pack_index in range(100):
@@ -81,12 +99,12 @@ func _init() -> void:
 	var shop_run := {"shop": []}
 	for inventory_index in range(40):
 		economy.generate_shop_inventory(shop_run, "spicy")
-		_expect(shop_run.shop.size() == 8, "The finished-art singles pool could not fill all eight slots.")
+		_expect(shop_run.shop.size() == 8, "The canonical singles pool could not fill all eight slots.")
 		for card_id_value in shop_run.shop:
 			var card_id := String(card_id_value)
 			_expect(
-				bool(catalog.cards_by_id.get(card_id, {}).get("public_reward_eligible", false)),
-				"The singles case exposed unfinished card art for %s." % card_id
+				catalog.cards_by_id.has(card_id),
+				"The singles case generated an unknown card ID: %s." % card_id
 			)
 
 	if failed:
