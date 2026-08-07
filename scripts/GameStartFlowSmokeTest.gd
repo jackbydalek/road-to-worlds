@@ -240,6 +240,29 @@ func _run() -> void:
 	game_status_scene = main.find_child("GameStartGateway", true, false) as Control
 	var continue_button := main.find_child("ContinueRunButton", true, false) as Button
 	_expect(continue_button != null and not continue_button.disabled, "Continue did not enable for a valid autosave.")
+	var saved_deck_frame := main.find_child("SavedDeckFrame", true, false) as PanelContainer
+	var saved_status_frame := main.find_child("SavedGameStatusFrame", true, false) as PanelContainer
+	var saved_deck_style := saved_deck_frame.get_theme_stylebox("panel") as StyleBoxFlat if saved_deck_frame != null else null
+	var saved_status_style := saved_status_frame.get_theme_stylebox("panel") as StyleBoxFlat if saved_status_frame != null else null
+	_expect(
+		saved_deck_style != null
+		and _color_rgb_close(saved_deck_style.border_color, PALETTE.PERIWINKLE)
+		and saved_deck_style.corner_radius_top_left >= 12,
+		"The saved deck art was not presented in the rounded periwinkle cafe card."
+	)
+	_expect(
+		saved_status_style != null
+		and _color_rgb_close(saved_status_style.border_color, PALETTE.SKY)
+		and saved_status_style.corner_radius_top_left >= 12,
+		"The saved season details were not presented in the rounded sky cafe card."
+	)
+	var saved_deck_button := main.find_child("SavedDeckCollectionButton", true, false) as Button
+	var saved_deck_button_style := saved_deck_button.get_theme_stylebox("normal") as StyleBoxFlat if saved_deck_button != null else null
+	_expect(
+		saved_deck_button_style != null
+		and _color_rgb_close(saved_deck_button_style.bg_color, PALETTE.CORAL, 0.006),
+		"The saved-season deck action did not use the coral primary treatment."
+	)
 	var saved_product_art := main.find_child("SavedStarterProductArt", true, false) as TextureRect
 	var saved_product_viewport := main.find_child("SavedProductViewportContainer", true, false) as SubViewportContainer
 	_expect(
@@ -307,6 +330,14 @@ func _expect(condition: bool, message: String) -> void:
 		return
 	failed = true
 	push_error(message)
+
+
+func _color_rgb_close(a: Color, b: Color, tolerance := 0.002) -> bool:
+	return (
+		absf(a.r - b.r) < tolerance
+		and absf(a.g - b.g) < tolerance
+		and absf(a.b - b.b) < tolerance
+	)
 
 
 func _remove_test_saves() -> void:

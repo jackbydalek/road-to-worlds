@@ -23,17 +23,39 @@ content_margin_top = 16.0
 content_margin_right = 18.0
 content_margin_bottom = 18.0
 
-[sub_resource type="StyleBoxFlat" id="Style_inset"]
-bg_color = Color(0.98, 0.95, 0.89, 0.94)
+[sub_resource type="StyleBoxFlat" id="Style_deck_inset"]
+bg_color = Color(1, 0.969, 0.945, 0.96)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.659, 0.412, 0.278, 0.82)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
+border_color = Color(0.557, 0.663, 0.902, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.161, 0.212, 0.373, 0.14)
+shadow_size = 5
+shadow_offset = Vector2(0, 3)
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 11.0
+
+[sub_resource type="StyleBoxFlat" id="Style_status_inset"]
+bg_color = Color(0.91, 0.89, 0.961, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.408, 0.773, 0.91, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.161, 0.212, 0.373, 0.14)
+shadow_size = 5
+shadow_offset = Vector2(0, 3)
 content_margin_left = 12.0
 content_margin_top = 10.0
 content_margin_right = 12.0
@@ -201,7 +223,7 @@ theme_override_constants/separation = 6
 [node name="SavedDeckFrame" type="PanelContainer" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow"]
 custom_minimum_size = Vector2(0, 274)
 layout_mode = 2
-theme_override_styles/panel = SubResource("Style_inset")
+theme_override_styles/panel = SubResource("Style_deck_inset")
 
 [node name="SavedDeckMount" type="CenterContainer" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedDeckFrame"]
 unique_name_in_owner = true
@@ -239,7 +261,7 @@ layout_mode = 2
 [node name="SavedGameStatusFrame" type="PanelContainer" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow"]
 custom_minimum_size = Vector2(0, 146)
 layout_mode = 2
-theme_override_styles/panel = SubResource("Style_inset")
+theme_override_styles/panel = SubResource("Style_status_inset")
 
 [node name="StatusBox" type="VBoxContainer" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedGameStatusFrame"]
 layout_mode = 2
@@ -249,22 +271,25 @@ alignment = 1
 [node name="StatusLine1" type="Label" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedGameStatusFrame/StatusBox"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.161, 0.212, 0.373, 1)
 theme_override_fonts/font = ExtResource("4_body")
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="StatusLine2" type="Label" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedGameStatusFrame/StatusBox"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.325, 0.384, 0.541, 1)
 theme_override_fonts/font = ExtResource("4_body")
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="StatusLine3" type="Label" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedGameStatusFrame/StatusBox"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.325, 0.384, 0.541, 1)
 theme_override_fonts/font = ExtResource("4_body")
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
@@ -273,6 +298,7 @@ autowrap_mode = 2
 [node name="StatusLine4" type="Label" parent="DoorDisplay/DoorMargin/DoorContent/SummaryRow/SavedGameStatusFrame/StatusBox"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.518, 0.42, 0.376, 1)
 theme_override_fonts/font = ExtResource("4_body")
 theme_override_font_sizes/font_size = 11
 horizontal_alignment = 1
@@ -286,11 +312,15 @@ alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(170, 42)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.161, 0.212, 0.373, 1)
+theme_override_colors/font_hover_color = Color(0.161, 0.212, 0.373, 1)
+theme_override_colors/font_pressed_color = Color(0.161, 0.212, 0.373, 1)
 theme_override_fonts/font = ExtResource("4_body")
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("Style_secondary")
-theme_override_styles/hover = SubResource("Style_secondary_hover")
-theme_override_styles/pressed = SubResource("Style_secondary")
+theme_override_styles/normal = SubResource("Style_primary")
+theme_override_styles/hover = SubResource("Style_primary_hover")
+theme_override_styles/pressed = SubResource("Style_primary")
+theme_override_styles/focus = SubResource("Style_primary_hover")
 text = "VIEW DECK"
 
 [node name="ActionColumn" type="VBoxContainer" parent="."]
