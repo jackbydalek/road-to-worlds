@@ -1,6 +1,6 @@
 extends SceneTree
 
-const PRODUCTION_MAP_PREVIEW_PATH := "res://outputs/illustrated_vfx/starter_city_production_map.png"
+const PRODUCTION_MAP_PREVIEW_PATH := "res://outputs/illustrated_vfx/tournament_hub_campaign.png"
 
 
 func _initialize() -> void:
@@ -44,84 +44,29 @@ func _initialize() -> void:
 	await process_frame
 	_expect(String(main.run.get("run_loop", "")) == "route", "New public runs did not enter the route loop.")
 	_expect(main._deck_total(main.run.deck) == 15, "New route run did not use a 15-card starter.")
-	_expect(main.current_screen == "route_map", "New route run did not open the Starter City map.")
-	var production_overworld := main.find_child("StarterCityOverworld", true, false)
-	_expect(production_overworld != null, "Production flow did not load the promoted Starter City scene.")
+	_expect(main.current_screen == "route_hub", "New route run did not open the Locals tournament hub.")
 	_expect(
-		main.find_child("GeneratedStarterCity", true, false) != null,
-		"Production route map did not build its fitted procedural city."
+		main.find_child("TournamentHub", true, false) != null
+		and main.find_child("ShopKiosk", true, false) != null
+		and main.find_child("VendingMachine", true, false) != null
+		and main.find_child("MatchTable", true, false) != null,
+		"Production flow did not load the front-on parallax card-store hub."
 	)
 	_expect(
-		main.find_child("MapOverview", true, false) != null,
-		"Production route map did not expose the full-map overview control."
+		main.find_child("HubRoundLabel", true, false) != null
+		and main.find_child("HubLifeLabel", true, false) != null
+		and main.find_child("HubFundsLabel", true, false) != null
+		and main.find_child("HubDeckLabel", true, false) != null,
+		"Tournament hub is missing its round, persistent-life, funds, or locked-deck status."
 	)
 	_expect(
-		main.find_child("RouteRunBarSurface", true, false) != null
-		and main.find_child("RouteHudEyebrow", true, false) != null
-		and main.find_child("RouteLifeChip", true, false) != null
-		and main.find_child("RouteFundsChip", true, false) != null
-		and main.find_child("RouteDeckChip", true, false) != null,
-		"Production route map is missing its angular navigation HUD or status chips."
+		main.find_child("HubBackLayer", true, false) != null
+		and main.find_child("HubMidLayer", true, false) != null
+		and main.find_child("HubFrontLayer", true, false) != null,
+		"Tournament hub did not preserve separate parallax depth layers."
 	)
-	var route_guide := production_overworld.get_node_or_null("Interface/Guide/Margin/Text") as Label
-	_expect(
-		route_guide != null
-		and route_guide.text == "STARTER CITY   •   MOVE WITH WASD / ARROWS"
-		and "saved seed" not in route_guide.text.to_lower(),
-		"Production town guidance did not explain free movement concisely."
-	)
-	var hearty_map_sprite := main.find_child("PlayerSprite", true, false) as Sprite3D
-	_expect(
-		hearty_map_sprite != null
-		and hearty_map_sprite.texture != null
-		and hearty_map_sprite.texture.resource_path.ends_with("hearty_player_idle.png"),
-		"The Starter City map did not use the selected Hearty character."
-	)
-	var save_result: Dictionary = main._autosave_now("route_map")
+	var save_result: Dictionary = main._autosave_now("route_hub")
 	_expect(bool(save_result.get("ok", false)), "Route run could not be serialized: %s" % String(save_result.get("message", "unknown")))
-	var graph = main.find_child("RouteGraph", true, false)
-	_expect(
-		graph != null and graph.layers.size() == graph.route_columns + 2,
-		"Production route graph did not load the authored town route and boss."
-	)
-	if graph != null:
-		_expect(
-			graph.world_exploration_mode
-			and not graph.button_layer.visible
-			and main.find_child("TownActors", true, false) != null
-			and main.find_child("PlaceholderBuildings", true, false) != null,
-			"Production route graph did not convert its choices into physical town actors."
-		)
-		var miniboss_nodes := 0
-		for node_value in graph.nodes.values():
-			if String(node_value.get("type", "")) == "mini_boss":
-				miniboss_nodes += 1
-		_expect(
-			miniboss_nodes == graph.MINIBOSS_ROWS.size(),
-			"Starter City needs two miniboss opportunities distributed across its shorter routes."
-		)
-		var production_map_viewport := main.find_child("StarterCityViewport", true, false) as SubViewport
-		var wheel_event := InputEventMouseButton.new()
-		wheel_event.button_index = MOUSE_BUTTON_WHEEL_DOWN
-		wheel_event.pressed = true
-		wheel_event.factor = 1.0
-		wheel_event.position = Vector2(640.0, 360.0)
-		var wheel_target_before: float = (
-			graph.camera_target_x if graph.vertical_camera_locked else graph.camera_target_z
-		)
-		production_map_viewport.push_input(wheel_event, true)
-		await process_frame
-		var wheel_target_after: float = (
-			graph.camera_target_x if graph.vertical_camera_locked else graph.camera_target_z
-		)
-		_expect(
-			is_equal_approx(wheel_target_after, wheel_target_before),
-			"Mouse-wheel input displaced the player-follow town camera."
-		)
-		if graph.vertical_camera_locked:
-			graph.camera_target_x = wheel_target_before
-		else:
-			graph.camera_target_z = wheel_target_before
 	for _frame in range(8):
 		await process_frame
 	if DisplayServer.get_name() != "headless":
@@ -129,60 +74,30 @@ func _initialize() -> void:
 		_expect(
 			production_map_image != null
 			and production_map_image.save_png(ProjectSettings.globalize_path(PRODUCTION_MAP_PREVIEW_PATH)) == OK,
-			"Production Starter City map could not be captured."
+			"Production tournament hub could not be captured."
 		)
-	production_overworld.emit_signal("starter_shop_requested")
+	var hub_shop_button := main.find_child("HubShopButton", true, false) as Button
+	if hub_shop_button != null:
+		hub_shop_button.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	_expect(
 		main.current_screen == "route_shop"
-		and bool(main.run.pending_route_node.get("town_optional_shop", false)),
-		"Entering the LOCAL CARD SHOP did not open its persistent route-shop screen."
+		and bool(main.run.pending_route_node.get("hub_shop", false)),
+		"The hub kiosk did not open its persistent card-shop screen."
 	)
-	main.run.pending_route_node.remove_purchased = true
-	main._complete_route_node()
+	var hub_shop_services := main.find_child("RouteShopServicesPanel", true, false) as Control
+	_expect(hub_shop_services != null and not hub_shop_services.visible, "The hub shop exposed services that belong to the one-use vending machine.")
+	var hub_shop_back := main.find_child("RouteShopContinueButton", true, false) as Button
+	if hub_shop_back != null:
+		hub_shop_back.emit_signal("pressed")
 	for _frame in range(6):
 		await process_frame
 	_expect(
-		main.current_screen == "route_map"
-		and String(main.run.route_current) == "start"
-		and bool(main.run.get("town_start_shop", {}).get("remove_purchased", false)),
-		"Leaving the optional town shop changed the route or forgot its visit state."
+		main.current_screen == "route_hub"
+		and bool(main.run.get("hub_shop", {}).get("hub_shop", false)),
+		"Leaving the kiosk did not return to the hub or remember its visit state."
 	)
-	production_overworld = main.find_child("StarterCityOverworld", true, false)
-	graph = main.find_child("RouteGraph", true, false)
-	if graph != null:
-		var live_destinations: Array[String] = graph._available_destinations()
-		var live_destination_id := String(live_destinations[0])
-		var live_destination_type := String(graph.nodes[live_destination_id].type)
-		graph.trigger_world_destination(live_destination_id)
-		for _frame in range(720):
-			await physics_frame
-			if main.current_screen != "route_map":
-				break
-		_expect(
-			String(main.run.route_current) == live_destination_id,
-			"Triggering a physical town destination did not commit its route choice."
-		)
-		var expected_route_screen := (
-			"route_encounter_intro"
-			if live_destination_type in ["enemy", "mini_boss", "final_boss"]
-			else "route_shop"
-			if live_destination_type == "shop"
-			else "route_event"
-		)
-		_expect(
-			main.current_screen == expected_route_screen,
-			"Production street node did not open its %s resolution screen." % live_destination_type
-		)
-		main._complete_route_node()
-		for _frame in range(8):
-			await process_frame
-		_expect(
-			main.current_screen == "route_map"
-			and main.find_child("GeneratedStarterCity", true, false) != null,
-			"Completing a route stop did not return to the production procedural city."
-		)
 	main.run.pending_route_node = {"id": "smoke_enemy", "type": "enemy", "label": "Smoke Test Rival"}
 	main._start_route_battle()
 	await process_frame
@@ -190,14 +105,14 @@ func _initialize() -> void:
 	var rival_intro_portrait := main.find_child("RouteRivalPortrait", true, false) as TextureRect
 	_expect(
 		main.current_screen == "route_encounter_intro"
-		and main.find_child("StarterCityMap", true, false) != null
+		and main.find_child("TournamentHub", true, false) != null
 		and main.find_child("RouteEncounterDimmer", true, false) != null
 		and main.find_child("RouteRivalDialoguePanel", true, false) != null
 		and main.find_child("BeginRouteEncounterButton", true, false) != null
 		and rival_intro_portrait != null
 		and rival_intro_portrait.texture != null
 		and rival_intro_portrait.texture.resource_path.contains("route_rival_npc_"),
-		"Enemy node did not stage the supplied rival over the darkened route map."
+		"Enemy node did not stage the supplied rival over the darkened tournament hub."
 	)
 	_expect(
 		String(main.run.route_battle.get("rival_portrait_id", "")) in ["npc1", "npc2"],
@@ -233,15 +148,8 @@ func _initialize() -> void:
 			next_button.emit_signal("pressed")
 	await process_frame
 	await process_frame
-	var reward_map := main.find_child("StarterCityMap", true, false)
-	var hearty_victory_pose := main.find_child("Player", true, false)
-	_expect(
-		hearty_victory_pose != null
-		and hearty_victory_pose.victory_texture != null
-		and hearty_victory_pose.victory_texture.resource_path.ends_with("hearty_player_victory.png"),
-		"The route-map celebration did not use the supplied Hearty victory pose."
-	)
-	_expect(reward_map != null and main.find_child("RouteRewardDimmer", true, false) != null, "The victory reward did not stay over the live route map.")
+	var reward_hub := main.find_child("TournamentHub", true, false)
+	_expect(reward_hub != null and main.find_child("RouteRewardDimmer", true, false) != null, "The victory reward did not stay over the live tournament hub.")
 	_expect(int(main.run.life) == 31 and int(main.run.money) == 10 and main.run.reward_offer.size() == 3, "Victory did not preserve life, animate cash, and generate a three-card reward.")
 	var regular_pack_button := main.find_child("RouteSealedPackButton", true, false) as TextureButton
 	_expect(

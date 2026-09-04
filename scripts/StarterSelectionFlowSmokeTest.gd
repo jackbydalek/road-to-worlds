@@ -78,7 +78,7 @@ func _run() -> void:
 	await create_timer(0.72).timeout
 	for _frame in range(4):
 		await process_frame
-	_expect(main.current_screen == "route_map", "The victory pose did not hand off to the Starter City run.")
+	_expect(main.current_screen == "route_hub", "The victory pose did not hand off to the Locals tournament hub.")
 	_finish()
 
 

@@ -74,6 +74,7 @@ const UI_SOUND_CONTROLLER_SCRIPT := preload("res://scripts/ui/UiSoundController.
 const MENU_SPARKLE_CONTROLLER_SCRIPT := preload("res://scripts/ui/MenuSparkleController.gd")
 const CARD_UPGRADE_REVEAL_SCRIPT := preload("res://scripts/ui/CardUpgradeReveal.gd")
 const ROUTE_RIVAL_INTRO_SCRIPT := preload("res://scripts/ui/RouteRivalIntro.gd")
+const TOURNAMENT_HUB_SCRIPT := preload("res://scripts/ui/TournamentHubScreen.gd")
 const SKETCH_THEME_SCRIPT := preload("res://scripts/ui/SketchTheme.gd")
 const WORKSPACE_THEME_SCRIPT := preload("res://scripts/ui/WorkspaceTheme.gd")
 const BUTTON_MOTION_SCRIPT := preload("res://scripts/ui/AudaciousButtonMotion.gd")
@@ -761,12 +762,12 @@ func _sync_music_for_current_screen() -> void:
 		_play_battle_music()
 	elif current_screen in ["start", "new_game", "season_setup", "draft", "season"]:
 		_play_card_shop_music(true)
-	elif current_screen == "shop" or (current_screen == "deck" and deckbuilder_return_screen == "shop"):
+	elif current_screen in ["shop", "route_hub", "route_shop", "route_break_upgrade"] or (current_screen == "deck" and deckbuilder_return_screen == "shop"):
 		_play_card_shop_music(false)
 	elif current_screen == "settings" and settings_return_screen in ["start", "new_game", "season_setup", "draft", "season"]:
 		_play_card_shop_music(true)
 	elif current_screen == "settings" and (
-		settings_return_screen == "shop"
+		settings_return_screen in ["shop", "route_hub", "route_shop", "route_break_upgrade"]
 		or (settings_return_screen == "deck" and deckbuilder_return_screen == "shop")
 	):
 		_play_card_shop_music(false)
@@ -2073,6 +2074,10 @@ func _return_from_settings() -> void:
 			_show_start()
 		"season":
 			_show_season_run()
+		"route_hub", "route_map", "route_break_upgrade":
+			_show_tournament_hub()
+		"route_shop":
+			_show_route_shop()
 		"deck":
 			_show_deckbuilder()
 		"packs":
@@ -3126,9 +3131,9 @@ func _start_new_run_with_mode(archetype_id: String, mode: String, difficulty_id:
 		"season":
 			route_run_service.initialize_run(run, rng.randi())
 			_generate_shop_inventory()
-			_set_footer("Your %s run begins in Starter City." % _starter_label(archetype_id))
+			_set_footer("Your %s run begins at Locals." % _starter_label(archetype_id))
 			_show_run_map()
-			_autosave_now("route_map")
+			_autosave_now("route_hub")
 		_:
 			_generate_shop_inventory()
 			_set_footer("Debug Sandbox started with " + _starter_label(archetype_id) + ".")
@@ -3309,7 +3314,7 @@ func _difficulty_data(difficulty_id: String) -> Dictionary:
 func _apply_screen_chrome() -> void:
 	if footer_label == null:
 		return
-	if current_screen not in ["route_remove", "route_upgrade"] and is_instance_valid(route_shop_service_overlay):
+	if current_screen not in ["route_remove", "route_upgrade", "route_break_upgrade"] and is_instance_valid(route_shop_service_overlay):
 		_clear_route_shop_service_overlay()
 	if title_label != null:
 		title_label.add_theme_color_override("font_color", PALETTE.NAVY if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.INK)
@@ -3329,10 +3334,10 @@ func _apply_screen_chrome() -> void:
 	var season_menu := current_screen == "season"
 	var pack_screen := current_screen == "packs"
 	var finale_screen := current_screen == "thanks"
-	var route_map_screen := current_screen == "route_map"
+	var route_map_screen := current_screen in ["route_map", "route_hub"]
 	var route_encounter_screen := current_screen in [
 		"route_encounter_intro", "route_shop", "route_remove", "route_upgrade",
-		"route_event", "route_game_over", "route_victory",
+		"route_break_upgrade", "route_event", "route_game_over", "route_victory",
 	]
 	var route_presentation_screen := route_encounter_screen or current_screen in ["route_reward_reveal", "route_reward_pack", "route_reward"]
 	var full_frame_screen := current_screen in ["deck", "settings"]
@@ -3476,6 +3481,171 @@ func _set_calendar_prep_notice(event_id: String) -> void:
 
 
 func _show_run_map(resolve_pending: bool = true) -> void:
+	_show_tournament_hub(resolve_pending)
+
+
+func _show_tournament_hub(resolve_pending: bool = true) -> void:
+	if _guard_run_over():
+		return
+	_clear_route_reward_overlay()
+	_clear_route_encounter_overlay()
+	route_encounter_transitioning = false
+	if resolve_pending and not run.get("pending_route_node", {}).is_empty():
+		_resolve_pending_route_node()
+		return
+	var existing_hub := content.find_child("TournamentHub", false, false)
+	if existing_hub != null and not existing_hub.is_queued_for_deletion():
+		current_screen = "route_hub"
+		_apply_screen_chrome()
+		_render_nav()
+		_update_status()
+		existing_hub.call("configure", _tournament_hub_snapshot(), _reduced_motion_enabled())
+		_play_card_shop_music()
+		return
+	current_screen = "route_hub"
+	_apply_screen_chrome()
+	_render_nav()
+	_clear(content)
+	_update_status()
+	_set_footer("")
+
+	var hub = TOURNAMENT_HUB_SCRIPT.new()
+	hub.name = "TournamentHub"
+	hub.configure(_tournament_hub_snapshot(), _reduced_motion_enabled())
+	hub.shop_requested.connect(_open_hub_shop)
+	hub.heal_requested.connect(_use_hub_break_heal)
+	hub.upgrade_requested.connect(_show_hub_break_upgrade)
+	hub.next_round_requested.connect(_start_next_hub_round)
+	hub.save_requested.connect(_save_run)
+	hub.settings_requested.connect(_show_settings)
+	content.add_child(hub)
+	_play_card_shop_music()
+
+
+func _tournament_hub_snapshot() -> Dictionary:
+	var round_number := clampi(int(run.get("hub_round", 1)), 1, maxi(1, int(run.get("hub_rounds_per_floor", 4))))
+	return {
+		"floor": String(run.get("hub_floor", "locals")).capitalize(),
+		"round": round_number,
+		"total_rounds": int(run.get("hub_rounds_per_floor", 4)),
+		"life": int(run.get("life", 0)),
+		"max_life": int(run.get("max_life", route_run_service.STARTING_LIFE)),
+		"money": int(run.get("money", 0)),
+		"deck_count": _deck_total(run.get("deck", {})),
+		"break_used": bool(run.get("hub_break_used", false)),
+		"break_choice": String(run.get("hub_break_choice", "")),
+		"can_heal": int(run.get("life", 0)) < int(run.get("max_life", route_run_service.STARTING_LIFE)),
+		"can_upgrade": not route_run_service.upgradeable_card_ids(run).is_empty(),
+		"next_label": _hub_round_label(round_number),
+		"notice": String(run.get("hub_notice", "Choose the shop, use your one break, or report to the next round.")),
+	}
+
+
+func _hub_round_label(round_number: int) -> String:
+	match round_number:
+		1:
+			return "Report to Table 1"
+		2:
+			return "Report to Table 3"
+		3:
+			return "Report to the Top Cut"
+		_:
+			return "Play the Locals Final"
+
+
+func _hub_round_node(round_number: int) -> Dictionary:
+	var node_type := "enemy"
+	if round_number == 3:
+		node_type = "mini_boss"
+	elif round_number >= int(run.get("hub_rounds_per_floor", 4)):
+		node_type = "final_boss"
+	var labels := [
+		"Table 1 — Opening Opponent",
+		"Table 3 — Swiss Rival",
+		"Top Cut — Local Semifinal",
+		"Locals Final — Store Champion",
+	]
+	return {
+		"id": "%s_round_%d" % [String(run.get("hub_floor", "locals")), round_number],
+		"type": node_type,
+		"label": labels[clampi(round_number - 1, 0, labels.size() - 1)],
+		"location": "Local Card Store — Table %d" % (3 if round_number == 2 else round_number),
+		"hub_round_node": true,
+		"hub_round": round_number,
+	}
+
+
+func _start_next_hub_round() -> void:
+	if not run.get("pending_route_node", {}).is_empty():
+		_resolve_pending_route_node()
+		return
+	var round_number := clampi(int(run.get("hub_round", 1)), 1, maxi(1, int(run.get("hub_rounds_per_floor", 4))))
+	run.hub_notice = "Round %d called. Your life and locked deck carry into the match." % round_number
+	run.pending_route_node = _hub_round_node(round_number)
+	_autosave_now("route_encounter_intro")
+	_resolve_pending_route_node()
+
+
+func _open_hub_shop() -> void:
+	var shop_state: Dictionary = run.get("hub_shop", {}).duplicate(true)
+	if shop_state.is_empty():
+		shop_state = {
+			"id": "%s_card_shop" % String(run.get("hub_floor", "locals")),
+			"type": "shop",
+			"label": "Locals Card Counter",
+			"hub_shop": true,
+		}
+	else:
+		shop_state.hub_shop = true
+	run.pending_route_node = shop_state
+	_autosave_now("route_shop")
+	_show_route_shop()
+
+
+func _leave_hub_shop() -> void:
+	var shop_state: Dictionary = run.get("pending_route_node", {}).duplicate(true)
+	shop_state.hub_shop = true
+	run.hub_shop = shop_state
+	run.pending_route_node = {}
+	run.hub_notice = "Purchases were added directly to your locked deck."
+	_autosave_now("route_hub")
+	_show_tournament_hub()
+
+
+func _use_hub_break_heal() -> void:
+	var result: Dictionary = route_run_service.use_hub_break_heal(run)
+	run.hub_notice = String(result.get("message", "The break machine did not respond."))
+	if bool(result.get("ok", false)):
+		_autosave_now("route_hub")
+	_show_tournament_hub()
+
+
+func _show_hub_break_upgrade() -> void:
+	if bool(run.get("hub_break_used", false)):
+		run.hub_notice = "The break machine is already out of order."
+		_show_tournament_hub()
+		return
+	var candidates: Array[String] = route_run_service.upgradeable_card_ids(run)
+	if candidates.is_empty():
+		run.hub_notice = "Every eligible card is already upgraded. The machine was not used."
+		_show_tournament_hub()
+		return
+	candidates.sort_custom(func(left: String, right: String) -> bool:
+		return _card_display_name(cards_by_id[left]) < _card_display_name(cards_by_id[right])
+	)
+	current_screen = "route_break_upgrade"
+	_apply_screen_chrome()
+	_update_status()
+	_show_route_shop_service_picker(
+		"break_upgrade",
+		candidates,
+		"Bye Round — Upgrade One Card",
+		"Choose one copy to improve permanently. This is free, but the break machine becomes out of order after the upgrade.",
+		PALETTE.ACTION_SPECIAL
+	)
+
+
+func _route_map_legacy(resolve_pending: bool = true) -> void:
 	if _guard_run_over():
 		return
 	_clear_route_reward_overlay()
@@ -3667,7 +3837,10 @@ func _start_route_battle(resume_saved: bool = false) -> void:
 			"opponent_life": route_run_service.encounter_life(node_type),
 			"ai": route_run_service.encounter_ai(node_type),
 			"intro_seen": false,
-			"location": ["Park Table", "Sidewalk Table", "Waterfront Table"][posmod(encounter_seed, 3)],
+			"location": String(node.get(
+				"location",
+				["Park Table", "Sidewalk Table", "Waterfront Table"][posmod(encounter_seed, 3)]
+			)),
 		}
 		run.route_battle = battle
 	elif not battle.has("rival_portrait_id"):
@@ -4379,6 +4552,7 @@ func _show_route_shop() -> void:
 	_clear(content)
 	_update_status()
 	var node: Dictionary = run.get("pending_route_node", {})
+	var hub_shop := bool(node.get("hub_shop", false))
 	if not node.has("inventory"):
 		_generate_shop_inventory()
 		node.inventory = run.shop.slice(0, 4)
@@ -4407,6 +4581,7 @@ func _show_route_shop() -> void:
 	var service_panel := service_parts.panel as PanelContainer
 	service_panel.name = "RouteShopServicesPanel"
 	service_panel.custom_minimum_size = Vector2(435, 252)
+	service_panel.visible = not hub_shop
 	if shopkeeper_stage != null:
 		shopkeeper_stage.add_child(service_panel)
 		service_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -4477,8 +4652,9 @@ func _show_route_shop() -> void:
 		if not cards_by_id.has(card_id):
 			continue
 		_add_route_shop_card_offer(cards_row, card_id, true)
-	var leave := TOPDECK_UI_SCRIPT.make_button("Continue on Route     >", "primary", Vector2(360, 64), "RouteShopContinueButton")
-	_connect_pressed(leave, _complete_route_node)
+	var leave_text := "Back to Player Area" if hub_shop else "Continue on Route     >"
+	var leave := TOPDECK_UI_SCRIPT.make_button(leave_text, "primary", Vector2(360, 64), "RouteShopContinueButton")
+	_connect_pressed(leave, _leave_hub_shop if hub_shop else _complete_route_node)
 	(shell_parts.actions as HBoxContainer).add_child(leave)
 
 
@@ -5052,7 +5228,7 @@ func _show_route_shop_service_picker(
 		_add_route_shop_service_card_choice(choices, service_kind, card_id, accent)
 	if candidates.is_empty():
 		var empty_copy := TOPDECK_UI_SCRIPT.make_label(
-			"Every eligible card in your deck has already been upgraded." if service_kind == "upgrade" else "There are no cards available for this service.",
+			"Every eligible card in your deck has already been upgraded." if service_kind in ["upgrade", "break_upgrade"] else "There are no cards available for this service.",
 			"body",
 			PALETTE.TEXT_SECONDARY
 		)
@@ -5070,7 +5246,8 @@ func _show_route_shop_service_picker(
 	instruction.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	actions.add_child(instruction)
 	var back_name := "RouteRemoveBackButton" if service_kind == "remove" else "RouteUpgradeBackButton"
-	var back := TOPDECK_UI_SCRIPT.make_button("Back to Shop", "secondary", Vector2(210, 52), back_name)
+	var back_text := "Back to Hub" if service_kind == "break_upgrade" else "Back to Shop"
+	var back := TOPDECK_UI_SCRIPT.make_button(back_text, "secondary", Vector2(210, 52), back_name)
 	_connect_pressed(back, _close_route_shop_service_overlay)
 	actions.add_child(back)
 	var confirm_name := "RouteRemoveConfirmButton" if service_kind == "remove" else "RouteUpgradeConfirmButton"
@@ -5167,7 +5344,7 @@ func _add_route_shop_service_card_choice(
 	card_visual.add_child(quantity)
 
 	var info_text := "ONE COPY WILL BE REMOVED"
-	if service_kind == "upgrade":
+	if service_kind in ["upgrade", "break_upgrade"]:
 		var upgraded_count: int = route_run_service.upgrade_count(run, card_id)
 		info_text = String(route_run_service.upgrade_summary(card_id)).to_upper()
 		if upgraded_count > 0:
@@ -5216,15 +5393,24 @@ func _select_route_shop_service_card(service_kind: String, card_id: String) -> v
 func _confirm_route_shop_service_selection(service_kind: String) -> void:
 	if selected_route_service_card_id.is_empty():
 		return
-	if service_kind == "remove":
-		_route_remove_card(selected_route_service_card_id)
-	else:
-		_route_upgrade_card(selected_route_service_card_id)
+	match service_kind:
+		"remove":
+			_route_remove_card(selected_route_service_card_id)
+		"break_upgrade":
+			_route_hub_upgrade_card(selected_route_service_card_id)
+		_:
+			_route_upgrade_card(selected_route_service_card_id)
 
 
 func _close_route_shop_service_overlay() -> void:
-	current_screen = "route_shop"
+	var service_kind := ""
+	if is_instance_valid(route_shop_service_overlay):
+		service_kind = String(route_shop_service_overlay.get_meta("service_kind", ""))
 	_clear_route_shop_service_overlay()
+	if service_kind == "break_upgrade":
+		_show_tournament_hub()
+		return
+	current_screen = "route_shop"
 	_apply_screen_chrome()
 	_update_status()
 
@@ -5266,6 +5452,28 @@ func _route_upgrade_card(card_id: String) -> void:
 	await _play_route_card_upgrade_reveal(card_id, selected_visual, selected_face)
 	if current_screen == "route_upgrade":
 		_show_route_shop()
+
+
+func _route_hub_upgrade_card(card_id: String) -> void:
+	var selected_choice := find_child("RouteServiceChoice_%s" % card_id, true, false) as Control
+	var selected_visual := selected_choice.get_node_or_null("RouteServiceCardVisual") as Control if selected_choice != null else null
+	var selected_face := selected_visual.get_node_or_null("RouteServiceCardFace") as Control if selected_visual != null else null
+	if is_instance_valid(route_shop_service_overlay):
+		for button_node in route_shop_service_overlay.find_children("*", "Button", true, false):
+			(button_node as Button).disabled = true
+	var result: Dictionary = route_run_service.use_hub_break_upgrade(run, card_id)
+	run.hub_notice = String(result.get("message", "Could not upgrade that card."))
+	if not bool(result.get("ok", false)):
+		_show_tournament_hub()
+		return
+	_update_status()
+	var shop_stats := find_child("RouteShopServiceStats", true, false) as Label
+	if shop_stats != null:
+		shop_stats.text = _route_run_stats_text()
+	_autosave_now("route_hub")
+	await _play_route_card_upgrade_reveal(card_id, selected_visual, selected_face)
+	if current_screen == "route_break_upgrade":
+		_show_tournament_hub()
 
 
 func _play_route_card_upgrade_reveal(
@@ -5657,6 +5865,7 @@ func _complete_route_node() -> void:
 	var node: Dictionary = run.get("pending_route_node", {})
 	var node_id := String(node.get("id", ""))
 	var node_type := String(node.get("type", ""))
+	var hub_round_node := bool(node.get("hub_round_node", false))
 	if bool(node.get("town_optional_shop", false)):
 		run.town_start_shop = node.duplicate(true)
 		run.pending_route_node = {}
@@ -5677,11 +5886,19 @@ func _complete_route_node() -> void:
 	if node_type == "final_boss":
 		run.demo_complete = true
 		run.run_over = true
-		run.last_result = ["Starter City Champion defeated.", "Cloud City waits beyond the bridge."]
+		run.last_result = ["Locals Champion defeated.", "Regionals waits beyond the demo."] if hub_round_node else ["Starter City Champion defeated.", "Cloud City waits beyond the bridge."]
 		_autosave_now("route_victory")
 		_show_route_victory()
 		return
-	_autosave_now("route_map")
+	if hub_round_node:
+		var completed_round := int(node.get("hub_round", run.get("hub_round", 1)))
+		run.hub_round = mini(completed_round + 1, int(run.get("hub_rounds_per_floor", 4)))
+		run.hub_notice = "Round %d cleared. Life remains at %d/%d; your deck stays locked." % [
+			completed_round,
+			int(run.get("life", 0)),
+			int(run.get("max_life", route_run_service.STARTING_LIFE)),
+		]
+	_autosave_now("route_hub")
 	_show_run_map()
 
 
@@ -6310,6 +6527,8 @@ func _return_from_deckbuilder() -> void:
 			_show_season_run()
 		"route_map":
 			_show_run_map()
+		"route_hub", "route_break_upgrade":
+			_show_tournament_hub()
 		"route_shop":
 			_show_route_shop()
 		"route_event":
@@ -9058,6 +9277,10 @@ func _resume_loaded_screen(saved_screen: String) -> void:
 				_show_route_remove_card()
 			"route_upgrade":
 				_show_route_upgrade_card()
+			"route_break_upgrade":
+				_show_hub_break_upgrade()
+			"route_hub", "route_map":
+				_show_tournament_hub()
 			"route_event":
 				_show_route_event()
 			_:

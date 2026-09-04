@@ -10,6 +10,7 @@ const SHOP_HEAL_COST := 4
 const SHOP_HEAL_AMOUNT := 9
 const SHOP_REMOVE_COST := 3
 const SHOP_UPGRADE_COST := 5
+const HUB_BREAK_HEAL_AMOUNT := 8
 const EVENT_HEAL_AMOUNT := 8
 const EVENT_MAX_LIFE_AMOUNT := 5
 const EVENT_MONEY_AMOUNT := 5
@@ -61,12 +62,20 @@ func initialize_run(target_run: Dictionary, seed_value: int) -> void:
 	target_run.route_pack_presented = false
 	target_run.route_pack_opened = false
 	target_run.card_upgrades = {}
+	target_run.campaign_presentation = "tournament_hub"
+	target_run.hub_floor = "locals"
+	target_run.hub_round = 1
+	target_run.hub_rounds_per_floor = 4
+	target_run.hub_break_used = false
+	target_run.hub_break_choice = ""
+	target_run.hub_shop = {}
+	target_run.hub_notice = "Registration is locked. Prepare here, then report to the next table."
 	target_run.max_life = STARTING_LIFE
 	target_run.life = STARTING_LIFE
 	target_run.run_over = false
 	target_run.demo_complete = false
-	target_run.season_goal = "Choose a path through Starter City and defeat its champion."
-	target_run.season_notice = "Start at a folding table. Reach the city championship."
+	target_run.season_goal = "Survive four rounds at Locals and defeat the store champion."
+	target_run.season_notice = "Your deck and life carry between rounds. The break machine works once this floor."
 	target_run.sideboard = {}
 	target_run.deck = compact_starter_deck(target_run.get("deck", {}), STARTING_DECK_SIZE)
 	target_run.collection = target_run.deck.duplicate(true)
@@ -106,6 +115,23 @@ func normalize_run(target_run: Dictionary) -> void:
 		target_run.route_pack_opened = bool(target_run.get("route_reward_intro_seen", false))
 	if not target_run.has("card_upgrades") or not (target_run.card_upgrades is Dictionary):
 		target_run.card_upgrades = {}
+	if not target_run.has("campaign_presentation"):
+		target_run.campaign_presentation = "tournament_hub"
+	if not target_run.has("hub_floor"):
+		target_run.hub_floor = "locals"
+	if not target_run.has("hub_round"):
+		target_run.hub_round = 1
+	if not target_run.has("hub_rounds_per_floor"):
+		target_run.hub_rounds_per_floor = 4
+	if not target_run.has("hub_break_used"):
+		target_run.hub_break_used = false
+	if not target_run.has("hub_break_choice"):
+		target_run.hub_break_choice = ""
+	if not target_run.has("hub_shop") or not (target_run.hub_shop is Dictionary):
+		target_run.hub_shop = {}
+	if not target_run.has("hub_notice"):
+		target_run.hub_notice = "Registration is locked. Prepare here, then report to the next table."
+	target_run.hub_round = clampi(int(target_run.hub_round), 1, maxi(1, int(target_run.hub_rounds_per_floor)))
 	_normalize_card_upgrades(target_run)
 	if not target_run.has("max_life"):
 		target_run.max_life = STARTING_LIFE
@@ -336,6 +362,33 @@ func upgrade_card(target_run: Dictionary, card_id: String) -> Dictionary:
 		"ok": true,
 		"message": "Upgraded %s: %s." % [String(cards_by_id[card_id].get("name", card_id)), upgrade_summary(card_id)]
 	}
+
+
+func use_hub_break_heal(target_run: Dictionary) -> Dictionary:
+	if bool(target_run.get("hub_break_used", false)):
+		return {"ok": false, "message": "The break machine is already out of order."}
+	var missing_life := maxi(0, int(target_run.get("max_life", STARTING_LIFE)) - int(target_run.get("life", 0)))
+	if missing_life <= 0:
+		return {"ok": false, "message": "Your life is already full. The machine was not used."}
+	var healed := mini(HUB_BREAK_HEAL_AMOUNT, missing_life)
+	target_run.life = int(target_run.get("life", 0)) + healed
+	target_run.hub_break_used = true
+	target_run.hub_break_choice = "heal"
+	target_run.hub_notice = "Recovered %d life. The break machine is now out of order." % healed
+	return {"ok": true, "healed": healed, "message": String(target_run.hub_notice)}
+
+
+func use_hub_break_upgrade(target_run: Dictionary, card_id: String) -> Dictionary:
+	if bool(target_run.get("hub_break_used", false)):
+		return {"ok": false, "message": "The break machine is already out of order."}
+	var result := upgrade_card(target_run, card_id)
+	if not bool(result.get("ok", false)):
+		return result
+	target_run.hub_break_used = true
+	target_run.hub_break_choice = "upgrade"
+	target_run.hub_notice = "%s The break machine is now out of order." % String(result.get("message", "Card upgraded."))
+	result.message = String(target_run.hub_notice)
+	return result
 
 
 func buy_card_removal(target_run: Dictionary, shop_node: Dictionary, card_id: String, minimum_deck_size: int = 1) -> Dictionary:

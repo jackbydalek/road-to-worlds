@@ -50,8 +50,8 @@ func _run() -> void:
 
 	main._start_new_run_with_mode("spicy", "season", "white")
 	await _settle()
-	_expect(main.current_screen == "route_map", "The test route run did not reach Starter City.")
-	var saved: Dictionary = main.run_state_service.save_run(main.run, "route_map")
+	_expect(main.current_screen == "route_hub", "The test route run did not reach the Locals hub.")
+	var saved: Dictionary = main.run_state_service.save_run(main.run, "route_hub")
 	_expect(bool(saved.get("ok", false)), "The flow test could not create its isolated autosave.")
 
 	main._show_start()
@@ -69,10 +69,10 @@ func _run() -> void:
 		continue_button.emit_signal("pressed")
 	await create_timer(0.4).timeout
 	await _settle()
-	_expect(main.current_screen == "route_map", "Continue did not restore the saved Starter City route.")
+	_expect(main.current_screen == "route_hub", "Continue did not restore the saved Locals hub.")
 
 	main.run.run_over = true
-	saved = main.run_state_service.save_run(main.run, "route_map")
+	saved = main.run_state_service.save_run(main.run, "route_hub")
 	_expect(bool(saved.get("ok", false)), "The flow test could not save a completed run.")
 	main._show_start()
 	await _settle()
