@@ -10,7 +10,7 @@ const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const SCENARIOS := [
 	{"id":"hot_honey_on_play", "card_id":"spicy_hot_honey_bee", "label":"Hot Honey Bee — on-play Chef damage", "archetype":"Spicy"},
 	{"id":"gazelle_buff", "card_id":"hearty_gravy_gazelle", "label":"Gravy Gazelle — targeted +1/+1", "archetype":"Hearty"},
-	{"id":"polar_heal", "card_id":"hearty_polar_pot_pie_bear", "label":"Polar Pot Pie Bear — heal other units", "archetype":"Hearty"},
+	{"id":"bison_attack", "card_id":"hearty_bison_burrito", "label":"Bison Burrito — discard Prep and grow", "archetype":"Hearty / Fresh"},
 	{"id":"hydra_absorb", "card_id":"fresh_harvest_hydra", "label":"Harvest Hydra — sacrifice and absorb", "archetype":"Fresh"},
 	{"id":"gardenrilla_prep", "card_id":"fresh_garden_gorilla", "label":"Spicy Gardenrilla — Fresh Prep scaling", "archetype":"Fresh"},
 	{"id":"feta_mill", "card_id":"funky_fondue_ferret", "label":"Feta Ferret — mill and grow", "archetype":"Funky"},
@@ -110,14 +110,14 @@ func run_scenario(scenario_id: String) -> Dictionary:
 			before = _snapshot(state)
 			service._resolve_activated_ability(state, int(gazelle.instance_id), service.card("hearty_gravy_gazelle").abilities[0], int(target.instance_id))
 			passed = int(target.attack) == 4 and int(target.health) == 3 and gazelle.used_abilities.has("gravy_gazelle_buff")
-		"polar_heal":
-			var bear := _add_unit(state, "player", "hearty_polar_pot_pie_bear", "plated")
-			var patient := _add_unit(state, "player", "hearty_bagver", "plated")
-			patient.health = 1
-			expected = "Polar Pot Pie Bear heals another friendly unit by 1 without healing itself."
+		"bison_attack":
+			var bison := _add_unit(state, "player", "hearty_bison_burrito", "plated")
+			_add_unit(state, "player", "hearty_bagver", "prep")
+			_add_unit(state, "player", "hearty_ramen_ram", "prep")
+			expected = "Bison Burrito discards both friendly Prep units and grows from 4/5 to 6/7."
 			before = _snapshot(state)
-			service.activate_ability(state, int(bear.instance_id), "polar_pot_pie_heal")
-			passed = int(patient.health) == 2 and bear.used_abilities.has("polar_pot_pie_heal")
+			service._resolve_effects(state, "player", service.card("hearty_bison_burrito").on_attack, bison)
+			passed = state.player.prep.is_empty() and int(bison.attack) == 6 and int(bison.health) == 7
 		"hydra_absorb":
 			var hydra := _add_unit(state, "player", "fresh_harvest_hydra", "plated")
 			hydra.served_sacrifice_attack = 4

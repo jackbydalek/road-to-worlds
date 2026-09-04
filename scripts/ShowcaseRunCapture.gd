@@ -43,7 +43,7 @@ func _run() -> void:
 	await _hold(0.45)
 	print("SHOWCASE starter preview closed")
 
-	# A real Hearty/Black season starts at $8 and enters the 3D card cafe.
+	# A real Hearty/Black season starts at $8 and enters the 3D card shop.
 	await _transition(func() -> void:
 		main._start_new_run_with_mode("hearty", "season", "white")
 	)

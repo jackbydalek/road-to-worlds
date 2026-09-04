@@ -199,8 +199,6 @@ func _best_opponent_deck_upgrade(host, opponent_deck: Dictionary, candidates: Ar
 				continue
 			if String(host.cards_by_id[candidate_id].get("card_type", "")) != remove_type:
 				continue
-			if int(opponent_deck.get(candidate_id, 0)) >= host._deck_limit(candidate_id):
-				continue
 			var improvement := _opponent_card_upgrade_score(host, candidate_id) - remove_score
 			if improvement > best_improvement:
 				best_improvement = improvement

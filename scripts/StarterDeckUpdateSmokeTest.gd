@@ -73,7 +73,7 @@ func _run() -> void:
 	var catalog: RefCounted = CONTENT_CATALOG_SCRIPT.new()
 	_expect(catalog.load_all(), "The season content catalog did not load the updated starters.")
 	var run_state: RefCounted = RUN_STATE_SCRIPT.new()
-	run_state.setup(catalog.cards_by_id, catalog.archetypes_by_id, ["spicy", "hearty", "sweet", "fresh"], 20, 6, 20, "", 30)
+	run_state.setup(catalog.cards_by_id, catalog.archetypes_by_id, ["spicy", "hearty", "sweet", "fresh"], 1, 6, 20, "", 0)
 	for archetype_id in ["spicy", "sweet", "hearty", "fresh"]:
 		var season_deck := {}
 		for entry in catalog.archetypes_by_id[archetype_id].get("starterDeck", []):

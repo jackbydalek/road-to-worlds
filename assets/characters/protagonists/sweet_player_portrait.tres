@@ -1,0 +1,8 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/protagonists/sweet_player_neutral.png" id="1_sweet"]
+
+[resource]
+atlas = ExtResource("1_sweet")
+region = Rect2(90, 15, 584, 584)
+filter_clip = true

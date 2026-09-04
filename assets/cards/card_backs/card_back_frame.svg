@@ -1,23 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1620" height="2160" viewBox="0 0 1620 2160">
-  <rect
-    x="28"
-    y="28"
-    width="1564"
-    height="2104"
-    rx="132"
+  <path
+    d="M120 28H1488L1592 132V2028L1488 2132H120L28 2040V112Z"
     fill="none"
     stroke="#29365F"
     stroke-width="56"
+    stroke-linejoin="miter"
   />
-  <rect
-    x="66"
-    y="66"
-    width="1488"
-    height="2028"
-    rx="102"
+  <path
+    d="M150 72H1458L1548 162V1998L1458 2088H150L72 2010V150Z"
     fill="none"
     stroke="#FFF7F1"
     stroke-width="12"
+    stroke-linejoin="miter"
     opacity="0.92"
   />
 </svg>

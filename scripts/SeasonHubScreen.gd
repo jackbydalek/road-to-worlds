@@ -60,7 +60,7 @@ func _add_nexus_header(host, parent: Node, event: Dictionary, metrics: Dictionar
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	copy.add_theme_constant_override("separation", -1)
 	row.add_child(copy)
-	var eyebrow := NEXUS_UI.make_section_label("TOPDECK TO WORLDS  •  SEASON CIRCUIT", NEXUS_UI.TEAL_DARK, 15)
+	var eyebrow := NEXUS_UI.make_section_label("TOP CUT: Locals to Worlds  •  SEASON CIRCUIT", NEXUS_UI.TEAL_DARK, 15)
 	copy.add_child(eyebrow)
 	var title := NEXUS_UI.make_section_label("EVENT CALENDAR", NEXUS_UI.INK, 34)
 	copy.add_child(title)

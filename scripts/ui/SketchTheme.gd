@@ -91,40 +91,6 @@ static func _register_button(theme: Theme, type_name: String, fill: Color, borde
 	_apply_button(theme, type_name, fill, border, text)
 
 
-static func _register_reference_button(theme: Theme, type_name: String, texture: Texture2D, text: Color) -> void:
-	theme.set_type_variation(type_name, "Button")
-	_apply_reference_button(theme, type_name, texture, text)
-
-
-static func _apply_reference_button(theme: Theme, type_name: String, texture: Texture2D, text: Color) -> void:
-	theme.set_stylebox("normal", type_name, _reference_button_style(texture, Color.WHITE, false))
-	theme.set_stylebox("hover", type_name, _reference_button_style(texture, Color(1.07, 1.07, 1.07, 1.0), false))
-	theme.set_stylebox("pressed", type_name, _reference_button_style(texture, Color(0.86, 0.86, 0.86, 1.0), true))
-	theme.set_stylebox("disabled", type_name, _reference_button_style(texture, Color(0.68, 0.68, 0.68, 0.72), false))
-	theme.set_stylebox("focus", type_name, StyleBoxEmpty.new())
-	theme.set_color("font_color", type_name, text)
-	theme.set_color("font_hover_color", type_name, text)
-	theme.set_color("font_pressed_color", type_name, text)
-	theme.set_color("font_disabled_color", type_name, PALETTE.DISABLED_INK)
-	theme.set_color("icon_normal_color", type_name, text)
-	theme.set_color("icon_hover_color", type_name, text)
-	theme.set_color("icon_pressed_color", type_name, text)
-	theme.set_color("icon_disabled_color", type_name, PALETTE.DISABLED_INK)
-	theme.set_font("font", type_name, UI.display_font(0.68))
-	theme.set_font_size("font_size", type_name, 17)
-	theme.set_constant("icon_max_width", type_name, 20)
-	theme.set_constant("h_separation", type_name, 8)
-
-
-static func _reference_button_style(texture: Texture2D, tint: Color, pressed: bool) -> StyleBoxTexture:
-	return UI.texture_style(
-		texture,
-		tint,
-		Vector4(25, 17, 25, 17),
-		Vector4(15, 6 if not pressed else 8, 15, 7 if not pressed else 5)
-	)
-
-
 static func _apply_button(theme: Theme, type_name: String, fill: Color, border: Color, text: Color) -> void:
 	theme.set_stylebox("normal", type_name, _button_style(Color(fill, 0.88), border, false))
 	theme.set_stylebox("hover", type_name, _button_style(Color(fill.lightened(0.10), 0.94), PALETTE.SKY, false, true))

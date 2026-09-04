@@ -95,6 +95,7 @@ func _audit_inventory_and_3d_faces() -> void:
 		var face := physical_card.find_child("CardFace", true, false) as MeshInstance3D
 		var face_material := face.material_override as StandardMaterial3D if face != null else null
 		_expect(body != null and face_material != null and face_material.albedo_texture != null, "%s could not build a complete physical 3D card." % card_id)
+		_expect(body != null and String(body.get_meta("card_body_geometry", "")) == "runtime_angular", "%s used a physical card body that did not match the runtime angular face." % card_id)
 		physical_card.free()
 		for effect in _card_effects(data):
 			var effect_type := String(effect.get("type", ""))

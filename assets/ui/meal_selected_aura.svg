@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="360" height="500" viewBox="0 0 360 500">
-  <rect x="31" y="31" width="298" height="438" rx="40" fill="none" stroke="#29365f" stroke-opacity=".82" stroke-width="16"/>
-  <rect x="40" y="40" width="280" height="420" rx="32" fill="none" stroke="#fff7f1" stroke-width="8"/>
-  <rect x="46" y="46" width="268" height="408" rx="27" fill="none" stroke="#d8b35f" stroke-width="7"/>
-  <g fill="#d8b35f" stroke="#29365f" stroke-width="4" stroke-linejoin="round">
-    <path d="M46 88 52 103 67 109 52 115 46 130 40 115 25 109 40 103Z"/>
-    <path d="M314 354 320 369 335 375 320 381 314 396 308 381 293 375 308 369Z"/>
+  <path d="M68 29h224l39 39v364l-39 39H68l-39-39V68Z" fill="none" stroke="#f2d33d" stroke-opacity=".18" stroke-width="26"/>
+  <path d="M70 41h216l31 31v354l-31 31H70l-27-27V68Z" fill="none" stroke="#f3f6fa" stroke-opacity=".96" stroke-width="6"/>
+  <path d="M49 139V70l22-23h72M217 453h68l26-27v-69" fill="none" stroke="#f2d33d" stroke-width="8"/>
+  <g fill="#f3f6fa">
+    <path d="M48 84 54 105 75 111 54 117 48 138 42 117 21 111 42 105Z"/>
+    <path d="M312 356 318 377 339 383 318 389 312 410 306 389 285 383 306 377Z"/>
   </g>
-  <circle cx="304" cy="92" r="26" fill="#fff7f1" stroke="#29365f" stroke-width="6"/>
-  <path d="m291 92 9 10 18-22" fill="none" stroke="#d8b35f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m287 91 11 12 23-28" fill="none" stroke="#f2d33d" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"/>
 </svg>

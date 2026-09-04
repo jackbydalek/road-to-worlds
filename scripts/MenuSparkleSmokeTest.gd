@@ -33,17 +33,17 @@ func _run() -> void:
 	button.mouse_entered.emit()
 	button.focus_entered.emit()
 	await process_frame
-	_expect(button.find_children("MenuClickSparkleBurst", "Node2D", true, false).is_empty(), "Hover or focus created menu sparkles without a click.")
+	_expect(button.find_children("MenuPressEdgeFlash", "Node2D", true, false).is_empty(), "Hover or focus created menu press feedback without a click.")
 
 	root.set_meta("reduced_motion", true)
 	button.button_down.emit()
 	await process_frame
-	var reduced_burst := button.find_child("MenuClickSparkleBurst", true, false) as Node2D
-	_expect(reduced_burst != null and reduced_burst.get_child_count() == 2, "Reduced motion did not limit the menu sparkle burst.")
-	_expect(reduced_burst != null and reduced_burst.show_behind_parent, "Menu sparkles are not rendered behind their button.")
+	var reduced_feedback := button.find_child("MenuPressEdgeFlash", true, false) as Node2D
+	_expect(reduced_feedback != null and reduced_feedback.get_child_count() == 1, "Reduced motion did not simplify menu press feedback to one edge.")
+	_expect(reduced_feedback != null and reduced_feedback.z_index > 0, "Menu press feedback did not render over the button edge.")
 
-	if reduced_burst != null:
-		reduced_burst.queue_free()
+	if reduced_feedback != null:
+		reduced_feedback.queue_free()
 	await process_frame
 	root.set_meta("reduced_motion", false)
 	var popup := Control.new()
@@ -57,11 +57,11 @@ func _run() -> void:
 	popup.visible = true
 	await process_frame
 	await process_frame
-	_expect(button.find_children("MenuClickSparkleBurst", "Node2D", true, false).is_empty(), "A revealed menu overlay created sparkles without a click.")
+	_expect(button.find_children("MenuPressEdgeFlash", "Node2D", true, false).is_empty(), "A revealed menu overlay created press feedback without a click.")
 	button.button_down.emit()
 	await process_frame
-	var normal_burst := button.find_child("MenuClickSparkleBurst", true, false) as Node2D
-	_expect(normal_burst != null and normal_burst.get_child_count() == 5, "A normal menu click did not create the expected sparkle burst.")
+	var normal_feedback := button.find_child("MenuPressEdgeFlash", true, false) as Node2D
+	_expect(normal_feedback != null and normal_feedback.get_child_count() == 2, "A normal menu click did not create the two-edge press flash.")
 
 	var tabletop := Control.new()
 	tabletop.name = "Tabletop3DPrototype"
@@ -72,12 +72,12 @@ func _run() -> void:
 	tabletop.add_child(battle_button)
 	await process_frame
 	await process_frame
-	_expect(not battle_button.has_meta("menu_sparkle_bound"), "The menu sparkle controller bound to a battle control.")
+	_expect(not battle_button.has_meta("menu_press_feedback_bound"), "The menu feedback controller bound to a battle control.")
 
 	if failed:
 		quit(1)
 		return
-	print("Menu sparkle smoke test passed.")
+	print("Menu press feedback smoke test passed.")
 	quit(0)
 
 

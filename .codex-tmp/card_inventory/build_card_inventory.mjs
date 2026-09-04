@@ -102,7 +102,7 @@ for (const sheet of [summary, cardSheet, deckSheet]) {
 
 // Summary sheet
 summary.mergeCells("A1:H1");
-summary.getRange("A1").values = [["Topdeck to Worlds — Implemented Card Catalog"]];
+summary.getRange("A1").values = [["TOP CUT: Locals to Worlds — Implemented Card Catalog"]];
 summary.getRange("A1:H1").format = {
   fill: titleFill,
   font: { name: titleFont, size: 20, bold: true, color: "#FFFFFF" },

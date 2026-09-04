@@ -15,6 +15,7 @@ const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
 const CARD_FACE_SCRIPT := preload("res://scripts/CardFace.gd")
 const LOFI_OUTLINE := preload("res://scripts/ui/LofiOutline.gd")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const CTA_CARET_RIGHT := preload("res://assets/ui/audacious/caret-right-bold.svg")
 
 const OVERVIEW_SIZE := 11.5
 const SHOPKEEPER_SIZE := 3.0
@@ -479,6 +480,9 @@ func _style_shopkeeper_action(button: Button, variant: String) -> void:
 
 func _style_overview_round_button() -> void:
 	overview_round_button.custom_minimum_size = Vector2(500, 84)
+	overview_round_button.icon = CTA_CARET_RIGHT
+	overview_round_button.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	overview_round_button.add_theme_constant_override("icon_max_width", 28)
 	overview_round_button.add_theme_font_override("font", SKETCH_UI.body_font(0.8))
 	overview_round_button.add_theme_font_size_override("font_size", 28)
 	overview_round_button.add_theme_color_override("font_color", Color("#29365F"))
@@ -486,6 +490,9 @@ func _style_overview_round_button() -> void:
 	overview_round_button.add_theme_color_override("font_pressed_color", Color("#29365F"))
 	overview_round_button.add_theme_color_override("font_focus_color", Color("#29365F"))
 	overview_round_button.add_theme_color_override("font_disabled_color", WORKSPACE_UI.MUTED_INK)
+	for color_name in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
+		overview_round_button.add_theme_color_override(color_name, PALETTE.NAVY)
+	overview_round_button.add_theme_color_override("icon_disabled_color", WORKSPACE_UI.MUTED_INK)
 	var normal := WORKSPACE_UI.clean_style(
 		Color("#EF7E76"),
 		Color("#29365F"),
@@ -530,7 +537,7 @@ func _update_overview_round_button() -> void:
 	if overview_round_button == null:
 		return
 	var tournament_round := int(shop_context.get("tournament_round", 1))
-	overview_round_button.text = "START ROUND %d   →" % tournament_round
+	overview_round_button.text = "START ROUND %d" % tournament_round
 	overview_round_button.visible = overview_active
 	call_deferred("_refresh_overview_round_attention")
 
@@ -861,7 +868,7 @@ func _add_singles_panel() -> void:
 	header.add_child(title_stack)
 	var eyebrow := Label.new()
 	eyebrow.name = "InSceneSinglesEyebrow"
-	eyebrow.text = "CARD CAFÉ  •  SHOPKEEPER'S WEEKLY PICKS"
+	eyebrow.text = "CARD SHOP  •  SHOPKEEPER'S WEEKLY PICKS"
 	eyebrow.add_theme_font_override("font", SKETCH_UI.body_font(0.56))
 	eyebrow.add_theme_font_size_override("font_size", 12)
 	eyebrow.add_theme_color_override("font_color", PALETTE.PERIWINKLE)
@@ -1182,7 +1189,7 @@ func _render_trade_binder(message: String = "") -> void:
 	if heading != null:
 		heading.text = "TRADE BINDER"
 	trade_wallet_label.text = "WALLET  $%d" % int(shop_context.get("money", 0))
-	trade_message_label.text = message if message != "" else "The traders will buy copies beyond the safe deck limit. Cards used by your deck are protected."
+	trade_message_label.text = message if message != "" else "The traders will buy unassigned copies. Cards used by your deck are protected."
 	var entries: Array = shop_context.get("trade_entries", [])
 	var total_cards := 0
 	var total_value := 0
@@ -1640,37 +1647,8 @@ func _add_single_card_tile(entry_value: Variant) -> void:
 
 
 func _make_singles_price_badge(price: int) -> PanelContainer:
-	var on_sale := price > 5
-	var badge := PanelContainer.new()
+	var badge := WORKSPACE_UI.make_price_sticker(price, Vector2(76, 48))
 	badge.name = "SinglesPriceBadge"
-	badge.set_meta("price", price)
-	badge.set_meta("shows_sale", on_sale)
-	badge.custom_minimum_size = Vector2(72 if not on_sale else 86, 38)
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.z_index = 20
-	badge.rotation = deg_to_rad(3.0)
-	badge.add_theme_stylebox_override(
-		"panel",
-		WORKSPACE_UI.clean_style(
-			Color(PALETTE.CORAL, 0.96) if on_sale else Color(PALETTE.FRESH_YELLOW, 0.94),
-			PALETTE.NAVY,
-			2,
-			10,
-			Vector4(7, 5, 7, 5),
-			0,
-			true
-		)
-	)
-	var amount := Label.new()
-	amount.name = "PriceAmount"
-	amount.text = ("SALE  •  $%d" if on_sale else "$%d") % price
-	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	amount.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	amount.add_theme_font_override("font", SKETCH_UI.body_font(0.58))
-	amount.add_theme_font_size_override("font_size", 13 if on_sale else 17)
-	amount.add_theme_color_override("font_color", PALETTE.NAVY)
-	badge.add_child(amount)
 	return badge
 
 

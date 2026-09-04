@@ -21,13 +21,9 @@ func _run() -> void:
 	_expect(main.boosters_by_id.size() == 2, "Season shell did not load both booster definitions.")
 	_expect(main.tournaments_by_id.size() == 5, "Season shell did not load the tournament calendar.")
 	_expect(main.current_screen == "start", "The demo did not open on the title screen.")
-	_expect(main.find_child("GameStartButton", true, false) != null, "The title screen is missing Game Start.")
+	_expect(main.find_child("GameStartButton", true, false) != null, "The title screen is missing New Game.")
+	_expect(main.find_child("ContinueRunButton", true, false) != null, "The title screen does not own Continue.")
 	_expect(main.find_child("TitleHowToPlayButton", true, false) != null, "The title screen is missing How to Play.")
-
-	main._show_game_start()
-	await process_frame
-	_expect(main.find_child("ContinueRunButton", true, false) != null, "Game Start is missing Continue.")
-	_expect(main.find_child("NewGameButton", true, false) != null, "Game Start is missing New Run.")
 
 	main._show_season_run_setup()
 	await process_frame

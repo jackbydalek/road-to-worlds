@@ -14,7 +14,7 @@ The automated `ResponsiveLayoutSmokeTest` covers those viewport and text-scale c
 
 ## Pass checklist
 
-- [ ] Loading screen uses the cream café background; no black flash or browser console error.
+- [ ] Loading screen uses the illustrated game background; no black flash or browser console error.
 - [ ] Title, New Run, How to Play, Settings, and Credits fit without clipped text or horizontal scrolling.
 - [ ] Credits show asset/audio attribution and the Discord button opens `https://discord.gg/EK6AmYgnPZ` in a new tab.
 - [ ] All seven tutorial steps remain readable at 125% zoom.

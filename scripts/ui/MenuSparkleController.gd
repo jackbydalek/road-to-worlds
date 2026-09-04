@@ -38,85 +38,65 @@ func _bind_control(control: Control) -> void:
 
 
 func _bind_button(button: BaseButton) -> void:
-	if bool(button.get_meta("menu_sparkle_bound", false)):
+	if bool(button.get_meta("menu_press_feedback_bound", false)):
 		return
-	button.set_meta("menu_sparkle_bound", true)
+	button.set_meta("menu_press_feedback_bound", true)
 	button.button_down.connect(func() -> void: _play_button_press(button))
 
 
 func _play_button_press(button: BaseButton) -> void:
 	if not _can_play_for(button) or button.disabled:
 		return
-	_spawn_burst(button, PALETTE.CORAL, 5, 28.0)
+	_spawn_edge_flash(button, _button_accent(button))
 
 
-func _spawn_burst(button: BaseButton, accent: Color, count: int, distance: float) -> void:
+func _spawn_edge_flash(button: BaseButton, accent: Color) -> void:
 	if not enabled or not is_instance_valid(button):
 		return
 	var reduced_motion := bool(get_tree().root.get_meta("reduced_motion", false))
-	var actual_count := mini(2, count) if reduced_motion else count
-	var burst := Node2D.new()
-	burst.name = "MenuClickSparkleBurst"
-	burst.position = button.size * 0.5
-	burst.show_behind_parent = true
-	button.add_child(burst)
-	var half_size := button.size * 0.5
-	var longest_duration := 0.0
-	for particle_index in range(actual_count):
-		var radius := 4.5 + float(particle_index % 3) * 1.6
-		var fill := accent if particle_index % 2 == 0 else PALETTE.FRESH_YELLOW
-		var particle := _outlined_particle(radius, fill)
-		particle.scale = Vector2.ONE * 0.25
-		burst.add_child(particle)
-		var angle := TAU * float(particle_index) / float(maxi(1, actual_count)) - PI * 0.5
-		var direction := Vector2(cos(angle), sin(angle))
-		var edge_distance := minf(
-			half_size.x / maxf(absf(direction.x), 0.001),
-			half_size.y / maxf(absf(direction.y), 0.001)
-		)
-		particle.position = direction * maxf(0.0, edge_distance - 8.0)
-		var travel := distance * (0.62 + float((particle_index * 7) % 5) * 0.09)
-		var destination := direction * (edge_distance + travel)
-		var duration := 0.28 if reduced_motion else 0.48 + float(particle_index % 3) * 0.04
-		longest_duration = maxf(longest_duration, duration)
-		var tween := create_tween().set_parallel(true)
-		tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(particle, "position", destination, duration)
-		tween.tween_property(particle, "scale", Vector2.ONE * (0.82 + float(particle_index % 2) * 0.18), duration * 0.42)
-		if not reduced_motion:
-			tween.tween_property(particle, "rotation", angle * 0.22, duration)
-		tween.tween_property(particle, "modulate:a", 0.0, duration * 0.48).set_delay(duration * 0.52)
-		tween.finished.connect(particle.queue_free)
-	var cleanup := create_tween()
-	cleanup.tween_interval(longest_duration + 0.06)
-	cleanup.tween_callback(Callable(self, "_cleanup_burst").bind(burst.get_instance_id()))
+	var feedback := Node2D.new()
+	feedback.name = "MenuPressEdgeFlash"
+	feedback.z_index = 20
+	button.add_child(feedback)
+	var width := maxf(1.0, button.size.x)
+	var height := maxf(1.0, button.size.y)
+	feedback.add_child(_edge_line(PackedVector2Array([
+		Vector2(2, minf(12.0, height * 0.25)),
+		Vector2(2, 2),
+		Vector2(maxf(34.0, width * 0.38), 2),
+	]), accent))
+	if not reduced_motion:
+		feedback.add_child(_edge_line(PackedVector2Array([
+			Vector2(width - 2, height - minf(12.0, height * 0.25)),
+			Vector2(width - 2, height - 2),
+			Vector2(minf(width - 34.0, width * 0.62), height - 2),
+		]), PALETTE.COOL_WHITE))
+	var duration := 0.12 if reduced_motion else 0.20
+	var tween := create_tween().set_parallel(true)
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(feedback, "modulate:a", 0.0, duration * 0.58).set_delay(duration * 0.42)
+	tween.finished.connect(feedback.queue_free)
 
 
-func _cleanup_burst(instance_id: int) -> void:
-	var burst := instance_from_id(instance_id)
-	if is_instance_valid(burst):
-		burst.queue_free()
+func _button_accent(button: BaseButton) -> Color:
+	match String(button.get_meta("ui_button_variant", "default")):
+		"danger": return PALETTE.ACTION_DANGER
+		"confirm": return PALETTE.ACTION_CONFIRM
+		"special": return PALETTE.ACTION_SPECIAL
+		"primary": return PALETTE.ACTION_PRIMARY
+		_: return PALETTE.FOCUS_EDGE
 
 
-func _outlined_particle(radius: float, fill: Color) -> Polygon2D:
-	var particle := Polygon2D.new()
-	particle.polygon = _sparkle_polygon(radius + 2.2)
-	particle.color = Color(PALETTE.NAVY, 0.88)
-	var center := Polygon2D.new()
-	center.polygon = _sparkle_polygon(radius)
-	center.color = fill
-	particle.add_child(center)
-	return particle
-
-
-func _sparkle_polygon(radius: float) -> PackedVector2Array:
-	var inner := radius * 0.22
-	return PackedVector2Array([
-		Vector2(0.0, -radius), Vector2(inner, -inner),
-		Vector2(radius, 0.0), Vector2(inner, inner),
-		Vector2(0.0, radius), Vector2(-inner, inner),
-		Vector2(-radius, 0.0), Vector2(-inner, -inner),
-	])
+func _edge_line(points: PackedVector2Array, color: Color) -> Line2D:
+	var line := Line2D.new()
+	line.points = points
+	line.default_color = color
+	line.width = 3.0
+	line.joint_mode = Line2D.LINE_JOINT_SHARP
+	line.begin_cap_mode = Line2D.LINE_CAP_BOX
+	line.end_cap_mode = Line2D.LINE_CAP_BOX
+	line.antialiased = true
+	return line
 
 
 func _can_play_for(control: Control) -> bool:

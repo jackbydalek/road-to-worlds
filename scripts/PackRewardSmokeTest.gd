@@ -26,12 +26,14 @@ func _init() -> void:
 					catalog.cards_by_id.has(card_id),
 					"%s generated an unknown card ID: %s." % [booster_id, card_id]
 				)
+				_expect(economy.card_is_starter_eligible(catalog.cards_by_id[card_id], "spicy"), "%s generated an out-of-pool Spicy-run card: %s." % [booster_id, card_id])
 
-	# Every canonical collectible must remain selectable regardless of whether it
-	# has dedicated artwork yet. Isolating each card makes this deterministic and
-	# protects both reward paths from accidentally reintroducing an art filter.
+	# Every collectible legal for a Spicy run must remain selectable regardless
+	# of whether it has dedicated artwork yet.
 	for card_value in catalog.cards:
 		var card: Dictionary = card_value
+		if not economy.card_is_starter_eligible(card, "spicy"):
+			continue
 		var isolated_rng := RandomNumberGenerator.new()
 		isolated_rng.seed = 7252026
 		var isolated_economy: RefCounted = SHOP_ECONOMY_SERVICE_SCRIPT.new()
@@ -45,15 +47,15 @@ func _init() -> void:
 			"Singles selection excluded canonical card %s." % String(card.id)
 		)
 
-	for affinity in AFFINITY_ORDER:
+	for affinity in ["spicy", "sweet", "hearty"]:
 		for pack_index in range(100):
 			var prize_pack: Array = economy.generate_pack("season_prize_pack", affinity)
 			for entry in prize_pack:
 				var card_id := String((entry as Dictionary).get("cardId", ""))
 				var card: Dictionary = catalog.cards_by_id.get(card_id, {})
 				_expect(
-					economy.card_is_affinity_reward_eligible(card, affinity),
-					"%s prize pack generated ineligible card %s." % [String(affinity).capitalize(), card_id]
+					economy.card_is_starter_eligible(card, affinity),
+					"%s prize pack generated an out-of-pool card: %s." % [String(affinity).capitalize(), card_id]
 				)
 
 	var funky_deck := {
@@ -106,6 +108,7 @@ func _init() -> void:
 				catalog.cards_by_id.has(card_id),
 				"The singles case generated an unknown card ID: %s." % card_id
 			)
+			_expect(economy.card_is_starter_eligible(catalog.cards_by_id[card_id], "spicy"), "The singles case generated an out-of-pool Spicy-run card: %s." % card_id)
 
 	if failed:
 		quit(1)

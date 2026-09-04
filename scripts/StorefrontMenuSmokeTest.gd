@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 
 var failed := false
 
@@ -51,7 +52,7 @@ func _run() -> void:
 	_expect(
 		main.find_child("CafeSignBack", true, false) is MeshInstance3D
 		and main.find_child("CafeSignFace", true, false) is MeshInstance3D,
-		"The Coffee n' Cards lettering is missing its physical café sign."
+		"The Coffee n' Cards lettering is missing its physical storefront sign."
 	)
 	_expect(
 		int(shop_world.shop_view_render_counts.singles) == 0
@@ -125,19 +126,21 @@ func _run() -> void:
 	_expect(
 		 round_button != null
 		and round_button.visible
-		and round_button.text == "START ROUND 1   →"
+		and round_button.text == "START ROUND 1"
+		and round_button.icon != null
+		and round_button.icon_alignment == HORIZONTAL_ALIGNMENT_RIGHT
 		and round_button.tooltip_text.is_empty(),
 		"The store overview did not offer Start Round 1 before tournament registration."
 	)
 	if round_button != null:
-		var round_style := round_button.get_theme_stylebox("normal") as StyleBoxFlat
+		var round_face = round_button.get_node_or_null("BattleAngularButtonFace")
 		_expect(
 			round_button.custom_minimum_size.x >= 500.0
 			and round_button.custom_minimum_size.y >= 84.0
-			and round_button.get_theme_font_size("font_size") >= 28
-			and round_style != null
-			and round_style.border_width_left >= 6
-			and round_style.shadow_size >= 12,
+			and round_button.get_theme_font_size("font_size") >= 24
+			and round_face != null
+			and round_face.variant == "primary"
+			and round_face.fill_color_for_state("normal").is_equal_approx(PALETTE.SELECTION_BLUE),
 			"Start Round does not have the larger tournament-CTA silhouette."
 		)
 	shop_world.call("_return_to_shopkeeper_menu")
@@ -319,7 +322,8 @@ func _run() -> void:
 	_expect(
 		round_button != null
 		and round_button.visible
-		and round_button.text == "START ROUND 2   →"
+		and round_button.text == "START ROUND 2"
+		and round_button.icon != null
 		and round_button.custom_minimum_size.x >= 400.0
 		and round_button.get_signal_connection_list("pressed").size() > 0,
 		"The store overview did not expose a large, connected Start Round 2 action."

@@ -1,14 +1,14 @@
 extends Node
 class_name UiSoundController
 
-const BUTTON_PRESS := preload("res://assets/audio/ui/button_press.wav")
-const TOGGLE_ON := preload("res://assets/audio/ui/toggle_on.wav")
-const TOGGLE_OFF := preload("res://assets/audio/ui/toggle_off.wav")
-const SCREEN_TRANSITION := preload("res://assets/audio/ui/screen_transition.wav")
-const POPUP := preload("res://assets/audio/ui/popup.wav")
-const SUCCESS := preload("res://assets/audio/ui/success.wav")
-const ERROR := preload("res://assets/audio/ui/error.wav")
-const SLIDER_TICK := preload("res://assets/audio/ui/slider_tick.wav")
+const BUTTON_PRESS := preload("res://assets/audio/ui/cute_cozy/Button_Pressed.wav")
+const TOGGLE_ON := preload("res://assets/audio/ui/cute_cozy/Clicked_In.wav")
+const TOGGLE_OFF := preload("res://assets/audio/ui/cute_cozy/Clicked_Out.wav")
+const SCREEN_TRANSITION := preload("res://assets/audio/ui/cute_cozy/Confirm.wav")
+const POPUP := preload("res://assets/audio/ui/cute_cozy/Menu_Open.wav")
+const SUCCESS := preload("res://assets/audio/ui/cute_cozy/Success.wav")
+const ERROR := preload("res://assets/audio/ui/cute_cozy/Warning.wav")
+const SLIDER_TICK := preload("res://assets/audio/ui/cute_cozy/Clicked_In.wav")
 
 const SLIDER_COOLDOWN_MSEC := 35
 const TRANSITION_COOLDOWN_MSEC := 140
@@ -29,7 +29,7 @@ func _ready() -> void:
 func _bind_existing_controls() -> void:
 	var root := get_tree().root
 	_bind_control(root)
-	for node in root.find_children("*", "Control", true, false):
+	for node in root.find_children("*", "", true, false):
 		_bind_control(node)
 
 

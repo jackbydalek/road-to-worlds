@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://8nhiyvbt63bq"]
 
 [ext_resource type="Script" uid="uid://bt06nj3jsspyu" path="res://scripts/ui/SeasonSetupMenu.gd" id="1_script"]
-[ext_resource type="FontFile" uid="uid://dnbvqa12yomhk" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="2_display"]
+[ext_resource type="FontFile" path="res://assets/fonts/Oxanium-SemiBold.ttf" id="2_display"]
 [ext_resource type="FontFile" uid="uid://de6offqn05r66" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="3_body"]
 [ext_resource type="PackedScene" uid="uid://bpft2f2u7plqq" path="res://assets/card_shop/shelf.tscn" id="4_shelf"]
 [ext_resource type="PackedScene" path="res://assets/season_setup/starter_spicy.tscn" id="5_spicy"]
@@ -372,11 +372,12 @@ grow_horizontal = 2
 theme_override_colors/font_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_colors/font_hover_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_fonts/font = ExtResource("2_display")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_hit")
 theme_override_styles/pressed = SubResource("Style_hit_hover")
 theme_override_styles/hover = SubResource("Style_hit_hover")
 theme_override_styles/focus = SubResource("Style_hit_hover")
+vertical_alignment = 2
 
 [node name="HeartyStarterButton" type="Button" parent="StarterButtons" unique_id=546401307]
 unique_name_in_owner = true
@@ -392,11 +393,12 @@ grow_horizontal = 2
 theme_override_colors/font_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_colors/font_hover_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_fonts/font = ExtResource("2_display")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_hit")
 theme_override_styles/pressed = SubResource("Style_hit_hover")
 theme_override_styles/hover = SubResource("Style_hit_hover")
 theme_override_styles/focus = SubResource("Style_hit_hover")
+vertical_alignment = 2
 
 [node name="SweetStarterButton" type="Button" parent="StarterButtons" unique_id=1849750922]
 unique_name_in_owner = true
@@ -412,11 +414,12 @@ grow_horizontal = 2
 theme_override_colors/font_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_colors/font_hover_color = Color(0.203922, 0.231373, 0.301961, 1)
 theme_override_fonts/font = ExtResource("2_display")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_hit")
 theme_override_styles/pressed = SubResource("Style_hit_hover")
 theme_override_styles/hover = SubResource("Style_hit_hover")
 theme_override_styles/focus = SubResource("Style_hit_hover")
+vertical_alignment = 2
 
 [node name="DraftNightButton" type="Button" parent="StarterButtons" unique_id=2023419376]
 unique_name_in_owner = true

@@ -9,7 +9,7 @@ if [[ ! -x "$godot_bin" ]]; then
 	exit 1
 fi
 
-release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/topdeck-to-worlds-release.XXXXXX")"
+release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/top-cut-locals-to-worlds-release.XXXXXX")"
 cleanup() {
 	rm -rf "$release_tmp"
 }
@@ -27,6 +27,9 @@ run_test() {
 
 printf '[demo gate] Verify product branding\n'
 "$project_dir/scripts/release/check_branding.sh"
+
+printf '[demo gate] Verify no-generative-AI asset policy\n'
+"$project_dir/scripts/release/check_no_ai_assets.sh"
 
 printf '[demo gate] Import and parse project\n'
 "$godot_bin" --headless --editor --path "$project_dir" --quit
@@ -46,13 +49,12 @@ tests=(
 	"scripts/CombatLayoutSmokeTest.gd"
 	"scripts/ResponsiveLayoutSmokeTest.gd"
 	"scripts/NexusSeasonUiSmokeTest.gd"
-	"scripts/CardContentFitSmokeTest.gd"
-	"scripts/CardFaceSmokeTest.gd"
-	"scripts/CardFrameRedesignSmokeTest.gd"
-	"scripts/DualCardFrameSmokeTest.gd"
+	"scripts/RuntimeCardFaceIntegrationSmokeTest.gd"
 	"scripts/CardEffectLabSmokeTest.gd"
 	"scripts/ThreeDCardInterfaceAudit.gd"
-	"scripts/GameStartFlowSmokeTest.gd"
+	"scripts/RouteRunSmokeTest.gd"
+	"scripts/RouteCampaignFlowSmokeTest.gd"
+	"scripts/overworld/OverworldRouteGraphSmokeTest.gd"
 	"scripts/OpponentDeckTierSmokeTest.gd"
 	"scripts/RoundCashRewardSmokeTest.gd"
 	"scripts/GuidedTutorialSmokeTest.gd"
@@ -65,11 +67,11 @@ tests=(
 	"scripts/MenuSparkleSmokeTest.gd"
 	"scripts/MusicMixSmokeTest.gd"
 	"scripts/BattleSettingsSmokeTest.gd"
+	"scripts/GlobalButtonStyleSmokeTest.gd"
 	"scripts/TitleMenuPaletteSmokeTest.gd"
 	"scripts/TournamentResultUiSmokeTest.gd"
 	"scripts/PublicUiSmokeTest.gd"
 	"scripts/AutosaveSmokeTest.gd"
-	"scripts/SeasonShellSmokeTest.gd"
 )
 
 for test_script in "${tests[@]}"; do
@@ -83,6 +85,7 @@ if ! "$godot_bin" --headless --path "$project_dir" --export-release "Web (itch.i
 	exit 1
 fi
 tail -n 4 "$export_log"
+"$project_dir/scripts/release/check_no_ai_assets.sh" --export-log "$export_log"
 : >"$export_log"
 test -s "$release_tmp/index.html"
 test -s "$release_tmp/index.pck"

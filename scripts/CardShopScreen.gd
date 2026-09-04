@@ -388,10 +388,9 @@ func _add_single_tile(host, parent: Node, card_id: String, hover_label: Label) -
 			host._card_descriptor(card),
 			int(card.get("cost", 0))
 		])
-	host._add_body_text(box, "Owned %d | Deck %d/%d" % [
+	host._add_body_text(box, "Owned %d | Deck %d | No copy limit" % [
 		host._owned_count(card_id),
-		host._deck_count(card_id),
-		host._deck_limit(card_id)
+		host._deck_count(card_id)
 	])
 
 	var buy_button: Button = host._make_button("Buy")

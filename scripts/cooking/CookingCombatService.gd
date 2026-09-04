@@ -68,7 +68,7 @@ func deck_name(deck_id: String) -> String:
 	return String(decks.get(deck_id, {}).get("name", deck_id if deck_id != "" else "Awaiting Deck"))
 
 
-func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed: int = 1, first_side: String = "player", defer_opponent_turn: bool = false, ai_difficulty: String = "easy") -> Dictionary:
+func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed: int = 1, first_side: String = "player", defer_opponent_turn: bool = false, ai_difficulty: String = "easy", match_rules: Dictionary = {}) -> Dictionary:
 	rng.seed = seed
 	var deck_ids := available_deck_ids()
 	if player_deck_id == "" and not deck_ids.is_empty():
@@ -77,6 +77,10 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 		opponent_deck_id = deck_ids[1] if deck_ids.size() > 1 else deck_ids[0]
 	var player_combatant := _make_combatant(player_deck_id)
 	var opponent_combatant := _make_combatant(opponent_deck_id)
+	player_combatant.life = int(match_rules.get("player_life", STARTING_LIFE))
+	player_combatant.max_life = int(match_rules.get("player_max_life", player_combatant.life))
+	opponent_combatant.life = int(match_rules.get("opponent_life", STARTING_LIFE))
+	opponent_combatant.max_life = int(match_rules.get("opponent_max_life", opponent_combatant.life))
 	var state := {
 		"turn": 1,
 		"phase": "player_main" if has_playable_content() else "awaiting_cards",
@@ -107,6 +111,7 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 		"last_visual_action": {},
 		"reaction_skip": "",
 		"search_queue": [],
+		"run_rules": match_rules.duplicate(true),
 		"message": "Add cards to data/cards.json to begin testing." if not has_playable_content() else "Play units to Prep or Plated. Only Plated cards can attack or be attacked.",
 		"log": [],
 		"player": player_combatant,
@@ -1047,6 +1052,7 @@ func _make_combatant(deck_id: String) -> Dictionary:
 		"ai_profile": _ai_profile_for_deck(deck_id),
 		"ai_policy": AI_POLICY_PRODUCTION,
 		"life": STARTING_LIFE,
+		"max_life": STARTING_LIFE,
 		"deck": deck_list,
 		"hand": [],
 		"prep": [],
@@ -1102,7 +1108,12 @@ func resolve_reaction(state: Dictionary, hand_index: int = -1, resume_opponent_t
 		state.player.hand.remove_at(hand_index)
 		state.player.discard.append(reaction_card_id)
 		if reaction_kind == "hand_trap":
-			_queue_play_event(state, "player", reaction_card_id, "reaction")
+			_queue_play_event(state, "player", reaction_card_id, "reaction", -1, -1, {
+				"reaction_trigger": String(pending.get("trigger", "")),
+				"reacted_card_id": String(pending.get("card_id", "")),
+				"reacted_instance_id": int(pending.get("source_instance_id", -1)),
+				"reacted_action_kind": String(pending.get("action_kind", ""))
+			})
 			state.player.hand_trap_used = true
 			if _consume_hand_trap_guard(state, String(pending.get("acting_side", "opponent"))):
 				_log(state, "%s negates %s." % [card(String(_guard_source_card_id(state, String(pending.get("acting_side", "opponent"))))).get("name", "A guard"), card(reaction_card_id).get("name", reaction_card_id)])
@@ -1471,6 +1482,8 @@ func _play_tool(state: Dictionary, side: String, hand_index: int, skip_reaction:
 		return false
 	var card_id := String(who.hand[hand_index])
 	var data := card(card_id)
+	if side == "opponent" and not _ai_tool_is_useful(state, data):
+		return false
 	var discard_cost := int(data.get("discard_cost", 0))
 	if who.hand.size() - 1 < discard_cost:
 		_message(state, "Not enough cards to pay %s's discard cost." % data.name)
@@ -1666,7 +1679,8 @@ func _start_turn(state: Dictionary, side: String, draw_card: bool = true) -> boo
 		_resolve_effects(state, side, card(String(who.environment)).get("on_turn_start", []), {})
 	if should_draw:
 		_draw(state, side)
-		while who.hand.size() < START_TURN_HAND_FLOOR and not who.deck.is_empty():
+		var hand_floor := int(state.get("run_rules", {}).get("turn_hand_floor", START_TURN_HAND_FLOOR))
+		while who.hand.size() < hand_floor and (not who.deck.is_empty() or not who.discard.is_empty()):
 			_draw(state, side)
 	state.phase = "player_main" if side == "player" else "opponent_turn"
 	return should_draw
@@ -1999,6 +2013,8 @@ func _ai_hand_action(state: Dictionary, hand_index: int) -> Dictionary:
 		"tool":
 			if bool(state.opponent.items_disabled) or state.opponent.hand.size() - 1 < int(data.get("discard_cost", 0)):
 				return {}
+			if not _ai_tool_is_useful(state, data):
+				return {}
 			base.score += 68.0 + _ai_card_effect_value(data) - float(int(data.get("discard_cost", 0)) * 8)
 			return base
 		"chef":
@@ -2007,6 +2023,47 @@ func _ai_hand_action(state: Dictionary, hand_index: int) -> Dictionary:
 			base.score += 72.0 + _ai_card_effect_value(data)
 			return base
 	return {}
+
+
+func _ai_tool_is_useful(state: Dictionary, data: Dictionary) -> bool:
+	var has_effect := false
+	for effect in data.get("effects", []):
+		has_effect = true
+		if String(effect.get("type", "")) == "switch_friendly_zones":
+			if not _ai_best_friendly_zone_switch(state, "opponent").is_empty():
+				return true
+			continue
+		return true
+	return false if has_effect else true
+
+
+func _ai_best_friendly_zone_switch(state: Dictionary, side: String) -> Dictionary:
+	if state[side].plated.is_empty() or state[side].prep.is_empty():
+		return {}
+	var best_pair: Dictionary = {}
+	var best_gain := 0.0
+	for plated_unit in state[side].plated:
+		for prep_unit in state[side].prep:
+			var current_value := _ai_zone_switch_value(plated_unit, "plated") + _ai_zone_switch_value(prep_unit, "prep")
+			var switched_value := _ai_zone_switch_value(prep_unit, "plated") + _ai_zone_switch_value(plated_unit, "prep")
+			var gain := switched_value - current_value
+			if gain > best_gain:
+				best_gain = gain
+				best_pair = {
+					"plated_instance_id": int(plated_unit.instance_id),
+					"prep_instance_id": int(prep_unit.instance_id)
+				}
+	return best_pair
+
+
+func _ai_zone_switch_value(unit: Dictionary, zone_name: String) -> float:
+	var data := card(String(unit.get("card_id", "")))
+	var value := float(int(unit.get("health", 0))) * 1.5
+	if zone_name == "plated":
+		value += float(int(unit.get("attack", 0)) * 5 + 8)
+	elif bool(data.get("can_attack_from_prep", false)):
+		value += float(int(unit.get("attack", 0)) * 3 + 4)
+	return value
 
 
 func _ai_card_deck_demand(data: Dictionary) -> int:
@@ -2709,7 +2766,7 @@ func _resolve_effects(
 			"heal_player":
 				var player_healing := _healing_amount(state, side, amount)
 				var life_before := int(state[side].life)
-				state[side].life = mini(STARTING_LIFE, int(state[side].life) + player_healing)
+				state[side].life = mini(int(state[side].get("max_life", STARTING_LIFE)), int(state[side].life) + player_healing)
 				_queue_heal_event(state, side, "chef", -1, int(state[side].life) - life_before)
 			"damage_enemy_player":
 				_deal_chef_damage(
@@ -3029,9 +3086,12 @@ func _resolve_effects(
 			"switch_friendly_zones":
 				var plated_target_id := int(effect.get("plated_instance_id", -1))
 				var prep_target_id := target_instance_id
-				if side != "player" and plated_target_id < 0 and not state[side].plated.is_empty() and not state[side].prep.is_empty():
-					plated_target_id = int(state[side].plated[0].instance_id)
-					prep_target_id = int(state[side].prep[0].instance_id)
+				if side != "player" and plated_target_id < 0:
+					var switch_pair := _ai_best_friendly_zone_switch(state, side)
+					if switch_pair.is_empty():
+						continue
+					plated_target_id = int(switch_pair.plated_instance_id)
+					prep_target_id = int(switch_pair.prep_instance_id)
 				var plated_target := _find_unit_in_zone(state[side], "plated", plated_target_id)
 				var prep_target := _find_unit_in_zone(state[side], "prep", prep_target_id)
 				if not plated_target.is_empty() and not prep_target.is_empty():
@@ -3540,7 +3600,21 @@ func _first_ability_target_id(state: Dictionary, acting_side: String, source: Di
 func _draw(state: Dictionary, side: String, _fatigue_enabled: bool = true) -> void:
 	var who: Dictionary = state[side]
 	if who.deck.is_empty():
-		return
+		var run_rules: Dictionary = state.get("run_rules", {})
+		if not bool(run_rules.get("reshuffle_pressure", false)) or who.discard.is_empty():
+			return
+		for discarded_card in who.discard:
+			who.deck.append(discarded_card)
+		who.discard.clear()
+		_shuffle(who.deck)
+		who.fatigue = int(who.get("fatigue", 0)) + 1
+		var pressure_curve: Array = run_rules.get("reshuffle_damage", [3, 5, 7])
+		var curve_index := mini(int(who.fatigue) - 1, pressure_curve.size() - 1)
+		var pressure_damage := int(pressure_curve[curve_index]) if curve_index >= 0 else 0
+		_log(state, "%s reshuffles and takes %d pressure damage." % [_side_name(side), pressure_damage])
+		_deal_chef_damage(state, side, pressure_damage, side, false)
+		if bool(state.game_over):
+			return
 	var drawn_card_id := String(who.deck.pop_back())
 	who.hand.append(drawn_card_id)
 	_queue_animation_event(state, "draw", {
@@ -4326,10 +4400,18 @@ func _record_hand_play(state: Dictionary, side: String, card_id: String, action_
 	}
 
 
-func _queue_play_event(state: Dictionary, side: String, card_id: String, action_kind: String, instance_id: int = -1, target_instance_id: int = -1) -> int:
+func _queue_play_event(
+	state: Dictionary,
+	side: String,
+	card_id: String,
+	action_kind: String,
+	instance_id: int = -1,
+	target_instance_id: int = -1,
+	extra_presentation: Dictionary = {}
+) -> int:
 	var group_id := _next_animation_group(state)
 	var zone := _unit_zone(state[side], instance_id) if instance_id >= 0 else ""
-	_queue_animation_event(state, "play", {
+	var play_presentation := {
 		"side": side,
 		"card_id": card_id,
 		"card_type": action_kind,
@@ -4338,7 +4420,9 @@ func _queue_play_event(state: Dictionary, side: String, card_id: String, action_
 		"zone": zone,
 		"from": "hand",
 		"to": zone if zone != "" else ("attachment" if action_kind == "spice" else "environment" if action_kind == "environment" else "discard")
-	}, group_id)
+	}
+	play_presentation.merge(extra_presentation, true)
+	_queue_animation_event(state, "play", play_presentation, group_id)
 	var data := card(card_id)
 	var activation_effects: Array = data.get("on_play", [])
 	if action_kind in ["tool", "chef", "reaction"]:

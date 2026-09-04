@@ -32,23 +32,25 @@ func _run() -> void:
 				return
 
 	var run_state: RefCounted = RUN_STATE_SCRIPT.new()
-	run_state.setup(service.cards_by_id, {}, [], 20, 6, 20, "")
+	run_state.setup(service.cards_by_id, {}, [], 1, 6, 20, "")
 	var exact_deck: Dictionary = service.decks.spicy_test_kitchen.cards.duplicate(true)
 	var exact_collection: Dictionary = exact_deck.duplicate(true)
 	if not bool(run_state.deck_is_legal({"deck": exact_deck, "collection": exact_collection, "sideboard": {}}).get("ok", false)):
 		_fail("A legal 20-card constructed deck was rejected.")
 		return
-	var short_deck: Dictionary = exact_deck.duplicate(true)
-	short_deck.spicy_hot_honey_bee = int(short_deck.spicy_hot_honey_bee) - 1
-	if bool(run_state.deck_is_legal({"deck": short_deck, "collection": exact_collection, "sideboard": {}}).get("ok", false)):
-		_fail("A 19-card constructed deck was accepted.")
+	var one_card_deck := {"spicy_hot_honey_bee": 1}
+	if not bool(run_state.deck_is_legal({"deck": one_card_deck, "collection": one_card_deck.duplicate(true), "sideboard": {}}).get("ok", false)):
+		_fail("A one-card constructed deck was rejected.")
+		return
+	if bool(run_state.deck_is_legal({"deck": {}, "collection": {}, "sideboard": {}}).get("ok", false)):
+		_fail("An empty constructed deck was accepted.")
 		return
 	var oversized_deck: Dictionary = exact_deck.duplicate(true)
 	var oversized_collection: Dictionary = exact_collection.duplicate(true)
 	oversized_deck.item_strainer = int(oversized_deck.item_strainer) + 1
 	oversized_collection.item_strainer = int(oversized_collection.item_strainer) + 1
-	if bool(run_state.deck_is_legal({"deck": oversized_deck, "collection": oversized_collection, "sideboard": {}}).get("ok", false)):
-		_fail("A 21-card constructed deck was accepted.")
+	if not bool(run_state.deck_is_legal({"deck": oversized_deck, "collection": oversized_collection, "sideboard": {}}).get("ok", false)):
+		_fail("A 21-card constructed deck was rejected.")
 		return
 
 	var dual_recipe_state: Dictionary = service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 991)
@@ -154,14 +156,22 @@ func _run() -> void:
 		return
 
 	var polar_state: Dictionary = service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 9991)
-	polar_state.player.plated = [
-		_unit(418, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6),
-		_unit(419, "hearty_bagver", "Bagver", "ingredient", 1, 1)
+	polar_state.player.prep = [_unit(418, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6)]
+	service.move_unit(polar_state, 418, "plated")
+	if int(polar_state.player.plated[0].attack) != 5 or int(polar_state.player.plated[0].health) != 8:
+		_fail("Polar Pot Pie Bear did not inherit Bison Burrito's +2/+2 move effect.")
+		return
+
+	var bison_state: Dictionary = service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 9992)
+	var bison := _unit(420, "hearty_bison_burrito", "Bison Burrito", "meal", 4, 5)
+	bison_state.player.plated = [bison]
+	bison_state.player.prep = [
+		_unit(421, "hearty_bagver", "Bagver", "ingredient", 1, 2),
+		_unit(422, "hearty_ramen_ram", "Ramen Ram", "ingredient", 1, 2)
 	]
-	polar_state.player.plated[1].max_health = 2
-	service.activate_ability(polar_state, 418, "polar_pot_pie_heal")
-	if int(polar_state.player.plated[1].health) != 2:
-		_fail("Polar Pot Pie Bear did not heal another friendly unit.")
+	service._resolve_effects(bison_state, "player", service.card("hearty_bison_burrito").on_attack, bison)
+	if not bison_state.player.prep.is_empty() or int(bison.attack) != 6 or int(bison.health) != 7:
+		_fail("Bison Burrito did not discard its Prep units and gain +1/+1 for each.")
 		return
 
 	var bodyguard_data: Dictionary = service.card("sweet_soft_serve_crab")

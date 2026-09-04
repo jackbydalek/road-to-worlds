@@ -2,7 +2,7 @@ extends SceneTree
 
 const DEMO := preload("res://scenes/GreyboxCameraDemo.tscn")
 const PLANT_SCRIPT_PATH := "res://scripts/StylizedPlantVariant.gd"
-const ILLUSTRATED_SHADER_PATH := "res://assets/shaders/illustrated_cafe_palette.gdshader"
+const ILLUSTRATED_SHADER_PATH := "res://assets/shaders/illustrated_palette.gdshader"
 const OUTLINE_SHADER_PATH := "res://assets/shaders/lofi_outline.gdshader"
 const STOREFRONT_SHADER_PATH := "res://assets/shaders/storefront_cool_palette.gdshader"
 const PLANT_PATHS := [
@@ -52,7 +52,7 @@ func _run() -> void:
 					has_illustrated_material = true
 					_expect(_has_outline(material), "%s lost its navy plant outline." % plant.name)
 		_expect(visible_mesh_count > 0, "%s did not expose a visible plant cluster." % plant.name)
-		_expect(has_illustrated_material, "%s lost its illustrated café material." % plant.name)
+		_expect(has_illustrated_material, "%s lost its illustrated environment material." % plant.name)
 
 	var floor_mesh := demo.get_node_or_null("ViewportContainer/SubViewport/World/Floor") as MeshInstance3D
 	var back_wall := demo.get_node_or_null("ViewportContainer/SubViewport/World/BackWall") as MeshInstance3D
@@ -101,8 +101,8 @@ func _run() -> void:
 				var rendered_face := renderer.get_node_or_null("%sCaseCardFrame" % variant_name)
 				var rendered_frame := rendered_face.find_child("CardFrame", true, false) if rendered_face != null else null
 				_expect(
-					rendered_frame != null and String(rendered_frame.get_meta("frame_style", "")) == "cozy_cafe",
-					"The %s display texture is not built from the current cozy-café CardFace." % variant_name
+					rendered_frame != null and String(rendered_frame.get_meta("frame_style", "")) == "illustrated_card",
+					"The %s display texture is not built from the current illustrated CardFace." % variant_name
 				)
 	for counter_name in ["counter", "counter2"]:
 		var counter := demo.get_node_or_null("ViewportContainer/SubViewport/World/%s" % counter_name)

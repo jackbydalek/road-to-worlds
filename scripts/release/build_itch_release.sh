@@ -16,10 +16,12 @@ if [[ -z "$version" || ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
 fi
 
 build_dir="$project_dir/builds"
-artifact="$build_dir/topdeck-to-worlds-${version}-itch-web.zip"
-stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/topdeck-to-worlds-itch.XXXXXX")"
+artifact="$build_dir/top-cut-locals-to-worlds-${version}-itch-web.zip"
+stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/top-cut-locals-to-worlds-itch.XXXXXX")"
+export_log="${stage_dir}.export.log"
 cleanup() {
 	rm -rf "$stage_dir"
+	rm -f "$export_log"
 }
 trap cleanup EXIT
 
@@ -28,8 +30,13 @@ printf '[release] Running automated release gate\n'
 "$project_dir/scripts/release/check_demo.sh"
 
 printf '\n[release] Exporting version %s\n' "$version"
-"$godot_bin" --headless --path "$project_dir" \
-	--export-release "Web (itch.io)" "$stage_dir/index.html"
+if ! "$godot_bin" --headless --path "$project_dir" \
+	--export-release "Web (itch.io)" "$stage_dir/index.html" >"$export_log" 2>&1; then
+	tail -n 200 "$export_log" >&2
+	exit 1
+fi
+tail -n 4 "$export_log"
+"$project_dir/scripts/release/check_no_ai_assets.sh" --export-log "$export_log"
 
 for required_file in index.html index.js index.pck index.wasm; do
 	test -s "$stage_dir/$required_file"

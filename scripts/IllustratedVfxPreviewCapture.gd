@@ -41,11 +41,10 @@ func _run() -> void:
 	var prep_center: Vector2 = table._world_to_container(player_prep.global_position + Vector3(0.0, 0.4, 0.0))
 	var rival_center: Vector2 = table._world_to_container(rival_card.global_position + Vector3(0.0, 0.45, 0.0))
 
-	table._spawn_celestial_orbit_screen(player_center, table.PALETTE.FRESH_YELLOW, Vector2(76.0, 48.0), 1.35)
-	table._spawn_cloud_puff_screen(prep_center, table.PALETTE.CREAM, table.PALETTE.TEAL, 1.15)
-	table._spawn_impact_rays_screen(rival_center, table.PALETTE.CORAL, 9, 1.0)
-	table._spawn_screen_particle_burst(rival_center, table.PALETTE.FRESH_YELLOW, 9, "✦")
-	await create_timer(0.18).timeout
+	table._play_graphic_vfx_screen("card_land", player_center, table.PALETTE.AFFINITY_SPICY)
+	table._play_graphic_vfx_screen("heal", prep_center)
+	table._play_graphic_vfx_screen("damage", rival_center)
+	await create_timer(0.08).timeout
 	_save_preview(SHOWCASE_PATH)
 
 	await create_timer(1.15).timeout

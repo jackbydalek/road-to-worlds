@@ -1,4 +1,4 @@
-# Topdeck Gameplay Rules
+# TOP CUT Gameplay Rules
 
 These are the rules used by every live match in Season Run and by the Debug Sandbox's Kitchen Match. Campaign collection, shop, deckbuilding, and tournament progression are described in [Season Loop](season-loop.md).
 
@@ -6,7 +6,9 @@ These are the rules used by every live match in Season Run and by the Debug Sand
 
 Reduce the opposing Chef from 20 life to zero.
 
-Each player chooses a deck, shuffles, and draws five cards. The first player begins but skips the draw at the start of their first turn. The second player draws normally on their first turn. On later turns, the active player draws one card; if they then have fewer than two cards in hand, they continue drawing until they have two or their deck is empty. Players also ready their units, reset once-per-turn abilities, and make newly matured Ingredients recipe-ready.
+Each player chooses a deck, shuffles, and draws five cards. The first player begins but skips the draw at the start of their first turn. The second player draws normally on their first turn. On later turns, the active player draws one card; Debug and legacy matches refill to two cards, while Starter City route encounters refill to three. Players also ready their units, reset once-per-turn abilities, and make newly matured Ingredients recipe-ready.
+
+In a Starter City route encounter, drawing from an empty deck reshuffles that player's discard pile into the deck. That player takes 3 damage on the first reshuffle, 5 on the second, and 7 on each later reshuffle in that match. The counter resets at the next encounter. Legacy and isolated Debug matches retain ordinary empty-deck behavior unless explicitly configured with route rules.
 
 Each side of the table has:
 

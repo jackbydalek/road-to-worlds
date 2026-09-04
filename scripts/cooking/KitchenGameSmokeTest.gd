@@ -721,30 +721,32 @@ func _run() -> void:
 		_fail("Wastabi did not load its canonical Stalwart keyword.")
 		return
 
-	# Bison Burrito receives its canonical bonus when moving from Prep to Plated.
-	var bison_move_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 702)
-	bison_move_state.player.prep = [_test_unit(902, "hearty_bison_burrito", "Bison Burrito", "meal", 4, 5, false, 2)]
-	production_service.move_unit(bison_move_state, 902, "plated")
-	if bison_move_state.player.plated.is_empty() or int(bison_move_state.player.plated[0].attack) != 6 or int(bison_move_state.player.plated[0].health) != 7:
-		_fail("Bison Burrito did not gain +2/+2 when it moved from Prep to Plated.")
+	# Polar Pot Pie Bear now receives the former Bison move bonus.
+	var polar_move_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 702)
+	polar_move_state.player.prep = [_test_unit(902, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6, false, 2)]
+	production_service.move_unit(polar_move_state, 902, "plated")
+	if polar_move_state.player.plated.is_empty() or int(polar_move_state.player.plated[0].attack) != 5 or int(polar_move_state.player.plated[0].health) != 8:
+		_fail("Polar Pot Pie Bear did not gain +2/+2 when it moved from Prep to Plated.")
 		return
 
-	# Polar Pot Pie Bear heals each other friendly unit once per turn while Plated.
-	var polar_heal_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 703)
-	polar_heal_state.player.plated = [
-		_test_unit(905, "hearty_polar_pot_pie_bear", "Polar Pot Pie Bear", "meal", 3, 6, true, 2),
-		_test_unit(906, "hearty_bagver", "Bagver", "ingredient", 1, 1, false, 2)
+	# Bison Burrito discards every Prep unit as it attacks, then gets +1/+1 per unit.
+	var bison_attack_state: Dictionary = production_service.start_game("hearty_test_kitchen", "spicy_test_kitchen", 703)
+	bison_attack_state.turn = 2
+	bison_attack_state.first_player = "opponent"
+	bison_attack_state.phase = "player_main"
+	bison_attack_state.player.plated = [_test_unit(905, "hearty_bison_burrito", "Bison Burrito", "meal", 4, 5, true, 2)]
+	bison_attack_state.player.prep = [
+		_test_unit(906, "hearty_bagver", "Bagver", "ingredient", 1, 2, false, 2),
+		_test_unit(907, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)
 	]
-	polar_heal_state.player.plated[1].max_health = 2
-	polar_heal_state.player.prep = [_test_unit(907, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 1, false, 2)]
-	polar_heal_state.player.prep[0].max_health = 3
-	production_service.activate_ability(polar_heal_state, 905, "polar_pot_pie_heal")
-	if int(polar_heal_state.player.plated[0].health) != 6 or int(polar_heal_state.player.plated[1].health) != 2 or int(polar_heal_state.player.prep[0].health) != 2:
-		_fail("Polar Pot Pie Bear did not heal each other friendly unit.")
+	bison_attack_state.opponent.plated = []
+	production_service.select_attacker(bison_attack_state, 905)
+	production_service.attack(bison_attack_state)
+	if not bison_attack_state.player.prep.is_empty() or int(bison_attack_state.player.plated[0].attack) != 6 or int(bison_attack_state.player.plated[0].health) != 7:
+		_fail("Bison Burrito did not discard two Prep units and gain +2/+2 when it attacked.")
 		return
-	production_service.activate_ability(polar_heal_state, 905, "polar_pot_pie_heal")
-	if int(polar_heal_state.player.prep[0].health) != 2:
-		_fail("Polar Pot Pie Bear activated more than once in the same turn.")
+	if not bison_attack_state.player.discard.has("hearty_bagver") or not bison_attack_state.player.discard.has("hearty_macaroni_manatee"):
+		_fail("Bison Burrito's discarded Prep units did not reach the discard pile.")
 		return
 
 	# Cinnamon Snail's healing reduction applies only while it is Plated.
@@ -1332,7 +1334,7 @@ func _run() -> void:
 		_fail("Jalapeño Panther's deck picker did not add the chosen card to the hand.")
 		return
 
-	print("Topdeck gameplay smoke test passed.")
+	print("TOP CUT gameplay smoke test passed.")
 	quit(0)
 
 

@@ -69,6 +69,38 @@ func _run() -> void:
 		_fail("Face-race AI did not choose the cheapest blocker.")
 		return
 
+	var switchblade_state: Dictionary = service.start_game(
+		"spicy_test_kitchen", "hearty_test_kitchen", 27182, "player", true, "medium"
+	)
+	switchblade_state.opponent.hand = ["item_switchblade"]
+	switchblade_state.opponent.prep.clear()
+	switchblade_state.opponent.plated.clear()
+	if service._ai_play_one_hand_card(switchblade_state) or not switchblade_state.opponent.discard.is_empty() or switchblade_state.opponent.hand != ["item_switchblade"]:
+		_fail("AI spent Switchblade with no Prep and Plated foods to swap.")
+		return
+	var weak_plated: Dictionary = service._make_unit(switchblade_state, switchblade_state.opponent, service.card("hearty_bagver"), "plated", "opponent")
+	weak_plated.attack = 1
+	weak_plated.health = 2
+	weak_plated.max_health = 2
+	var strong_prep: Dictionary = service._make_unit(switchblade_state, switchblade_state.opponent, service.card("hearty_gravy_gazelle"), "prep", "opponent")
+	strong_prep.attack = 1
+	strong_prep.health = 4
+	strong_prep.max_health = 4
+	switchblade_state.opponent.plated = [weak_plated]
+	switchblade_state.opponent.prep = [strong_prep]
+	weak_plated.attack = 5
+	if service._ai_play_one_hand_card(switchblade_state) or not switchblade_state.opponent.discard.is_empty() or switchblade_state.opponent.hand != ["item_switchblade"]:
+		_fail("AI spent Switchblade on a swap that weakened its Plated zone.")
+		return
+	weak_plated.attack = 1
+	strong_prep.attack = 5
+	if not service._ai_play_one_hand_card(switchblade_state):
+		_fail("AI did not use Switchblade once it could improve its board.")
+		return
+	if not switchblade_state.opponent.hand.is_empty() or not switchblade_state.opponent.discard.has("item_switchblade") or int(switchblade_state.opponent.plated[0].instance_id) != int(strong_prep.instance_id):
+		_fail("AI did not move the stronger Prep food into Plated with Switchblade.")
+		return
+
 	print("AI_POLICY_SMOKE_TEST=PASS")
 	quit(0)
 

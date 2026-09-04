@@ -76,6 +76,8 @@ static func make_menu_button(
 	button.expand_icon = false
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(0, 64)
+	button.set_meta("ui_button_variant", "selected" if selected else ("primary" if action else "secondary"))
+	button.set_meta("ui_button_variant_inferred", false)
 	button.add_theme_font_override("font", SKETCH_UI.display_font(0.72))
 	button.add_theme_font_size_override("font_size", 19)
 	button.add_theme_constant_override("icon_max_width", 28)
@@ -100,6 +102,8 @@ static func make_event_button(selected: bool, completed: bool, unlocked: bool) -
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(0, 38)
+	button.set_meta("ui_button_variant", "selected" if selected else "secondary")
+	button.set_meta("ui_button_variant_inferred", false)
 	button.add_theme_font_override("font", SKETCH_UI.display_font(0.68))
 	button.add_theme_font_size_override("font_size", 16)
 	var fill := TEAL if selected else (PALETTE.TEAL_SOFT if completed else PAPER)

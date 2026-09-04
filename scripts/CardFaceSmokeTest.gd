@@ -95,7 +95,7 @@ func _run() -> void:
 	var hearty_rules := hearty_face.find_child("CardRules", true, false) as Label
 	var hearty_rules_backdrop := hearty_face.find_child("CardRulesBackdrop", true, false) as Panel
 	var card_icon_font := sweet_icon.get_theme_font("font") as FontFile if sweet_icon != null else null
-	_expect(bee_frame != null and bee_frame.get_meta("frame_style", "") == "cozy_cafe", "The Spicy Ingredient did not use the reusable cozy card frame.")
+	_expect(bee_frame != null and bee_frame.get_meta("frame_style", "") == "illustrated_card", "The Spicy Ingredient did not use the reusable illustrated card frame.")
 	_expect(sweet_frame != null and sweet_frame.get_meta("difficulty_id", "") == "gold", "The Gold card did not retain its difficulty trim.")
 	_expect(hearty_frame != null and hearty_frame.get_meta("difficulty_id", "") == "blue", "The Blue card did not retain its difficulty trim.")
 	_expect(bee_art != null and not bool(bee_art.get_meta("art_pending", true)), "Hot Honey Bee did not load its converted artwork frames.")
@@ -151,7 +151,7 @@ func _run() -> void:
 	var chef_icon := chef_face.find_child("CardAffinityIcon", true, false) as Label
 	var chef_stats := chef_face.find_child("CardStats", true, false) as Label
 	_expect(CARD_FACE_SCRIPT.supports_card(catalog.cards_by_id.chef_mary), "Chef cards were not accepted by the authored card renderer.")
-	_expect(chef_frame != null and chef_frame.get_meta("frame_style", "") == "cozy_cafe", "Chef cards did not use the reusable cozy frame.")
+	_expect(chef_frame != null and chef_frame.get_meta("frame_style", "") == "illustrated_card", "Chef cards did not use the reusable illustrated frame.")
 	_expect(chef_art != null and not bool(chef_art.get_meta("art_pending", true)), "Chef Giada did not load her supplied portrait.")
 	_expect(chef_icon != null and chef_icon.visible and chef_icon.text == "🧑‍🍳" and chef_stats != null and not chef_stats.visible, "Chef cards did not display their utility classification correctly.")
 
@@ -160,8 +160,8 @@ func _run() -> void:
 	var tool_frame := tool_face.find_child("CardFrame", true, false) as Panel
 	var tool_type := tool_face.find_child("CardType", true, false) as Label
 	_expect(CARD_FACE_SCRIPT.supports_card(catalog.cards_by_id.item_wooden_spoon), "Tool cards were not accepted by the authored card renderer.")
-	_expect(tool_frame != null and tool_frame.get_meta("frame_style", "") == "cozy_cafe", "Tool cards did not use the reusable cozy frame.")
-	_expect(tool_type != null and tool_type.visible and tool_type.text.contains("Item"), "Tool cards did not display their utility classification ribbon.")
+	_expect(tool_frame != null and tool_frame.get_meta("frame_style", "") == "illustrated_card", "Tool cards did not use the reusable illustrated frame.")
+	_expect(tool_type != null and tool_type.visible and tool_type.text == "Item" and tool_type.clip_text, "Tool cards did not display a clean utility classification ribbon.")
 	chef_face.free()
 	tool_face.free()
 

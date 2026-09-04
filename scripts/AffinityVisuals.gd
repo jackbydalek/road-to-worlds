@@ -76,13 +76,17 @@ static func card_type_symbol(card_type: String) -> String:
 
 static func card_type_label(card_type: String) -> String:
 	var normalized := card_type.to_lower()
-	var display_name := String(CARD_TYPE_NAMES.get(normalized, card_type.capitalize()))
-	if display_name == "":
-		display_name = "Card"
+	var display_name := card_type_name(normalized)
 	var type_symbol := card_type_symbol(normalized)
 	if type_symbol == "":
 		return display_name
 	return "%s %s" % [type_symbol, display_name]
+
+
+static func card_type_name(card_type: String) -> String:
+	var normalized := card_type.to_lower()
+	var display_name := String(CARD_TYPE_NAMES.get(normalized, card_type.capitalize()))
+	return display_name if display_name != "" else "Card"
 
 
 static func card_display_name(card: Dictionary) -> String:

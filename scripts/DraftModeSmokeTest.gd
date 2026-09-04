@@ -19,10 +19,8 @@ func _run() -> void:
 	await process_frame
 
 	_expect(main.current_screen == "start", "The game did not open on the start screen.")
-	_expect(main.find_child("GameStartButton", true, false) is Button, "The boot landing did not offer Game Start.")
-	main._show_game_start()
-	await process_frame
-	_expect(main.current_screen == "game_start" and main.find_child("NewGameButton", true, false) is Button, "Game Start did not open the Continue / New Game gateway.")
+	_expect(main.find_child("GameStartButton", true, false) is Button, "The boot landing did not offer New Game.")
+	_expect(main.find_child("ContinueRunButton", true, false) is Button, "The boot landing did not own the Continue action.")
 	main._show_season_run_setup()
 	main.season_setup_archetype_index = main.DEMO_STARTER_ORDER.find(main.DRAFT_NIGHT_ID)
 	main.season_setup_difficulty_index = main.DIFFICULTY_ORDER.find("silver")
@@ -39,7 +37,7 @@ func _run() -> void:
 	_expect(main.current_screen == "draft", "Starting a draft did not open the draft screen.")
 	var draft_scene := main.find_child("DraftWorkspaceScreen", true, false) as Control
 	_expect(draft_scene != null and draft_scene.scene_file_path == "res://scenes/ui/DraftMenu.tscn", "Draft Night was not instantiated from its editable scene.")
-	_expect(main.title_label.text == "Topdeck to Worlds", "The draft shell did not use the approved product name.")
+	_expect(main.title_label.text == "TOP CUT: Locals to Worlds", "The draft shell did not use the approved product name.")
 	_expect(main.status_label.text == "Draft Night", "The draft shell did not identify the active workspace.")
 	_expect(not main.footer_label.visible, "The redundant draft footer still consumed vertical space.")
 	if draft_scene != null:
@@ -55,7 +53,7 @@ func _run() -> void:
 		draft_mode_style != null
 		and draft_mode_style.border_color.is_equal_approx(PALETTE.NAVY)
 		and draft_mode_style.corner_radius_top_left >= 12,
-		"The draft heading did not use the rounded navy café-panel treatment."
+		"The draft heading did not use the rounded navy illustrated-panel treatment."
 	)
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
@@ -136,8 +134,7 @@ func _run() -> void:
 	_expect(main.run.get("deck", {}) == main.run.get("collection", {}), "The drafted collection did not exactly match the drafted deck.")
 	_expect(main.run.get("draft_picks", []).size() == main.DRAFT_DECK_SIZE, "The run did not preserve all 20 draft picks.")
 	_expect(main.current_screen == "shop", "Completing the draft did not continue to the card shop.")
-	for card_id in main.run.get("deck", {}):
-		_expect(int(main.run.deck[card_id]) <= main._deck_limit(String(card_id)), "The draft exceeded the copy limit for %s." % String(card_id))
+	_expect(main._deck_limit("spicy_hot_honey_bee") == 0, "The draft catalog did not use the unlimited-copy sentinel.")
 
 	main._release_audio_streams()
 	await create_timer(0.12).timeout

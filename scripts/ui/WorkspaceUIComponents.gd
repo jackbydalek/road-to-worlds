@@ -162,6 +162,8 @@ static func make_price_sticker(price: int, minimum_size: Vector2 = Vector2(72, 4
 
 
 static func style_button(button: Button, variant: String = "secondary") -> void:
+	button.set_meta("ui_button_variant", variant)
+	button.set_meta("ui_button_variant_inferred", false)
 	button.theme_type_variation = &""
 	button.custom_minimum_size.y = 34
 	for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:

@@ -2,7 +2,7 @@
 
 All cards and development decks live in `data/cards.json`. Card IDs are stable lowercase identifiers used by decks and runtime instances.
 
-The season shell reads this same catalog and derives campaign-only rarity, value, deck-limit, role, and deck-quality fields at runtime. Printed match rules remain single-source.
+The season shell reads this same catalog and derives campaign-only rarity, value, role, and deck-quality fields at runtime. It also exposes `deckLimit: 0` as a compatibility sentinel for unlimited copies. Printed match rules remain single-source.
 
 The demo catalog is locked to the 87 cards supplied for release: 30 Ingredients, 23 Meals, 9 Chefs, 15 Tools, 5 Environments, and 5 Spices. `token_fresh_ingredient` is an internal gameplay token and is not part of that collectible count. `CanonicalCatalogSmokeTest.gd` fails if a card is added, removed, renamed, or moved to a different card type without intentionally updating the release manifest.
 

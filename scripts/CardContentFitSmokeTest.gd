@@ -36,6 +36,14 @@ func _run() -> void:
 		_expect(not card.is_empty(), "Missing content-fit card %s." % card_id)
 		if card.is_empty():
 			continue
+		if card_id == "item_switchblade":
+			var switchblade_frames: Array = card.get("art_frames", [])
+			_expect(
+				switchblade_frames.size() == 6
+				and switchblade_frames.all(func(frame_path) -> bool: return ResourceLoader.exists(String(frame_path)))
+				and is_equal_approx(float(card.get("art_frame_duration", 0.0)), 0.07),
+				"Switchblade did not load all six supplied 70 ms animation frames."
+			)
 
 		var large_face = CARD_FACE_SCRIPT.new()
 		large_face.configure(card, "gold", false)

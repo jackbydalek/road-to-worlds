@@ -60,12 +60,10 @@ func _run() -> void:
 		var dual_badge := face.find_child("DualAffinityBadgeLabel", true, false)
 		var type_label := face.find_child("CardType", true, false) as Label
 		var expected_icons := ""
-		var expected_type_symbols: Array[String] = []
 		for affinity_id in DUAL_FRAME_AFFINITY_ORDER[expected_frame_key]:
 			var symbol := AFFINITY_VISUALS.symbol(String(affinity_id))
 			expected_icons += symbol
-			expected_type_symbols.append(symbol)
-		_expect(frame != null and frame.get_meta("frame_style", "") == "cozy_cafe", "%s did not use the reusable cozy frame." % String(card.get("id", "")))
+		_expect(frame != null and frame.get_meta("frame_style", "") == "illustrated_card", "%s did not use the reusable illustrated frame." % String(card.get("id", "")))
 		_expect(first_stripe != null and second_stripe != null, "%s did not display both affinity stripe segments." % String(card.get("id", "")))
 		_expect(dual_tint != null and left_rail != null and right_rail != null, "%s did not receive the split artwork tint and opposing side rails." % String(card.get("id", "")))
 		_expect(dual_type_tint != null, "%s did not split its Ingredient or Meal classification pill between both affinities." % String(card.get("id", "")))
@@ -73,7 +71,12 @@ func _run() -> void:
 		if symbol_box != null:
 			_expect(symbol_box.size.x >= symbol_box.size.y * 1.65, "%s did not give its dual affinity symbols a wide enough box." % String(card.get("id", "")))
 		_expect(dual_badge == null, "%s still displayed the redundant DUAL badge." % String(card.get("id", "")))
-		_expect(type_label != null and type_label.text == "%s %s" % [" + ".join(expected_type_symbols), String(card.get("card_type", "")).capitalize()], "%s did not use both Noto affinity symbols in its type ribbon." % String(card.get("id", "")))
+		_expect(
+			type_label != null
+			and type_label.text == String(card.get("card_type", "")).capitalize()
+			and type_label.clip_text,
+			"%s did not keep its card type on a clean, clipped line separate from recipe symbols." % String(card.get("id", ""))
+		)
 		_expect(icon != null and icon.text == expected_icons, "%s did not display both affinity symbols." % String(card.get("id", "")))
 		face.free()
 

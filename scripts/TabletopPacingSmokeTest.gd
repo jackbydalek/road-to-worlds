@@ -47,17 +47,14 @@ func _run() -> void:
 	_expect(table.find_child("OutcomeOverlay", true, false) != null, "The match outcome overlay was not created.")
 	var rival_action_panel := table.find_child("RivalActionPanel", true, false) as PanelContainer
 	var game_breakdown_button := table.find_child("GameBreakdownButton", true, false) as Button
-	var rival_pacing_button := table.find_child("RivalPacingButton", true, false) as Button
-	var text_scale_button := table.find_child("TextScaleButton", true, false) as Button
 	_expect(rival_action_panel != null and not rival_action_panel.visible, "The persistent rival-action inspector was not created in its idle state.")
 	_expect(table.battle_log_panel != null and not table.battle_log_panel.visible, "The battle log did not start collapsed.")
 	_expect(game_breakdown_button != null and game_breakdown_button.disabled, "The Game Breakdown control was not created in its idle state.")
-	var match_options_button := table.find_child("MatchOptionsButton", true, false) as Button
-	var readability_controls := table.find_child("ReadabilityControls", true, false) as PanelContainer
-	_expect(match_options_button != null and match_options_button.text == "OPTIONS", "The compact match-options control was not created.")
-	_expect(readability_controls != null and not readability_controls.visible, "Readability settings did not start collapsed.")
-	_expect(rival_pacing_button != null and rival_pacing_button.text.begins_with("PLAY SPEED"), "The play-speed control was not created.")
-	_expect(text_scale_button != null and text_scale_button.text.begins_with("TEXT SIZE"), "The readable text-scale control was not created.")
+	_expect(table.find_child("MatchOptionsButton", true, false) == null, "The obsolete match-options control is still present.")
+	_expect(not table.exit_button.visible, "The redundant top-level exit control is still visible.")
+	_expect(table.settings_button.text.is_empty() and String(table.settings_button.get_meta("material_symbol", "")) == "settings", "The consolidated settings control is not an icon-only cog.")
+	_expect(table.find_child("MatchSettingsMenu", true, false) == null, "The obsolete in-battle settings dropdown still exists.")
+	_expect(table.find_child("RivalPacingButton", true, false) == null and table.find_child("TextScaleButton", true, false) == null, "Battle preferences still have duplicate HUD controls.")
 	_expect(table.theme.default_font.resource_path.ends_with("AtkinsonHyperlegibleNext.ttf"), "The Living Table UI did not use the bundled hyperlegible font.")
 	var original_text_scale_index: int = table.text_scale_index
 	table.text_scale_index = 0
@@ -68,7 +65,6 @@ func _run() -> void:
 	_expect(table.status_label.get_theme_font_size("font_size") > base_status_font_size, "The 150% text setting did not enlarge match UI copy.")
 	table.text_scale_index = original_text_scale_index
 	table._apply_text_scale()
-	table._refresh_readability_control_labels()
 	_expect(table.find_children("*", "AudioStreamPlayer", true, false).is_empty(), "The no-sound pacing pass added an AudioStreamPlayer.")
 	var ingredient_hand_index := -1
 	for hand_index in range(table.state.player.hand.size()):
@@ -87,24 +83,62 @@ func _run() -> void:
 		}
 		table._refresh_action_panel()
 		table._begin_hand_play_selection(ingredient_hand_index)
+		table._update_zone_flair(0.0)
+		var all_legal_slots_lit: bool = not table.action_highlight_slots.is_empty()
+		for choice in table.action_highlight_slots:
+			var legal_material := table.zone_materials[String(choice.zone)][int(choice.slot)] as StandardMaterial3D
+			all_legal_slots_lit = all_legal_slots_lit and legal_material.emission_enabled
+		_expect(all_legal_slots_lit, "Play Card did not light every legal destination slot.")
+		if table.action_highlight_slots.size() >= 2:
+			var hovered_choice: Dictionary = table.action_highlight_slots[0]
+			var comparison_choice: Dictionary = table.action_highlight_slots[1]
+			var hovered_screen_position: Vector2 = table._world_to_container(
+				table._slot_world_position(String(hovered_choice.zone), int(hovered_choice.slot))
+			)
+			table._update_action_destination_hover(hovered_screen_position)
+			table._update_zone_flair(0.0)
+			var hovered_material := table.zone_materials[String(hovered_choice.zone)][int(hovered_choice.slot)] as StandardMaterial3D
+			var comparison_material := table.zone_materials[String(comparison_choice.zone)][int(comparison_choice.slot)] as StandardMaterial3D
+			_expect(
+				table.hovered_action_zone == String(hovered_choice.zone)
+				and table.hovered_action_slot == int(hovered_choice.slot)
+				and hovered_material.albedo_color.a > comparison_material.albedo_color.a
+				and hovered_material.emission_energy_multiplier > comparison_material.emission_energy_multiplier,
+				"Hovering a legal destination did not brighten it above the other legal slots."
+			)
 		var inspector_buttons: Array[Node] = table.action_list.find_children("*", "Button", true, false)
 		var has_cancel := false
 		for inspector_button in inspector_buttons:
-			if String((inspector_button as Button).text) == "Cancel":
+			if String((inspector_button as Button).get_meta("action_label", "")) == "Cancel":
 				has_cancel = true
 		_expect(table.pending_hand_play_index == ingredient_hand_index and not table.action_highlight_slots.is_empty() and has_cancel, "Play Card did not enter the board-destination selection mode with a cancel action.")
 		table._cancel_pending_hand_play()
 		table.selected_ref = {}
 		table._refresh_action_panel()
-	table.selected_ref = {"kind": "field", "side": "opponent", "hand_index": -1, "instance_id": -1, "zone": "plated", "card_id": "spicy_wasabi_wasp"}
+	table.selected_ref = {"kind": "field", "side": "opponent", "hand_index": -1, "instance_id": -1, "zone": "plated", "card_id": "sweet_soft_serve_crab"}
 	table._refresh_action_panel()
+	var viewed_keyword_card := table.action_list.find_child("LivingTableInfoCardFace", true, false) as Control
+	var keyword_popout := table.keyword_popout as PanelContainer
+	var keyword_title := keyword_popout.find_child("KeywordPopoutTitle_bodyguard", true, false) as Label if keyword_popout != null else null
+	var keyword_body := keyword_popout.find_child("KeywordPopoutBody_bodyguard", true, false) as Label if keyword_popout != null else null
 	_expect(
-		table.keyword_popout != null
-		and table.keyword_popout.visible
+		viewed_keyword_card != null
+		and viewed_keyword_card.visible
 		and String(table.service.card("spicy_wasabi_wasp").get("text", "")) == "Stalwart"
 		and String(table.service.card("sweet_soft_serve_crab").get("text", "")) == "Bodyguard"
 		and String(table.service.card("hearty_french_bread_dog").get("text", "")) == "Taunt",
-		"Keyword cards did not use concise printed text with an inspector popout."
+		"Keyword cards did not remain readable directly on the high-fidelity card viewer."
+	)
+	_expect(
+		keyword_popout != null
+		and keyword_popout.visible
+		and keyword_popout.get_global_rect().position.x >= viewed_keyword_card.get_global_rect().end.x + 10.0
+		and keyword_popout.find_child("KeywordPopoutAngularSurface", true, false) != null
+		and keyword_title != null
+		and keyword_title.text == "BODYGUARD"
+		and keyword_body != null
+		and keyword_body.text.contains("does not pierce"),
+		"The inspected keyword card did not restore its explanation beside the card."
 	)
 	if DisplayServer.get_name() != "headless":
 		await create_timer(1.0).timeout
@@ -112,10 +146,13 @@ func _run() -> void:
 		_expect(inspector_preview.save_png(INSPECTOR_PREVIEW_PATH) == OK, "The card inspector preview could not be saved.")
 	table.selected_ref = {}
 	table._refresh_action_panel()
+	_expect(table.keyword_popout == null, "The keyword explanation remained after the card inspector closed.")
 	# A drop is resolved under the dragged card, not under the offset point where
 	# the player happened to grab it. This keeps the highlighted slot authoritative.
 	table.drag_offset = Vector3(-0.55, 0.0, 0.0)
-	var offset_drop_point: Vector3 = table._dragged_card_point(Vector3(0.4, table.TABLE_Y, -0.65))
+	var plated_slot_zero: Vector3 = table._slot_world_position("player_plated", 0)
+	var offset_drop_pointer := plated_slot_zero + Vector3(1.30, 0.0, -0.80)
+	var offset_drop_point: Vector3 = table._dragged_card_point(offset_drop_pointer)
 	var offset_drop_slot: Dictionary = table._slot_at_point(offset_drop_point)
 	_expect(
 		String(offset_drop_slot.get("zone", "")) == "player_plated" and int(offset_drop_slot.get("slot", -1)) == 0,
@@ -124,9 +161,79 @@ func _run() -> void:
 	table.drag_offset = Vector3.ZERO
 	await create_timer(1.0).timeout
 	table._spawn_screen_particle_burst(Vector2(120.0, 120.0), Color.WHITE, 1, "✦")
-	var procedural_particle: Node = table.effect_layer.get_child(-1)
-	_expect(procedural_particle is Polygon2D, "Tabletop effects still use font glyphs that can render as missing-character boxes.")
+	var procedural_burst := table.effect_layer.get_child(-1) as Node2D
+	_expect(
+		_is_basic_square_burst(procedural_burst, 1, Color.WHITE),
+		"Tabletop effects did not return to simple, unoutlined square particles."
+	)
+	var fallback_count_before: int = table.effect_layer.get_child_count()
+	table._spawn_screen_particle_burst(Vector2(160.0, 120.0), table.PALETTE.SIGNAL_YELLOW, 28, "✦")
+	var fallback_burst := table.effect_layer.get_child(-1) as Node2D
+	_expect(
+		table.effect_layer.get_child_count() - fallback_count_before == 1
+		and _is_basic_square_burst(fallback_burst, 10, table.PALETTE.SIGNAL_YELLOW),
+		"The fallback effect did not use one restrained ten-square burst."
+	)
 	await create_timer(0.6).timeout
+	table.reduced_motion = false
+	table._play_graphic_vfx_screen("card_land", Vector2(160, 140), table.PALETTE.AFFINITY_SPICY)
+	var landing_vfx := table.effect_layer.find_child("CardLandingGraphicVfx", true, false) as Node2D
+	_expect(
+		_is_card_arrival_vfx(landing_vfx, 5),
+		"Card landing did not use the focused ring, white flash, and restrained debris treatment."
+	)
+	if landing_vfx != null:
+		landing_vfx.queue_free()
+	var foreground_landing_count: int = table.effect_layer.find_children("*LandingUnderlayVfx", "Node3D", true, false).size()
+	table._play_graphic_vfx_world("card_land", Vector3(0.0, table.TABLE_Y, 0.0), table.PALETTE.AFFINITY_SPICY)
+	var landing_underlay := table.card_layer.find_child("CardLandingUnderlayVfx", false, false) as Node3D
+	_expect(
+		landing_underlay != null
+		and landing_underlay.get_parent() == table.card_layer
+		and landing_underlay.get_meta("render_depth", "") == "behind_cards"
+		and landing_underlay.position.y < table.TABLE_Y + 0.034
+		and landing_underlay.find_child("ArrivalAccentUnderlay", false, false) is MeshInstance3D
+		and landing_underlay.find_child("ArrivalWhiteUnderlay", false, false) is MeshInstance3D
+		and table.effect_layer.find_children("*LandingUnderlayVfx", "Node3D", true, false).size() == foreground_landing_count,
+		"A played card's arrival effect was not rendered as a depth-tested underlay behind the 3D card."
+	)
+	if landing_underlay != null:
+		landing_underlay.queue_free()
+	table._play_graphic_vfx_screen("damage", Vector2(220, 140))
+	var damage_vfx := table.effect_layer.find_child("DamageGraphicVfx", true, false) as Node2D
+	_expect(
+		_is_hit_spark_vfx(damage_vfx, 6, table.PALETTE.SIGNAL_RED),
+		"Damage did not use the affinity-edged, white-core hit spark treatment."
+	)
+	if damage_vfx != null:
+		damage_vfx.queue_free()
+	table._play_graphic_vfx_screen("heal", Vector2(280, 140))
+	var heal_vfx := table.effect_layer.find_child("HealGraphicVfx", true, false) as Node2D
+	_expect(
+		_is_heal_aura_vfx(heal_vfx, 4),
+		"Healing did not use the clean emerald aura and white glint treatment."
+	)
+	if heal_vfx != null:
+		heal_vfx.queue_free()
+	await process_frame
+	table.reduced_motion = true
+	table._play_graphic_vfx_screen("card_land", Vector2(340, 140), table.PALETTE.AFFINITY_SPICY)
+	var reduced_landing_vfx := table.effect_layer.find_child("CardLandingGraphicVfx", true, false) as Node2D
+	_expect(
+		_is_card_arrival_vfx(reduced_landing_vfx, 2),
+		"Reduced motion did not simplify card landing while preserving its arrival ring."
+	)
+	if reduced_landing_vfx != null:
+		reduced_landing_vfx.queue_free()
+	table._play_graphic_vfx_screen("damage", Vector2(400, 140))
+	var reduced_damage_vfx := table.effect_layer.find_child("DamageGraphicVfx", true, false) as Node2D
+	_expect(
+		_is_hit_spark_vfx(reduced_damage_vfx, 3, table.PALETTE.SIGNAL_RED),
+		"Reduced motion did not simplify damage while preserving its readable white core."
+	)
+	if reduced_damage_vfx != null:
+		reduced_damage_vfx.queue_free()
+	table.reduced_motion = false
 	var draw_card_id := String(table.state.player.hand[0])
 	var draw_card_node: Node3D = table._hand_card_node("player", 0, draw_card_id)
 	var staged_draw_events: Array[Dictionary] = [{
@@ -191,7 +298,23 @@ func _run() -> void:
 	var activation_origin_scale: Vector3 = meal_probe.scale
 	var activation_probe_timer := create_timer(0.24)
 	activation_probe_timer.timeout.connect(func() -> void:
-		_expect(table.find_child("FieldActivationIndicator", true, false) != null, "The field activation callout did not appear over the source card.")
+		var activation_indicator := table.find_child("FieldActivationIndicator", true, false) as PanelContainer
+		var activation_surface = table.find_child("FieldActivationAngularSurface", true, false)
+		var activation_kind := table.find_child("FieldActivationKind", true, false) as Label
+		var activation_card_name := table.find_child("FieldActivationCardName", true, false) as Label
+		_expect(activation_indicator != null, "The field activation callout did not appear over the source card.")
+		_expect(
+			activation_surface != null
+			and activation_surface.fill_color.is_equal_approx(table.PALETTE.GRAPHITE)
+			and activation_surface.accent_color.is_equal_approx(table.PALETTE.ELECTRIC_CYAN)
+			and activation_surface.dark_surface
+			and activation_kind != null
+			and activation_kind.get_theme_font("font").resource_path == "res://assets/fonts/Oxanium-SemiBold.ttf"
+			and activation_kind.get_theme_color("font_color").is_equal_approx(table.PALETTE.ELECTRIC_CYAN)
+			and activation_card_name != null
+			and activation_card_name.get_theme_color("font_color").is_equal_approx(table.PALETTE.COOL_WHITE),
+			"The field activation callout does not use the dark angular activation treatment."
+		)
 		_expect(meal_probe.position.y > activation_origin_position.y and meal_probe.scale.length() > activation_origin_scale.length(), "The activating field card did not lift and pulse.")
 		if DisplayServer.get_name() != "headless":
 			var activation_preview := root.get_texture().get_image()
@@ -224,6 +347,42 @@ func _run() -> void:
 		and String(on_play_events[1].get("type", "")) == "card_text_activation",
 		"A card with on-play text did not queue its activation cue immediately after entering play."
 	)
+	var token_probe: Node3D = table._make_card("token_fresh_ingredient", true)
+	token_probe.set_meta("instance_id", 99002)
+	table.card_layer.add_child(token_probe)
+	table.interactive_cards.append(token_probe)
+	var saladmander_activation_events: Array[Dictionary] = [{
+		"type": "card_text_activation",
+		"side": "player",
+		"source_instance_id": 99001,
+		"card_id": "fresh_saladmander",
+		"card_type": "meal"
+	}]
+	var saladmander_play_events: Array[Dictionary] = [{
+		"type": "play",
+		"side": "player",
+		"instance_id": 99001,
+		"card_id": "fresh_saladmander",
+		"card_type": "meal"
+	}, {
+		"type": "play",
+		"side": "player",
+		"instance_id": 99002,
+		"card_id": "token_fresh_ingredient",
+		"card_type": "token"
+	}]
+	var staged_token_cards: Array[Node3D] = table._stage_activation_result_plays(saladmander_play_events, saladmander_activation_events)
+	_expect(
+		table._is_activation_source_play(saladmander_play_events[0], saladmander_activation_events)
+		and not table._is_activation_source_play(saladmander_play_events[1], saladmander_activation_events)
+		and staged_token_cards.size() == 1
+		and not token_probe.visible,
+		"Saladmander's generated token was visible before the source effect activated."
+	)
+	table._release_staged_result_play(saladmander_play_events[1], staged_token_cards)
+	_expect(token_probe.visible and staged_token_cards.is_empty(), "Saladmander's token did not appear when its result animation began.")
+	table.interactive_cards.erase(token_probe)
+	token_probe.queue_free()
 	var ability_event_state: Dictionary = table.state.duplicate(true)
 	ability_event_state.phase = "player_main"
 	ability_event_state.game_over = false
@@ -268,20 +427,11 @@ func _run() -> void:
 	var action_reveal_preview_timer := create_timer(0.55)
 	action_reveal_preview_timer.timeout.connect(func() -> void:
 		var fullscreen_reveal := table.find_child("ActionCardFullscreenReveal", true, false) as TextureRect
-		var reveal_border := fullscreen_reveal.find_child("ActionCardRevealBorder", true, false) as Panel if fullscreen_reveal != null else null
-		var reveal_border_style := reveal_border.get_theme_stylebox("panel") as StyleBoxFlat if reveal_border != null else null
 		_expect(fullscreen_reveal != null, "The Tool did not appear in the full-screen action-card reveal.")
 		_expect(
-			reveal_border_style != null
-			and reveal_border_style.border_width_left >= 8
-			and reveal_border_style.border_color == table._action_reveal_border_color(),
-			"The Tool/Chef spin reveal did not carry the selected rounded card border."
-		)
-		_expect(
-			reveal_border_style != null
-			and not reveal_border_style.draw_center
-			and reveal_border_style.shadow_size == 0,
-			"The Tool/Chef spin border added a fill, tint, or shadow over the card art."
+			fullscreen_reveal == null
+			or fullscreen_reveal.find_child("ActionCardRevealBorder", true, false) == null,
+			"The Tool/Chef spin reveal restored the duplicate border that drifts out of sync."
 		)
 		if DisplayServer.get_name() != "headless":
 			var spin_preview := root.get_texture().get_image()
@@ -344,7 +494,30 @@ func _run() -> void:
 	table.animation_busy = false
 	table._reset_camera_pacing()
 	var table_environment := table.find_child("WorldEnvironment", true, false) as WorldEnvironment
-	_expect(table_environment != null and table_environment.environment.background_color.is_equal_approx(Color(0.976, 0.941, 0.922, 1.0)), "Living Table did not retain its warm cream background.")
+	var battle_backdrop := table.get_node_or_null("BattleBackdrop") as TextureRect
+	var battle_viewport_container := table.get_node_or_null("ViewportContainer") as SubViewportContainer
+	_expect(
+		table_environment != null
+		and table_environment.environment.background_mode == Environment.BG_CLEAR_COLOR
+		and table.world_viewport.transparent_bg
+		and battle_backdrop != null
+		and battle_backdrop.texture != null
+		and battle_backdrop.texture.resource_path == "res://assets/battle/field-battle-background.png",
+		"Living Table did not load the supplied field battle background."
+	)
+	_expect(
+		battle_backdrop.z_index >= 0
+		and battle_viewport_container != null
+		and battle_viewport_container.z_index > battle_backdrop.z_index
+		and table.get_node("Interface").z_index > battle_viewport_container.z_index,
+		"Battle layers can disappear behind the parent screen or render in the wrong order."
+	)
+	_expect(
+		table.find_child("SpectatorLayer", true, false) == null
+		and table.find_child("PlayerSpectator", true, false) == null
+		and table.find_child("OpponentSpectator", true, false) == null,
+		"People are still being added to the battle presentation."
+	)
 	table._face_material("spicy_hot_honey_bee")
 	var bee_face_viewport := table.texture_viewports.find_child("PrototypeFullCardFaceViewport_spicy_hot_honey_bee", false, false) as SubViewport
 	_expect(bee_face_viewport != null and bee_face_viewport.size == table.CARD_FACE_TEXTURE_SIZE and bee_face_viewport.render_target_update_mode != SubViewport.UPDATE_ALWAYS, "Living Table card faces still used an unbounded full-frame render target.")
@@ -446,7 +619,7 @@ func _run() -> void:
 		"A card's READY pill overlaps its attack/health pill vertically (gap %.3f, required %.3f)." % [ready_badge_gap, combined_badge_half_height + 0.02]
 	)
 	var adjacent_ready_root := Node3D.new()
-	adjacent_ready_root.position.x = 1.72
+	adjacent_ready_root.position.x = table.PLATED_SLOT_SPACING
 	adjacent_ready_root.scale = Vector3.ONE * table.PLATED_CARD_SCALE
 	table.card_layer.add_child(adjacent_ready_root)
 	table._add_stat_badge(adjacent_ready_root, ready_badge_unit, "player")
@@ -468,7 +641,7 @@ func _run() -> void:
 		"A card could not be opened for inspection while the opponent turn animation was running."
 	)
 	var inspection_buttons: Array[Node] = table.action_list.find_children("*", "Button", true, false)
-	_expect(inspection_buttons.size() == 1 and String(inspection_buttons[0].name) == "LivingTableInfoClose", "Opponent-turn inspection exposed an actionable card control.")
+	_expect(inspection_buttons.is_empty(), "Opponent-turn inspection exposed an actionable card control.")
 	table.selected_ref = {}
 	table._refresh_action_panel()
 	table.animation_busy = false
@@ -549,8 +722,8 @@ func _run() -> void:
 	)
 	await create_timer(removal_duration * 0.5).timeout
 
-	# Dragging an attacker onto the opposing chef must restore its board pose,
-	# then animate straight forward instead of lunging from the drop corner.
+	# Field-card drags keep the card seated and use a red targeting arrow. Releasing
+	# a legal chef target still begins the attack animation from that board pose.
 	var direct_attacker: Dictionary = table.service._make_unit(table.state, table.state.player, table.service.card("spicy_hot_honey_bee"), "plated", "player")
 	direct_attacker.ready = true
 	direct_attacker.table_slot = 0
@@ -569,15 +742,41 @@ func _run() -> void:
 	var attack_origin := direct_attacker_card.position if direct_attacker_card != null else Vector3.ZERO
 	if direct_attacker_card != null:
 		table.pressed_card = direct_attacker_card
-		table.dragging = true
-		table.drag_original_position = attack_origin
-		table.drag_original_rotation = direct_attacker_card.rotation
-		direct_attacker_card.position = Vector3(table.opponent_chef.position.x, table.DRAG_Y, table.opponent_chef.position.z)
-		direct_attacker_card.rotation = Vector3.ZERO
-		direct_attacker_card.scale = Vector3.ONE
-		table._finish_drag(table.opponent_chef.position)
-		_expect(direct_attacker_card.position.is_equal_approx(attack_origin), "A chef-targeted drag attack did not return to its board slot before animating.")
-		await create_timer(0.12).timeout
+		var attack_source_screen: Vector2 = table._world_to_container(direct_attacker_card.global_position)
+		var chef_target_screen: Vector2 = table._world_to_container(table.opponent_chef.global_position)
+		table._begin_drag(attack_origin, attack_source_screen)
+		var invalid_target := Vector3(4.4, table.TABLE_Y, 3.3)
+		table._update_drag(invalid_target, table._world_to_container(invalid_target))
+		_expect(
+			not bool(table.targeting_arrow.get("valid_target"))
+			and (table.targeting_arrow.get("arrow_color") as Color).is_equal_approx(table.PALETTE.STRUCTURAL_EDGE),
+			"An invalid field-card target did not keep the targeting arrow steel."
+		)
+		table._update_drag(table.opponent_chef.position, chef_target_screen)
+		_expect(
+			direct_attacker_card.position.is_equal_approx(attack_origin)
+			and table.drag_uses_targeting_arrow
+			and table.targeting_arrow.visible
+			and bool(table.targeting_arrow.get("valid_target"))
+			and String(table.targeting_arrow.get("action_kind")) == "attack"
+			and (table.targeting_arrow.get("arrow_color") as Color).is_equal_approx(table.PALETTE.SIGNAL_RED),
+			"A legal attack drag did not keep the card seated and show the red targeting arrow."
+		)
+		var attack_dot_phase_before := float(table.targeting_arrow.get("dot_animation_phase"))
+		await create_timer(0.08).timeout
+		_expect(
+			table.targeting_arrow.is_processing()
+			and not is_equal_approx(float(table.targeting_arrow.get("dot_animation_phase")), attack_dot_phase_before),
+			"The dotted attack arrow did not animate toward its target."
+		)
+		table._finish_drag(table.opponent_chef.position, chef_target_screen)
+		_expect(not table.targeting_arrow.visible, "The attack targeting arrow remained after release.")
+		# GPU-backed visual runs can spend the first frame importing or drawing the
+		# card face. Poll for the lunge instead of assuming one fixed render frame.
+		for unused_poll in range(9):
+			await create_timer(0.04).timeout
+			if direct_attacker_card.position.z < attack_origin.z - 0.2:
+				break
 		_expect(bool(table.animation_busy) and direct_attacker_card.position.z < attack_origin.z - 0.2 and absf(direct_attacker_card.position.x - attack_origin.x) < 0.05, "A chef-targeted attack did not animate straight forward from its board slot.")
 		await create_timer(1.0).timeout
 		_expect(not bool(table.animation_busy) and int(table.state.opponent.life) == 19, "The forward chef-attack animation did not resolve combat cleanly.")
@@ -596,14 +795,41 @@ func _run() -> void:
 	table.service.clear_animation_events(table.state)
 	table._render_match()
 	var swap_animations_before: int = table.swap_move_animation_count
-	table.service.move_unit(table.state, int(swap_prep.instance_id), "plated", 0)
-	await table._drain_animation_event_queue()
-	_expect(
-		table.swap_move_animation_count == swap_animations_before + 1
-		and not table.service._find_unit_in_zone(table.state.player, "plated", int(swap_prep.instance_id)).is_empty()
-		and not table.service._find_unit_in_zone(table.state.player, "prep", int(swap_plated.instance_id)).is_empty(),
-		"An occupied-slot move did not use the dedicated crossing swap animation."
-	)
+	var swap_source_card: Node3D = table._card_node_for_instance(int(swap_prep.instance_id))
+	if swap_source_card != null:
+		var swap_origin := swap_source_card.position
+		var swap_target: Vector3 = table._slot_world_position("player_plated", 0)
+		var swap_source_screen: Vector2 = table._world_to_container(swap_source_card.global_position)
+		var swap_target_screen: Vector2 = table._world_to_container(swap_target)
+		table.pressed_card = swap_source_card
+		table._begin_drag(swap_origin, swap_source_screen)
+		table._update_drag(swap_target, swap_target_screen)
+		var switch_dot_phase_before := float(table.targeting_arrow.get("dot_animation_phase"))
+		_expect(
+			swap_source_card.position.is_equal_approx(swap_origin)
+			and table.targeting_arrow.visible
+			and bool(table.targeting_arrow.get("valid_target"))
+			and String(table.targeting_arrow.get("action_kind")) == "switch"
+			and table.targeting_arrow.is_processing()
+			and (table.targeting_arrow.get("arrow_color") as Color).is_equal_approx(table.PALETTE.ELECTRIC_CYAN),
+			"A legal zone switch did not keep the card seated and show the animated cyan targeting arrow."
+		)
+		await create_timer(0.08).timeout
+		_expect(
+			table.targeting_arrow.is_processing()
+			and not is_equal_approx(float(table.targeting_arrow.get("dot_animation_phase")), switch_dot_phase_before),
+			"The dotted zone-switch arrow did not animate toward its target."
+		)
+		await table._finish_drag(swap_target, swap_target_screen)
+		_expect(
+			not table.targeting_arrow.visible
+			and table.swap_move_animation_count == swap_animations_before + 1
+			and not table.service._find_unit_in_zone(table.state.player, "plated", int(swap_prep.instance_id)).is_empty()
+			and not table.service._find_unit_in_zone(table.state.player, "prep", int(swap_plated.instance_id)).is_empty(),
+			"Releasing the cyan zone-switch arrow did not confirm the crossing swap animation."
+		)
+	else:
+		_expect(false, "The zone-switch regression card was not rendered on the Living Table.")
 
 	table.state.game_over = true
 	table.state.winner = "player"
@@ -621,6 +847,56 @@ func _run() -> void:
 	table.queue_free()
 	await process_frame
 	_finish()
+
+
+func _is_basic_square_burst(burst: Node2D, expected_count: int, expected_color: Color) -> bool:
+	if burst == null or burst.get_child_count() != expected_count:
+		return false
+	for child_value in burst.get_children():
+		var square := child_value as Polygon2D
+		if (
+			square == null
+			or square.polygon.size() != 4
+			or square.get_child_count() != 0
+			or not square.color.is_equal_approx(expected_color)
+		):
+			return false
+	return true
+
+
+func _is_card_arrival_vfx(effect: Node2D, expected_debris_count: int) -> bool:
+	return (
+		effect != null
+		and effect.find_child("ArrivalHalo", false, false) is Line2D
+		and effect.find_child("ArrivalWhiteRing", false, false) is Line2D
+		and effect.find_child("ArrivalAccentRing", false, false) is Line2D
+		and effect.find_child("ArrivalFlash", false, false) is Polygon2D
+		and effect.find_children("ArrivalDebris*", "Polygon2D", false, false).size() == expected_debris_count
+	)
+
+
+func _is_hit_spark_vfx(effect: Node2D, expected_debris_count: int, expected_accent: Color) -> bool:
+	if effect == null:
+		return false
+	var accent_core := effect.find_child("ImpactAccentCore", false, false) as Polygon2D
+	return (
+		effect.find_child("ImpactShockRing", false, false) is Line2D
+		and effect.find_child("ImpactWhiteCore", false, false) is Polygon2D
+		and effect.find_children("ImpactRayCore*", "Line2D", false, false).size() >= 5
+		and effect.find_children("ImpactDebris*", "Polygon2D", false, false).size() == expected_debris_count
+		and accent_core != null
+		and Color(accent_core.color, 1.0).is_equal_approx(Color(expected_accent, 1.0))
+	)
+
+
+func _is_heal_aura_vfx(effect: Node2D, expected_debris_count: int) -> bool:
+	return (
+		effect != null
+		and effect.find_child("HealHalo", false, false) is Line2D
+		and effect.find_child("HealWhiteRing", false, false) is Line2D
+		and effect.find_child("HealAccentRing", false, false) is Line2D
+		and effect.find_children("HealDebris*", "Polygon2D", false, false).size() == expected_debris_count
+	)
 
 
 func _expect(condition: bool, message: String) -> void:

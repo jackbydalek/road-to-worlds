@@ -5,7 +5,6 @@ const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
 
 const PACK_OPENING_SCENE_PATH := "res://scenes/PackOpeningScene.tscn"
 const CARD_BACK_PATH := "res://assets/cards/card_backs/living_table.png"
-const CARD_BACK_FRAME_PATH := "res://assets/cards/card_backs/card_back_frame.svg"
 const PACK_OPEN_SOUND_PATHS := [
 	"res://assets/audio/kenney_casino/cards-pack-open-1.ogg",
 	"res://assets/audio/kenney_casino/cards-pack-open-2.ogg"
@@ -395,14 +394,6 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 		card_back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		card_back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		face.add_child(card_back)
-		var card_back_frame := TextureRect.new()
-		card_back_frame.name = "PackCardBackFrame%d" % index
-		card_back_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_back_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
-		card_back_frame.texture = load(CARD_BACK_FRAME_PATH) as Texture2D
-		card_back_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		card_back_frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		face.add_child(card_back_frame)
 		return
 	if revealed and host._card_uses_authored_face(card):
 		var authored_face: Control = host._make_card_face(card, CARD_SLOT_SIZE, true)

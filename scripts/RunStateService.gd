@@ -7,8 +7,8 @@ const REDUCED_STARTING_MONEY := 5
 var cards_by_id: Dictionary = {}
 var archetypes_by_id: Dictionary = {}
 var archetype_order: Array = []
-var main_deck_size := 20
-var max_main_deck_size := 20
+var main_deck_size := 1
+var max_main_deck_size := 0
 var sideboard_size := 6
 var starting_money := 8
 var save_path := ""
@@ -31,7 +31,7 @@ func setup(
 	archetypes_by_id = archetype_database
 	archetype_order = ordered_archetypes
 	main_deck_size = main_size
-	max_main_deck_size = maxi(main_size, maximum_main_size)
+	max_main_deck_size = 0 if maximum_main_size <= 0 else maxi(main_size, maximum_main_size)
 	sideboard_size = side_size
 	starting_money = initial_money
 	save_path = run_save_path
@@ -111,20 +111,17 @@ func starting_lives_for_difficulty(difficulty_id: String) -> int:
 
 func deck_is_legal(target_run: Dictionary) -> Dictionary:
 	var main_total := deck_total(target_run.get("deck", {}))
-	if main_total < main_deck_size:
-		return { "ok": false, "reason": "Main deck must contain at least %d cards." % main_deck_size }
-	if main_total > max_main_deck_size:
+	var minimum_size := main_deck_size
+	if main_total < minimum_size:
+		return { "ok": false, "reason": "Main deck must contain at least %d cards." % minimum_size }
+	if max_main_deck_size > 0 and main_total > max_main_deck_size:
 		return { "ok": false, "reason": "Main deck cannot contain more than %d cards." % max_main_deck_size }
 	if deck_total(target_run.get("sideboard", {})) > sideboard_size:
 		return { "ok": false, "reason": "Sideboard cannot exceed %d cards." % sideboard_size }
 	for card_id in target_run.get("deck", {}).keys():
-		if deck_count(target_run, card_id) > deck_limit(card_id):
-			return { "ok": false, "reason": "Too many copies of " + _card_name(card_id) + "." }
 		if deck_count(target_run, card_id) + sideboard_count(target_run, card_id) > owned_count(target_run, card_id):
 			return { "ok": false, "reason": "Deck uses more copies than owned: " + _card_name(card_id) + "." }
 	for card_id in target_run.get("sideboard", {}).keys():
-		if sideboard_count(target_run, card_id) > deck_limit(card_id):
-			return { "ok": false, "reason": "Too many sideboard copies of " + _card_name(card_id) + "." }
 		if deck_count(target_run, card_id) + sideboard_count(target_run, card_id) > owned_count(target_run, card_id):
 			return { "ok": false, "reason": "Sideboard uses more copies than owned: " + _card_name(card_id) + "." }
 	return { "ok": true, "reason": "Legal" }
@@ -147,7 +144,7 @@ func available_count(target_run: Dictionary, card_id: String) -> int:
 
 
 func deck_limit(card_id: String) -> int:
-	return int(cards_by_id[card_id].get("deckLimit", 3))
+	return 0
 
 
 func deck_total(deck: Dictionary) -> int:
@@ -164,10 +161,8 @@ func add_to_collection(target_run: Dictionary, card_id: String, count: int) -> v
 func add_to_deck(target_run: Dictionary, card_id: String) -> Dictionary:
 	if available_count(target_run, card_id) <= 0:
 		return { "ok": false, "message": "No available copies of " + _card_name(card_id) + "." }
-	if deck_total(target_run.deck) >= max_main_deck_size:
+	if max_main_deck_size > 0 and deck_total(target_run.deck) >= max_main_deck_size:
 		return { "ok": false, "message": "Main deck is full at %d cards." % max_main_deck_size }
-	if deck_count(target_run, card_id) >= deck_limit(card_id):
-		return { "ok": false, "message": "Deck copy limit reached for " + _card_name(card_id) + "." }
 	target_run.deck[card_id] = deck_count(target_run, card_id) + 1
 	return { "ok": true, "message": "" }
 
@@ -204,7 +199,7 @@ func sell_extra_copies(target_run: Dictionary) -> int:
 	for card_id in target_run.collection.keys():
 		var owned := owned_count(target_run, card_id)
 		var in_use := deck_count(target_run, card_id) + sideboard_count(target_run, card_id)
-		var keep: int = max(deck_limit(card_id), in_use)
+		var keep := in_use
 		if owned > keep:
 			var extras: int = owned - keep
 			total += extras * max(1, int(floor(float(cards_by_id[card_id].value) * 0.45)))

@@ -4,13 +4,11 @@
 
 "Pandazole Simple Game Pack" (https://skfb.ly/o87ID) by Pandazole is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
 
-"Low Poly Cafe" (https://sketchfab.com/3d-models/low-poly-cafe-e1ca53cf4b654740aeaaacb2fa25982d) by vadzaecc is licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
-
 "Stylized interior plants" (https://sketchfab.com/3d-models/stylized-interior-plants-bb28ae7d1ddb4601ae7e4350e2ae0bed) by redlupa is licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
 
-"3D low poly coffee table set" (https://sketchfab.com/3d-models/3d-low-poly-coffee-table-set-b6bd307d18524b0883a8f772b67b3cf4) by MrMcChickenXD is used under the Sketchfab Standard license (https://sketchfab.com/licenses).
-
 ## Interface Icons
+
+Material Symbols Sharp by Google (https://github.com/google/material-design-icons) is used for generic interface actions under the Apache License 2.0. The curated source SVGs and license are preserved in `assets/ui/material_symbols_sharp/`.
 
 Save icons created by Yogi Aprelliyanto - Flaticon (https://www.flaticon.com/free-icons/save)
 
@@ -20,11 +18,11 @@ Settings icons created by logisstudio - Flaticon (https://www.flaticon.com/free-
 
 ## Interface Assets
 
-"Cozy Café UI Kit Premium" by Nexa Visuals is used under the included commercial runtime license. The repository contains only the licensed runtime subset; see `third_party/cozy_cafe_ui/LICENSE.txt`.
+"Pattern Pack Extra" by Kenney (https://kenney.nl/) is dedicated to the public domain under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/). Recolored stone-path and missing-art patterns are used in the overworld and temporary portrait slots.
 
 ## Audio
 
-"Modern UI SFX" created by Andrea Baroni for Cyberleaf Studio (https://andreabaroni.com/), used under the pack's included license.
+"Cute & Cozy UI Audio Free Sample" by Case Portman Audio (https://caseportman.itch.io/cute-cozy-ui-sfx), used under the included royalty-free license with attribution required. The included sound files may not be redistributed as standalone audio or as part of another sound-effects pack. The original license and readme are preserved in `assets/audio/ui/cute_cozy/`.
 
 "Sunlit Balearic Downtempo Sunset Lounge" and "Upbeat Funky Groove" by Paul (PWLPL) (https://pixabay.com/users/pwlpl-16464651/), used under the Pixabay Content License (https://pixabay.com/service/license-summary/).
 
@@ -38,10 +36,23 @@ Settings icons created by logisstudio - Flaticon (https://www.flaticon.com/free-
 
 "Casino Audio" by Kenney (https://kenney.nl/), dedicated to the public domain under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
 
+## Project-owner supplied original character art
+
+- `assets/characters/protagonists/sweet_player_neutral.png` — Sweet protagonist neutral illustration, supplied as `sweet character.png`.
+- `assets/characters/rivals/route_rival_npc_01.png` — route rival illustration, supplied as `npc1.png`.
+- `assets/characters/rivals/route_rival_npc_02.png` — route rival illustration, supplied as `npc2.png`.
+
+Shipping use of custom supplied artwork remains covered by the owner attestation
+in `docs/shipping-asset-provenance.md`.
+
 ## Project-owner supplied CC0 assets
 
 The following assets were supplied directly by the project owner for this demo and declared CC0:
 
 - `assets/audio/531087__ryusa__magic-spell-buff-bell-sparkle-reverb.wav` — healing and buff sparkle sound.
-- `assets/cards/card_backs/living_table.png` — illustrated production card back, adapted from the supplied `IMG_0341.PNG`.
-- `assets/logos/topdeck-to-worlds-pastel.png` — title logo, adapted from the supplied logo image.
+- `assets/cards/card_backs/living_table.png` — illustrated production card back, supplied as `IMG_0398.PNG`.
+- `assets/logos/topdeck-to-worlds-storefront.png` — TOP CUT: Locals to Worlds title logo, supplied as `IMG_0381.PNG`.
+- `assets/overworld/source_sheets/route_icons_sheet.png` — illustrated Enemy, Miniboss, Final Boss, Shop, and Event route icons, supplied as `IMG_0361.PNG`.
+- `assets/overworld/source_sheets/spicy_character_sheet.png` — illustrated Spicy idle, walk, and victory poses, supplied as `IMG_0362.PNG`.
+- `assets/overworld/source_sheets/hearty_character_sheet.jpg` — illustrated Hearty idle, walk, and victory poses, supplied as `479E61E5-55A5-4151-B466-ACA744A3E3DB_1_101_o.jpeg`.
+- `assets/overworld/buildings/` — LowPoly building models by Quaternius, recolored for Starter City's cream, periwinkle, lavender, coral, sky, and navy palette. Licensed CC0 1.0; the supplied license is preserved beside the models.

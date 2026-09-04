@@ -148,7 +148,7 @@ func _slot_point(tutorial, zone_id: String, slot_index: int) -> Vector3:
 	var center: Vector3 = tutorial.ZONE_CENTERS[zone_id]
 	var zone_name := zone_id.trim_prefix("player_").trim_prefix("opponent_")
 	var capacity: int = tutorial.service.PREP_SLOTS if zone_name == "prep" else tutorial.service.PLATED_SLOTS
-	var spacing := 1.72 if capacity == 3 else 1.8
+	var spacing: float = tutorial.PREP_SLOT_SPACING if capacity == 3 else tutorial.PLATED_SLOT_SPACING
 	var offset := (float(slot_index) - float(capacity - 1) * 0.5) * spacing
 	return center + Vector3(offset, 0.0, 0.0)
 

@@ -1,21 +1,23 @@
 # Technical Architecture
 
-The project has two layers: a persistent season shell and the card-match engine.
+The project has two layers: a persistent route-run shell and the card-match engine. The legacy season services remain available to development tools while the public flow uses the route loop.
 
-## Season Shell
+## Route-Run Shell
 
 `scenes/Main.tscn` loads `scripts/Main.gd`. The controller owns navigation, shared presentation helpers, the active run, and the bridge into a Kitchen Match. Focused services and screens keep the campaign features separate:
 
 - `ContentCatalog.gd` loads `data/cards.json`, derives season-facing rarity, value, roles, stats, archetypes, and starter decks, then loads booster and tournament definitions.
 - `RunStateService.gd` owns collection, deck legality, versioned save envelopes, backup recovery, money, season lives, and normalized metagame state.
+- `RouteRunService.gd` owns route-run defaults, 15-card starter compaction, encounter life/AI targets, and affinity-weighted card reward offers.
+- `OverworldRouteGraph.gd` generates or restores the seeded route graph, renders its routes and stops, and reports committed node arrivals to `Main.gd`.
 - `ShopEconomyService.gd` generates boosters and singles, handles purchases and reveals, and awards cards to the collection.
 - `SeasonFlowService.gd` owns calendar unlock and completion rules.
 - `TournamentService.gd` creates opponents, upgrades later lists, calculates quick debug results, and evaluates event records.
 - The shop, pack opening, deckbuilder, and season hub are independent screen scripts that render against the host controller.
 
-Legal season decks contain 20–30 cards, and all starters begin at 20 so newly acquired cards can be added without first removing a starter card. The public demo and Debug Menu expose the Spicy, Hearty, and Sweet starters. Fresh and Funky remain available as card affinities for mixed deckbuilding. Sideboard data and editing remain implemented for debug/campaign experimentation, but the sideboard is hidden from the public demo flow.
+Legal decks contain at least 1 card with no maximum deck size or per-card copy limit. Public route starters are still compacted to 15 cards, and rewards or shops add cards directly to the run deck. The public deck view is read-only except at explicit card-removal services. Legacy constructed collection and sideboard editing remain available in Debug mode.
 
-The public Season Run uses a two-event calendar and the 3D card-store overworld as its navigation hub. Singles purchases, the trade binder, and Meta Analysis all render directly inside that overworld, so wallet, collection, field-share, and report changes update without replacing the store instance. A persistent top-right utility strip exposes wallet, calendar, deck editing, and settings/save; world hotspots continue to handle the shopkeeper, trading, metagame, and tournament interactions. Each routed menu returns through an explicit Exit to Card Store action.
+The public run uses `OverworldStageTest.tscn` as the production Starter City map. `Main.gd` embeds it in the campaign shell, saves its graph snapshot, locks route choices after arrival, and requires the pending encounter to resolve before the next destination becomes available. Enemy nodes launch the Living Table, shops and events open run-specific screens, and victories open controlled card rewards.
 
 Season Deck Edit is a fixed-height workspace rather than a scrolling page. Collection and Main Deck own independent vertical scrollers around a persistent card preview, so the complete demo editor and its Exit to Card Store action remain visible at once.
 
@@ -28,7 +30,7 @@ Season Deck Edit is a fixed-height workspace rather than a scrolling page. Colle
 For a tournament round, the shell:
 
 1. Builds the player deck from the active run.
-2. Builds an opponent deck from the selected archetype, then applies Medium/Hard/Expert card upgrades while preserving size, copy limits, and card-type ratios.
+2. Builds an opponent deck from the selected archetype, then applies Medium/Hard/Expert card upgrades while preserving size and card-type ratios.
 3. Configures the Living Table instance before adding it to the scene tree, including the two exact deck dictionaries.
 4. Passes the seed, opening side, event name, round number, run border, and event-scaled Easy/Medium/Hard/Expert AI tier.
 5. Receives a `match_finished` result containing winner, turn, and remaining life.
@@ -44,12 +46,12 @@ Physical card faces are cached once per unique card in a match. Their SubViewpor
 
 ## Content Boundary
 
-`data/cards.json` remains authoritative for printed card rules. The season catalog decorates copies of those definitions at load time with campaign-only properties such as rarity, shop value, deck limit, role, and abstract deck-quality stats. Those extra properties are not duplicated into the match catalog.
+`data/cards.json` remains authoritative for printed card rules. The season catalog decorates copies of those definitions at load time with campaign-only properties such as rarity, shop value, role, and abstract deck-quality stats. A `deckLimit` value of `0` is retained as a compatibility sentinel for unlimited copies. Those extra properties are not duplicated into the match catalog.
 
 ## Validation
 
 - `KitchenGameSmokeTest.gd` covers match rules, effects, selection workflows, inspection, and drag-and-drop.
-- `RebalancedCardPoolSmokeTest.gd` validates the canonical 87-card demo catalog, three exact 20-card starters, dual recipes, discard deployment, direct-to-Prep tutoring, Pup Tart's Meal limit, and Chef Soup's reset. `DeckSizeRangeSmokeTest.gd` covers the constructed-deck range and 30-card editor capacity.
+- `RebalancedCardPoolSmokeTest.gd` validates the canonical 87-card demo catalog, three exact 20-card starters, dual recipes, discard deployment, direct-to-Prep tutoring, Pup Tart's Meal limit, and Chef Soup's reset. `DeckSizeRangeSmokeTest.gd` verifies the minimum size while allowing decks above 30 cards and more than three copies of one card.
 - `SeasonShellSmokeTest.gd` covers content adaptation, debug navigation, shop generation, booster collection updates, deckbuilder, metagame, calendar, live Kitchen Match launch, tournament records, and event unlocking.
 - `AutosaveSmokeTest.gd` covers versioned checkpoints, the animated indicator, backup recovery, resume-screen metadata, and interrupted-match reconstruction.
 - `StarterBalanceSimulation.gd` runs every ordered pairing of the three starters through the production AI, including response windows, and reports seat-neutral matchups plus balance flags. Pass `--ai=easy`, `--ai=medium`, `--ai=hard`, or `--ai=expert` to validate a particular policy. Expert AI searches two plays ahead, evaluates passing, uses known opposing hand and upcoming-deck information, preserves low-value reactions, and chooses higher-value search and discard options. Automated player-side defenders in the simulator still use the first eligible response whenever a Hand Trap or damage-response window opens; results are a consistent tuning baseline, not a substitute for skilled human play.

@@ -1,120 +1,69 @@
 [gd_scene format=3 uid="uid://3517w4bnmwfk"]
 
 [ext_resource type="Script" uid="uid://ce6iocsg0v1ir" path="res://scripts/ui/TitleMenu.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://scenes/ui/components/StorefrontBackdrop.tscn" id="2_storefront"]
-[ext_resource type="FontFile" uid="uid://dnbvqa12yomhk" path="res://assets/fonts/ArchivoNarrow-Regular.ttf" id="3_display"]
+[ext_resource type="FontFile" path="res://assets/fonts/Oxanium-SemiBold.ttf" id="3_display"]
 [ext_resource type="FontFile" uid="uid://de6offqn05r66" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
 [ext_resource type="Texture2D" path="res://assets/logos/topdeck-to-worlds-storefront.png" id="5_title_logo"]
+[ext_resource type="Script" path="res://scripts/ui/TitleBackgroundPattern.gd" id="6_title_pattern"]
 
 [sub_resource type="AtlasTexture" id="Texture_title_logo_crop"]
 atlas = ExtResource("5_title_logo")
-region = Rect2(0, 180, 2160, 1100)
+region = Rect2(0, 400, 2160, 760)
 filter_clip = true
 
 [sub_resource type="StyleBoxFlat" id="Style_sign"]
-bg_color = Color(0.160784, 0.211765, 0.372549, 0.97)
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 8
-border_color = Color(0.556863, 0.662745, 0.901961, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.34)
-shadow_size = 16
-shadow_offset = Vector2(0, 5)
+bg_color = Color(1, 0.968627, 0.945098, 0)
 
 [sub_resource type="StyleBoxFlat" id="Style_start"]
-bg_color = Color(0.937255, 0.494118, 0.462745, 0.98)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 7
-border_color = Color(0.160784, 0.211765, 0.372549, 1)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.28)
-shadow_size = 8
-shadow_offset = Vector2(2, 7)
+bg_color = Color(1, 0.968627, 0.945098, 0)
+content_margin_left = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Style_start_hover"]
-bg_color = Color(0.94902, 0.643137, 0.721569, 1)
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 8
-border_color = Color(0.160784, 0.211765, 0.372549, 1)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.34)
-shadow_size = 10
-shadow_offset = Vector2(2, 9)
+bg_color = Color(1, 0.968627, 0.945098, 0.92)
+border_width_left = 6
+border_color = Color(0.937255, 0.494118, 0.462745, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 18.0
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.22)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="Style_poster"]
-bg_color = Color(0.909804, 0.890196, 0.960784, 0.98)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 5
-border_color = Color(0.556863, 0.662745, 0.901961, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.24)
-shadow_size = 7
-shadow_offset = Vector2(2, 6)
+bg_color = Color(1, 0.968627, 0.945098, 0)
+content_margin_left = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Style_poster_hover"]
-bg_color = Color(0.556863, 0.662745, 0.901961, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 6
-border_color = Color(0.160784, 0.211765, 0.372549, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.30)
-shadow_size = 9
-shadow_offset = Vector2(2, 8)
+bg_color = Color(1, 0.968627, 0.945098, 0.92)
+border_width_left = 6
+border_color = Color(0.407843, 0.772549, 0.909804, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 18.0
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.22)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="Style_credits"]
-bg_color = Color(0.94902, 0.643137, 0.721569, 0.96)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 5
-border_color = Color(0.160784, 0.211765, 0.372549, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.24)
-shadow_size = 7
-shadow_offset = Vector2(2, 6)
+bg_color = Color(1, 0.968627, 0.945098, 0)
+content_margin_left = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Style_credits_hover"]
-bg_color = Color(0.937255, 0.494118, 0.462745, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 6
-border_color = Color(0.160784, 0.211765, 0.372549, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-shadow_color = Color(0.160784, 0.211765, 0.372549, 0.30)
-shadow_size = 9
-shadow_offset = Vector2(2, 8)
+bg_color = Color(1, 0.968627, 0.945098, 0.92)
+border_width_left = 6
+border_color = Color(0.94902, 0.643137, 0.721569, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 18.0
+shadow_color = Color(0.160784, 0.211765, 0.372549, 0.22)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
 content_margin_left = 22.0
@@ -164,8 +113,15 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_script")
 
-[node name="StorefrontBackdrop" parent="." unique_id=1685170223 instance=ExtResource("2_storefront")]
+[node name="TitlePattern" type="Control" parent="."]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_title_pattern")
 
 [node name="NightColorGrade" type="ColorRect" parent="." unique_id=1895277532]
 layout_mode = 1
@@ -177,14 +133,26 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
 
+[node name="CardSwirlLayer" type="Control" parent="."]
+z_index = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="ShopSign" type="PanelContainer" parent="." unique_id=1532409553]
+z_index = 8
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -491.0
-offset_right = 249.0
-offset_bottom = 332.0
+offset_left = -500.0
+offset_top = 34.0
+offset_right = 500.0
+offset_bottom = 374.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("Style_sign")
@@ -197,74 +165,95 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="PosterLayer" type="Control" parent="." unique_id=1163034413]
+z_index = 10
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -48.0
-offset_top = 4.0
-offset_right = -48.0
-offset_bottom = 4.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="GameStartButton" type="Button" parent="PosterLayer" unique_id=753603324]
+[node name="ContinueRunButton" type="Button" parent="PosterLayer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 0
-offset_left = 243.0
-offset_top = 434.0
-offset_right = 455.0
-offset_bottom = 688.0
-rotation = -0.105
-pivot_offset = Vector2(106, 127)
-focus_neighbor_right = NodePath("../TitleHowToPlayButton")
+offset_left = 530.0
+offset_top = 390.0
+offset_right = 910.0
+offset_bottom = 448.0
 theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 42
+theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("Style_start")
 theme_override_styles/pressed = SubResource("Style_start")
 theme_override_styles/hover = SubResource("Style_start_hover")
 theme_override_styles/focus = SubResource("Style_start_hover")
-text = "START
-GAME"
+text = "CONTINUE"
+alignment = 1
+metadata/ui_button_variant = "primary"
+metadata/ui_button_variant_inferred = false
+
+[node name="GameStartButton" type="Button" parent="PosterLayer" unique_id=753603324]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 74.0
+offset_top = 420.0
+offset_right = 388.0
+offset_bottom = 494.0
+focus_neighbor_right = NodePath("../TitleHowToPlayButton")
+theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_fonts/font = ExtResource("3_display")
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("Style_start")
+theme_override_styles/pressed = SubResource("Style_start")
+theme_override_styles/hover = SubResource("Style_start_hover")
+theme_override_styles/focus = SubResource("Style_start_hover")
+text = "NEW GAME"
+alignment = 1
+metadata/ui_button_variant = "secondary"
+metadata/ui_button_variant_inferred = false
 
 [node name="TitleHowToPlayButton" type="Button" parent="PosterLayer" unique_id=500142525]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 664.0
-offset_top = 434.0
-offset_right = 846.0
-offset_bottom = 603.0
-rotation = 0.075
-pivot_offset = Vector2(91, 84)
+offset_left = 74.0
+offset_top = 504.0
+offset_right = 388.0
+offset_bottom = 568.0
 focus_neighbor_left = NodePath("../GameStartButton")
 focus_neighbor_right = NodePath("../CreditsPosterButton")
 theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("Style_poster")
 theme_override_styles/pressed = SubResource("Style_poster")
 theme_override_styles/hover = SubResource("Style_poster_hover")
 theme_override_styles/focus = SubResource("Style_poster_hover")
-text = "HOW TO
-PLAY"
+text = "HOW TO PLAY"
+alignment = 1
 
 [node name="CreditsPosterButton" type="Button" parent="PosterLayer" unique_id=957799565]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 875.0
-offset_top = 520.0
-offset_right = 1058.0
-offset_bottom = 666.0
-rotation = 0.13
-pivot_offset = Vector2(91, 73)
+offset_left = 74.0
+offset_top = 578.0
+offset_right = 388.0
+offset_bottom = 642.0
 focus_neighbor_left = NodePath("../TitleHowToPlayButton")
 theme_override_colors/font_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
+theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
 theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("Style_credits")
@@ -272,6 +261,7 @@ theme_override_styles/pressed = SubResource("Style_credits")
 theme_override_styles/hover = SubResource("Style_credits_hover")
 theme_override_styles/focus = SubResource("Style_credits_hover")
 text = "CREDITS"
+alignment = 1
 
 [node name="CreditsPanel" type="PanelContainer" parent="." unique_id=1927921375]
 visible = false

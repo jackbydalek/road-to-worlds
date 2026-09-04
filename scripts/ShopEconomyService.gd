@@ -3,6 +3,11 @@ class_name ShopEconomyService
 
 const AFFINITY_REWARD_POOL := "strongest_affinity_or_support"
 const SUPPORT_CARD_TYPES := ["chef", "environment", "spice", "tool"]
+const STARTER_ALLOWED_AFFINITIES := {
+	"spicy": ["spicy", "fresh", "funky"],
+	"sweet": ["sweet", "hearty", "funky"],
+	"hearty": ["hearty", "sweet", "fresh"],
+}
 
 var cards: Array = []
 var cards_by_id: Dictionary = {}
@@ -48,8 +53,6 @@ func start_pack(target_run: Dictionary, pack: Array) -> void:
 func generate_pack(booster_id: String, current_primary: String) -> Array:
 	var booster: Dictionary = boosters_by_id[booster_id]
 	var pack: Array = []
-	var affinity_restricted := String(booster.get("rewardPool", "")) == AFFINITY_REWARD_POOL
-
 	for slot in booster.get("slots", []):
 		var count := int(slot.get("count", 1))
 		for i in range(count):
@@ -70,7 +73,7 @@ func generate_pack(booster_id: String, current_primary: String) -> Array:
 					rarity = slot.get("upgradeRarity", rarity)
 
 			pack.append({
-				"cardId": pick_card_by_rarity(rarity, current_primary, affinity_restricted),
+				"cardId": pick_card_by_rarity(rarity, current_primary),
 				"rarity": rarity
 			})
 
@@ -84,18 +87,14 @@ func pick_card_by_rarity(rarity: String, current_primary: String, affinity_restr
 	for card in cards:
 		if (
 			card.get("rarity", "") == rarity
-			and (not affinity_restricted or card_is_affinity_reward_eligible(card, current_primary))
+			and card_is_starter_eligible(card, current_primary)
 		):
 			pool.append(card.id)
 
-	if pool.is_empty() and affinity_restricted:
-		for card in cards:
-			if card_is_affinity_reward_eligible(card, current_primary):
-				pool.append(card.id)
-
 	if pool.is_empty():
 		for card in cards:
-			pool.append(card.id)
+			if card_is_starter_eligible(card, current_primary):
+				pool.append(card.id)
 	if pool.is_empty():
 		return ""
 
@@ -262,6 +261,8 @@ func pick_shop_card(rarity: String, current_primary: String, excluded: Array) ->
 			continue
 		if excluded.has(card.id):
 			continue
+		if not card_is_starter_eligible(card, current_primary):
+			continue
 		var weight := 1
 		if card.archetype == current_primary:
 			weight += 2
@@ -272,12 +273,20 @@ func pick_shop_card(rarity: String, current_primary: String, excluded: Array) ->
 
 	if pool.is_empty():
 		for card in cards:
-			if not excluded.has(card.id):
+			if not excluded.has(card.id) and card_is_starter_eligible(card, current_primary):
 				pool.append(card.id)
 
 	if pool.is_empty():
 		return ""
 	return pool[rng.randi_range(0, pool.size() - 1)]
+
+
+func card_is_starter_eligible(card: Dictionary, starter_affinity: String) -> bool:
+	var allowed: Array = STARTER_ALLOWED_AFFINITIES.get(starter_affinity, [starter_affinity])
+	for affinity in _card_affinities(card):
+		if not allowed.has(affinity):
+			return false
+	return true
 
 func card_price(target_run: Dictionary, card_id: String) -> int:
 	var card: Dictionary = cards_by_id[card_id]
@@ -294,10 +303,8 @@ func _pack_reveal_note(target_run: Dictionary, card_id: String, owned_before: in
 	var note := ""
 	if owned_before == 0:
 		note = "NEW"
-	elif owned_before < deck_limit(card_id):
-		note = "Useful copy"
 	else:
-		note = "Duplicate"
+		note = "Another copy"
 
 	if card_matches_current_deck(card_id, current_primary):
 		note += " | Fits deck"
@@ -306,7 +313,7 @@ func _pack_reveal_note(target_run: Dictionary, card_id: String, owned_before: in
 
 
 func deck_limit(card_id: String) -> int:
-	return int(cards_by_id[card_id].get("deckLimit", 3))
+	return 0
 
 
 func _owned_count(target_run: Dictionary, card_id: String) -> int:

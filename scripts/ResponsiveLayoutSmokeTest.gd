@@ -35,8 +35,6 @@ func _test_starter_deck_preview_layout() -> void:
 	root.add_child(main)
 	await process_frame
 	await process_frame
-	main._show_game_start()
-	await process_frame
 	main.season_setup_archetype_index = 1
 	main._show_season_run_setup()
 	await process_frame
@@ -155,11 +153,11 @@ func _test_tutorial_inspector_layout() -> void:
 		tutorial._refresh_action_panel()
 		await process_frame
 		await process_frame
-		var play_button := _find_button_with_text(tutorial.action_list, "Play Card")
-		var complete_text := tutorial.action_list.find_child("LivingTableCompleteCardText", true, false) as Label
+		var play_button := _find_button_with_action_label(tutorial.action_list, "Play Card")
+		var card_face := tutorial.action_list.find_child("LivingTableInfoCardFace", true, false) as Control
 		var context := "%dx%d at 125%% battle text" % [viewport_size.x, viewport_size.y]
 		_expect(play_button != null, "The tutorial inspector did not render its Play Card control at %s." % context)
-		_expect(complete_text != null and complete_text.visible and complete_text.size.y > 0.0, "The tutorial inspector did not render the complete card text at %s." % context)
+		_expect(card_face != null and card_face.visible and card_face.size.y >= 300.0, "The tutorial viewer did not render a readable high-fidelity card at %s." % context)
 		if play_button != null:
 			_expect(tutorial.action_scroll.get_global_rect().encloses(play_button.get_global_rect()), "The tutorial Play Card control starts below the visible inspector at %s." % context)
 			_expect(tutorial.action_scroll.scroll_vertical == 0, "The tutorial inspector did not open at its primary action at %s." % context)
@@ -168,10 +166,10 @@ func _test_tutorial_inspector_layout() -> void:
 			await process_frame
 
 
-func _find_button_with_text(parent: Node, text_value: String) -> Button:
+func _find_button_with_action_label(parent: Node, text_value: String) -> Button:
 	for node in parent.find_children("*", "Button", true, false):
 		var button := node as Button
-		if button.text == text_value:
+		if String(button.get_meta("action_label", "")) == text_value:
 			return button
 	return null
 

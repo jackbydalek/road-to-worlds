@@ -36,7 +36,7 @@ func _run() -> void:
 	_expect(
 		background != null and not background.visible
 		and pastel_background != null and pastel_background.visible,
-		"The season menu did not use the responsive pastel card-café background."
+		"The season menu did not use the responsive illustrated background."
 	)
 	_expect(not main.header_bar.visible and not main.footer_label.visible, "The legacy shell chrome still surrounds the Nexus season menu.")
 	_expect(main.find_child("SeasonHubMenuRail", true, false) != null, "The Nexus menu rail is missing.")

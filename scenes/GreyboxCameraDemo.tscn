@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bbhpc2gsvxt7o" path="res://scripts/GreyboxCameraDemo.gd" id="1_demo"]
 [ext_resource type="PackedScene" uid="uid://cdsbgy55rfwha" path="res://assets/card_shop/table.tscn" id="2_4ullt"]
 [ext_resource type="PackedScene" uid="uid://d0ryjerg3wgy8" path="res://assets/card_shop/counter.tscn" id="2_h0733"]
-[ext_resource type="PackedScene" uid="uid://cugdmnv4qe53f" path="res://clerkidle.tscn" id="2_u3c5j"]
+[ext_resource type="Texture2D" path="res://assets/characters/shopkeeper/route_shopkeeper_card_pose.png" id="2_u3c5j"]
 [ext_resource type="PackedScene" uid="uid://bpft2f2u7plqq" path="res://assets/card_shop/shelf.tscn" id="3_bxkix"]
 [ext_resource type="Texture2D" uid="uid://c8qneutrhlwmc" path="res://assets/ui/shop_hud/deck_edit.png" id="3_deck"]
 [ext_resource type="Texture2D" uid="uid://bhdp7vmwrlaaj" path="res://assets/ui/shop_hud/save.png" id="4_save"]
@@ -340,15 +340,15 @@ omni_range = 2.2
 [node name="FeaturedTableProps" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=1700019412]
 
 [node name="Playmat" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/FeaturedTableProps" unique_id=669263600]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.39, 0.76, 3.37)
+transform = Transform3D(0.028305402, 0, -0.99959934, 0, 1, 0, 0.99959934, 0, 0.028305402, 0.37352604, 0.76, 3.0275083)
 mesh = SubResource("Mesh_playmat")
 
 [node name="DeckBox" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/FeaturedTableProps" unique_id=7971606]
-transform = Transform3D(0.9838437, 0, 0.17902958, 0, 1, 0, -0.17902958, 0, 0.9838437, 0.88, 0.84, 3.36)
+transform = Transform3D(0.20680599, 0, -0.978382, 0, 1, 0, 0.978382, 0, 0.20680599, 0.39739168, 0.84, 3.5170288)
 mesh = SubResource("Mesh_deck_box")
 
 [node name="TokenBowl" type="MeshInstance3D" parent="ViewportContainer/SubViewport/World/FeaturedTableProps" unique_id=1927759695]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.81, 3.35)
+transform = Transform3D(0.028305402, 0, -0.99959934, 0, 1, 0, 0.99959934, 0, 0.028305402, 0.37908226, 0.81, 2.5171463)
 mesh = SubResource("Mesh_token_bowl")
 
 [node name="counter2" parent="ViewportContainer/SubViewport/World" unique_id=1291513717 instance=ExtResource("2_h0733")]
@@ -899,8 +899,11 @@ mesh = SubResource("Mesh_hearty_card")
 [node name="NPC" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=1495633306]
 transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 1.3499808, 0, -4.9262867)
 
-[node name="ShopkeeperModel" parent="ViewportContainer/SubViewport/World/NPC" unique_id=1033687673 instance=ExtResource("2_u3c5j")]
+[node name="ShopkeeperModel" type="Sprite3D" parent="ViewportContainer/SubViewport/World/NPC" unique_id=1033687673]
 transform = Transform3D(1.7894714, -0.00015454208, 0.19439876, 0.00015495397, 1.8, 4.5781653e-06, -0.19439876, 1.2183618e-05, 1.7894714, 0, 0, 2.0982294)
+pixel_size = 0.0012
+billboard = 1
+texture = ExtResource("2_u3c5j")
 
 [node name="CameraTargets" type="Node3D" parent="ViewportContainer/SubViewport/World" unique_id=599473288]
 
@@ -1055,7 +1058,7 @@ text = "Browse Singles"
 layout_mode = 2
 text = "Open Pack - $5"
 
-[node name="ViewSetList" type="Button" parent="Interface/MenuPanel/Margin/Content"]
+[node name="ViewSetList" type="Button" parent="Interface/MenuPanel/Margin/Content" unique_id=1100960709]
 layout_mode = 2
 text = "View Set List"
 

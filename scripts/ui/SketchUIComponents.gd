@@ -9,26 +9,14 @@ const TEAL := PALETTE.TEAL
 const ORANGE := PALETTE.BRICK
 const MUSTARD := PALETTE.APRICOT
 
-const DISPLAY_FONT := preload("res://assets/fonts/ArchivoNarrow-Regular.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
 const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BUTTON_PAPER_A := preload("res://assets/ui/wired_title/button_paper_a.svg")
 const BUTTON_PAPER_B := preload("res://assets/ui/wired_title/button_paper_b.svg")
-const BUTTON_PRIMARY := preload("res://assets/ui/wired_title/button_primary.svg")
-const BUTTON_COMPACT_A := preload("res://assets/ui/wired_title/button_compact_a.svg")
-const BUTTON_COMPACT_B := preload("res://assets/ui/wired_title/button_compact_b.svg")
-const BUTTON_COMPACT_PRIMARY := preload("res://assets/ui/wired_title/button_compact_primary.svg")
-const BUTTON_REFERENCE_A := preload("res://assets/ui/painted_buttons/button_wide.png")
-const BUTTON_REFERENCE_B := preload("res://assets/ui/painted_buttons/button_outline_wide.png")
-const BUTTON_REFERENCE_PRIMARY := preload("res://assets/ui/painted_buttons/button_wide.png")
-const BUTTON_REFERENCE_COMPACT_A := preload("res://assets/ui/painted_buttons/button_compact.png")
-const BUTTON_REFERENCE_COMPACT_B := preload("res://assets/ui/painted_buttons/button_compact.png")
-const BUTTON_REFERENCE_COMPACT_PRIMARY := preload("res://assets/ui/painted_buttons/button_compact.png")
-const BUTTON_REFERENCE_SQUARE := preload("res://assets/ui/painted_buttons/button_square.png")
 const PANEL_PAPER := preload("res://assets/ui/wired_title/panel_paper.svg")
 const TITLE_PAPER := preload("res://assets/ui/wired_title/title_paper.svg")
 const DRAFT_STAR := preload("res://assets/ui/wired_title/draft_star.svg")
 const ROUGH_PANEL_SCRIPT := preload("res://scripts/ui/SketchPanelContainer.gd")
-const SKETCH_BUTTON_SCRIPT := preload("res://scripts/ui/SketchButton.gd")
 
 
 static func make_button(
@@ -38,51 +26,15 @@ static func make_button(
 	font_size: int = 34,
 	alternate_outline: bool = false
 ) -> Button:
-	var button = SKETCH_BUTTON_SCRIPT.new()
+	var button := Button.new()
 	button.text = label
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = minimum_size
-	button.configure(primary, alternate_outline)
+	button.set_meta("ui_button_variant", "primary" if primary else ("target" if alternate_outline else "secondary"))
+	button.set_meta("ui_button_variant_inferred", false)
 	button.add_theme_font_override("font", display_font(0.72))
 	button.add_theme_font_size_override("font_size", font_size)
 	return button
-
-
-static func _reference_button_style(
-	texture: Texture2D,
-	tint: Color,
-	pressed: bool,
-	texture_margins: Vector4 = Vector4(30, 24, 30, 24),
-	content_margins: Vector4 = Vector4(30, 18, 30, 19)
-) -> StyleBoxTexture:
-	var adjusted_content := content_margins
-	if pressed:
-		adjusted_content.y += 3
-		adjusted_content.w -= 3
-	return texture_style(
-		texture,
-		tint,
-		texture_margins,
-		adjusted_content
-	)
-
-
-static func _ticket_button_style(fill: Color, border: Color, pressed: bool, hovered: bool = false) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(12)
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	style.content_margin_top = 7 if not pressed else 9
-	style.content_margin_bottom = 8 if not pressed else 6
-	style.anti_aliasing = true
-	if not pressed:
-		style.shadow_color = Color(0.08, 0.06, 0.16, 0.24 if not hovered else 0.34)
-		style.shadow_size = 4 if not hovered else 6
-		style.shadow_offset = Vector2(0, 2)
-	return style
 
 
 static func make_panel(
@@ -157,15 +109,6 @@ static func make_arrow_button(direction: int, minimum_size: Vector2 = Vector2(72
 	var button := make_button("←" if direction < 0 else "→", minimum_size, false, 38, direction > 0)
 	if minimum_size.y >= 72.0:
 		button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var square_margins := Vector4(30, 30, 30, 30)
-		var square_content := Vector4(10, 10, 10, 10)
-		button.add_theme_stylebox_override("normal", _reference_button_style(BUTTON_REFERENCE_SQUARE, Color.WHITE, false, square_margins, square_content))
-		button.add_theme_stylebox_override("hover", _reference_button_style(BUTTON_REFERENCE_SQUARE, Color(1.06, 1.06, 1.06, 1.0), false, square_margins, square_content))
-		button.add_theme_stylebox_override("pressed", _reference_button_style(BUTTON_REFERENCE_SQUARE, Color(0.88, 0.88, 0.88, 1.0), true, square_margins, square_content))
-		button.add_theme_stylebox_override("disabled", _reference_button_style(BUTTON_REFERENCE_SQUARE, Color(0.72, 0.72, 0.72, 0.66), false, square_margins, square_content))
-		button.add_theme_color_override("font_color", INK)
-		button.add_theme_color_override("font_hover_color", INK)
-		button.add_theme_color_override("font_pressed_color", INK)
 	return button
 
 

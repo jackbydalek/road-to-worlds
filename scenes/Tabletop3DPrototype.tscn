@@ -1,17 +1,17 @@
 [gd_scene format=3 uid="uid://d2cjo7vj8apsb"]
 
 [ext_resource type="Script" uid="uid://bod7dptp0enb7" path="res://scripts/Tabletop3DPrototype.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/battle/field-battle-background.png" id="2_field_background"]
 
 [sub_resource type="Environment" id="Environment_tabletop"]
-background_mode = 1
-background_color = Color(0.976, 0.941, 0.922, 1)
+background_mode = 0
 ambient_light_source = 3
 ambient_light_color = Color(1, 0.92, 0.87, 1)
 ambient_light_energy = 0.58
 
 [sub_resource type="StandardMaterial3D" id="Material_table"]
 shading_mode = 0
-albedo_color = Color(0.82, 0.77, 0.89, 1)
+albedo_color = Color(0.898, 0.631, 0.31, 1)
 metallic = 0.0
 roughness = 0.94
 
@@ -32,7 +32,7 @@ size = Vector3(13.05, 0.18, 11.75)
 [sub_resource type="StandardMaterial3D" id="Material_player_prep"]
 transparency = 1
 shading_mode = 0
-albedo_color = Color(0.408, 0.773, 0.91, 0.36)
+albedo_color = Color(0.247059, 0.560784, 0.713725, 0.36)
 roughness = 0.88
 
 [sub_resource type="BoxMesh" id="Mesh_prep_zone"]
@@ -41,7 +41,7 @@ size = Vector3(1.58, 0.035, 1.52)
 [sub_resource type="StandardMaterial3D" id="Material_player_plated"]
 transparency = 1
 shading_mode = 0
-albedo_color = Color(0.937, 0.494, 0.463, 0.34)
+albedo_color = Color(0.0862745, 0.541176, 0.764706, 0.34)
 roughness = 0.88
 
 [sub_resource type="BoxMesh" id="Mesh_plated_zone"]
@@ -50,13 +50,13 @@ size = Vector3(1.58, 0.035, 1.52)
 [sub_resource type="StandardMaterial3D" id="Material_opponent_prep"]
 transparency = 1
 shading_mode = 0
-albedo_color = Color(0.557, 0.663, 0.902, 0.34)
+albedo_color = Color(0.847059, 0.356863, 0.439216, 0.34)
 roughness = 0.88
 
 [sub_resource type="StandardMaterial3D" id="Material_opponent_plated"]
 transparency = 1
 shading_mode = 0
-albedo_color = Color(0.949, 0.643, 0.722, 0.34)
+albedo_color = Color(0.937255, 0.211765, 0.333333, 0.34)
 roughness = 0.88
 
 [sub_resource type="StandardMaterial3D" id="Material_chef_player"]
@@ -84,6 +84,19 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
+[node name="BattleBackdrop" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+z_index = 0
+texture = ExtResource("2_field_background")
+expand_mode = 1
+stretch_mode = 6
+
 [node name="ViewportContainer" type="SubViewportContainer" parent="." unique_id=1562794964]
 layout_mode = 1
 anchors_preset = 15
@@ -92,9 +105,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 stretch = true
+z_index = 2
 
 [node name="WorldViewport" type="SubViewport" parent="ViewportContainer" unique_id=229818861]
 handle_input_locally = false
+transparent_bg = true
 msaa_3d = 2
 size = Vector2i(1440, 900)
 render_target_update_mode = 4
@@ -124,9 +139,9 @@ omni_range = 13.0
 shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="ViewportContainer/WorldViewport/World" unique_id=599173441]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.5, 8.35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.4, 10.8)
 current = true
-fov = 42.0
+fov = 44.0
 
 [node name="Table" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World" unique_id=1556251163]
 position = Vector3(0, 0, 0.5)
@@ -142,7 +157,7 @@ mesh = SubResource("Mesh_table_edge")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, 2.25)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPrep" unique_id=589803034]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.72, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.08, 0, 0)
 material_override = SubResource("Material_player_prep")
 mesh = SubResource("Mesh_prep_zone")
 
@@ -151,7 +166,7 @@ material_override = SubResource("Material_player_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Slot3" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPrep" unique_id=95022894]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.72, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.08, 0, 0)
 material_override = SubResource("Material_player_prep")
 mesh = SubResource("Mesh_prep_zone")
 
@@ -168,12 +183,12 @@ outline_size = 11
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, 0.15)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPlated" unique_id=1054688156]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.08, 0, 0)
 material_override = SubResource("Material_player_plated")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Slot2" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/PlayerPlated" unique_id=1374307409]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.08, 0, 0)
 material_override = SubResource("Material_player_plated")
 mesh = SubResource("Mesh_plated_zone")
 
@@ -190,12 +205,12 @@ outline_size = 11
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -2.25)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1586093162]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.08, 0, 0)
 material_override = SubResource("Material_opponent_plated")
 mesh = SubResource("Mesh_plated_zone")
 
 [node name="Slot2" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPlated" unique_id=1061984284]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.08, 0, 0)
 material_override = SubResource("Material_opponent_plated")
 mesh = SubResource("Mesh_plated_zone")
 
@@ -212,7 +227,7 @@ outline_size = 10
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.205, -4.45)
 
 [node name="Slot1" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=562390361]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.72, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.08, 0, 0)
 material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
@@ -221,7 +236,7 @@ material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
 [node name="Slot3" type="MeshInstance3D" parent="ViewportContainer/WorldViewport/World/Zones/OpponentPrep" unique_id=1046090940]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.72, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.08, 0, 0)
 material_override = SubResource("Material_opponent_prep")
 mesh = SubResource("Mesh_prep_zone")
 
@@ -280,6 +295,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+z_index = 3
 
 [node name="EffectLayer" type="Control" parent="Interface" unique_id=1055262555]
 layout_mode = 1
@@ -296,7 +312,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 76.0
 grow_horizontal = 2
-mouse_filter = 1
+mouse_filter = 2
 
 [node name="Margin" type="MarginContainer" parent="Interface/TopBar" unique_id=1818808303]
 layout_mode = 2
@@ -310,6 +326,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1039128186]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
@@ -326,12 +343,18 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="TurnLabel" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1476930291]
+visible = false
 custom_minimum_size = Vector2(178, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
 text = "TURN 1"
-horizontal_alignment = 1
+horizontal_alignment = 0
 vertical_alignment = 1
+
+[node name="ControlSpacer" type="Control" parent="Interface/TopBar/Margin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
 
 [node name="PlayerLife" type="Label" parent="Interface/TopBar/Margin/TopRow" unique_id=1270119525]
 visible = false
@@ -349,12 +372,13 @@ theme_override_font_sizes/font_size = 16
 text = "Restart"
 
 [node name="SettingsButton" type="Button" parent="Interface/TopBar/Margin/TopRow"]
-custom_minimum_size = Vector2(104, 42)
+custom_minimum_size = Vector2(54, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
-text = "Settings"
+tooltip_text = "Options"
 
 [node name="ExitButton" type="Button" parent="Interface/TopBar/Margin/TopRow" unique_id=538710607]
+visible = false
 custom_minimum_size = Vector2(106, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
@@ -374,7 +398,7 @@ offset_bottom = 38.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 18
-text = "END TURN  →"
+text = "END TURN"
 
 [node name="ActionPanel" type="PanelContainer" parent="Interface" unique_id=1785371859]
 layout_mode = 1

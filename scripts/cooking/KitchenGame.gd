@@ -10,7 +10,7 @@ signal exit_requested
 const SERVICE_SCRIPT := preload("res://scripts/cooking/CookingCombatService.gd")
 const COMBAT_ARENA_SCENE := preload("res://scenes/CombatArena.tscn")
 const CHEF_LIFE_HEART := preload("res://assets/ui/chef_life_heart.svg")
-const FONT_PATH := "res://assets/fonts/ArchivoNarrow-Regular.ttf"
+const FONT_PATH := "res://assets/fonts/Oxanium-SemiBold.ttf"
 const OPPONENT_ACTION_DELAY := 1.05
 const DEFENSE_POSITION_ANIMATION_SECONDS := 0.52
 

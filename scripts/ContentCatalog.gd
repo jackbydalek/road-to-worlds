@@ -153,7 +153,8 @@ func _decorate_card(card: Dictionary, default_expansion_id: String = "core") -> 
 		rarity = "uncommon"
 	card["rarity"] = rarity
 	card["expansion_id"] = String(card.get("expansion_id", default_expansion_id))
-	card["deckLimit"] = 3
+	# Zero is the shared sentinel for unlimited copies in constructed and run decks.
+	card["deckLimit"] = 0
 	card["cost"] = card.get("recipe", []).size() if card_type == "meal" else int(card.get("discard_cost", 0))
 	card["value"] = {"common": 2, "uncommon": 4, "rare": 7, "mythic": 10}.get(rarity, 2)
 	card["animalType"] = String(card.get("archetype", "neutral"))

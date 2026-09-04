@@ -1,28 +1,27 @@
 extends RefCounted
 class_name DeckbuilderScreen
 
-const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
-const WORKSPACE_UI := preload("res://scripts/ui/WorkspaceUIComponents.gd")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const MATERIAL_SYMBOLS := preload("res://scripts/ui/MaterialSymbolsSharp.gd")
+const ANGULAR_SURFACE_SCRIPT := preload("res://scripts/ui/BattleAngularSurface.gd")
+const ANGULAR_BUTTON_FACE_SCRIPT := preload("res://scripts/ui/BattleAngularButtonFace.gd")
+const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 
 const SORT_NAME := "name"
 const SORT_RARITY := "rarity"
 const SORT_AFFINITY := "affinity"
 
 const COLLECTION_COLUMNS := 4
-const DECK_COLUMNS := 3
+const DECK_COLUMNS := 8
 const COLLECTION_CARD_SIZE := Vector2(150, 213)
-const DECK_CARD_SIZE := Vector2(92, 131)
+const DECK_CARD_SIZE := Vector2(136, 194)
 const HOVER_CARD_SIZE := Vector2(300, 426)
 const HOVER_PREVIEW_SIZE := Vector2(326, 466)
 const HOVER_DELAY_SECONDS := 0.38
-const SURFACE := WORKSPACE_UI.SURFACE
-const SURFACE_WARM := WORKSPACE_UI.SURFACE_WARM
-const BORDER_SOFT := WORKSPACE_UI.BORDER_SOFT
-const WORKSHOP_CREAM := PALETTE.CREAM
-const COLLECTION_LAVENDER := Color("#F3EFFA")
-const DECK_BLUSH := Color("#FBE5EC")
-const CARD_PAPER := Color("#FFF9F5")
+const WORKSHOP_SURFACE := PALETTE.CARBON
+const WORKSHOP_PANEL := PALETTE.SURFACE_PAPER_MUTED
+const WORKSHOP_TILE := PALETTE.SURFACE_PAPER
 
 var _hover_preview: PanelContainer
 var _hover_preview_body: CenterContainer
@@ -38,74 +37,62 @@ func show(host) -> void:
 	host._update_status()
 	_remove_hover_preview(host)
 
-	var metrics: Dictionary = host._calculate_deck_metrics(host.run.deck, host.run.sideboard)
-	var legal: Dictionary = host._deck_is_legal()
-	var collection_ids: Array = _sorted_card_ids(host, host.run.collection.keys(), metrics.primary)
-	var compact_workspace: bool = host._run_mode() == "season"
+	var workshop_shell := PanelContainer.new()
+	workshop_shell.name = "DeckbuilderWorkshopShell"
+	workshop_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	workshop_shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	workshop_shell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	host.content.add_child(workshop_shell)
+	_apply_angular_surface(workshop_shell, PALETTE.CARBON.darkened(0.10), PALETTE.STEEL, true)
+	var shell_margin := MarginContainer.new()
+	shell_margin.add_theme_constant_override("margin_left", 10)
+	shell_margin.add_theme_constant_override("margin_right", 10)
+	shell_margin.add_theme_constant_override("margin_top", 10)
+	shell_margin.add_theme_constant_override("margin_bottom", 10)
+	workshop_shell.add_child(shell_margin)
+	var workshop_content := VBoxContainer.new()
+	workshop_content.name = "DeckbuilderWorkshopContent"
+	workshop_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	workshop_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	workshop_content.add_theme_constant_override("separation", 10)
+	shell_margin.add_child(workshop_content)
 
-	_add_header(host, metrics, legal)
+	_add_back_bar(host, workshop_content)
 
-	var workspace := HBoxContainer.new()
+	var workspace := VBoxContainer.new()
 	workspace.name = "DeckbuilderWorkspace"
 	workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	workspace.custom_minimum_size = Vector2(0, 560 if compact_workspace else 600)
-	workspace.add_theme_constant_override("separation", 16)
-	host.content.add_child(workspace)
+	workspace.custom_minimum_size = Vector2(0, 600)
+	workshop_content.add_child(workspace)
 
-	_add_collection_binder(host, workspace, collection_ids, compact_workspace)
-	_add_deck_rail(host, workspace, compact_workspace)
+	_add_deck_rail(host, workspace)
 	_create_hover_preview(host)
 
-	if host._run_mode() == "season":
-		var back_button: Button = host._add_deckbuilder_back_button(host.content)
-		_style_deck_button(back_button)
 
+func _add_back_bar(host, parent: Node) -> void:
+	var bar := PanelContainer.new()
+	bar.name = "DeckbuilderTopBar"
+	bar.custom_minimum_size = Vector2(0, 48)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	parent.add_child(bar)
+	_apply_angular_surface(bar, WORKSHOP_SURFACE, PALETTE.ELECTRIC_CYAN, true)
 
-func _add_header(host, metrics: Dictionary, legal: Dictionary) -> void:
-	var header: VBoxContainer = _add_clean_panel(
-		host.content,
-		"DECK WORKSHOP",
-		PALETTE.CORAL,
-		Vector2(0, 82)
-	)
-	header.name = "DeckbuilderHeader"
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	bar.add_child(margin)
 
-	var toolbar := HBoxContainer.new()
-	toolbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	toolbar.add_theme_constant_override("separation", 10)
-	header.add_child(toolbar)
-
-	var identity := VBoxContainer.new()
-	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	identity.add_theme_constant_override("separation", 2)
-	toolbar.add_child(identity)
-
-	var collection_label := Label.new()
-	collection_label.name = "DeckbuilderCollectionSummary"
-	collection_label.text = "COLLECTION  •  %d unique cards" % host.run.collection.size()
-	collection_label.add_theme_font_size_override("font_size", 13)
-	collection_label.add_theme_color_override("font_color", PALETTE.NAVY)
-	identity.add_child(collection_label)
-
-	var metrics_label := Label.new()
-	metrics_label.name = "DeckbuilderMetricsSummary"
-	metrics_label.text = host._format_metrics_short(metrics)
-	metrics_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	metrics_label.add_theme_font_size_override("font_size", 13)
-	metrics_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	metrics_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	identity.add_child(metrics_label)
-
-	var legality := _add_badge(
-		toolbar,
-		"✓  EVENT LEGAL" if bool(legal.ok) else "!  " + String(legal.reason).to_upper(),
-		PALETTE.SKY.lightened(0.42) if bool(legal.ok) else PALETTE.BLUSH.lightened(0.30),
-		PALETTE.NAVY if bool(legal.ok) else PALETTE.BRICK_DARK
-	)
-	legality.name = "DeckbuilderLegalityBadge"
-
-	_add_sort_controls(host, toolbar)
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_child(row)
+	var back_button: Button = host._add_deckbuilder_back_button(row)
+	back_button.custom_minimum_size = Vector2(112, 36)
+	_style_deck_button(back_button, "secondary")
+	MATERIAL_SYMBOLS.apply_to_button(back_button, "back", 18)
 
 
 func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Array, compact_workspace: bool) -> void:
@@ -113,8 +100,8 @@ func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Arra
 		host,
 		workspace,
 		"CARD COLLECTION",
-		COLLECTION_LAVENDER,
-		PALETTE.PERIWINKLE
+		WORKSHOP_PANEL,
+		PALETTE.ELECTRIC_CYAN
 	)
 	collection_panel.name = "DeckbuilderCollectionPanel"
 	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -124,7 +111,7 @@ func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Arra
 	var hint := Label.new()
 	hint.text = "Hover to inspect  •  Add owned copies to your deck"
 	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
+	hint.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
 	collection_panel.add_child(hint)
 
 	var scroll := ScrollContainer.new()
@@ -152,7 +139,7 @@ func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Arra
 
 
 func _add_collection_card(host, parent: GridContainer, card_id: String, compact_workspace: bool) -> void:
-	var card: Dictionary = host.cards_by_id[card_id]
+	var card: Dictionary = _route_display_card(host, card_id, host.cards_by_id[card_id])
 	var owned: int = host._owned_count(card_id)
 	var available: int = host._available_count(card_id)
 	var tile := _add_card_tile(host, parent, card_id, card, "DeckbuilderCollectionCard")
@@ -170,8 +157,8 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	var owned_badge := _add_badge(
 		info_row,
 		"OWNED ×%d" % owned,
-		PALETTE.LAVENDER_GLASS,
-		PALETTE.NAVY
+		PALETTE.STEEL.darkened(0.12),
+		PALETTE.COOL_WHITE
 	)
 	owned_badge.name = "DeckbuilderOwnedBadge"
 
@@ -180,23 +167,30 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	available_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	available_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	available_label.add_theme_font_size_override("font_size", 12)
-	available_label.add_theme_color_override("font_color", PALETTE.NAVY if available > 0 else Color("#85829A"))
+	available_label.add_theme_color_override("font_color", PALETTE.EMERALD.darkened(0.30) if available > 0 else Color(PALETTE.TEXT_ON_LIGHT, 0.48))
 	info_row.add_child(available_label)
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 5)
 	tile.add_child(actions)
+	if String(host.run.get("run_loop", "")) == "route":
+		var route_note := Label.new()
+		route_note.text = "Added through route rewards"
+		route_note.add_theme_font_size_override("font_size", 11)
+		route_note.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
+		actions.add_child(route_note)
+		_bind_card_hover(host, tile, card_id)
+		return
 
 	var add_main: Button = host._make_button("+  MAIN DECK")
 	add_main.name = "DeckbuilderAddMainButton"
 	add_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_main.disabled = (
 		available <= 0
-		or host._deck_total(host.run.deck) >= host.run_state_service.max_main_deck_size
-		or host._deck_count(card_id) >= host._deck_limit(card_id)
 	)
 	host._style_button(add_main, "action")
 	_style_deck_button(add_main, "primary")
+	MATERIAL_SYMBOLS.apply_to_button(add_main, "add", 17)
 	var main_id := card_id
 	host._connect_pressed(add_main, func() -> void: host._add_to_deck(main_id))
 	actions.add_child(add_main)
@@ -207,54 +201,29 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 		add_side.disabled = (
 			available <= 0
 			or host._deck_total(host.run.sideboard) >= host.run_state_service.sideboard_size
-			or host._sideboard_count(card_id) >= host._deck_limit(card_id)
 		)
 		var side_id := card_id
 		_style_deck_button(add_side)
+		MATERIAL_SYMBOLS.apply_to_button(add_side, "add", 17)
 		host._connect_pressed(add_side, func() -> void: host._add_to_sideboard(side_id))
 		actions.add_child(add_side)
 
 	_bind_card_hover(host, tile, card_id)
 
 
-func _add_deck_rail(host, workspace: HBoxContainer, compact_workspace: bool) -> void:
-	var rail := _add_workspace_panel(host, workspace, "MY DECKS", DECK_BLUSH, PALETTE.CORAL)
+func _add_deck_rail(host, workspace: Node) -> void:
+	var rail := _add_workspace_panel(host, workspace, "ACTIVE DECK", WORKSHOP_PANEL, PALETTE.SELECTION_BLUE)
 	rail.name = "DeckbuilderDeckRail"
-	rail.custom_minimum_size = Vector2(380 if compact_workspace else 364, 0)
+	rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	if compact_workspace:
-		var deck_panel := _add_deck_tab(
-			host,
-			rail,
-			"Main Deck  %d/%d" % [host._deck_total(host.run.deck), host.run_state_service.max_main_deck_size],
-			"DeckbuilderMainDeckPanel"
-		)
-		_add_deck_grid(host, deck_panel, host.run.deck, true, "DeckbuilderMainDeckScroll")
-		return
-
-	var tabs := TabContainer.new()
-	tabs.name = "DeckbuilderDeckTabs"
-	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_theme_stylebox_override("panel", _clean_style(SURFACE, BORDER_SOFT, 1, 7, Vector4(8, 8, 8, 8)))
-	rail.add_child(tabs)
-
-	var main_panel := _add_deck_tab(
+	var deck_panel := _add_deck_tab(
 		host,
-		tabs,
-		"Main %d/%d" % [host._deck_total(host.run.deck), host.run_state_service.max_main_deck_size],
+		rail,
+		"Main Deck  %d cards" % host._deck_total(host.run.deck),
 		"DeckbuilderMainDeckPanel"
 	)
-	_add_deck_grid(host, main_panel, host.run.deck, true, "DeckbuilderMainDeckScroll")
-
-	var side_panel := _add_deck_tab(
-		host,
-		tabs,
-		"Sideboard %d/%d" % [host._deck_total(host.run.sideboard), host.run_state_service.sideboard_size],
-		"DeckbuilderSideboardPanel"
-	)
-	_add_deck_grid(host, side_panel, host.run.sideboard, false, "DeckbuilderSideboardScroll")
+	_add_deck_grid(host, deck_panel, host.run.deck, true, "DeckbuilderMainDeckScroll")
 
 
 func _add_deck_tab(host, parent: Node, title: String, node_name: String) -> VBoxContainer:
@@ -268,17 +237,17 @@ func _add_deck_tab(host, parent: Node, title: String, node_name: String) -> VBox
 	if parent is not TabContainer:
 		var title_label := Label.new()
 		title_label.text = title.to_upper()
-		title_label.add_theme_font_override("font", SKETCH_UI.display_font(0.68))
+		title_label.add_theme_font_override("font", DISPLAY_FONT)
 		title_label.add_theme_font_size_override("font_size", 16)
-		title_label.add_theme_color_override("font_color", SKETCH_UI.INK)
+		title_label.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT)
 		panel.add_child(title_label)
 	else:
 		(parent as TabContainer).set_tab_title((parent as TabContainer).get_tab_count() - 1, title)
 
 	var hint := Label.new()
-	hint.text = "Hover to inspect  •  Remove with −"
+	hint.text = "Hover to inspect" if String(host.run.get("run_loop", "")) == "route" else "Hover to inspect  •  Remove a card with −"
 	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
+	hint.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
 	panel.add_child(hint)
 	return panel
 
@@ -293,7 +262,7 @@ func _add_deck_grid(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 
 	var grid := GridContainer.new()
 	grid.name = scroll_name + "Grid"
-	grid.columns = DECK_COLUMNS
+	grid.columns = clampi(floori((host.get_viewport_rect().size.x - 100.0) / 164.0), 3, DECK_COLUMNS)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 5)
 	grid.add_theme_constant_override("v_separation", 7)
@@ -308,53 +277,51 @@ func _add_deck_grid(host, parent: VBoxContainer, deck: Dictionary, is_main: bool
 	for card_id_value in ids:
 		var card_id := String(card_id_value)
 		var card: Dictionary = host.cards_by_id[card_id]
-		var tile := _add_card_tile(host, grid, card_id, card, "DeckbuilderDeckCard")
-		tile.custom_minimum_size = Vector2(108, 181)
+		var copy_count := maxi(0, int(deck[card_id]))
+		for copy_index in range(copy_count):
+			var display_card := _route_display_card_copy(host, card_id, card, copy_index)
+			var tile := _add_card_tile(host, grid, card_id, display_card, "DeckbuilderDeckCard")
+			tile.set_meta("copy_index", copy_index)
+			tile.custom_minimum_size = Vector2(154, 226)
 
-		var art_center := CenterContainer.new()
-		art_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tile.add_child(art_center)
-		art_center.add_child(_make_visual_card(host, card, DECK_CARD_SIZE))
+			var art_center := CenterContainer.new()
+			art_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			tile.add_child(art_center)
+			art_center.add_child(_make_visual_card(host, display_card, DECK_CARD_SIZE))
 
-		var controls := HBoxContainer.new()
-		controls.add_theme_constant_override("separation", 3)
-		tile.add_child(controls)
+			if String(host.run.get("run_loop", "")) != "route":
+				var controls := HBoxContainer.new()
+				controls.alignment = BoxContainer.ALIGNMENT_END
+				tile.add_child(controls)
+				var remove: Button = host._make_button("")
+				remove.name = "DeckbuilderRemoveMainButton" if is_main else "DeckbuilderRemoveSideButton"
+				remove.custom_minimum_size = Vector2(32, 28)
+				_style_deck_button(remove, "icon")
+				remove.tooltip_text = "Remove this copy"
+				MATERIAL_SYMBOLS.apply_to_button(remove, "remove", 18, HORIZONTAL_ALIGNMENT_CENTER)
+				var selected_id := card_id
+				if is_main:
+					host._connect_pressed(remove, func() -> void: host._remove_from_deck(selected_id))
+				else:
+					host._connect_pressed(remove, func() -> void: host._remove_from_sideboard(selected_id))
+				controls.add_child(remove)
 
-		var count := Label.new()
-		count.text = "×%d" % int(deck[card_id])
-		count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		count.add_theme_font_size_override("font_size", 15)
-		count.add_theme_color_override("font_color", PALETTE.NAVY)
-		controls.add_child(count)
-
-		var remove: Button = host._make_button("−")
-		remove.name = "DeckbuilderRemoveMainButton" if is_main else "DeckbuilderRemoveSideButton"
-		remove.custom_minimum_size = Vector2(32, 28)
-		_style_deck_button(remove, "icon")
-		var selected_id := card_id
-		if is_main:
-			host._connect_pressed(remove, func() -> void: host._remove_from_deck(selected_id))
-		else:
-			host._connect_pressed(remove, func() -> void: host._remove_from_sideboard(selected_id))
-		controls.add_child(remove)
-
-		_bind_card_hover(host, tile, card_id)
+			_bind_card_hover(host, tile, card_id, copy_index)
 
 
 func _add_workspace_panel(host, parent: Node, title: String, background: Color, accent: Color) -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override(
-		"panel",
-		_clean_style(background, PALETTE.NAVY, 2, 14, Vector4.ZERO, 0, true)
-	)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
+	_apply_angular_surface(panel, background, accent, false)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	panel.add_child(margin)
 
 	var box := VBoxContainer.new()
@@ -363,17 +330,18 @@ func _add_workspace_panel(host, parent: Node, title: String, background: Color, 
 	box.add_theme_constant_override("separation", 7)
 	margin.add_child(box)
 
+	var title_bar := PanelContainer.new()
+	title_bar.add_theme_stylebox_override(
+		"panel",
+		_clean_style(PALETTE.CARBON.lightened(0.035), accent, 0, 2, Vector4(10, 5, 10, 5), 5)
+	)
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_override("font", SKETCH_UI.body_font(0.5))
+	title_label.add_theme_font_override("font", DISPLAY_FONT)
 	title_label.add_theme_font_size_override("font_size", 16)
-	title_label.add_theme_color_override("font_color", PALETTE.NAVY)
-	box.add_child(title_label)
-	var accent_rule := ColorRect.new()
-	accent_rule.custom_minimum_size = Vector2(0, 3)
-	accent_rule.color = accent
-	accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(accent_rule)
+	title_label.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
+	title_bar.add_child(title_label)
+	box.add_child(title_bar)
 	return box
 
 
@@ -382,29 +350,20 @@ func _add_card_tile(host, parent: Node, card_id: String, card: Dictionary, node_
 	panel.name = node_name
 	panel.set_meta("card_id", card_id)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tile_fill := CARD_PAPER.lerp(
-		host._rarity_line_color(card.get("rarity", "common")),
-		0.035
-	)
-	panel.add_theme_stylebox_override(
-		"panel",
-		_clean_style(
-			tile_fill,
-			PALETTE.NAVY,
-			2,
-			11,
-			Vector4.ZERO,
-			0,
-			true
-		)
-	)
+	var tile_fill := WORKSHOP_TILE
+	var tile_accent: Color = host._rarity_line_color(card.get("rarity", "common")).darkened(0.30)
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
+	var angular_surface = _apply_angular_surface(panel, tile_fill, tile_accent, false)
+	panel.set_meta("deckbuilder_tile_surface", angular_surface)
+	panel.set_meta("deckbuilder_tile_fill", tile_fill)
+	panel.set_meta("deckbuilder_tile_accent", tile_accent)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 6)
-	margin.add_theme_constant_override("margin_right", 6)
-	margin.add_theme_constant_override("margin_top", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	panel.add_child(margin)
 
 	var tile := VBoxContainer.new()
@@ -438,8 +397,41 @@ func _make_visual_card(host, card: Dictionary, size: Vector2) -> Control:
 	return fallback
 
 
+func _route_display_card(host, card_id: String, card: Dictionary) -> Dictionary:
+	if (
+		String(host.run.get("run_loop", "")) != "route"
+		or host.route_run_service.upgrade_count(host.run, card_id) <= 0
+	):
+		return card
+	var upgraded_card := card.duplicate(true)
+	upgraded_card["upgraded"] = true
+	return upgraded_card
+
+
+func _route_display_card_copy(host, card_id: String, card: Dictionary, copy_index: int) -> Dictionary:
+	if (
+		String(host.run.get("run_loop", "")) != "route"
+		or copy_index < 0
+		or copy_index >= host.route_run_service.upgrade_count(host.run, card_id)
+	):
+		return card
+	var upgraded_card := card.duplicate(true)
+	upgraded_card["upgraded"] = true
+	return upgraded_card
+
+
 func _add_badge(parent: Node, text: String, background: Color, foreground: Color) -> PanelContainer:
-	var badge := WORKSPACE_UI.make_badge(text, background, foreground)
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override(
+		"panel",
+		_clean_style(background, foreground, 1, 3, Vector4(9, 5, 9, 5))
+	)
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_override("font", BODY_FONT)
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", foreground)
+	badge.add_child(label)
 	parent.add_child(badge)
 	return badge
 
@@ -452,16 +444,21 @@ func _create_hover_preview(host) -> void:
 	_hover_preview.z_index = 1800
 	_hover_preview.visible = false
 
-	_hover_preview.add_theme_stylebox_override(
-		"panel",
-		_clean_style(WORKSHOP_CREAM, PALETTE.NAVY, 3, 16, Vector4(12, 12, 12, 12), 0, true)
-	)
+	_hover_preview.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	host.add_child(_hover_preview)
+	_apply_angular_surface(_hover_preview, WORKSHOP_SURFACE, PALETTE.ELECTRIC_CYAN, true)
 
+	var preview_margin := MarginContainer.new()
+	preview_margin.add_theme_constant_override("margin_left", 10)
+	preview_margin.add_theme_constant_override("margin_right", 10)
+	preview_margin.add_theme_constant_override("margin_top", 10)
+	preview_margin.add_theme_constant_override("margin_bottom", 10)
+	preview_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hover_preview.add_child(preview_margin)
 	_hover_preview_body = CenterContainer.new()
 	_hover_preview_body.name = "DeckbuilderHoverPreviewBody"
 	_hover_preview_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hover_preview.add_child(_hover_preview_body)
+	preview_margin.add_child(_hover_preview_body)
 
 
 func _remove_hover_preview(host) -> void:
@@ -473,12 +470,19 @@ func _remove_hover_preview(host) -> void:
 	_hover_preview_body = null
 
 
-func _bind_card_hover(host, control: Control, card_id: String) -> void:
-	control.mouse_entered.connect(func() -> void: _queue_hover_preview(host, control, card_id))
-	control.mouse_exited.connect(_hide_hover_preview)
+func _bind_card_hover(host, control: Control, card_id: String, copy_index: int = -1) -> void:
+	var tile_panel := control.get_parent().get_parent() as PanelContainer
+	control.mouse_entered.connect(func() -> void:
+		_set_card_tile_hover(tile_panel, true)
+		_queue_hover_preview(host, control, card_id, copy_index)
+	)
+	control.mouse_exited.connect(func() -> void:
+		_set_card_tile_hover(tile_panel, false)
+		_hide_hover_preview()
+	)
 
 
-func _queue_hover_preview(host, source: Control, card_id: String) -> void:
+func _queue_hover_preview(host, source: Control, card_id: String, copy_index: int = -1) -> void:
 	_hover_request_id += 1
 	var request_id := _hover_request_id
 	await host.get_tree().create_timer(HOVER_DELAY_SECONDS).timeout
@@ -488,10 +492,10 @@ func _queue_hover_preview(host, source: Control, card_id: String) -> void:
 		or not source.get_global_rect().has_point(host.get_viewport().get_mouse_position())
 	):
 		return
-	_show_hover_preview(host, source, card_id)
+	_show_hover_preview(host, source, card_id, copy_index)
 
 
-func _show_hover_preview(host, source: Control, card_id: String) -> void:
+func _show_hover_preview(host, source: Control, card_id: String, copy_index: int = -1) -> void:
 	if (
 		_hover_preview == null
 		or not is_instance_valid(_hover_preview)
@@ -502,7 +506,12 @@ func _show_hover_preview(host, source: Control, card_id: String) -> void:
 
 	for child in _hover_preview_body.get_children():
 		child.free()
-	var card: Dictionary = host.cards_by_id[card_id]
+	var source_card: Dictionary = host.cards_by_id[card_id]
+	var card: Dictionary = (
+		_route_display_card_copy(host, card_id, source_card, copy_index)
+		if copy_index >= 0
+		else _route_display_card(host, card_id, source_card)
+	)
 	var known_keywords: Array[String] = []
 	for keyword_value in card.get("keywords", []):
 		var keyword_id := String(keyword_value)
@@ -526,9 +535,9 @@ func _show_hover_preview(host, source: Control, card_id: String) -> void:
 		preview_row.add_child(glossary)
 		var heading := Label.new()
 		heading.text = "KEYWORD GUIDE"
-		heading.add_theme_font_override("font", SKETCH_UI.display_font(0.68))
+		heading.add_theme_font_override("font", DISPLAY_FONT)
 		heading.add_theme_font_size_override("font_size", 12)
-		heading.add_theme_color_override("font_color", PALETTE.NAVY)
+		heading.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
 		glossary.add_child(heading)
 		for keyword_id in known_keywords:
 			host._add_keyword_explanation(glossary, keyword_id, "DeckbuilderKeyword")
@@ -554,7 +563,7 @@ func _add_sort_controls(host, parent: HBoxContainer) -> void:
 	var sort_label := Label.new()
 	sort_label.text = "SORT"
 	sort_label.add_theme_font_size_override("font_size", 12)
-	sort_label.add_theme_color_override("font_color", SKETCH_UI.MUTED_INK)
+	sort_label.add_theme_color_override("font_color", Color(PALETTE.COOL_WHITE, 0.62))
 	parent.add_child(sort_label)
 
 	_add_sort_button(host, parent, "Affinity", SORT_AFFINITY)
@@ -564,11 +573,13 @@ func _add_sort_controls(host, parent: HBoxContainer) -> void:
 
 func _add_sort_button(host, parent: HBoxContainer, label: String, mode: String) -> void:
 	var selected: bool = host.deckbuilder_sort_mode == mode
-	var button: Button = host._make_button(("✓ " if selected else "") + label)
+	var button: Button = host._make_button(label)
 	button.name = "DeckbuilderSort" + mode.capitalize()
 	button.custom_minimum_size = Vector2(84, 36)
-	button.disabled = selected
+	button.toggle_mode = true
+	button.button_pressed = selected
 	_style_deck_button(button, "selected" if selected else "secondary")
+	MATERIAL_SYMBOLS.apply_to_button(button, "check" if selected else "sort", 16)
 	host._connect_pressed(button, func() -> void: _set_sort_mode(host, mode))
 	parent.add_child(button)
 
@@ -582,11 +593,9 @@ func _add_clean_panel(
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = minimum_size
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override(
-		"panel",
-		_clean_style(WORKSHOP_CREAM, PALETTE.NAVY, 2, 14, Vector4.ZERO, 0, true)
-	)
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
+	_apply_angular_surface(panel, WORKSHOP_SURFACE, accent, true)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_top", 10)
@@ -599,9 +608,9 @@ func _add_clean_panel(
 	margin.add_child(body)
 	var heading := Label.new()
 	heading.text = title
-	heading.add_theme_font_override("font", SKETCH_UI.body_font(0.62))
+	heading.add_theme_font_override("font", DISPLAY_FONT)
 	heading.add_theme_font_size_override("font_size", 19)
-	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
 	body.add_child(heading)
 	var accent_rule := ColorRect.new()
 	accent_rule.custom_minimum_size = Vector2(116, 3)
@@ -613,7 +622,58 @@ func _add_clean_panel(
 
 
 func _style_deck_button(button: Button, variant: String = "secondary") -> void:
-	WORKSPACE_UI.style_button(button, variant)
+	button.set_meta("ui_button_variant", variant)
+	button.set_meta("ui_button_variant_inferred", false)
+	button.set_meta("ui_button_quiet_keyline", true)
+	button.theme_type_variation = &""
+	button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 34.0)
+	var spacing := StyleBoxFlat.new()
+	spacing.bg_color = Color.TRANSPARENT
+	spacing.border_color = Color.TRANSPARENT
+	spacing.content_margin_left = 13
+	spacing.content_margin_right = 13
+	spacing.content_margin_top = 7
+	spacing.content_margin_bottom = 7
+	spacing.set_meta("global_angular_button_spacing", true)
+	for state_name in ["normal", "hover", "pressed", "disabled", "focus"]:
+		button.add_theme_stylebox_override(state_name, spacing.duplicate())
+	button.add_theme_font_override("font", BODY_FONT)
+	button.add_theme_font_size_override("font_size", 13)
+	var face = button.get_node_or_null("DeckbuilderAngularButtonFace")
+	if face == null:
+		face = ANGULAR_BUTTON_FACE_SCRIPT.new()
+		face.name = "DeckbuilderAngularButtonFace"
+		button.add_child(face)
+	face.configure(button, variant)
+	var text_color: Color = face.text_color()
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(color_name, text_color)
+	button.add_theme_color_override("font_disabled_color", Color(PALETTE.COOL_WHITE, 0.46))
+
+
+func _apply_angular_surface(panel: Control, fill: Color, accent: Color, dark: bool):
+	var surface = ANGULAR_SURFACE_SCRIPT.new()
+	surface.name = "DeckbuilderAngularSurface"
+	surface.show_behind_parent = true
+	panel.add_child(surface)
+	surface.configure(fill, accent, dark, false)
+	return surface
+
+
+func _set_card_tile_hover(panel: PanelContainer, hovered: bool) -> void:
+	if not is_instance_valid(panel):
+		return
+	var surface = panel.get_meta("deckbuilder_tile_surface", null)
+	if not is_instance_valid(surface):
+		return
+	var base_fill: Color = panel.get_meta("deckbuilder_tile_fill", WORKSHOP_TILE)
+	var base_accent: Color = panel.get_meta("deckbuilder_tile_accent", PALETTE.STEEL)
+	surface.configure(
+		PALETTE.SURFACE_PAPER_MUTED if hovered else base_fill,
+		PALETTE.ELECTRIC_CYAN if hovered else base_accent,
+		false,
+		false
+	)
 
 
 func _clean_style(
@@ -625,15 +685,21 @@ func _clean_style(
 	accent_width: int = 0,
 	with_shadow: bool = false
 ) -> StyleBoxFlat:
-	return WORKSPACE_UI.clean_style(
-		background,
-		border,
-		border_width,
-		radius,
-		content_margins,
-		accent_width,
-		with_shadow
-	)
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.border_width_left = maxi(border_width, accent_width)
+	style.set_corner_radius_all(radius)
+	style.content_margin_left = content_margins.x
+	style.content_margin_top = content_margins.y
+	style.content_margin_right = content_margins.z
+	style.content_margin_bottom = content_margins.w
+	if with_shadow:
+		style.shadow_color = Color(PALETTE.CARBON, 0.20)
+		style.shadow_size = 2
+		style.shadow_offset = Vector2(3, 3)
+	return style
 
 
 func _set_sort_mode(host, mode: String) -> void:

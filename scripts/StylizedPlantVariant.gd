@@ -1,7 +1,7 @@
 extends Node3D
 
 const GAME_PALETTE := preload("res://scripts/ui/GamePalette.gd")
-const ILLUSTRATED_SHADER := preload("res://assets/shaders/illustrated_cafe_palette.gdshader")
+const ILLUSTRATED_SHADER := preload("res://assets/shaders/illustrated_palette.gdshader")
 const OUTLINE_SHADER := preload("res://assets/shaders/lofi_outline.gdshader")
 const PLANT_OUTLINE_WORLD_WIDTH := 0.022
 

@@ -1,6 +1,8 @@
 extends SceneTree
 
 const TABLE_SCENE := preload("res://scenes/Tabletop3DPrototype.tscn")
+const ABILITY_READY_PREVIEW_PATH := "/tmp/topdeck_to_worlds_ability_ready_glow.png"
+const PROFILE_EXPANDED_PREVIEW_PATH := "/tmp/topdeck_to_worlds_profile_expanded.png"
 
 var failures: Array[String] = []
 
@@ -52,21 +54,78 @@ func _run() -> void:
 	table.state.player.prep = [ability_unit]
 	table._render_match()
 	var ability_card: Node3D = table._card_node_for_instance(int(ability_unit.instance_id))
-	_expect(ability_card != null and ability_card.find_child("AbilityReadyAura", true, false) != null, "Usable ability has no celestial frame.")
-	var ability_sparkles := ability_card.find_child("AbilityReadySparkles", true, false) as MeshInstance3D if ability_card != null else null
-	_expect(ability_sparkles != null, "Usable ability has no independently animated sparkle layer.")
-	_expect(_texture_ends_with(ability_sparkles, "ability_ready_sparkles.svg"), "Ability sparkle layer uses the wrong texture.")
-	if ability_sparkles != null and ability_sparkles.material_override is StandardMaterial3D:
-		var sparkle_material := ability_sparkles.material_override as StandardMaterial3D
-		var sparkle_alpha_min := sparkle_material.albedo_color.a
-		var sparkle_alpha_max := sparkle_alpha_min
-		for unused_sample in range(8):
-			await create_timer(0.08).timeout
-			sparkle_alpha_min = minf(sparkle_alpha_min, sparkle_material.albedo_color.a)
-			sparkle_alpha_max = maxf(sparkle_alpha_max, sparkle_material.albedo_color.a)
-		_expect(sparkle_alpha_max - sparkle_alpha_min > 0.05, "Ability sparkles do not visibly animate in and out.")
+	var ability_aura := ability_card.find_child("AbilityReadyAura", true, false) as MeshInstance3D if ability_card != null else null
+	_expect(ability_aura != null, "Usable ability has no celestial frame.")
+	_expect(
+		ability_aura != null
+		and (ability_aura.mesh as QuadMesh).size.x >= 1.60
+		and float(ability_aura.get_meta("pulse_energy_max", 0.0)) >= 1.25
+		and (ability_aura.material_override as StandardMaterial3D).albedo_color.a >= 0.95,
+		"Usable ability glow is too subtle to read clearly on the battlefield."
+	)
+	_expect(
+		ability_card != null and ability_card.find_child("AbilityReadySparkles", true, false) == null,
+		"Usable ability frame still has distracting sparkle specks around its edges."
+	)
 	_expect(ability_card != null and ability_card.find_child("AbilityReadyBadge", true, false) == null, "Usable ability should communicate through its frame without a text badge.")
 	_expect(ability_card != null and ability_card.find_child("ReadyStatus", true, false) == null, "Generic READY badge competes with ABILITY state.")
+	_expect(
+		table.player_profile_badge.size.x <= 110.0
+		and table.opponent_profile_badge.size.x <= 110.0
+		and not table.player_profile_details.visible
+		and not table.opponent_profile_details.visible
+		and table.player_profile_life_bar.size.x >= 280.0
+		and table.opponent_profile_life_bar.size.x >= 280.0
+		and table.player_profile_life_label.text == "20/20",
+		"Collapsed combat profiles are not limited to portrait and HP."
+	)
+	table._toggle_profile_expanded("opponent")
+	await process_frame
+	_expect(
+		table.opponent_profile_details.visible
+		and table.opponent_profile_badge.size.x >= 240.0
+		and table.opponent_profile_badge.size.y <= 110.0
+		and table.opponent_profile_stats.text.contains("HAND")
+		and table.opponent_profile_stats.text.contains("DECK")
+		and table.opponent_profile_stats.text.contains("DISCARD"),
+		"Clicking a profile portrait did not expand its card-count details."
+	)
+	if DisplayServer.get_name() != "headless":
+		await create_timer(0.75).timeout
+		var expanded_profile_preview := root.get_texture().get_image()
+		_expect(expanded_profile_preview.save_png(PROFILE_EXPANDED_PREVIEW_PATH) == OK, "Expanded profile preview could not be saved.")
+	table._toggle_profile_expanded("opponent")
+	await process_frame
+	var ability_base_position: Vector3 = ability_card.get_meta("base_position", ability_card.position)
+	var ability_base_scale: Vector3 = ability_card.get_meta("base_scale", ability_card.scale)
+	table.hovered_card = ability_card
+	table._animate_physical_cards(0.2, 0.0)
+	_expect(
+		ability_card.position.y >= ability_base_position.y + 0.18
+		and ability_card.scale.x >= ability_base_scale.x * 1.07,
+		"Card hover feedback is not pronounced enough to read at the table scale."
+	)
+	table.hovered_card = null
+	table._animate_physical_cards(0.2, 0.0)
+	if DisplayServer.get_name() != "headless":
+		# Give freshly rebuilt 3D card faces and their animated art time to settle
+		# before capturing; the old sparkle sampling loop provided this delay.
+		await create_timer(0.75).timeout
+		var ability_ready_preview := root.get_texture().get_image()
+		_expect(ability_ready_preview.save_png(ABILITY_READY_PREVIEW_PATH) == OK, "Ability-ready glow preview could not be saved.")
+	var active_state: Dictionary = table.state
+	table.state = active_state.duplicate(true)
+	table.state.player.hand = []
+	table.state.player.prep = []
+	table.state.player.plated = []
+	table.state.player.environment = ""
+	table._render_match()
+	_expect(
+		table.end_turn_no_actions_attention_active
+		and table.end_turn_attention_until_msec > Time.get_ticks_msec(),
+		"End Turn did not receive its brief attention pulse when no useful actions remained."
+	)
+	table.state = active_state
 
 	table.queue_free()
 	await process_frame

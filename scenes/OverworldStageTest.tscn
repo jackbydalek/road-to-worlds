@@ -1,0 +1,286 @@
+[gd_scene format=3 uid="uid://cpyex88w60yqw"]
+
+[ext_resource type="Script" uid="uid://cilcstrbt80mb" path="res://scripts/overworld/OverworldPlayer.gd" id="2_player"]
+[ext_resource type="Texture2D" uid="uid://5bchygkibekb" path="res://assets/overworld/player_idle.png" id="3_player_texture"]
+[ext_resource type="Texture2D" uid="uid://ujn002deij74" path="res://assets/overworld/skybox/kenney_skyboxes/skybox-day.png" id="4_skybox"]
+[ext_resource type="Script" uid="uid://clh8ppixjj4sg" path="res://scripts/overworld/OverworldRouteGraph.gd" id="6_routes"]
+[ext_resource type="Shader" uid="uid://1ej83i2bqaqk" path="res://assets/shaders/overworld_grass.gdshader" id="7_grass_shader"]
+[ext_resource type="Texture2D" uid="uid://dljonkxq3b55" path="res://assets/overworld/grass_painted_soft.jpg" id="8_grass_texture"]
+[ext_resource type="ArrayMesh" uid="uid://b88ywvpityvi8" path="res://assets/overworld/buildings/1Story_Mat.obj" id="9_building_one"]
+[ext_resource type="ArrayMesh" uid="uid://5boe8yhxnke4" path="res://assets/overworld/buildings/2Story_Mat.obj" id="10_building_two"]
+[ext_resource type="ArrayMesh" uid="uid://drfe1w70v7cdv" path="res://assets/overworld/buildings/2Story_Sidehouse_Mat.obj" id="11_building_side"]
+[ext_resource type="Texture2D" uid="uid://dvw5f3mi517ld" path="res://assets/overworld/park_props/gazebo.png" id="12_gazebo"]
+[ext_resource type="Texture2D" uid="uid://w3vcx0wrawuj" path="res://assets/overworld/park_props/tree.png" id="13_tree"]
+[ext_resource type="Texture2D" uid="uid://cyetyy0tfjtev" path="res://assets/overworld/park_props/lamp.png" id="14_lamp"]
+[ext_resource type="Texture2D" uid="uid://dmmq0syey2jt1" path="res://assets/overworld/park_props/bush.png" id="15_bush"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_day"]
+panorama = ExtResource("4_skybox")
+energy_multiplier = 1.25
+
+[sub_resource type="Sky" id="Sky_day"]
+sky_material = SubResource("PanoramaSkyMaterial_day")
+process_mode = 2
+
+[sub_resource type="Environment" id="Environment_overworld"]
+background_mode = 2
+sky = SubResource("Sky_day")
+sky_rotation = Vector3(-0.35, 0, 0)
+ambient_light_source = 2
+ambient_light_color = Color(0.92, 0.9, 0.84, 1)
+ambient_light_energy = 0.38
+reflected_light_source = 1
+
+[sub_resource type="ShaderMaterial" id="Material_ground"]
+resource_name = "Painted Grass — Soft Sage"
+render_priority = 0
+shader = ExtResource("7_grass_shader")
+shader_parameter/grass_texture = ExtResource("8_grass_texture")
+shader_parameter/grass_tint = Color(0.51, 0.59, 0.44, 1)
+shader_parameter/texture_strength = 0.72
+shader_parameter/saturation = 0.78
+shader_parameter/tile_count = Vector2(12, 6)
+
+[sub_resource type="BoxMesh" id="Mesh_ground"]
+material = SubResource("Material_ground")
+size = Vector3(50, 0.35, 25)
+
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(50, 0.35, 25)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.34
+height = 1.15
+
+[sub_resource type="StandardMaterial3D" id="Material_shadow"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.16, 0.21, 0.37, 0.22)
+
+[sub_resource type="CylinderMesh" id="Mesh_shadow"]
+material = SubResource("Material_shadow")
+top_radius = 0.48
+bottom_radius = 0.48
+height = 0.018
+radial_segments = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_guide"]
+bg_color = Color(1, 0.969, 0.945, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.16, 0.21, 0.37, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="OverworldStageTest" type="Node3D" unique_id=1422031818]
+
+[node name="RouteGraph" type="Node" parent="." unique_id=1975603003]
+script = ExtResource("6_routes")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=843427668]
+environment = SubResource("Environment_overworld")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=313610858]
+transform = Transform3D(0.88294756, 0.36994863, -0.2890356, 0, 0.6156615, 0.7880107, 0.46947157, -0.6957722, 0.5435968, 0, 0, 0)
+light_color = Color(1, 0.91, 0.79, 1)
+light_energy = 0.72
+shadow_enabled = true
+directional_shadow_max_distance = 48.0
+
+[node name="GroundBlock" type="MeshInstance3D" parent="." unique_id=351611495]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 2, 7, -0.18, 1)
+mesh = SubResource("Mesh_ground")
+
+[node name="GroundCollision" type="StaticBody3D" parent="." unique_id=497513481]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, -0.18, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundCollision" unique_id=685358317]
+shape = SubResource("Shape_ground")
+
+[node name="StarterCityBackdrop" type="Node3D" parent="." unique_id=418002199]
+
+[node name="StarterCityBuilding03" type="MeshInstance3D" parent="StarterCityBackdrop" unique_id=164125683]
+transform = Transform3D(1.68, 0, 0, 0, 1.68, 0, 0, 0, 1.68, 7.2135477, 0.02, -5.9)
+mesh = ExtResource("10_building_two")
+metadata/source_model = "res://assets/overworld/buildings/2Story_Mat.obj"
+
+[node name="StarterCityBuilding07" type="MeshInstance3D" parent="StarterCityBackdrop" unique_id=558678128]
+transform = Transform3D(1.66, 0, 0, 0, 1.66, 0, 0, 0, 1.66, 11.90429, 0.02, -5.7)
+mesh = ExtResource("9_building_one")
+metadata/source_model = "res://assets/overworld/buildings/1Story_Mat.obj"
+
+[node name="StarterCityBuilding09" type="MeshInstance3D" parent="StarterCityBackdrop" unique_id=1190650551]
+transform = Transform3D(1.68, 0, 0, 0, 1.68, 0, 0, 0, 1.68, 16.80873, 0.02, -5.9)
+mesh = ExtResource("10_building_two")
+metadata/source_model = "res://assets/overworld/buildings/2Story_Mat.obj"
+
+[node name="StarterCityBuilding10" type="MeshInstance3D" parent="StarterCityBackdrop" unique_id=2072909997]
+transform = Transform3D(1.72, 0, 0, 0, 1.72, 0, 0, 0, 1.72, 21.786226, 0.02, -6.064727)
+mesh = ExtResource("9_building_one")
+metadata/source_model = "res://assets/overworld/buildings/1Story_Mat.obj"
+
+[node name="StarterCityBuilding11" type="MeshInstance3D" parent="StarterCityBackdrop" unique_id=919997033]
+transform = Transform3D(1.52, 0, 0, 0, 1.52, 0, 0, 0, 1.52, 27.894306, 0.02, -6)
+mesh = ExtResource("11_building_side")
+metadata/source_model = "res://assets/overworld/buildings/2Story_Sidehouse_Mat.obj"
+
+[node name="ParkBackdrop" type="Node3D" parent="." unique_id=1710362980]
+
+[node name="TreeLeft" type="Sprite3D" parent="ParkBackdrop" unique_id=1959106163]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.7, 1.73, -4.9)
+pixel_size = 0.0037
+billboard = 1
+no_depth_test = true
+render_priority = -4
+texture = ExtResource("13_tree")
+
+[node name="TreeRight" type="Sprite3D" parent="ParkBackdrop" unique_id=1154710289]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.409789, 1.73, -8.50419)
+flip_h = true
+pixel_size = 0.0037
+billboard = 1
+no_depth_test = true
+render_priority = -4
+texture = ExtResource("13_tree")
+
+[node name="TreeFarRight" type="Sprite3D" parent="ParkBackdrop" unique_id=1695606951]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.933072, 1.5, -7.3641586)
+pixel_size = 0.0032
+billboard = 1
+no_depth_test = true
+render_priority = -4
+texture = ExtResource("13_tree")
+
+[node name="Gazebo" type="Sprite3D" parent="ParkBackdrop" unique_id=961901684]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.3, 2.18, -4.15)
+pixel_size = 0.00365
+billboard = 1
+no_depth_test = true
+render_priority = -3
+texture = ExtResource("12_gazebo")
+
+[node name="LampLeft" type="Sprite3D" parent="ParkBackdrop" unique_id=299585875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.7, 1.34, -3.3)
+pixel_size = 0.0032
+billboard = 1
+no_depth_test = true
+render_priority = -1
+texture = ExtResource("14_lamp")
+
+[node name="LampRight" type="Sprite3D" parent="ParkBackdrop" unique_id=19266426]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.3850398, 1.34, -3.3)
+flip_h = true
+pixel_size = 0.0032
+billboard = 1
+no_depth_test = true
+render_priority = -1
+texture = ExtResource("14_lamp")
+
+[node name="ParkBushLeft" type="Sprite3D" parent="ParkBackdrop" unique_id=1670060914]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.67, -3.65)
+pixel_size = 0.0034
+billboard = 1
+no_depth_test = true
+render_priority = -2
+texture = ExtResource("15_bush")
+
+[node name="ParkBushCenterLeft" type="Sprite3D" parent="ParkBackdrop" unique_id=1295546832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.1, 0.67, -3.55)
+flip_h = true
+pixel_size = 0.0034
+billboard = 1
+no_depth_test = true
+render_priority = -2
+texture = ExtResource("15_bush")
+
+[node name="ParkBushCenterRight" type="Sprite3D" parent="ParkBackdrop" unique_id=1005043593]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0.67, -3.55)
+pixel_size = 0.0034
+billboard = 1
+no_depth_test = true
+render_priority = -2
+texture = ExtResource("15_bush")
+
+[node name="ParkBushRight" type="Sprite3D" parent="ParkBackdrop" unique_id=2051693768]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.355466, 0.67, -3.65)
+flip_h = true
+pixel_size = 0.0034
+billboard = 1
+no_depth_test = true
+render_priority = -2
+texture = ExtResource("15_bush")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1186583074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.62, 3.138773)
+script = ExtResource("2_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=120127304]
+shape = SubResource("CapsuleShape_player")
+
+[node name="Visual" type="Node3D" parent="Player" unique_id=1237267618]
+
+[node name="Shadow" type="MeshInstance3D" parent="Player/Visual" unique_id=1584344291]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.58, 0)
+mesh = SubResource("Mesh_shadow")
+
+[node name="Artwork" type="Node3D" parent="Player/Visual" unique_id=1059781251]
+
+[node name="PlayerSprite" type="Sprite3D" parent="Player/Visual/Artwork" unique_id=762179669]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 0, 0.64, 0)
+pixel_size = 0.0027
+billboard = 1
+alpha_cut = 1
+texture = ExtResource("3_player_texture")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=112065678]
+transform = Transform3D(1, 0, 0, 0, 0.7771459, 0.6293204, 0, -0.6293204, 0.7771459, -8, 17.5, 24)
+current = true
+fov = 35.0
+near = 0.1
+far = 80.0
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=488969688]
+
+[node name="RouteButtons" type="Control" parent="Interface" unique_id=725332031]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RouteStatus" type="Label" parent="Interface" unique_id=1405007780]
+offset_left = 24.0
+offset_top = 118.0
+offset_right = 520.0
+offset_bottom = 202.0
+theme_override_colors/font_color = Color(0.16, 0.21, 0.37, 1)
+theme_override_colors/font_outline_color = Color(1, 0.969, 0.945, 1)
+theme_override_constants/outline_size = 7
+theme_override_font_sizes/font_size = 22
+text = "Choose your next destination"
+
+[node name="Guide" type="PanelContainer" parent="Interface" unique_id=715252306]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 572.0
+offset_bottom = 106.0
+theme_override_styles/panel = SubResource("StyleBox_guide")
+
+[node name="Margin" type="MarginContainer" parent="Interface/Guide" unique_id=226581893]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="Text" type="Label" parent="Interface/Guide/Margin" unique_id=1928913822]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.16, 0.21, 0.37, 1)
+theme_override_font_sizes/font_size = 19
+text = "Choose a connected stop  •  Hover the edge arrows to explore"

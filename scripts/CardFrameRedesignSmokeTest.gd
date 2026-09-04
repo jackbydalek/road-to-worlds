@@ -67,7 +67,7 @@ func _run() -> void:
 		var stats := child.find_child("CardStatsBadge", true, false) as Panel
 		var type_ribbon := child.find_child("CardTypeRibbon", true, false) as Panel
 		var requirements := child.find_child("CardRequirements", true, false) as Label
-		_expect(frame != null and frame.get_meta("frame_style", "") == "cozy_cafe", "A representative card did not use the reusable frame.")
+		_expect(frame != null and frame.get_meta("frame_style", "") == "illustrated_card", "A representative card did not use the reusable frame.")
 		if frame != null:
 			var frame_style := frame.get_theme_stylebox("panel") as StyleBoxFlat
 			_expect(frame_style != null and frame_style.border_color == frame.get_meta("difficulty_color"), "The selected border color did not replace the outer frame outline.")

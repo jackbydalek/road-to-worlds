@@ -16,9 +16,6 @@ func _run() -> void:
 	await _settle()
 
 	await _capture("01_title.png")
-	main._show_game_start()
-	await _settle()
-	await _capture("02_game_status.png")
 
 	main.season_setup_archetype_index = 1
 	main.season_setup_difficulty_index = 0

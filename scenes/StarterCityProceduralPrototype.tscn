@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/OverworldStageTest.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/overworld/StarterCityProceduralPrototype.gd" id="2_prototype"]
+
+[node name="StarterCityProceduralPrototype" instance=ExtResource("1_base")]
+script = ExtResource("2_prototype")
+
+[node name="RouteGraph" parent="." index="0"]
+generation_seed = 240826
+vertical_camera_locked = true
+
+[node name="Camera3D" parent="." index="8"]
+projection = 1
+size = 17.5
+
+[editable path="RouteGraph"]
