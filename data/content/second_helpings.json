@@ -1,0 +1,282 @@
+{
+  "expansion": {
+    "id": "second_helpings",
+    "name": "Second Helpings",
+    "code": "HELP",
+    "release_order": 2
+  },
+  "cards": [
+    {
+      "id": "spicy_jalapenowl",
+      "name": "Jalapeñowl",
+      "subtitle": "Jalapeño + owl",
+      "card_type": "meal",
+      "archetype": "spicy",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 4,
+      "health": 3,
+      "recipe": [
+        "spicy"
+      ],
+      "special_serve": {
+        "recipe": [
+          "any"
+        ],
+        "ingredient_filter": {
+          "spiced": true
+        },
+        "text": "Sacrifice 1 spiced Ingredient.",
+        "require_ready": false
+      },
+      "text": "When served, deal 2 damage to the opposing Chef. Special Serve: Sacrifice 1 Ingredient.",
+      "on_play": [
+        {
+          "type": "damage_enemy_player",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "spicy_quesadillama",
+      "name": "Quesadillama",
+      "subtitle": "Quesadilla + llama",
+      "card_type": "meal",
+      "archetype": "spicy",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 4,
+      "health": 4,
+      "recipe": [
+        "spicy",
+        "any"
+      ],
+      "special_serve": {
+        "recipe": [
+          "spicy"
+        ],
+        "ingredient_filter": {
+          "min_attack": 3
+        },
+        "text": "Sacrifice 1 Spicy Ingredient with 3+ Attack.",
+        "require_ready": false
+      },
+      "text": "When served, this gains +1 Attack. Special Serve: Sacrifice 1 Spicy Ingredient with 3+ Attack.",
+      "on_play": [
+        {
+          "type": "buff_self",
+          "attack": 1
+        }
+      ]
+    },
+    {
+      "id": "sweet_tiramiswan",
+      "name": "Tiramiswan",
+      "subtitle": "Tiramisu + swan",
+      "card_type": "meal",
+      "archetype": "sweet",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 3,
+      "health": 4,
+      "recipe": [
+        "sweet"
+      ],
+      "special_serve": {
+        "recipe": [
+          "any"
+        ],
+        "ingredient_filter": {
+          "spiced": true
+        },
+        "text": "Sacrifice 1 spiced Ingredient.",
+        "require_ready": false
+      },
+      "text": "When served, draw 1 card. Special Serve: Sacrifice 1 Ingredient.",
+      "on_play": [
+        {
+          "type": "draw",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "sweet_crepebara",
+      "name": "Crêpebara",
+      "subtitle": "Crêpe + capybara",
+      "card_type": "meal",
+      "archetype": "sweet",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 3,
+      "health": 5,
+      "recipe": [
+        "sweet",
+        "any"
+      ],
+      "special_serve": {
+        "recipe": [
+          "sweet"
+        ],
+        "ingredient_filter": {
+          "keyword": "bodyguard"
+        },
+        "text": "Sacrifice 1 Sweet Ingredient with Bodyguard.",
+        "require_ready": false
+      },
+      "text": "When served, heal your Chef for 2. Special Serve: Sacrifice 1 Sweet Ingredient with Bodyguard.",
+      "on_play": [
+        {
+          "type": "heal_player",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "hearty_macawroni",
+      "name": "Macawroni",
+      "subtitle": "Macaroni + macaw",
+      "card_type": "meal",
+      "archetype": "hearty",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 3,
+      "health": 5,
+      "recipe": [
+        "hearty"
+      ],
+      "special_serve": {
+        "recipe": [
+          "hearty"
+        ],
+        "ingredient_filter": {
+          "min_health": 4
+        },
+        "text": "Sacrifice 1 Hearty Ingredient with 4+ current Health.",
+        "require_ready": false
+      },
+      "text": "When served, heal your Chef for 2. Special Serve: Sacrifice 1 Hearty Ingredient with 4+ current Health.",
+      "on_play": [
+        {
+          "type": "heal_player",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "hearty_wombatato",
+      "name": "Wombatato",
+      "subtitle": "Wombat + potato",
+      "card_type": "meal",
+      "archetype": "hearty",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 4,
+      "health": 5,
+      "recipe": [
+        "hearty",
+        "any"
+      ],
+      "special_serve": {
+        "recipe": [
+          "any"
+        ],
+        "ingredient_filter": {
+          "damaged": true
+        },
+        "text": "Sacrifice 1 damaged Ingredient.",
+        "require_ready": false
+      },
+      "text": "When served, this gains +1 Health. Special Serve: Sacrifice 1 damaged Ingredient.",
+      "on_play": [
+        {
+          "type": "buff_self",
+          "health": 1
+        }
+      ]
+    },
+    {
+      "id": "fresh_guacamolemur",
+      "name": "Guacamolemur",
+      "subtitle": "Guacamole + lemur",
+      "card_type": "meal",
+      "archetype": "fresh",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 4,
+      "health": 4,
+      "recipe": [
+        "fresh",
+        "any"
+      ],
+      "special_serve": {
+        "recipe": [
+          "any",
+          "any"
+        ],
+        "ingredient_filter": {
+          "token": true
+        },
+        "text": "Sacrifice 2 Ingredient tokens.",
+        "require_ready": false
+      },
+      "text": "When served, draw 1 card. Special Serve: Sacrifice 2 Ingredient tokens.",
+      "on_play": [
+        {
+          "type": "draw",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "funky_kimchilla",
+      "name": "Kimchilla",
+      "subtitle": "Kimchi + chinchilla",
+      "card_type": "meal",
+      "archetype": "funky",
+      "expansion_id": "second_helpings",
+      "unlock_week": 2,
+      "prototype": true,
+      "rare": false,
+      "attack": 3,
+      "health": 4,
+      "recipe": [
+        "funky"
+      ],
+      "special_serve": {
+        "recipe": [
+          "any"
+        ],
+        "ingredient_filter": {
+          "spiced": true
+        },
+        "text": "Sacrifice 1 spiced Ingredient.",
+        "require_ready": false
+      },
+      "text": "When served, return an Ingredient from your discard to your hand. Special Serve: Sacrifice 1 Ingredient.",
+      "on_play": [
+        {
+          "type": "recover",
+          "amount": 1,
+          "card_types": [
+            "ingredient"
+          ]
+        }
+      ]
+    }
+  ]
+}

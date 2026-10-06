@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Browse and edit the cards in See You at Locals.">
+  <title>Card Studio · See You at Locals</title>
+  <link rel="icon" href="/assets/ui/locals-card-club-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/palette.css">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="Card Studio home"><img src="/assets/logos/see_you_at_locals_supplied.png" alt="See You at Locals"><span>Card Studio</span></a>
+    <div class="header-actions"><span id="connection">Connecting to your game…</span><button id="refresh-library" class="quiet">Refresh</button><button id="requests-button">Change requests <span id="request-count">0</span></button></div>
+  </header>
+  <main>
+    <aside class="filters" aria-label="Filter the library">
+      <div class="section-label">YOUR COLLECTION</div>
+      <button class="filter-all selected" id="all-cards">All cards <span id="total">—</span></button>
+      <div class="section-label">CARD TYPE</div><div id="type-filters"></div>
+      <div class="section-label">AFFINITY</div><div id="affinity-filters" class="affinities"></div>
+      <label class="field">Set<select id="set-filter"><option value="">Every set</option></select></label>
+      <label class="field">Artwork<select id="art-filter"><option value="">All artwork</option><option value="ready">Has artwork</option><option value="pending">Art pending</option></select></label>
+      <label class="check"><input type="checkbox" id="draft-filter"> Saved drafts only</label>
+      <div class="sidebar-note">Edits stay in drafts until you apply them to the game.</div>
+    </aside>
+    <section class="library" aria-label="Card library">
+      <div class="library-heading"><div><div class="section-label">THE CARD FILE</div><h1>Your cards, on the table.</h1></div><span id="result-count" aria-live="polite"></span></div>
+      <div class="toolbar"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a card, keyword, or effect…" aria-label="Search cards"></label><select id="sort" aria-label="Sort cards"><option value="catalog">Catalog order</option><option value="name">Name A–Z</option><option value="attack">Highest attack</option><option value="health">Highest health</option></select></div>
+      <div id="card-grid" class="card-grid"><p>Loading your card library…</p></div>
+    </section>
+    <section id="editor" class="editor" aria-label="Card editor"><div class="editor-empty">Choose a card to begin editing.</div></section>
+  </main>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="review"><form method="dialog"><div class="dialog-heading"><h2 id="review-title">Review changes</h2><button aria-label="Close review" value="cancel">✕</button></div><div id="review-body"></div><div class="dialog-actions"><button value="cancel">Keep editing</button><button id="confirm-apply" class="primary" type="button">Apply to game</button></div></form></dialog>
+  <dialog id="requests"><form method="dialog"><div class="dialog-heading"><h2>Changes for Codex</h2><button aria-label="Close requests">✕</button></div><p>Save a request on a card, then tell Codex: <strong>“Implement my card change requests.”</strong></p><p class="muted">Requests are saved in this project. They need a Codex task to change game code.</p><div id="requests-list"></div><div class="dialog-actions"><button id="copy-requests" type="button">Copy handoff</button><button class="primary">Done</button></div></form></dialog>
+</body>
+</html>

@@ -14,7 +14,7 @@ const ART_PENDING := preload("res://assets/cards/art_pending.png")
 
 const DEFAULT_SIZE := Vector2(250, 355)
 const DEFAULT_FRAME_DURATION := 0.1
-const SUPPORTED_ARCHETYPES := ["spicy", "sweet", "hearty", "fresh", "funky"]
+const SUPPORTED_ARCHETYPES := ["spicy", "sweet", "hearty", "fresh", "funky", "neutral"]
 const AFFINITY_CARD_TYPES := ["ingredient", "meal"]
 const NEUTRAL_CARD_TYPES := ["chef", "tool", "spice", "environment"]
 
@@ -61,12 +61,18 @@ func _build_runtime_face(difficulty_id: String) -> void:
 	_runtime_face.visual_changed.connect(func() -> void: visual_changed.emit())
 
 	var runtime_data := _card.duplicate(true)
+	# Carry the selected rim into rendering, not just inspection metadata.
+	runtime_data["card_border_id"] = difficulty_id
+	# The shared frame is a presentation default on this private copy; browsing
+	# or inspecting a card never writes a UI flag into the authoritative catalog.
+	if not runtime_data.has("peach_soda_frame"):
+		runtime_data["peach_soda_frame"] = true
 	var card_type := String(_card.get("card_type", "ingredient"))
 	runtime_data["affinities"] = _card_affinity_ids()
 	runtime_data["display_card_type"] = "TOOL" if card_type == "tool" else AFFINITY_VISUALS.card_type_name(card_type)
 	runtime_data["compact_visual"] = _compact_visual
 	runtime_data["show_art"] = _show_art
-	runtime_data["show_stats"] = card_type not in NEUTRAL_CARD_TYPES
+	runtime_data["show_stats"] = bool(_card.get("show_stats", card_type not in NEUTRAL_CARD_TYPES))
 	if card_type in NEUTRAL_CARD_TYPES:
 		runtime_data["footer_text"] = "SIGNATURE EFFECT" if card_type == "chef" else "UTILITY / RESOLVE"
 	if not runtime_data.has("art_zoom"):

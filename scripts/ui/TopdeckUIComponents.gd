@@ -2,12 +2,13 @@ extends RefCounted
 class_name TopdeckUIComponents
 
 ## Production UI primitives for the run-facing game. These components implement
-## ART_DIRECTION.md's cool neutral chassis, clipped geometry, and semantic state
+## ART_DIRECTION.md's printed scorecards, friendly type, and clear action
 ## colors. Legacy screen helpers remain available only while screens migrate.
 
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const SHAPES := preload("res://scripts/ui/PaintedUiShapes.gd")
 const ANGULAR_SURFACE_SCRIPT := preload("res://scripts/ui/BattleAngularSurface.gd")
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 
 const SCREEN_MARGIN := 18
@@ -19,12 +20,12 @@ const CONTROL_HEIGHT := 46
 static func make_hud_bar(
 	eyebrow: String,
 	title: String,
-	accent: Color = PALETTE.FOCUS_EDGE,
+	accent: Color = PALETTE.PEACH_TEAL,
 	minimum_height: float = 78.0
 ) -> Dictionary:
 	var parts := make_surface_panel(
 		"ProductionHudBar",
-		PALETTE.SURFACE_RAISED,
+		PALETTE.PEACH_PAPER,
 		accent,
 		Vector2(0, minimum_height),
 		Vector4(22, 10, 18, 10),
@@ -43,8 +44,8 @@ static func make_hud_bar(
 	identity.custom_minimum_size = Vector2(210, 0)
 	identity.add_theme_constant_override("separation", 0)
 	row.add_child(identity)
-	identity.add_child(make_label(eyebrow.to_upper(), "eyebrow", accent))
-	identity.add_child(make_label(title.to_upper(), "hud_title", PALETTE.TEXT_PRIMARY))
+	identity.add_child(make_label(eyebrow, "eyebrow", _paper_accent(accent)))
+	identity.add_child(make_label(title, "hud_title", PALETTE.PEACH_INK))
 
 	var stats := HBoxContainer.new()
 	stats.name = "ProductionHudStats"
@@ -61,28 +62,21 @@ static func make_hud_bar(
 static func make_stat_chip(text: String, accent: Color, node_name: String = "ProductionStatChip") -> Label:
 	var chip := Label.new()
 	chip.name = node_name
-	chip.text = text.to_upper()
+	chip.text = text
 	chip.custom_minimum_size = Vector2(134, 40)
 	chip.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	chip.add_theme_font_override("font", BODY_FONT)
 	chip.add_theme_font_size_override("font_size", 15)
-	chip.add_theme_color_override("font_color", PALETTE.TEXT_PRIMARY)
+	chip.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	chip.add_theme_stylebox_override("normal", stat_chip_style(accent))
 	return chip
 
 
 static func stat_chip_style(accent: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = PALETTE.SURFACE_ROOT.lightened(0.035)
-	style.border_color = PALETTE.SURFACE_SECONDARY.darkened(0.12)
-	style.set_border_width_all(1)
-	style.border_width_left = 4
-	style.border_color = accent
-	style.corner_radius_top_left = 3
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_right = 3
-	style.corner_radius_bottom_left = 8
+	var style := paper_style(PALETTE.PEACH_PAPER.lightened(0.015).lerp(accent, 0.025), 0)
+	style.shadow_size = 0
+	style.shadow_offset = Vector2.ZERO
 	style.content_margin_left = 10.0
 	style.content_margin_right = 10.0
 	return style
@@ -100,7 +94,7 @@ static func make_encounter_shell(
 ) -> Dictionary:
 	var parts := make_surface_panel(
 		node_name,
-		PALETTE.SURFACE_RAISED,
+		PALETTE.PEACH_PAPER,
 		accent,
 		Vector2(0, 680),
 		Vector4(30, 24, 30, 28),
@@ -115,20 +109,20 @@ static func make_encounter_shell(
 	header.add_theme_constant_override("separation", 3)
 	body.add_child(header)
 	if not eyebrow.is_empty():
-		header.add_child(make_label(eyebrow.to_upper(), "eyebrow", accent))
+		header.add_child(make_label(eyebrow, "eyebrow", _paper_accent(accent)))
 	if not title.is_empty():
-		header.add_child(make_label(title.to_upper(), "screen_title", PALETTE.TEXT_PRIMARY))
+		header.add_child(make_label(title, "screen_title", PALETTE.PEACH_INK))
 	if not subtitle.is_empty():
-		header.add_child(make_label(subtitle, "body", PALETTE.TEXT_SECONDARY))
+		header.add_child(make_label(subtitle, "body", PALETTE.PEACH_INK_SOFT))
 	if not stats_text.is_empty():
-		var stats := make_label(stats_text, "status", PALETTE.STATE_REWARD)
+		var stats := make_label(stats_text, "status", PALETTE.SIGNAL_YELLOW.darkened(0.54))
 		stats.name = "EncounterStats"
 		header.add_child(stats)
 
 	var divider := ColorRect.new()
 	divider.name = "EncounterAccentDivider"
-	divider.custom_minimum_size = Vector2(0, 3)
-	divider.color = accent
+	divider.custom_minimum_size = Vector2(0, 1)
+	divider.color = PALETTE.PEACH_EDGE
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_child(divider)
 
@@ -143,7 +137,7 @@ static func make_encounter_shell(
 	if media_texture != null:
 		var media_parts := make_surface_panel(
 			"EncounterMediaPanel",
-			PALETTE.SURFACE_ROOT,
+			PALETTE.PEACH_PAPER_MUTED,
 			accent.darkened(0.08),
 			Vector2(270, 0),
 			Vector4(18, 18, 18, 18),
@@ -186,12 +180,12 @@ static func make_encounter_shell(
 
 static func make_section(
 	title: String,
-	accent: Color = PALETTE.FOCUS_EDGE,
+	accent: Color = PALETTE.PEACH_TEAL,
 	minimum_size: Vector2 = Vector2.ZERO
 ) -> Dictionary:
 	var parts := make_surface_panel(
 		"ProductionSection",
-		PALETTE.SURFACE_ROOT.lightened(0.025),
+		PALETTE.PEACH_PAPER_MUTED.lightened(0.025),
 		Color(accent, 0.82),
 		minimum_size,
 		SECTION_MARGIN,
@@ -200,7 +194,7 @@ static func make_section(
 	var body := parts.body as VBoxContainer
 	body.add_theme_constant_override("separation", 9)
 	if not title.is_empty():
-		body.add_child(make_label(title.to_upper(), "section", PALETTE.TEXT_PRIMARY))
+		body.add_child(make_label(title, "section", PALETTE.PEACH_INK))
 	return parts
 
 
@@ -208,23 +202,24 @@ static func make_reward_header(
 	title: String,
 	instruction: String,
 	stats_text: String,
-	accent: Color = PALETTE.FOCUS_EDGE
+	accent: Color = PALETTE.PEACH_TEAL
 ) -> Dictionary:
 	var parts := make_surface_panel(
 		"ProductionRewardHeader",
-		PALETTE.SURFACE_RAISED,
+		PALETTE.PEACH_PAPER,
 		accent,
-		Vector2(0, 112),
+		Vector2(0, 72 if instruction.is_empty() else 112),
 		Vector4(22, 12, 22, 12),
-		true
+		false
 	)
 	var body := parts.body as VBoxContainer
 	body.add_theme_constant_override("separation", 4)
-	var heading := make_label(title.to_upper(), "section", PALETTE.TEXT_PRIMARY)
-	var detail := make_label(instruction, "small", PALETTE.TEXT_SECONDARY)
+	var heading := make_label(title, "section", PALETTE.PEACH_INK)
+	var detail := make_label(instruction, "small", PALETTE.PEACH_INK_SOFT)
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var stats := make_label(stats_text, "small", PALETTE.STATE_REWARD)
+	var stats := make_label(stats_text, "small", PALETTE.SIGNAL_YELLOW.darkened(0.54))
 	body.add_child(heading)
+	detail.visible = not instruction.is_empty()
 	body.add_child(detail)
 	body.add_child(stats)
 	parts["title"] = heading
@@ -243,7 +238,7 @@ static func make_button(
 	if not node_name.is_empty():
 		button.name = node_name
 	button.text = text
-	button.custom_minimum_size = minimum_size
+	button.custom_minimum_size = Vector2(minimum_size.x, maxf(CONTROL_HEIGHT, minimum_size.y))
 	button.focus_mode = Control.FOCUS_ALL
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.set_meta("ui_button_variant", variant)
@@ -253,33 +248,46 @@ static func make_button(
 	return button
 
 
+static func _paper_accent(accent: Color) -> Color:
+	# Eyebrows can arrive in any affinity color, including bright yellow. Keep
+	# their identity while giving small printed text a readable ink value.
+	var ink := Color(accent, 1.0)
+	var paper_luminance := PALETTE.PEACH_PAPER.srgb_to_linear().get_luminance()
+	for _step in range(12):
+		var contrast := (paper_luminance + 0.05) / (ink.srgb_to_linear().get_luminance() + 0.05)
+		if contrast >= 4.5:
+			break
+		ink = ink.lerp(PALETTE.PEACH_INK, 0.16)
+	return ink
+
+
 static func make_label(text: String, role: String = "body", color: Color = Color.TRANSPARENT) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var font: Font = BODY_FONT
 	var font_size := 16
-	var fallback_color := PALETTE.TEXT_SECONDARY
+	var fallback_color := PALETTE.PEACH_INK_SOFT
 	match role:
 		"eyebrow":
 			font = DISPLAY_FONT
 			font_size = 13
-			fallback_color = PALETTE.FOCUS_EDGE
+			fallback_color = _paper_accent(PALETTE.PEACH_TEAL)
 		"hud_title":
 			font = DISPLAY_FONT
 			font_size = 24
-			fallback_color = PALETTE.TEXT_PRIMARY
+			fallback_color = PALETTE.PEACH_INK
 		"screen_title":
 			font = DISPLAY_FONT
 			font_size = 38
-			fallback_color = PALETTE.TEXT_PRIMARY
+			fallback_color = PALETTE.PEACH_INK
 		"section":
 			font = DISPLAY_FONT
 			font_size = 21
-			fallback_color = PALETTE.TEXT_PRIMARY
+			fallback_color = PALETTE.PEACH_INK
 		"status":
 			font_size = 15
-			fallback_color = PALETTE.STATE_REWARD
+			fallback_color = PALETTE.SIGNAL_YELLOW.darkened(0.54)
 		"small":
 			font_size = 14
 		"muted":
@@ -300,7 +308,7 @@ static func make_surface_panel(
 	accent: Color,
 	minimum_size: Vector2 = Vector2.ZERO,
 	margins: Vector4 = PANEL_MARGIN,
-	show_inner_keyline: bool = true
+	show_inner_keyline: bool = false
 ) -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.name = node_name
@@ -330,3 +338,52 @@ static func make_surface_panel(
 	body.add_theme_constant_override("separation", 10)
 	margin.add_child(body)
 	return {"panel": panel, "surface": surface, "pattern": panel.get_node_or_null("%sPattern" % node_name), "body": body}
+
+
+static func flat_style(fill: Color, padding: int = 16) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.content_margin_left = padding
+	style.content_margin_right = padding
+	style.content_margin_top = padding
+	style.content_margin_bottom = padding
+	return style
+
+
+static func paper_style(fill: Color = PALETTE.PEACH_PAPER, padding: int = 16) -> StyleBoxFlat:
+	return SHAPES.style(fill, Vector4(padding, padding, padding, padding))
+
+
+static func style_scroll(scroll: ScrollContainer) -> void:
+	for bar in [scroll.get_v_scroll_bar(), scroll.get_h_scroll_bar()]:
+		for state in ["scroll", "grabber", "grabber_highlight", "grabber_pressed"]:
+			var fill := PALETTE.PEACH_PAPER_MUTED if state == "scroll" else PALETTE.PEACH_TEAL if state in ["grabber_highlight", "grabber_pressed"] else PALETTE.PEACH_EDGE
+			var style := flat_style(fill, 5)
+			style.set_corner_radius_all(4)
+			bar.add_theme_stylebox_override(state, style)
+
+
+static func enter(control: Control) -> void:
+	if not control.is_inside_tree() or bool(control.get_tree().root.get_meta("reduced_motion", false)):
+		return
+	control.modulate.a = 0.0
+	control.create_tween().tween_property(control, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+static func toast(source: Control, message: String, variant: String = "confirm") -> void:
+	var root := source.get_tree().root
+	for previous in source.get_tree().get_nodes_in_group("ui_feedback"):
+		previous.queue_free()
+	var feedback := PanelContainer.new()
+	feedback.name = "ActionFeedback"
+	feedback.add_to_group("ui_feedback")
+	feedback.z_index = 4000
+	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	feedback.add_theme_stylebox_override("panel", paper_style())
+	var color := PALETTE.ACTION_DANGER.darkened(0.24) if variant == "danger" else PALETTE.SIGNAL_YELLOW.darkened(0.54) if variant == "reward" else PALETTE.HEALTH_FILL
+	feedback.add_child(make_label(message, "section", color))
+	root.add_child(feedback)
+	feedback.size = feedback.get_combined_minimum_size()
+	feedback.position = Vector2((source.get_viewport_rect().size.x - feedback.size.x) * 0.5, source.get_viewport_rect().size.y - 140)
+	enter(feedback)
+	root.get_tree().create_timer(1.5).timeout.connect(feedback.queue_free)

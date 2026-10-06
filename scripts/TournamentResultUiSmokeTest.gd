@@ -16,6 +16,8 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 	await process_frame
+	main.autosave_enabled = false
+	main.player_settings.reduced_motion = true
 	var public_run := "--public" in OS.get_cmdline_user_args()
 	_start_season(main)
 
@@ -41,8 +43,8 @@ func _run() -> void:
 			main.find_child("TournamentResultRoundCard_%d" % round_number, true, false) != null,
 			"Round %d is missing from the recap." % round_number
 		)
-	var outcome := main.find_child("TournamentResultOutcome", true, false) as Label
-	_expect(outcome != null and outcome.text == "EVENT CLEARED", "The victory outcome is not player-facing.")
+	var outcome := main.find_child("TournamentResultProgress", true, false) as Label
+	_expect(outcome != null and outcome.text == "Round won", "The victory outcome is not player-facing.")
 	var primary := main.find_child("SeasonResultPrimaryAction", true, false) as Button
 	_expect(primary != null and primary.text == "Open Prize Packs (1)", "The prize pack is not the clear primary action.")
 	var technical_details := main.find_child("TournamentResultTechnicalDetails", true, false)
@@ -64,30 +66,58 @@ func _run() -> void:
 	)
 	await process_frame
 	await process_frame
-	outcome = main.find_child("TournamentResultOutcome", true, false) as Label
-	_expect(outcome != null and outcome.text == "SEASON ENDED", "The defeat ceremony does not explain the outcome.")
+	outcome = main.find_child("TournamentResultProgress", true, false) as Label
+	_expect(outcome != null and outcome.text == "Defeated", "The defeat ceremony does not explain the outcome.")
 	var paper_background := main.find_child("PaperBackground", true, false) as ColorRect
 	var pastel_background := main.find_child("PastelWorkspaceBackground", true, false) as ColorRect
-	_expect(
-		paper_background != null and not paper_background.visible
-		and pastel_background != null and pastel_background.visible,
-		"The season-ended screen still uses the paper background."
-	)
-	var defeat_hero := main.find_child("TournamentResultHero", true, false) as PanelContainer
-	var defeat_hero_style := defeat_hero.get_theme_stylebox("panel") as StyleBoxFlat if defeat_hero != null else null
-	_expect(
-		defeat_hero_style != null
-		and defeat_hero_style.bg_color.get_luminance() > 0.75
-		and defeat_hero_style.border_color.is_equal_approx(PALETTE.NAVY)
-		and defeat_hero_style.corner_radius_top_left >= 16,
-		"The season-ended hero does not use the smooth pastel card treatment."
-	)
+	var background := main.find_child("RoutePresentationBackground", true, false) as ColorRect
+	_expect(not paper_background.visible and not pastel_background.visible and background.visible and background.color.is_equal_approx(PALETTE.PEACH_PAPER), "The result does not use the shared Peach Soda background.")
+	var room := background.get_node_or_null("LocalsMenuRoom")
+	_expect(room != null and room.get_script().resource_path == "res://scripts/ui/PeachSodaBattleBackdrop.gd", "The result should use native room geometry rather than a retired generated backdrop.")
+	var hero := main.find_child("TournamentResultHero", true, false) as PanelContainer
+	var hero_style := main.find_child("TournamentResultHeroSurface", true, false)
+	_expect(hero_style != null and hero_style.fill_color.is_equal_approx(PALETTE.PEACH_PAPER), "The defeat banner must use the shared paper surface.")
+	_expect(hero.find_children("*", "Label", true, false).size() == 2, "The result must show both the outcome and run progress.")
+
 	primary = main.find_child("SeasonResultPrimaryAction", true, false) as Button
-	_expect(primary != null and primary.text == "Start New Run", "Defeat does not offer a clear restart action.")
-	var primary_style := primary.get_theme_stylebox("normal") as StyleBoxFlat if primary != null else null
-	_expect(primary_style != null and primary_style.bg_color.is_equal_approx(PALETTE.CORAL), "The restart action is not using the coral primary-action treatment.")
+	_expect(primary != null and primary.text == "Start New Run" and primary.get_meta("ui_button_variant", "") == "primary", "Defeat does not offer a clear restart action.")
 	_expect(_tree_contains_text(main, "Review Deck"), "Defeat does not offer a run-review action.")
 	_expect(not _tree_contains_text(main, "Visit Card Shop"), "Defeat still offers an invalid shop route.")
+
+	# A long match history must never push the restart/review actions off screen.
+	var long_summary := _defeat_summary()
+	long_summary.wins = 11
+	long_summary.losses = 1
+	long_summary.round_results = []
+	for index in range(12):
+		long_summary.round_results.append({"round": index + 1, "opponent_name": "Local Rival %d" % (index + 1), "opponent_archetype": "Hearty Starter", "won": index < 11, "turn": 7, "player_life": 0, "cash": 2})
+	for viewport_size in [Vector2i(1280, 720), Vector2i(1440, 900), Vector2i(1920, 1080), Vector2i(1728, 1117)]:
+		root.size = viewport_size
+		main.run.last_event_result = long_summary.duplicate(true)
+		main._show_tournament_result([], false)
+		await _settle()
+		_check_actions(main)
+		var result_scroll := main.find_child("TournamentResultScroll", true, false) as ScrollContainer
+		var final_round := main.find_child("TournamentResultRoundCard_12", true, false) as Control
+		result_scroll.ensure_control_visible(final_round)
+		await _settle()
+		_expect(result_scroll.get_global_rect().encloses(final_round.get_global_rect()), "The last result row cannot be brought into view.")
+		_check_actions(main)
+
+	# The screenshot came from an older result without last_event_result data.
+	# Rendering a fallback must offer the same valid end-of-run actions.
+	main.run.last_event_result = {}
+	main._show_tournament_result(["The run is over."], false)
+	await _settle()
+	_check_actions(main)
+	_expect((main.find_child("TournamentResultRecord", true, false) as Label).text == "—" and _tree_contains_text(main, "Earnings not saved"), "The fallback invented a record or earnings for missing history.")
+	_expect(not _tree_contains_text(main, "Visit Card Shop") and not _tree_contains_text(main, "View Calendar"), "The fallback defeat offers legacy progression actions.")
+	main._show_tournament_result(["Round 1: Lost", "Round 2: Won"], false)
+	await _settle()
+	_expect((main.find_child("TournamentResultRecord", true, false) as Label).text == "1–1" and main.find_child("TournamentResultRoundCard_1", true, false) == null, "Aggregate-only history invented a round order.")
+	_click(main.find_child("SeasonResultPrimaryAction", true, false))
+	await _settle()
+	_expect(main.current_screen == "season_setup", "Start New Run did not open starter selection.")
 
 	main._release_audio_streams()
 	await create_timer(0.12).timeout
@@ -98,6 +128,33 @@ func _run() -> void:
 		return
 	print("Tournament result UI smoke test passed.")
 	quit()
+
+
+func _settle() -> void:
+	for unused in range(8):
+		await process_frame
+
+
+func _check_actions(main: Node) -> void:
+	var actions := main.find_child("SeasonResultActions", true, false) as Control
+	var result_scroll := main.find_child("TournamentResultScroll", true, false) as Control
+	_expect(actions.get_global_rect().position.y >= result_scroll.get_global_rect().end.y, "Actions overlap the scrolling recap.")
+	for button_node in actions.find_children("*", "Button", true, false):
+		var button := button_node as Button
+		_expect(button != null and not button.disabled and root.get_visible_rect().encloses(button.get_global_rect()), "A result action is clipped or disabled.")
+		_expect(button.size.y * root.size.y / root.get_visible_rect().size.y >= 46.0, "A result action is too small at this resolution.")
+
+
+func _click(control: Control) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.position = control.get_global_rect().get_center()
+	event.global_position = event.position
+	root.push_input(event, true)
+	event = event.duplicate()
+	event.pressed = false
+	root.push_input(event, true)
 
 
 func _start_season(main) -> void:

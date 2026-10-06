@@ -17,7 +17,8 @@ func _run() -> void:
 	await _settle()
 	_audit_visible_buttons(main, "title")
 	_expect_variant(main, "ContinueRunButton", "primary")
-	_expect_variant(main, "GameStartButton", "secondary")
+	var continue_button := main.find_child("ContinueRunButton", true, false) as Button
+	_expect_variant(main, "GameStartButton", "secondary" if continue_button != null and continue_button.is_visible_in_tree() else "primary")
 	_expect_variant(main, "TitleHowToPlayButton", "secondary")
 
 	main._show_settings()

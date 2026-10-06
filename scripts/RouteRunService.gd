@@ -1,6 +1,10 @@
 extends RefCounted
 class_name RouteRunService
 
+const WEEKLY := preload("res://scripts/WeeklyDemoService.gd")
+const FOOD := preload("res://scripts/FoodPrototype.gd")
+var weekly := WEEKLY.new()
+
 const STARTING_LIFE := 40
 const STARTING_DECK_SIZE := 15
 const REGULAR_REWARD_SIZE := 3
@@ -10,7 +14,7 @@ const SHOP_HEAL_COST := 4
 const SHOP_HEAL_AMOUNT := 9
 const SHOP_REMOVE_COST := 3
 const SHOP_UPGRADE_COST := 5
-const HUB_BREAK_HEAL_AMOUNT := 8
+const HUB_BREAK_HEAL_AMOUNT := 5
 const EVENT_HEAL_AMOUNT := 8
 const EVENT_MAX_LIFE_AMOUNT := 5
 const EVENT_MONEY_AMOUNT := 5
@@ -57,6 +61,7 @@ func initialize_run(target_run: Dictionary, seed_value: int) -> void:
 	target_run.pending_route_node = {}
 	target_run.last_route_shopkeeper_card_id = ""
 	target_run.route_battle = {}
+	target_run.route_round_results = []
 	target_run.reward_offer = []
 	target_run.reward_picks_remaining = 0
 	target_run.route_pack_presented = false
@@ -65,17 +70,23 @@ func initialize_run(target_run: Dictionary, seed_value: int) -> void:
 	target_run.campaign_presentation = "tournament_hub"
 	target_run.hub_floor = "locals"
 	target_run.hub_round = 1
-	target_run.hub_rounds_per_floor = 4
+	target_run.hub_rounds_per_floor = int(weekly.config.get("rounds_per_week", 4))
+	target_run.week = 1
+	target_run.demo_weeks = int(weekly.config.get("weeks", 2))
+	target_run.week_transition = ""
+	target_run.deckbox = {}
+	target_run.deckbox_offer = []
+	target_run.deckbox_reward = {}
 	target_run.hub_break_used = false
 	target_run.hub_break_choice = ""
 	target_run.hub_shop = {}
-	target_run.hub_notice = "Registration is locked. Prepare here, then report to the next table."
+	target_run.hub_notice = ""
 	target_run.max_life = STARTING_LIFE
 	target_run.life = STARTING_LIFE
 	target_run.run_over = false
 	target_run.demo_complete = false
-	target_run.season_goal = "Survive four rounds at Locals and defeat the store champion."
-	target_run.season_notice = "Your deck and life carry between rounds. The break machine works once this floor."
+	target_run.season_goal = "Win two weekly Locals tournaments. Choose a deckbox and discover Second Helpings between weeks."
+	target_run.season_notice = "Your deck and life carry between rounds and weeks. The bye machine works once each week."
 	target_run.sideboard = {}
 	target_run.deck = compact_starter_deck(target_run.get("deck", {}), STARTING_DECK_SIZE)
 	target_run.collection = target_run.deck.duplicate(true)
@@ -130,9 +141,20 @@ func normalize_run(target_run: Dictionary) -> void:
 	if not target_run.has("hub_shop") or not (target_run.hub_shop is Dictionary):
 		target_run.hub_shop = {}
 	if not target_run.has("hub_notice"):
-		target_run.hub_notice = "Registration is locked. Prepare here, then report to the next table."
+		target_run.hub_notice = ""
 	target_run.hub_round = clampi(int(target_run.hub_round), 1, maxi(1, int(target_run.hub_rounds_per_floor)))
+	if String(target_run.campaign_presentation) == "tournament_hub":
+		if not target_run.has("demo_weeks"):
+			# Completed legacy demos remain completed; active hub saves gain week two.
+			target_run.demo_weeks = 1 if bool(target_run.get("demo_complete", false)) else int(weekly.config.get("weeks", 2))
+			target_run.week = 1
+		for entry in [["week_transition", ""], ["deckbox", {}], ["deckbox_offer", []], ["deckbox_reward", {}]]:
+			if not target_run.has(entry[0]):
+				target_run[entry[0]] = entry[1]
+		if String(target_run.week_transition) == "deckbox":
+			weekly.normalize_deckbox_offers(target_run)
 	_normalize_card_upgrades(target_run)
+	settle_deckbox_reward(target_run)
 	if not target_run.has("max_life"):
 		target_run.max_life = STARTING_LIFE
 	if not target_run.has("life"):
@@ -310,7 +332,25 @@ func upgraded_card_data(card_id: String) -> Dictionary:
 	if int(upgraded.get("discard_cost", 0)) > 0:
 		upgraded.discard_cost = maxi(0, int(upgraded.discard_cost) - 1)
 		upgraded.cost = maxi(0, int(upgraded.get("cost", upgraded.discard_cost + 1)) - 1)
+		upgraded.text = _upgraded_discard_text(card_id, int(upgraded.discard_cost))
 	return upgraded
+
+
+func _upgraded_discard_text(card_id: String, new_cost: int) -> String:
+	var original: Dictionary = cards_by_id[card_id]
+	var rules := String(original.get("text", ""))
+	var old_cost := int(original.get("discard_cost", 0))
+	var old_cards := "%d card%s" % [old_cost, "" if old_cost == 1 else "s"]
+	var new_cards := "%d card%s" % [new_cost, "" if new_cost == 1 else "s"]
+	var tool_prefix := "Discard %s; " % old_cards
+	var unit_prefix := "When played, discard %s, then " % old_cards
+	if rules.begins_with(tool_prefix):
+		var effect := rules.trim_prefix(tool_prefix)
+		return "Discard %s; %s" % [new_cards, effect] if new_cost > 0 else effect.left(1).to_upper() + effect.substr(1)
+	if rules.begins_with(unit_prefix):
+		var effect := rules.trim_prefix(unit_prefix)
+		return "When played, discard %s, then %s" % [new_cards, effect] if new_cost > 0 else "When played, %s" % effect
+	return rules
 
 
 func prepare_player_combat_deck(target_run: Dictionary, source_deck: Dictionary) -> Dictionary:
@@ -327,23 +367,51 @@ func prepare_player_combat_deck(target_run: Dictionary, source_deck: Dictionary)
 			var runtime_id := upgraded_card_id(card_id)
 			runtime_deck[runtime_id] = upgraded_count
 			custom_cards[runtime_id] = upgraded_card_data(card_id)
+	if not target_run.get("deckbox", {}).is_empty():
+		for id_value in runtime_deck.keys():
+			var id := String(id_value)
+			var data: Dictionary = custom_cards.get(id, cards_by_id.get(id, {})).duplicate(true)
+			var boosted := deckbox_card_data(target_run, data)
+			if boosted == data:
+				continue
+			var runtime_id := id + "__deckbox"
+			boosted.id = runtime_id
+			boosted.base_card_id = String(data.get("base_card_id", id))
+			boosted.deckbox_applied = true
+			custom_cards[runtime_id] = boosted
+			runtime_deck[runtime_id] = runtime_deck[id]
+			runtime_deck.erase(id)
 	return {"deck": runtime_deck, "cards": custom_cards}
 
 
-func remove_card(target_run: Dictionary, card_id: String, minimum_deck_size: int = 1) -> Dictionary:
+func deckbox_card_data(target_run: Dictionary, source: Dictionary) -> Dictionary:
+	var result := source.duplicate(true)
+	var kind := String(result.get("card_type", ""))
+	if kind in ["ingredient", "meal"]:
+		result.attack = int(result.get("attack", 0)) + WEEKLY.bonus(target_run, kind + "_attack")
+		result.health = int(result.get("health", 1)) + WEEKLY.bonus(target_run, kind + "_health")
+	return result
+
+
+func remove_card(target_run: Dictionary, card_id: String, minimum_deck_size: int = 1, copy_index: int = -1) -> Dictionary:
 	if deck_total(target_run.get("deck", {})) <= minimum_deck_size:
 		return {"ok": false, "message": "Your deck is already at its minimum size."}
 	if int(target_run.get("deck", {}).get(card_id, 0)) <= 0:
 		return {"ok": false, "message": "That card is not in your deck."}
+	if copy_index >= int(target_run.deck[card_id]):
+		return {"ok": false, "message": "That copy is no longer in your deck."}
 	target_run.deck[card_id] = int(target_run.deck[card_id]) - 1
 	target_run.collection[card_id] = maxi(0, int(target_run.get("collection", {}).get(card_id, 0)) - 1)
 	if int(target_run.deck[card_id]) <= 0:
 		target_run.deck.erase(card_id)
 	var upgraded_count := int(target_run.get("card_upgrades", {}).get(card_id, 0))
+	if copy_index >= 0 and copy_index < upgraded_count:
+		upgraded_count -= 1
 	var remaining_count := int(target_run.get("deck", {}).get(card_id, 0))
-	if upgraded_count > remaining_count:
-		if remaining_count > 0:
-			target_run.card_upgrades[card_id] = remaining_count
+	upgraded_count = mini(upgraded_count, remaining_count)
+	if target_run.has("card_upgrades"):
+		if upgraded_count > 0:
+			target_run.card_upgrades[card_id] = upgraded_count
 		else:
 			target_run.card_upgrades.erase(card_id)
 	return {"ok": true, "message": "Removed %s from your deck." % String(cards_by_id.get(card_id, {}).get("name", card_id))}
@@ -364,13 +432,70 @@ func upgrade_card(target_run: Dictionary, card_id: String) -> Dictionary:
 	}
 
 
+func settle_deckbox_reward(target_run: Dictionary) -> Dictionary:
+	var reward: Dictionary = target_run.get("deckbox_reward", {})
+	var kind := String(reward.get("kind", ""))
+	var applied := maxi(0, int(reward.get("applied", 0)))
+	var active := String(target_run.get("week_transition", "")) == "deckbox_reward"
+	if not active:
+		return {"kind": kind, "remaining": 0, "applied": applied, "eligible": 0, "complete": true, "message": ""}
+	var maximum := WEEKLY.bonus(target_run, "remove_cards" if kind == "remove" else "upgrade_cards") if kind in ["remove", "upgrade"] else 0
+	applied = mini(applied, maximum)
+	var remaining := clampi(int(reward.get("remaining", 0)), 0, maximum - applied)
+	var eligible := 0
+	if kind == "remove":
+		eligible = maxi(0, deck_total(target_run.get("deck", {})) - 1)
+	elif kind == "upgrade":
+		for id_value in target_run.get("deck", {}):
+			var id := String(id_value)
+			if card_is_upgradeable(id):
+				eligible += maxi(0, int(target_run.deck[id]) - upgrade_count(target_run, id))
+	remaining = mini(remaining, eligible)
+	reward.remaining = remaining
+	reward.applied = applied
+	target_run.deckbox_reward = reward
+	var message := ""
+	if remaining == 0:
+		target_run.week_transition = "week_intro"
+		if eligible == 0:
+			message = "Your deck must keep at least 1 card." if kind == "remove" else "There are no more cards to upgrade."
+	return {"kind": kind, "remaining": remaining, "applied": applied, "eligible": eligible, "complete": remaining == 0, "message": message}
+
+
+func claim_deckbox_card_reward(target_run: Dictionary, card_id: String, copy_index: int) -> Dictionary:
+	var status := settle_deckbox_reward(target_run)
+	if bool(status.complete):
+		return {"ok": false, "message": "This deckbox's card reward is already complete."}
+	var card_count := int(target_run.get("deck", {}).get(card_id, 0))
+	if copy_index < 0 or copy_index >= card_count:
+		return {"ok": false, "message": "That copy is no longer in your deck."}
+	var result: Dictionary
+	if String(status.kind) == "remove":
+		result = remove_card(target_run, card_id, 1, copy_index)
+	else:
+		# Identical normal copies share one choice. Its index is the first copy
+		# after the upgraded prefix; refreshing after each choice advances it.
+		if copy_index != upgrade_count(target_run, card_id):
+			return {"ok": false, "message": "That copy is already upgraded or the card choice has changed."}
+		result = upgrade_card(target_run, card_id)
+	if not bool(result.get("ok", false)):
+		return result
+	target_run.deckbox_reward.remaining = int(target_run.deckbox_reward.remaining) - 1
+	target_run.deckbox_reward.applied = int(target_run.deckbox_reward.applied) + 1
+	var after := settle_deckbox_reward(target_run)
+	result.remaining = int(after.remaining)
+	result.applied = int(after.applied)
+	result.complete = bool(after.complete)
+	return result
+
+
 func use_hub_break_heal(target_run: Dictionary) -> Dictionary:
 	if bool(target_run.get("hub_break_used", false)):
 		return {"ok": false, "message": "The break machine is already out of order."}
 	var missing_life := maxi(0, int(target_run.get("max_life", STARTING_LIFE)) - int(target_run.get("life", 0)))
 	if missing_life <= 0:
 		return {"ok": false, "message": "Your life is already full. The machine was not used."}
-	var healed := mini(HUB_BREAK_HEAL_AMOUNT, missing_life)
+	var healed := mini(HUB_BREAK_HEAL_AMOUNT + WEEKLY.bonus(target_run, "bye_heal"), missing_life)
 	target_run.life = int(target_run.get("life", 0)) + healed
 	target_run.hub_break_used = true
 	target_run.hub_break_choice = "heal"
@@ -391,12 +516,12 @@ func use_hub_break_upgrade(target_run: Dictionary, card_id: String) -> Dictionar
 	return result
 
 
-func buy_card_removal(target_run: Dictionary, shop_node: Dictionary, card_id: String, minimum_deck_size: int = 1) -> Dictionary:
+func buy_card_removal(target_run: Dictionary, shop_node: Dictionary, card_id: String, minimum_deck_size: int = 1, copy_index: int = -1) -> Dictionary:
 	if bool(shop_node.get("remove_purchased", false)):
 		return {"ok": false, "message": "This shop's card removal has already been used."}
 	if int(target_run.get("money", 0)) < SHOP_REMOVE_COST:
 		return {"ok": false, "message": "Not enough money for card removal."}
-	var result := remove_card(target_run, card_id, minimum_deck_size)
+	var result := remove_card(target_run, card_id, minimum_deck_size, copy_index)
 	if not bool(result.get("ok", false)):
 		return result
 	target_run.money = int(target_run.money) - SHOP_REMOVE_COST
@@ -526,18 +651,24 @@ func reward_pick_count(node_type: String) -> int:
 			return REGULAR_REWARD_SIZE
 
 
-func generate_reward_offer(starter_affinity: String, node_type: String, seed_value: int, excluded: Array = []) -> Array[String]:
+func generate_reward_offer(starter_affinity: String, node_type: String, seed_value: int, excluded: Array = [], target_run: Dictionary = {}) -> Array[String]:
 	rng.seed = seed_value
 	var offer_size := REGULAR_REWARD_SIZE
 	if node_type == "mini_boss":
 		offer_size = MINIBOSS_REWARD_SIZE
 	elif node_type == "final_boss":
 		offer_size = BOSS_REWARD_SIZE
+	var result: Array[String] = []
+	var synergy := FOOD.synergy_rewards_enabled(target_run)
+	if synergy:
+		result = FOOD.synergy_reward_pair(target_run, cards_by_id, rng, excluded)
 	var pool: Array[String] = []
 	for card_value in cards:
 		var card: Dictionary = card_value
 		var card_id := String(card.get("id", ""))
-		if card_id == "" or excluded.has(card_id) or bool(card.get("is_token", false)) or not card_is_starter_eligible(card, starter_affinity):
+		if card_id == "" or excluded.has(card_id) or not WEEKLY.card_available(card, target_run) or not card_is_starter_eligible(card, starter_affinity):
+			continue
+		if result.has(card_id) or (synergy and not FOOD.reward_card_eligible(card, target_run, cards_by_id)):
 			continue
 		var rarity := String(card.get("rarity", "common"))
 		var rarity_weight := _rarity_weight(rarity, node_type)
@@ -548,7 +679,6 @@ func generate_reward_offer(starter_affinity: String, node_type: String, seed_val
 			affinity_weight = 2
 		for unused in range(rarity_weight * affinity_weight):
 			pool.append(card_id)
-	var result: Array[String] = []
 	while result.size() < offer_size and not pool.is_empty():
 		var chosen := pool[rng.randi_range(0, pool.size() - 1)]
 		if not result.has(chosen):
@@ -581,6 +711,10 @@ func _card_has_affinity(card: Dictionary, affinity: String) -> bool:
 
 
 func card_is_starter_eligible(card: Dictionary, starter_affinity: String) -> bool:
+	if bool(card.get("starter_only", false)) or bool(card.get("is_token", false)):
+		return false
+	if starter_affinity == "food_prototype":
+		return true
 	var allowed: Array = STARTER_ALLOWED_AFFINITIES.get(starter_affinity, [starter_affinity])
 	var printed_affinities: Array[String] = []
 	for affinity_value in card.get("archetypes", []):

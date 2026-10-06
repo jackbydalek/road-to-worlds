@@ -1,0 +1,13 @@
+Tool: OpenAI built-in image generation (image_gen.imagegen).
+Date: 2026-09-06.
+Input reference: docs/references/locals-table-source-of-truth.jpg, supplied by the user as the authoritative visual target.
+Output file: assets/generated/locals_card_shop/locals-room-reference-v2.png.
+Returned image: 1586×992 opaque RGB PNG, approximately 16:10; preserved unchanged.
+The prompt requested an ideal 1920×1200 output; the actual returned dimensions are recorded in the manifest.
+
+Exact generation prompt:
+
+Use case: precise-object-edit / production game background extraction.
+Input image: the attached user reference is the authoritative edit target. Reconstruct this SAME room, camera, composition, warm rich cel-shaded illustration, detailed material texture and afternoon lighting as a clean production background plate.
+Remove ALL game UI overlays (top left title, settings/history buttons, both portrait/health panels, End Turn controls). Remove the central seated brown-haired opponent only, leaving the shelves behind them. Remove the entire central black playmat and ALL game cards/deck piles sitting on it, and remove the four large foreground hand cards. Inpaint the exposed area as continuous warm honey-colored wooden tabletop from y=28% of frame to the bottom. Keep the distant two players at upper right, windows, plant, shelves, backpack on right, large stickered deckbox on far left, table number tent, red card case, pen and scoresheet at far left, and green binder at far right. These peripheral props are essential and must remain at reference scale. Maintain the desk/back-wall boundary near y=27%, broad clear tabletop in center.
+Keep the reference image's exact 16:10 framing and composition. No main opponent in this plate because a separate character layer will be composited. No playmat, card slots, loose cards in center, HUD, logos from outside brands or copyrighted franchise symbols. Replace the small red/white ball sticker with a simple leaf sticker. Existing fictional TOP CUT prop branding can become three simple colored card symbols. Preserve the grounded detailed illustration; do not simplify into vector art, wash out colors, change to a generic cafe, or invent a new camera view. Output a clean opaque image, ideally 1920x1200.

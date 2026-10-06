@@ -16,8 +16,8 @@ if [[ -z "$version" || ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
 fi
 
 build_dir="$project_dir/builds"
-artifact="$build_dir/top-cut-locals-to-worlds-${version}-itch-web.zip"
-stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/top-cut-locals-to-worlds-itch.XXXXXX")"
+artifact="$build_dir/see-you-at-locals-${version}-itch-web.zip"
+stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/see-you-at-locals-itch.XXXXXX")"
 export_log="${stage_dir}.export.log"
 cleanup() {
 	rm -rf "$stage_dir"
@@ -44,6 +44,11 @@ done
 
 if ! grep -q "<meta name=\"version\" content=\"$version\">" "$stage_dir/index.html"; then
 	printf 'Exported HTML does not identify version %s.\n' "$version" >&2
+	exit 1
+fi
+
+if ! grep -Fq '<meta name="description" content="See You at Locals — playable browser demo">' "$stage_dir/index.html"; then
+	printf 'Exported HTML does not identify the game as See You at Locals.\n' >&2
 	exit 1
 fi
 

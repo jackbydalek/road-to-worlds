@@ -149,10 +149,11 @@ func opponent_deck_for_round(
 	opponent_archetype: String,
 	round_number: int,
 	event: Dictionary = {},
-	ai_difficulty: String = "easy"
+	ai_difficulty: String = "easy",
+	upgrade_count_override: int = -1
 ) -> Dictionary:
 	var opponent_deck: Dictionary = host._deck_entries_to_dict(host.archetypes_by_id[opponent_archetype].get("starterDeck", []))
-	var upgrade_count := _deck_upgrade_count_for_ai(ai_difficulty)
+	var upgrade_count := _deck_upgrade_count_for_ai(ai_difficulty) if upgrade_count_override < 0 else upgrade_count_override
 	if upgrade_count > 0:
 		_upgrade_opponent_deck_for_difficulty(host, opponent_deck, opponent_archetype, upgrade_count)
 	return opponent_deck

@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 1280 720">
+<defs>
+ <clipPath id="window"><rect x="34" y="122" width="290" height="267"/></clipPath>
+ <g id="leaf"><path d="M0 0C-29-5-38-26-30-40C-8-35 3-19 0 0Z" fill="#78906f" stroke="#3e5046" stroke-width="2.5"/><path d="M-26-35L0 0" fill="none" stroke="#a5b692" stroke-width="2"/></g>
+ <g id="pack"><path d="M0 0H25L27 47H-2Z" fill="#e5e9eb" stroke="#424951" stroke-width="2"/><path d="M0 0H25V7H0ZM-1 39H26V46H-1Z" fill="#596478"/><path d="M4 13H19V32H4Z" fill="#8fb3c3"/><path d="M8 16L16 18L14 28L6 26Z" fill="#f3f6fa"/></g>
+</defs>
+<!-- Daylit plaster, lower wall panelling, and grounded wooden floor. -->
+<rect x="-20" y="60" width="1320" height="660" fill="#edece7"/>
+<path d="M0 70H1280V94H0Z" fill="#d3d8d7"/>
+<path d="M0 92H1280V105H0Z" fill="#aeb8bc"/>
+<path d="M0 105H1280V111H0Z" fill="#f3f6fa"/>
+<path d="M0 326H1280V453H0Z" fill="#bcc7c8"/>
+<path d="M0 326H1280V337H0Z" fill="#ecede8" stroke="#8c9b9e" stroke-width="2"/>
+<path d="M0 448H1280V720H0Z" fill="#cebba4"/>
+<path d="M0 446H1280V460H0Z" fill="#6f7472"/>
+<path d="M0 450H1280V455H0Z" fill="#a4ada9"/>
+
+<path d="M16 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M102 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M188 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M274 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M360 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M446 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M532 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M618 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M704 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M790 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M876 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M962 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M1048 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M1134 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M1220 342V443" stroke="#a6b5b7" stroke-width="2"/>
+<path d="M0 481H1280" stroke="#ad9986" stroke-width="2"/>
+<path d="M0 523H1280" stroke="#ad9986" stroke-width="2"/>
+<path d="M0 578H1280" stroke="#ad9986" stroke-width="2"/>
+<path d="M0 646H1280" stroke="#ad9986" stroke-width="2"/>
+<path d="M129.60000000000002 460L-520 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M288.0 460L-160 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M446.4 460L200 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M604.8 460L560 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M763.2 460L920 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M921.6 460L1280 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M1080.0 460L1640 720" stroke="#b5a28f" stroke-width="2"/>
+<path d="M-10 436L308 438L597 606L201 612Z" fill="#f6ebca" opacity=".4"/>
+<!-- Deep window reveal and a quiet view out to the local shopping street. -->
+<path d="M22 114H338V409H22Z" fill="#b3bfc2"/>
+<rect x="27" y="116" width="303" height="284" rx="2" fill="#3f4c56" stroke="#303942" stroke-width="3"/>
+<g clip-path="url(#window)">
+<rect x="34" y="122" width="290" height="267" fill="#bddce5"/>
+<path d="M24 163Q80 112 155 162Q190 139 224 161Q253 128 313 149L344 182H24Z" fill="#e9f1ee"/>
+<path d="M16 256V223H65V203H139V236H185V194H243V227H333V391H16Z" fill="#a9b9bd"/>
+<path d="M18 301V266H54V258H149V289H188V253H296V290H342V398H18Z" fill="#ebe2d2"/>
+<path d="M17 264H153V278H17ZM185 251H302V263H185Z" fill="#8a8297"/>
+<path d="M29 302H133V339H29ZM205 283H235V322H205ZM257 283H284V322H257Z" fill="#7e9aa8"/>
+<path d="M18 297H145L135 308H27Z" fill="#78906f"/>
+<path d="M44 298L39 308M69 298L67 308M95 298V308M119 298L123 308" stroke="#e6e8d9" stroke-width="9"/>
+<path d="M283 391V325M283 352L258 331M285 342L301 323" stroke="#66796c" stroke-width="7"/>
+<path d="M230 321Q214 297 240 279Q241 253 268 261Q292 243 308 267Q337 266 335 293Q357 320 330 335L254 343Z" fill="#8daa85"/>
+<path d="M33 390V123H138L34 353Z" fill="#f3f6fa" opacity=".19"/>
+</g>
+<path d="M127 122V390M227 122V390M34 231H324" stroke="#495b65" stroke-width="10"/>
+<path d="M129 122V390M229 122V390M34 228H324" stroke="#e0e5e3" stroke-width="4"/>
+<path d="M17 399H341V412H17Z" fill="#ece8df" stroke="#697d82" stroke-width="2.5"/>
+<path d="M23 412H337V419H23Z" fill="#a9b8b6"/>
+<!-- Wordless store sign with the card emblem centered in its frame. -->
+<path d="M397 124H854V215H397Z" fill="#b5bcb9"/>
+<path d="M390 115H847V207H390Z" fill="#303840" stroke="#1f2930" stroke-width="3"/>
+<path d="M400 125H836V196H400Z" fill="none" stroke="#6b7880" stroke-width="1.5"/>
+<g id="club-card-logo" transform="translate(618.5 161) scale(1.5) translate(-445.5 -163.5)">
+<path d="M417 157L437 145L450 173L430 184Z" fill="#b75f56" stroke="#ecece5" stroke-width="2"/>
+<path d="M433 148L456 143L463 176L440 182Z" fill="#78906f" stroke="#ecece5" stroke-width="2"/>
+<path d="M451 146L474 154L462 184L440 177Z" fill="#6098b1" stroke="#ecece5" stroke-width="2"/>
+</g>
+<!-- Card accessories, binders, and boxed stock on a real wall fixture. -->
+<path d="M374 238H859V408H374Z" fill="#9ba4a1"/>
+<path d="M368 228H850V399H368Z" fill="#c4b4a1" stroke="#555c5c" stroke-width="3"/>
+<path d="M377 236H840V306H377ZM377 320H840V389H377Z" fill="#a59683"/>
+
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(392 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(429 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(466 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(503 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(540 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(577 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(614 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(651 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(688 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(725 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(762 250)"/>
+<use href="#pack" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#pack" transform="translate(799 250)"/>
+<rect x="389" y="332" width="26" height="53" rx="2" fill="#626e7c" stroke="#4f575d" stroke-width="2"/><rect x="395" y="340" width="14" height="19" fill="#e5e7df"/><path d="M397 347H406M397 352H406" stroke="#697b81" stroke-width="2"/>
+<rect x="421" y="332" width="26" height="53" rx="2" fill="#879d91" stroke="#4f575d" stroke-width="2"/><rect x="427" y="340" width="14" height="19" fill="#e5e7df"/><path d="M429 347H438M429 352H438" stroke="#697b81" stroke-width="2"/>
+<rect x="453" y="332" width="26" height="53" rx="2" fill="#d5d7cd" stroke="#4f575d" stroke-width="2"/><rect x="459" y="340" width="14" height="19" fill="#e5e7df"/><path d="M461 347H470M461 352H470" stroke="#697b81" stroke-width="2"/>
+<rect x="485" y="332" width="26" height="53" rx="2" fill="#79849a" stroke="#4f575d" stroke-width="2"/><rect x="491" y="340" width="14" height="19" fill="#e5e7df"/><path d="M493 347H502M493 352H502" stroke="#697b81" stroke-width="2"/>
+<rect x="517" y="332" width="26" height="53" rx="2" fill="#626e7c" stroke="#4f575d" stroke-width="2"/><rect x="523" y="340" width="14" height="19" fill="#e5e7df"/><path d="M525 347H534M525 352H534" stroke="#697b81" stroke-width="2"/>
+<rect x="549" y="332" width="26" height="53" rx="2" fill="#879d91" stroke="#4f575d" stroke-width="2"/><rect x="555" y="340" width="14" height="19" fill="#e5e7df"/><path d="M557 347H566M557 352H566" stroke="#697b81" stroke-width="2"/>
+<rect x="581" y="332" width="26" height="53" rx="2" fill="#d5d7cd" stroke="#4f575d" stroke-width="2"/><rect x="587" y="340" width="14" height="19" fill="#e5e7df"/><path d="M589 347H598M589 352H598" stroke="#697b81" stroke-width="2"/>
+<rect x="613" y="332" width="26" height="53" rx="2" fill="#79849a" stroke="#4f575d" stroke-width="2"/><rect x="619" y="340" width="14" height="19" fill="#e5e7df"/><path d="M621 347H630M621 352H630" stroke="#697b81" stroke-width="2"/>
+<rect x="645" y="332" width="26" height="53" rx="2" fill="#626e7c" stroke="#4f575d" stroke-width="2"/><rect x="651" y="340" width="14" height="19" fill="#e5e7df"/><path d="M653 347H662M653 352H662" stroke="#697b81" stroke-width="2"/>
+<rect x="677" y="332" width="26" height="53" rx="2" fill="#879d91" stroke="#4f575d" stroke-width="2"/><rect x="683" y="340" width="14" height="19" fill="#e5e7df"/><path d="M685 347H694M685 352H694" stroke="#697b81" stroke-width="2"/>
+<rect x="709" y="332" width="26" height="53" rx="2" fill="#d5d7cd" stroke="#4f575d" stroke-width="2"/><rect x="715" y="340" width="14" height="19" fill="#e5e7df"/><path d="M717 347H726M717 352H726" stroke="#697b81" stroke-width="2"/>
+<rect x="741" y="332" width="26" height="53" rx="2" fill="#79849a" stroke="#4f575d" stroke-width="2"/><rect x="747" y="340" width="14" height="19" fill="#e5e7df"/><path d="M749 347H758M749 352H758" stroke="#697b81" stroke-width="2"/>
+<rect x="773" y="332" width="26" height="53" rx="2" fill="#626e7c" stroke="#4f575d" stroke-width="2"/><rect x="779" y="340" width="14" height="19" fill="#e5e7df"/><path d="M781 347H790M781 352H790" stroke="#697b81" stroke-width="2"/>
+<rect x="805" y="332" width="26" height="53" rx="2" fill="#879d91" stroke="#4f575d" stroke-width="2"/><rect x="811" y="340" width="14" height="19" fill="#e5e7df"/><path d="M813 347H822M813 352H822" stroke="#697b81" stroke-width="2"/>
+<path d="M365 306H854V319H365ZM365 389H854V402H365Z" fill="#e0d3bf" stroke="#545b59" stroke-width="2.5"/>
+<path d="M373 319H846V323H373ZM373 402H846V408H373Z" fill="#858e89"/>
+<!-- Structural column and two modest task lights. -->
+<path d="M881 108H919V452H881Z" fill="#d3d9d6"/>
+<path d="M882 108H889V449H882Z" fill="#f4f3ec"/>
+<path d="M914 108H919V450H914Z" fill="#b2bfbd"/>
+<path d="M361 99V139M896 99V142" stroke="#424c54" stroke-width="4"/>
+<path d="M342 138H380L391 156H330Z" fill="#56656b" stroke="#303b42" stroke-width="3"/>
+<path d="M877 141H915L928 160H864Z" fill="#56656b" stroke="#303b42" stroke-width="3"/>
+<path d="M335 156H387M869 160H923" stroke="#f7ecc8" stroke-width="4"/>
+<!-- Pinboard surround, readable live tournament rows are scene controls. -->
+<path d="M962 125H1257V314H962Z" fill="#b1b9b6"/>
+<path d="M954 118H1250V306H954Z" fill="#e4ded0" stroke="#505b61" stroke-width="4"/>
+<path d="M962 127H1242V298H962Z" fill="#f3f2eb"/>
+<!-- Floor shadows tie the imported props to the venue. -->
+<path d="M64 595L291 578L341 617L102 627Z" fill="#7c7770" opacity=".35"/>
+<path d="M337 580L907 572L952 612L368 621Z" fill="#7c7770" opacity=".38"/>
+<path d="M967 561L1321 558V610H985Z" fill="#7c7770" opacity=".3"/>
+</svg>

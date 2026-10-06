@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
-const OUTPUT_PATH := "res://outputs/season_ended_art_direction.png"
 
 
 func _init() -> void:
@@ -14,6 +13,8 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 	await process_frame
+	main.autosave_enabled = false
+	main.player_settings.reduced_motion = true
 	var starter: Dictionary = main._deck_entries_to_dict(main.archetypes_by_id.spicy.get("starterDeck", []))
 	main.run = main.run_state_service.create_run(
 		"spicy",
@@ -44,14 +45,25 @@ func _run() -> void:
 			{"round": 3, "opponent_name": "Local Rival Tess", "opponent_archetype": "Hearty Starter", "won": false, "turn": 0, "player_life": 0, "cash": 4},
 		],
 	}
-	main._show_tournament_result([], false)
+	for viewport_size in [Vector2i(1280, 720), Vector2i(1440, 900), Vector2i(1920, 1080), Vector2i(1728, 1117)]:
+		root.size = viewport_size
+		main._show_tournament_result([], false)
+		await _capture("season_ended_%dx%d" % [viewport_size.x, viewport_size.y])
+	main.run.last_event_result = {}
+	main._show_tournament_result(["The run is over."], false)
+	await _capture("season_ended_fallback")
+	main.queue_free()
 	await process_frame
-	await process_frame
+	print("Saved season-ended previews.")
+	quit(0)
+
+
+func _capture(filename: String) -> void:
+	for unused in range(8):
+		await process_frame
 	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
-	if image == null or image.save_png(ProjectSettings.globalize_path(OUTPUT_PATH)) != OK:
+	if image == null or image.save_png(ProjectSettings.globalize_path("res://outputs/%s.png" % filename)) != OK:
 		push_error("Could not save season-ended preview.")
 		quit(1)
-		return
-	print("Saved season-ended preview: " + OUTPUT_PATH)
-	quit(0)

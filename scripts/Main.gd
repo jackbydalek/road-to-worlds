@@ -8,6 +8,10 @@ const STARTING_CHEF_LIFE := 20
 const SIDEBOARD_SIZE := 6
 const STARTING_MONEY := 8
 const SAVE_PATH := "user://topdeck_to_worlds_season_run.json"
+const FOOD_PROTOTYPE := preload("res://scripts/FoodPrototype.gd")
+var food_prototype_mode := false
+var food_prototype_save_path := FOOD_PROTOTYPE.SAVE_PATH
+var standard_save_path := ""
 const SETTINGS_PATH := "user://topdeck_to_worlds_settings.json"
 const LEGACY_BATTLE_SETTINGS_PATH := "user://topdeck_to_worlds_readability.cfg"
 const DEVELOPMENT_FLAGS := ["--dev", "--debug-menu"]
@@ -48,12 +52,12 @@ const DRAFT_SORT_NAME := "name"
 const DRAFT_SORT_TYPE := "type"
 const DRAFT_SORT_AFFINITY := "affinity"
 const CARD_HOVER_DELAY_SECONDS := 0.38
-const KEYWORD_TOOLTIPS := {
-	"stalwart": {"title": "Stalwart", "body": "This card can attack the opposing Chef even while they control Plated cards."},
-	"piercing": {"title": "Piercing", "body": "This card deals excess combat damage to the opposing Chef through a Defending unit."},
-	"taunt": {"title": "Taunt", "body": "While any Taunt unit is Plated, attackers must target a Taunt before other cards or the Chef. If there are multiple Taunt units, the attacker chooses among them."},
-	"hand_trap": {"title": "Handtrap", "body": "Discard this card from your hand to perform its action in response to an opponent's action."},
-}
+const GAME_MODAL := preload("res://scripts/ui/GameModal.gd")
+const CARD_BROWSER := preload("res://scripts/ui/CardBrowser.gd")
+const CARD_INSPECTION_CONTENT := preload("res://scripts/ui/CardInspectionContent.gd")
+const CARD_INSPECTION_OVERLAY := preload("res://scripts/ui/CardInspectionOverlay.gd")
+const CARD_HOVER_PREVIEW := preload("res://scripts/ui/CardHoverPreview.gd")
+const KEYWORD_TOOLTIPS := CARD_INSPECTION_CONTENT.KEYWORDS
 const AUTOSAVE_POLL_SECONDS := 0.4
 const CONTENT_CATALOG_SCRIPT := preload("res://scripts/ContentCatalog.gd")
 const DECK_METRICS_SERVICE_SCRIPT := preload("res://scripts/DeckMetricsService.gd")
@@ -65,6 +69,9 @@ const DECKBUILDER_SCREEN_SCRIPT := preload("res://scripts/DeckbuilderScreen.gd")
 const SEASON_HUB_SCREEN_SCRIPT := preload("res://scripts/SeasonHubScreen.gd")
 const SEASON_FLOW_SERVICE_SCRIPT := preload("res://scripts/SeasonFlowService.gd")
 const TOURNAMENT_SERVICE_SCRIPT := preload("res://scripts/TournamentService.gd")
+const WEEKLY_DEMO := preload("res://scripts/WeeklyDemoService.gd")
+const WEEKLY_DEMO_SCREEN := preload("res://scripts/ui/WeeklyDemoScreen.gd")
+const DECKBOX_CARD_REWARD_SCREEN := preload("res://scripts/ui/DeckboxCardRewardScreen.gd")
 const ROUTE_RUN_SERVICE_SCRIPT := preload("res://scripts/RouteRunService.gd")
 const CARD_EFFECT_LAB_SCRIPT := preload("res://scripts/CardEffectLab.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
@@ -74,7 +81,8 @@ const UI_SOUND_CONTROLLER_SCRIPT := preload("res://scripts/ui/UiSoundController.
 const MENU_SPARKLE_CONTROLLER_SCRIPT := preload("res://scripts/ui/MenuSparkleController.gd")
 const CARD_UPGRADE_REVEAL_SCRIPT := preload("res://scripts/ui/CardUpgradeReveal.gd")
 const ROUTE_RIVAL_INTRO_SCRIPT := preload("res://scripts/ui/RouteRivalIntro.gd")
-const TOURNAMENT_HUB_SCRIPT := preload("res://scripts/ui/TournamentHubScreen.gd")
+const PEACH_SODA_CAST := preload("res://scripts/ui/PeachSodaCast.gd")
+const TOURNAMENT_HUB_SCENE := preload("res://scenes/ui/TournamentHubScreen.tscn")
 const SKETCH_THEME_SCRIPT := preload("res://scripts/ui/SketchTheme.gd")
 const WORKSPACE_THEME_SCRIPT := preload("res://scripts/ui/WorkspaceTheme.gd")
 const BUTTON_MOTION_SCRIPT := preload("res://scripts/ui/AudaciousButtonMotion.gd")
@@ -84,7 +92,8 @@ const TOPDECK_UI_SCRIPT := preload("res://scripts/ui/TopdeckUIComponents.gd")
 const MATERIAL_SYMBOLS := preload("res://scripts/ui/MaterialSymbolsSharp.gd")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const ANGULAR_SURFACE_SCRIPT := preload("res://scripts/ui/BattleAngularSurface.gd")
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
+const MENU_ROOM_SCRIPT := preload("res://scripts/ui/PeachSodaBattleBackdrop.gd")
 const PASTEL_WORKSPACE_BACKGROUND_SHADER := preload("res://assets/shaders/pastel_workspace_background.gdshader")
 const INTRO_MUSIC_PATH := "res://assets/audio/intro.mp3"
 const CARD_SHOP_MUSIC_PATH := "res://assets/audio/shop.mp3"
@@ -106,10 +115,6 @@ const ROUTE_NODE_ICONS := {
 	"event": preload("res://assets/overworld/route_icons/event.png"),
 }
 const ROUTE_SHOPKEEPER_ART := preload("res://assets/characters/shopkeeper/route_shopkeeper_card_pose.png")
-const ROUTE_RIVAL_PORTRAITS := {
-	"npc1": preload("res://assets/characters/rivals/route_rival_npc_01.png"),
-	"npc2": preload("res://assets/characters/rivals/route_rival_npc_02.png"),
-}
 const SHOP_MUSIC_VOLUME_DB := -16.0
 const MENU_MUSIC_VOLUME_DB := -24.0
 const BATTLE_MUSIC_VOLUME_DB := -10.0
@@ -132,6 +137,7 @@ const TABLETOP_3D_PROTOTYPE_SCENE_PATH := "res://scenes/Tabletop3DPrototype.tscn
 const OVERWORLD_SCENE_PATH := "res://scenes/StarterCityOverworld.tscn"
 
 var rng := RandomNumberGenerator.new()
+var audio_rng := RandomNumberGenerator.new()
 var content_catalog: RefCounted
 var deck_metrics_service: RefCounted
 var run_state_service: RefCounted
@@ -159,6 +165,7 @@ var deckbuilder_sort_mode := SORT_AFFINITY
 var season_setup_archetype_index := 0
 var season_setup_difficulty_index := 0
 var season_setup_difficulty_open := false
+var season_setup_difficulty_chosen := false
 var draft_deck: Dictionary = {}
 var draft_offer: Array[String] = []
 var draft_picks: Array[String] = []
@@ -227,9 +234,13 @@ var selected_route_shop_card_id := ""
 var selected_route_service_card_id := ""
 var last_card_add_effect_context := ""
 var last_route_shop_purchase_effect_stages: Array[String] = []
+var route_shop_purchase_busy := false
 var last_card_upgrade_animation_stages: Array[String] = []
+var _card_upgrade_reveal_active := false
 var last_route_trade_animation_stages: Array[String] = []
 var route_reward_overlay: Control
+var route_reward_collecting := false
+var route_reward_collection_generation := 0
 var route_shop_service_overlay: Control
 var route_encounter_overlay: Control
 var route_encounter_transitioning := false
@@ -238,8 +249,9 @@ var route_encounter_transitioning := false
 func _ready() -> void:
 	var scoped_ui_font := AFFINITY_VISUALS.default_ui_font_with_symbols()
 	base_ui_theme = UI_THEME_SCRIPT.build(scoped_ui_font)
-	sketch_ui_theme = SKETCH_THEME_SCRIPT.build(scoped_ui_font)
-	workspace_ui_theme = WORKSPACE_THEME_SCRIPT.build(scoped_ui_font)
+	# One paper theme across every journey; legacy routing names remain stable.
+	sketch_ui_theme = base_ui_theme
+	workspace_ui_theme = base_ui_theme
 	theme = base_ui_theme
 	autosave_enabled = not _running_automated_test()
 	_load_player_settings()
@@ -256,6 +268,7 @@ func _ready() -> void:
 	get_tree().node_added.connect(_on_ui_node_added)
 	get_tree().auto_accept_quit = false
 	rng.randomize()
+	audio_rng.randomize()
 	_load_content()
 	deck_metrics_service = DECK_METRICS_SERVICE_SCRIPT.new()
 	deck_metrics_service.setup(cards_by_id, archetypes_by_id, ARCHETYPE_ORDER, MAIN_DECK_SIZE)
@@ -329,10 +342,47 @@ func _release_audio_streams() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if route_shop_purchase_busy or route_reward_collecting or _card_upgrade_reveal_active:
+		get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
+		return
+	if find_child("FinalDeckReview", true, false) != null:
+		get_viewport().set_input_as_handled()
+		_close_final_deck_review()
+		return
+	if is_instance_valid(route_shop_service_overlay):
+		get_viewport().set_input_as_handled()
+		if route_shop_service_overlay.get_meta("busy", false):
+			return
+		_close_route_shop_service_overlay()
 		return
 	if find_child("StarterDeckPreview", true, false) != null:
 		_close_starter_deck_preview()
+		return
+	if current_screen == "settings":
+		get_viewport().set_input_as_handled()
+		var confirmation := find_child("AbandonRunConfirmation", true, false) as Control
+		if confirmation != null and confirmation.is_visible_in_tree():
+			find_child("CancelAbandonRunButton", true, false).pressed.emit()
+		else:
+			_return_from_settings()
+		return
+	if current_screen == "deck":
+		get_viewport().set_input_as_handled()
+		_return_from_deckbuilder()
+		return
+	if current_screen == "draft":
+		get_viewport().set_input_as_handled()
+		_show_start()
+		return
+	if current_screen == "season_setup":
+		get_viewport().set_input_as_handled()
+		var setup := find_child("SeasonRegistration", true, false)
+		if setup != null:
+			setup._handle_back()
+		else:
+			_show_start()
 		return
 	if current_screen == "kitchen_match":
 		if is_instance_valid(round_result_popup):
@@ -571,8 +621,10 @@ func _autosave_now(resume_screen: String = "") -> Dictionary:
 	if target_screen == "settings" and is_instance_valid(suspended_tabletop) and suspended_tabletop_screen == "kitchen_match":
 		target_screen = "kitchen_match"
 	_show_autosave_indicator()
+	FOOD_PROTOTYPE.record_checkpoint(run)
 	var result: Dictionary = run_state_service.save_run(run, target_screen)
 	if bool(result.get("ok", false)):
+		FOOD_PROTOTYPE.write_playtest(run, run_state_service.save_path)
 		last_autosave_fingerprint = _run_fingerprint()
 		last_autosave_screen = target_screen
 		autosave_poll_elapsed = 0.0
@@ -645,10 +697,22 @@ func _build_shell() -> void:
 	var route_background := ColorRect.new()
 	route_background.name = "RoutePresentationBackground"
 	route_background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	route_background.color = PALETTE.SURFACE_ROOT
+	route_background.color = PALETTE.PEACH_PAPER
 	route_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	route_background.visible = false
 	add_child(route_background)
+	var room := Control.new()
+	room.name = "LocalsMenuRoom"
+	room.set_script(MENU_ROOM_SCRIPT)
+	room.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	route_background.add_child(room)
+	var room_shade := ColorRect.new()
+	room_shade.name = "LocalsMenuShade"
+	room_shade.color = Color(PALETTE.PEACH_PAPER, 0.14)
+	room_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	room_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	route_background.add_child(room_shade)
 
 	root_margin = MarginContainer.new()
 	root_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -667,7 +731,7 @@ func _build_shell() -> void:
 	shell.add_child(header_bar)
 
 	title_label = Label.new()
-	title_label.text = "TOP CUT: Locals to Worlds"
+	title_label.text = "See You at Locals"
 	title_label.add_theme_font_size_override("font_size", 28)
 	title_label.add_theme_color_override("font_color", UI_THEME_SCRIPT.INK)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1048,190 +1112,16 @@ func _make_title_route_menu(screen: Control, node_name: String) -> PanelContaine
 
 
 func _show_starter_deck_preview(starter_id: String) -> void:
-	if current_screen != "season_setup" or find_child("StarterDeckPreview", true, false) != null:
-		return
-	if is_instance_valid(ui_sound_controller):
-		ui_sound_controller.play_popup()
-	var draft_night := starter_id == DRAFT_NIGHT_ID
-	var display_name := "Draft Night" if draft_night else _archetype_label(starter_id)
-	var entries := _starter_deck_preview_entries(starter_id)
-	var total_cards := 0
-	for entry in entries:
-		total_cards += int(entry.count)
-
-	var overlay := Control.new()
-	overlay.name = "StarterDeckPreview"
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.z_index = 1800
-	add_child(overlay)
-
-	var dimmer := ColorRect.new()
-	dimmer.name = "StarterDeckPreviewDimmer"
-	dimmer.color = Color(PALETTE.NAVY, 0.46)
-	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	dimmer.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			_close_starter_deck_preview()
-	)
-	overlay.add_child(dimmer)
-
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(780, 690)
-	panel.add_theme_stylebox_override(
-		"panel",
-		WORKSPACE_UI_SCRIPT.clean_style(
-			Color(PALETTE.CREAM, 0.985),
-			PALETTE.NAVY,
-			2,
-			18,
-			Vector4(46, 38, 46, 42),
-			0,
-			true
-		)
-	)
-	panel.name = "StarterDeckPreviewPanel"
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	center.add_child(panel)
-
-	var layout := VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 8)
-	panel.add_child(layout)
-
-	var banner_parts := WORKSPACE_UI_SCRIPT.make_section(
-		"DRAFT NIGHT" if draft_night else "%s DECK" % display_name.to_upper(),
-		WORKSPACE_UI_SCRIPT.TEAL,
-		Vector2(650, 96),
-		false,
-		Vector4(20, 12, 20, 12)
-	)
-	var banner := banner_parts.panel as PanelContainer
-	var banner_heading := banner_parts.heading as Label
-	banner.add_theme_stylebox_override(
-		"panel",
-		WORKSPACE_UI_SCRIPT.clean_style(
-			Color(PALETTE.LAVENDER_GLASS, 0.92),
-			PALETTE.PERIWINKLE,
-			2,
-			14,
-			Vector4.ZERO
-		)
-	)
-	banner_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_heading.add_theme_font_size_override("font_size", 28)
-	banner_heading.add_theme_color_override("font_color", PALETTE.NAVY)
-	var banner_subtitle := Label.new()
-	banner_subtitle.text = (
-		"Build your season deck one pick at a time."
-		if draft_night
-		else "Review the cards before committing to this season."
-	)
-	banner_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner_subtitle.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	banner_parts.body.add_child(banner_subtitle)
-	banner.name = "StarterDeckPreviewBanner"
-	layout.add_child(banner)
-
-	var flexible_body: Control
-	if draft_night:
-		var empty_panel := PanelContainer.new()
-		empty_panel.custom_minimum_size = Vector2(0, 420)
-		empty_panel.add_theme_stylebox_override(
-			"panel",
-			WORKSPACE_UI_SCRIPT.clean_style(
-				Color(PALETTE.LAVENDER_GLASS, 0.62),
-				PALETTE.PERIWINKLE,
-				2,
-				14,
-				Vector4(42, 34, 42, 34)
-			)
-		)
-		empty_panel.name = "DraftNightDeckPreviewEmptyState"
-		layout.add_child(empty_panel)
-		flexible_body = empty_panel
-		var empty_copy := VBoxContainer.new()
-		empty_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-		empty_copy.add_theme_constant_override("separation", 16)
-		empty_panel.add_child(empty_copy)
-		var star_center := CenterContainer.new()
-		empty_copy.add_child(star_center)
-		var star := SKETCH_UI_SCRIPT.make_draft_star(Vector2(90, 90))
-		star_center.add_child(star)
-		var heading := Label.new()
-		heading.text = "YOUR DECK IS BUILT DURING DRAFT NIGHT"
-		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
-		heading.add_theme_font_size_override("font_size", 27)
-		heading.add_theme_color_override("font_color", PALETTE.NAVY)
-		empty_copy.add_child(heading)
-		for line in [
-			"Choose an opening dual-flavor Meal.",
-			"Make 20 picks from rotating three-card offers.",
-			"Every drafted card becomes part of your season collection.",
-		]:
-			var detail := Label.new()
-			detail.text = line
-			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.14))
-			detail.add_theme_font_size_override("font_size", 19)
-			detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-			empty_copy.add_child(detail)
-	else:
-		var summary := Label.new()
-		summary.name = "StarterDeckPreviewSummary"
-		summary.text = "%d cards  •  %d unique cards" % [total_cards, entries.size()]
-		summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		summary.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
-		summary.add_theme_font_size_override("font_size", 18)
-		summary.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-		layout.add_child(summary)
-
-		var list_panel := PanelContainer.new()
-		list_panel.custom_minimum_size = Vector2(0, 420)
-		list_panel.add_theme_stylebox_override(
-			"panel",
-			WORKSPACE_UI_SCRIPT.clean_style(
-				Color(PALETTE.LAVENDER_GLASS, 0.56),
-				PALETTE.PERIWINKLE,
-				2,
-				14,
-				Vector4(22, 16, 22, 16)
-			)
-		)
-		layout.add_child(list_panel)
-		flexible_body = list_panel
-		var list_scroll := ScrollContainer.new()
-		list_scroll.name = "StarterDeckPreviewScroll"
-		list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		list_panel.add_child(list_scroll)
-		var list := VBoxContainer.new()
-		list.name = "StarterDeckPreviewList"
-		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		list.add_theme_constant_override("separation", 4)
-		list_scroll.add_child(list)
-		_create_starter_deck_hover_preview(overlay)
-		for entry in entries:
-			_add_starter_deck_preview_row(list, entry)
-
-	var close_button := Button.new()
-	close_button.text = "CLOSE" if draft_night else "CLOSE DECK LIST"
-	close_button.custom_minimum_size = Vector2(360, 64)
-	close_button.focus_mode = Control.FOCUS_NONE
-	WORKSPACE_UI_SCRIPT.style_button(close_button, "primary")
-	close_button.add_theme_font_size_override("font_size", 22)
-	close_button.name = "CloseStarterDeckPreviewButton"
-	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_connect_pressed(close_button, _close_starter_deck_preview)
-	layout.add_child(close_button)
-	overlay.resized.connect(_layout_starter_deck_preview.bind(panel, flexible_body))
-	_layout_starter_deck_preview(panel, flexible_body)
-	call_deferred("_layout_starter_deck_preview", panel, flexible_body)
+	_close_starter_deck_preview()
+	var modal = GAME_MODAL.create(self, "%s deck" % starter_id.capitalize(), "StarterDeckPreview", _close_starter_deck_preview)
+	modal.back.name = "CloseStarterDeckPreviewButton"
+	var deck: Dictionary = {}
+	if archetypes_by_id.has(starter_id):
+		deck = route_run_service.compact_starter_deck(_deck_entries_to_dict(archetypes_by_id[starter_id].get("starterDeck", [])), 15)
+	var browser := CARD_BROWSER.new()
+	browser.name = "StarterDeckBrowser"
+	browser.configure(_deck_browser_entries(deck, false), String(DIFFICULTY_ORDER[season_setup_difficulty_index]), "StarterDeckPreview")
+	modal.body.add_child(browser)
 
 
 func _layout_starter_deck_preview(panel: PanelContainer, flexible_body: Control) -> void:
@@ -1302,7 +1192,7 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.12))
 	name.add_theme_font_size_override("font_size", 18)
-	name.add_theme_color_override("font_color", PALETTE.NAVY)
+	name.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	row.add_child(name)
 
 	var classification := Label.new()
@@ -1312,7 +1202,7 @@ func _add_starter_deck_preview_row(parent: VBoxContainer, entry: Dictionary) -> 
 	classification.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	classification.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
 	classification.add_theme_font_size_override("font_size", 15)
-	classification.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	classification.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
 	row.add_child(classification)
 	row.mouse_entered.connect(func() -> void: _queue_starter_deck_hover_preview(row, card_id))
 	row.mouse_exited.connect(_hide_starter_deck_hover_preview)
@@ -1325,8 +1215,8 @@ func _create_starter_deck_hover_preview(overlay: Control) -> void:
 	starter_deck_hover_preview.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI_SCRIPT.clean_style(
-			Color(PALETTE.CREAM, 0.985),
-			PALETTE.PERIWINKLE,
+			Color(PALETTE.PEACH_PAPER, 0.985),
+			PALETTE.PEACH_EDGE,
 			2,
 			14,
 			Vector4(16, 16, 16, 18),
@@ -1425,6 +1315,7 @@ func _show_start() -> void:
 		_autosave_now(current_screen)
 	current_screen = "start"
 	run = {}
+	_set_food_prototype_mode(false)
 	season_setup_archetype_index = 0
 	season_setup_difficulty_index = 0
 	draft_deck = {}
@@ -1445,14 +1336,126 @@ func _show_start() -> void:
 	var has_save := bool(saved_result.get("ok", false))
 	var saved_run: Dictionary = saved_result.get("run", {}) if has_save else {}
 	var saved_run_finished := has_save and bool(saved_run.get("run_over", false))
-	screen.configure(_development_tools_enabled(), has_save, saved_run_finished)
+	screen.configure(_development_tools_enabled(), has_save, saved_run_finished, saved_run)
 	screen.continue_requested.connect(_continue_run_to_shop, CONNECT_DEFERRED)
 	screen.start_requested.connect(_show_season_run_setup, CONNECT_DEFERRED)
 	screen.tutorial_requested.connect(_show_tutorial, CONNECT_DEFERRED)
 	screen.exit_requested.connect(_quit_from_title, CONNECT_DEFERRED)
 	screen.settings_requested.connect(_show_settings, CONNECT_DEFERRED)
 	screen.debug_requested.connect(_show_debug_starter_selection, CONNECT_DEFERRED)
+	screen.food_prototype_requested.connect(_show_food_prototype_menu, CONNECT_DEFERRED)
 	content.add_child(screen)
+
+
+func _set_food_prototype_mode(enabled: bool) -> void:
+	if enabled == food_prototype_mode:
+		return
+	if enabled:
+		standard_save_path = run_state_service.save_path
+	food_prototype_mode = enabled
+	_load_content()
+	if enabled:
+		FOOD_PROTOTYPE.apply_catalog(content_catalog)
+	# Every consumer receives the same catalog, including inspection and upgrades.
+	deck_metrics_service.setup(cards_by_id, archetypes_by_id, ARCHETYPE_ORDER, MAIN_DECK_SIZE)
+	run_state_service.cards_by_id = cards_by_id
+	run_state_service.archetypes_by_id = archetypes_by_id
+	run_state_service.save_path = food_prototype_save_path if enabled else standard_save_path
+	shop_economy_service.setup(cards, cards_by_id, boosters_by_id, rng)
+	route_run_service.setup(cards, cards_by_id)
+	last_autosave_fingerprint = ""
+
+
+func _food_prototype_page(title: String, description: String) -> VBoxContainer:
+	_apply_screen_chrome()
+	_clear(nav)
+	_clear(content)
+	_update_status()
+	_set_footer("")
+	var scroll := ScrollContainer.new()
+	scroll.name = "FoodPrototypeScreen"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(scroll)
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(center)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 28)
+	center.add_child(margin)
+	var section := TOPDECK_UI_SCRIPT.make_section(title, PALETTE.LOCALS_BLUE)
+	margin.add_child(section.panel)
+	var body := section.body as VBoxContainer
+	body.add_theme_constant_override("separation", 18)
+	var copy := TOPDECK_UI_SCRIPT.make_label(description, "body", PALETTE.LOCALS_INK)
+	copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	copy.custom_minimum_size.x = 540
+	body.add_child(copy)
+	return body
+
+
+func _show_food_prototype_menu() -> void:
+	_set_food_prototype_mode(true)
+	current_screen = "food_prototype_menu"
+	var body := _food_prototype_page("Food Prototype", "Start with a basic deck. Discover every food type.\nServe Meals using any Ingredients. Win four rounds of Locals.")
+	var saved: Dictionary = run_state_service.load_run()
+	var can_resume := bool(saved.get("ok", false)) and FOOD_PROTOTYPE.active(saved.get("run", {})) and not bool(saved.run.get("run_over", false))
+	var first_action: Button
+	if can_resume:
+		var resume := TOPDECK_UI_SCRIPT.make_button("Continue Prototype", "primary", Vector2(0, 56), "ContinueFoodPrototypeButton")
+		_connect_pressed(resume, _continue_run_to_shop)
+		body.add_child(resume)
+		first_action = resume
+	var start := TOPDECK_UI_SCRIPT.make_button("New Prototype", "secondary" if can_resume else "primary", Vector2(0, 56), "NewFoodPrototypeButton")
+	_connect_pressed(start, _start_food_prototype)
+	body.add_child(start)
+	var back := TOPDECK_UI_SCRIPT.make_button("Back", "secondary", Vector2(0, 50), "FoodPrototypeBackButton")
+	_connect_pressed(back, _show_start)
+	body.add_child(back)
+	(first_action if can_resume else start).grab_focus()
+
+
+func _start_food_prototype(seed_value: int = -1) -> void:
+	_set_food_prototype_mode(true)
+	var run_seed := rng.randi() if seed_value < 0 else seed_value
+	rng.seed = run_seed
+	run = run_state_service.create_run(FOOD_PROTOTYPE.ID, FOOD_PROTOTYPE.starter_deck(), "spicy", "season", "white")
+	route_run_service.initialize_run(run, run_seed)
+	FOOD_PROTOTYPE.initialize(run, run_seed, content_catalog)
+	_generate_shop_inventory()
+	_autosave_now("food_prototype_opening")
+	_show_food_prototype_opening()
+
+
+func _show_food_prototype_opening() -> void:
+	current_screen = "food_prototype_opening"
+	var body := _food_prototype_page("Your first find", "Choose one card to add to your 15-card basic deck.\nYou can mix every food type as your deck grows.")
+	var choices := HBoxContainer.new()
+	choices.add_theme_constant_override("separation", 20)
+	body.add_child(choices)
+	for id_value in run.get("food_opening_offer", []):
+		var id := String(id_value)
+		var column := VBoxContainer.new()
+		choices.add_child(column)
+		column.add_child(_make_card_face(cards_by_id[id], Vector2(220, 312)))
+		var choose := TOPDECK_UI_SCRIPT.make_button("Choose", "primary", Vector2(220, 50), "FoodOpening_" + id)
+		_connect_pressed(choose, func() -> void: _choose_food_prototype_opening(id))
+		column.add_child(choose)
+	var back := TOPDECK_UI_SCRIPT.make_button("Save and return to title", "secondary", Vector2(0, 48), "FoodOpeningBackButton")
+	_connect_pressed(back, _show_start)
+	body.add_child(back)
+	if choices.get_child_count() > 0:
+		choices.get_child(0).get_child(1).grab_focus()
+
+
+func _choose_food_prototype_opening(card_id: String) -> void:
+	if not FOOD_PROTOTYPE.choose_opening(run, card_id):
+		return
+	_ensure_hub_shop()
+	_autosave_now("route_hub")
+	_show_run_map()
 
 func _show_new_game_menu() -> void:
 	current_screen = "new_game"
@@ -1511,26 +1514,31 @@ func _show_settings() -> void:
 	settings_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	settings_shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	settings_shell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	content.add_child(settings_shell)
-	_add_settings_angular_surface(settings_shell, PALETTE.SURFACE_PAPER_MUTED, PALETTE.STRUCTURAL_EDGE)
+	var settings_center := CenterContainer.new()
+	settings_center.name = "SettingsTabletopCenter"
+	settings_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(settings_center)
+	settings_shell.custom_minimum_size = Vector2(minf(1060.0, get_viewport_rect().size.x - 64.0), 564)
+	settings_center.add_child(settings_shell)
+	_add_settings_angular_surface(settings_shell, PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL)
 	var shell_margin := MarginContainer.new()
 	for side_name in ["left", "right", "top", "bottom"]:
-		shell_margin.add_theme_constant_override("margin_%s" % side_name, 12)
+		shell_margin.add_theme_constant_override("margin_%s" % side_name, 24)
 	settings_shell.add_child(shell_margin)
 	var settings_body := VBoxContainer.new()
 	settings_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	settings_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	settings_body.add_theme_constant_override("separation", 10)
+	settings_body.add_theme_constant_override("separation", 18)
 	shell_margin.add_child(settings_body)
 
-	var header_parts := _make_settings_section("OPTIONS", PALETTE.CARBON, PALETTE.ELECTRIC_CYAN, Vector2(0, 54), Vector4(18, 8, 18, 8))
+	var header_parts := _make_settings_section("Settings", PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL, Vector2(0, 54), Vector4(0, 0, 0, 0))
 	var header_panel := header_parts.panel as PanelContainer
 	header_panel.name = "SettingsHeader"
 	settings_body.add_child(header_panel)
 	var header_body := header_parts.body as VBoxContainer
 	var header_heading := header_parts.heading as Label
 	header_heading.name = "SettingsTitle"
-	header_heading.add_theme_font_size_override("font_size", 25)
+	header_heading.add_theme_font_size_override("font_size", 27)
 	header_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	var header_row := HBoxContainer.new()
@@ -1541,6 +1549,7 @@ func _show_settings() -> void:
 	header_heading.reparent(header_row)
 	var reset_button := _make_button("Restore Defaults")
 	reset_button.set_meta("ui_button_quiet_keyline", true)
+	reset_button.set_meta("ui_button_shape", "round")
 	reset_button.name = "SettingsResetButton"
 	reset_button.custom_minimum_size = Vector2(190, 38)
 	reset_button.focus_mode = Control.FOCUS_ALL
@@ -1550,18 +1559,18 @@ func _show_settings() -> void:
 
 	var columns := HBoxContainer.new()
 	columns.name = "SettingsColumns"
-	columns.custom_minimum_size = Vector2(0, 410)
+	columns.custom_minimum_size = Vector2(0, 354)
 	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	columns.add_theme_constant_override("separation", 12)
+	columns.add_theme_constant_override("separation", 28)
 	settings_body.add_child(columns)
 
-	var category_parts := _make_settings_section("CATEGORIES", PALETTE.SURFACE_PAPER_MUTED, PALETTE.STRUCTURAL_EDGE, Vector2(255, 410), Vector4(14, 12, 14, 14))
+	var category_parts := _make_settings_section("", PALETTE.PEACH_PAPER_MUTED, PALETTE.PEACH_EDGE, Vector2(235, 354), Vector4(0, 0, 0, 0))
 	var category_frame := category_parts.panel as PanelContainer
 	category_frame.name = "SettingsCategoryRail"
 	columns.add_child(category_frame)
 	var category_list := category_parts.body as VBoxContainer
-	category_list.add_theme_constant_override("separation", 8)
+	category_list.add_theme_constant_override("separation", 10)
 
 	var content_stack := VBoxContainer.new()
 	content_stack.name = "SettingsCategoryContent"
@@ -1576,11 +1585,15 @@ func _show_settings() -> void:
 		"audio": "volume",
 		"battle": "swords",
 		"accessibility": "accessibility",
+		"run": "cards",
 	}
-	for category_id in ["display", "audio", "battle", "accessibility"]:
-		var category_button := _make_button(String(category_id).to_upper())
+	for category_id in ["display", "audio", "battle", "accessibility", "run"]:
+		var category_button := _make_button(String(category_id).capitalize())
 		category_button.name = "SettingsCategory%s" % String(category_id).capitalize()
-		category_button.custom_minimum_size = Vector2(0, 58)
+		category_button.custom_minimum_size = Vector2(0, 56)
+		category_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		category_button.set_meta("ui_button_shape", "round")
+		category_button.set_meta("settings_category_symbol", String(category_symbols[category_id]))
 		category_button.set_meta("ui_button_quiet_keyline", true)
 		category_button.focus_mode = Control.FOCUS_ALL
 		category_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1589,7 +1602,7 @@ func _show_settings() -> void:
 		MATERIAL_SYMBOLS.apply_to_button(category_button, String(category_symbols[category_id]), 21)
 		category_button.pressed.connect(_select_settings_category.bind(category_id, category_panels, category_buttons))
 
-	var display_parts := _make_settings_section("DISPLAY", PALETTE.SURFACE_PAPER, PALETTE.ELECTRIC_CYAN, Vector2(0, 410), Vector4(18, 13, 18, 15))
+	var display_parts := _make_settings_section("Display", PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL, Vector2(0, 354), Vector4(0, 0, 0, 0))
 	var display_frame := display_parts.panel as PanelContainer
 	display_frame.name = "SettingsDisplayPanel"
 	display_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1642,7 +1655,7 @@ func _show_settings() -> void:
 			text_scale_select.select(text_scale_select.item_count - 1)
 	text_scale_row.add_child(text_scale_select)
 
-	var audio_parts := _make_settings_section("AUDIO", PALETTE.SURFACE_PAPER, PALETTE.EMERALD, Vector2(0, 410), Vector4(18, 13, 18, 15))
+	var audio_parts := _make_settings_section("Audio", PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL, Vector2(0, 354), Vector4(0, 0, 0, 0))
 	var audio_frame := audio_parts.panel as PanelContainer
 	audio_frame.name = "SettingsAudioPanel"
 	audio_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1655,7 +1668,7 @@ func _show_settings() -> void:
 	var music_slider := _add_volume_setting(audio_panel, "Music", "music_volume")
 	var sfx_slider := _add_volume_setting(audio_panel, "Sound effects", "sfx_volume")
 
-	var battle_parts := _make_settings_section("BATTLE", PALETTE.SURFACE_PAPER, PALETTE.SIGNAL_YELLOW, Vector2(0, 410), Vector4(18, 13, 18, 15))
+	var battle_parts := _make_settings_section("At the table", PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL, Vector2(0, 354), Vector4(0, 0, 0, 0))
 	var battle_frame := battle_parts.panel as PanelContainer
 	battle_frame.name = "SettingsBattlePanel"
 	battle_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1696,7 +1709,7 @@ func _show_settings() -> void:
 	battle_text_row.add_child(battle_text_select)
 	var board_info_toggle := CheckButton.new()
 	board_info_toggle.name = "BoardInfoToggle"
-	board_info_toggle.text = "Show board labels and pile counts"
+	board_info_toggle.text = "Board labels"
 	board_info_toggle.button_pressed = bool(player_settings.show_board_info)
 	board_info_toggle.focus_mode = Control.FOCUS_ALL
 	board_info_toggle.set_meta("ui_button_quiet_keyline", true)
@@ -1704,7 +1717,7 @@ func _show_settings() -> void:
 	_style_settings_text_control(board_info_toggle)
 	_add_settings_control_panel(battle_panel, board_info_toggle)
 
-	var accessibility_parts := _make_settings_section("ACCESSIBILITY", PALETTE.SURFACE_PAPER, PALETTE.INTERFACE_VIOLET, Vector2(0, 410), Vector4(18, 13, 18, 15))
+	var accessibility_parts := _make_settings_section("Accessibility", PALETTE.PEACH_PAPER, PALETTE.PEACH_TEAL, Vector2(0, 354), Vector4(0, 0, 0, 0))
 	var accessibility_frame := accessibility_parts.panel as PanelContainer
 	accessibility_frame.name = "SettingsAccessibilityPanel"
 	accessibility_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1724,7 +1737,7 @@ func _show_settings() -> void:
 	_add_settings_control_panel(accessibility_panel, high_contrast_toggle)
 	var reduced_motion_toggle := CheckButton.new()
 	reduced_motion_toggle.name = "ReducedMotionToggle"
-	reduced_motion_toggle.text = "Reduce menu motion"
+	reduced_motion_toggle.text = "Reduced motion"
 	reduced_motion_toggle.button_pressed = bool(player_settings.reduced_motion)
 	reduced_motion_toggle.focus_mode = Control.FOCUS_ALL
 	reduced_motion_toggle.set_meta("ui_button_quiet_keyline", true)
@@ -1735,16 +1748,25 @@ func _show_settings() -> void:
 	var actions := HBoxContainer.new()
 	actions.name = "SettingsActions"
 	actions.add_theme_constant_override("separation", 10)
-	settings_body.add_child(actions)
+	var run_parts := _make_settings_section("Your run", PALETTE.PEACH_PAPER, PALETTE.PEACH_EDGE, Vector2(0, 354), Vector4(0, 0, 0, 0))
+	run_parts.panel.name = "SettingsRunPanel"
+	content_stack.add_child(run_parts.panel)
+	category_panels.run = run_parts.panel
+	(run_parts.body as VBoxContainer).add_child(actions)
 	var back_button := _make_button("Back")
 	back_button.set_meta("ui_button_quiet_keyline", true)
+	back_button.set_meta("ui_button_shape", "round")
 	back_button.name = "SettingsBackButton"
 	back_button.custom_minimum_size.y = 50
 	back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(back_button, "target")
+	_style_button(back_button, "secondary")
 	back_button.add_theme_font_size_override("font_size", 18)
 	_connect_pressed(back_button, _return_from_settings)
-	actions.add_child(back_button)
+	header_row.add_child(back_button)
+	header_row.move_child(back_button, 0)
+	back_button.size_flags_horizontal = Control.SIZE_FILL
+	back_button.custom_minimum_size.x = 120
+	back_button.focus_mode = Control.FOCUS_ALL
 	var abandon_button := _make_button("Abandon Run")
 	abandon_button.set_meta("ui_button_quiet_keyline", true)
 	abandon_button.name = "SettingsAbandonRunButton"
@@ -1755,20 +1777,20 @@ func _show_settings() -> void:
 	abandon_button.add_theme_font_size_override("font_size", 18)
 	actions.add_child(abandon_button)
 
-	var abandon_confirmation := HBoxContainer.new()
+	var abandon_confirmation := VBoxContainer.new()
 	abandon_confirmation.name = "AbandonRunConfirmation"
 	abandon_confirmation.visible = false
 	abandon_confirmation.add_theme_constant_override("separation", 10)
-	settings_body.add_child(abandon_confirmation)
+	(run_parts.body as VBoxContainer).add_child(abandon_confirmation)
 	var confirmation_copy := Label.new()
-	confirmation_copy.text = "Abandon this run? Your deck, money, and season progress cannot be recovered."
+	confirmation_copy.text = "End this run? Progress will be lost."
 	confirmation_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_settings_text_control(confirmation_copy, true)
 	abandon_confirmation.add_child(confirmation_copy)
 	var cancel_abandon_button := _make_button("Keep Playing")
 	cancel_abandon_button.name = "CancelAbandonRunButton"
 	cancel_abandon_button.set_meta("ui_button_quiet_keyline", true)
-	_style_button(cancel_abandon_button, "default")
+	_style_button(cancel_abandon_button, "primary")
 	abandon_confirmation.add_child(cancel_abandon_button)
 	var confirm_abandon_button := _make_button("Yes, Abandon Run")
 	confirm_abandon_button.name = "ConfirmAbandonRunButton"
@@ -1785,6 +1807,23 @@ func _show_settings() -> void:
 	)
 	_connect_pressed(confirm_abandon_button, _abandon_current_run)
 
+	for toggle in [fullscreen_toggle, board_info_toggle, high_contrast_toggle, reduced_motion_toggle]:
+		var caption: String = toggle.text
+		toggle.text = "%s  ·  %s" % [caption, "On" if toggle.button_pressed else "Off"]
+		toggle.toggled.connect(func(enabled: bool) -> void: toggle.text = "%s  ·  %s" % [caption, "On" if enabled else "Off"])
+	var saving_note := HBoxContainer.new()
+	saving_note.name = "SettingsSavingNote"
+	saving_note.add_theme_constant_override("separation", 8)
+	settings_body.add_child(saving_note)
+	var saving_mark := Label.new()
+	saving_mark.text = "✓"
+	saving_mark.add_theme_color_override("font_color", PALETTE.PEACH_TEAL)
+	saving_note.add_child(saving_mark)
+	var saving_copy := Label.new()
+	saving_copy.text = "Changes are saved automatically."
+	saving_copy.add_theme_font_size_override("font_size", 14)
+	_style_settings_text_control(saving_copy, true)
+	saving_note.add_child(saving_copy)
 	_select_settings_category(settings_active_category, category_panels, category_buttons)
 
 	fullscreen_toggle.toggled.connect(func(enabled: bool) -> void:
@@ -1904,8 +1943,9 @@ func _select_settings_category(
 		if not is_instance_valid(button):
 			continue
 		var selected := String(button_id) == category_id
-		button.text = String(button_id).to_upper()
+		button.text = String(button_id).capitalize()
 		_style_button(button, "selected" if selected else "default")
+		MATERIAL_SYMBOLS.apply_to_button(button, String(button.get_meta("settings_category_symbol", "settings")), 21)
 
 
 func _make_settings_section(
@@ -1918,7 +1958,6 @@ func _make_settings_section(
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = minimum_size
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	_add_settings_angular_surface(panel, fill, accent)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", int(margins.x))
 	margin.add_theme_constant_override("margin_top", int(margins.y))
@@ -1932,59 +1971,42 @@ func _make_settings_section(
 	margin.add_child(body)
 	var heading := Label.new()
 	heading.text = title
+	heading.visible = not title.is_empty()
 	heading.add_theme_font_override("font", DISPLAY_FONT)
-	heading.add_theme_font_size_override("font_size", 17)
+	heading.add_theme_font_size_override("font_size", 22)
 	heading.add_theme_color_override(
 		"font_color",
-		PALETTE.TEXT_PRIMARY if fill.get_luminance() < 0.56 else PALETTE.TEXT_ON_LIGHT
+		PALETTE.TEXT_PRIMARY if fill.get_luminance() < 0.56 else PALETTE.PEACH_INK
 	)
 	body.add_child(heading)
-	var accent_rule := ColorRect.new()
-	accent_rule.name = "%sAccentRule" % title.capitalize().replace(" ", "")
-	accent_rule.custom_minimum_size = Vector2(0, 4)
-	accent_rule.color = accent
-	accent_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(accent_rule)
-	body.move_child(accent_rule, 1)
+	if not title.is_empty() and title != "Settings":
+		var section_rule := ColorRect.new()
+		section_rule.name = "SettingsSectionRule"
+		section_rule.color = Color(accent, 0.65)
+		section_rule.custom_minimum_size = Vector2(40, 3)
+		section_rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		section_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(section_rule)
+		var breathing_room := Control.new()
+		breathing_room.custom_minimum_size.y = 7
+		body.add_child(breathing_room)
 	return {"panel": panel, "body": body, "heading": heading}
 
 
 func _style_settings_text_control(control: Control, muted: bool = false) -> void:
-	var color := PALETTE.TEXT_ON_LIGHT_SECONDARY if muted else PALETTE.TEXT_ON_LIGHT
+	var color := PALETTE.PEACH_INK_SOFT if muted else PALETTE.PEACH_INK
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		control.add_theme_color_override(state, color)
 
 
 func _style_settings_slider(slider: HSlider) -> void:
-	var track := StyleBoxLine.new()
-	track.color = PALETTE.STEEL
-	track.thickness = 6
-	track.grow_begin = 2
-	track.grow_end = 2
-	slider.add_theme_stylebox_override("slider", track)
-	var fill := StyleBoxLine.new()
-	fill.color = PALETTE.SELECTION_BLUE
-	fill.thickness = 6
-	fill.grow_begin = 2
-	fill.grow_end = 2
-	slider.add_theme_stylebox_override("grabber_area", fill)
-	var highlight_fill := StyleBoxLine.new()
-	highlight_fill.color = PALETTE.ELECTRIC_CYAN
-	highlight_fill.thickness = 6
-	highlight_fill.grow_begin = 2
-	highlight_fill.grow_end = 2
-	slider.add_theme_stylebox_override("grabber_area_highlight", highlight_fill)
-
+	UI_THEME_SCRIPT.style_settings_slider(slider)
 
 func _settings_row_style(margins: Vector4) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = PALETTE.SURFACE_PAPER_MUTED
-	style.border_color = PALETTE.STRUCTURAL_EDGE
-	style.set_border_width_all(1)
-	style.corner_radius_top_left = 2
-	style.corner_radius_top_right = 5
-	style.corner_radius_bottom_right = 2
-	style.corner_radius_bottom_left = 5
+	style.bg_color = Color.TRANSPARENT
+	style.border_color = Color(PALETTE.PEACH_EDGE, 0.30)
+	style.border_width_bottom = 1
 	style.content_margin_left = margins.x
 	style.content_margin_top = margins.y
 	style.content_margin_right = margins.z
@@ -2158,15 +2180,17 @@ func _show_debug_starter_selection() -> void:
 
 
 func _show_season_run_setup() -> void:
+	_set_food_prototype_mode(false)
 	if current_screen != "season_setup":
 		season_setup_difficulty_open = false
+		season_setup_difficulty_chosen = false
 	current_screen = "season_setup"
 	run = {}
 	_apply_screen_chrome()
 	_clear(nav)
 	_clear(content)
 	_update_status()
-	_set_footer("Choose a starter deck, then begin your route through Starter City.")
+	_set_footer("Choose a starter deck and card border, then take your seat at Locals.")
 
 	var selected_starter_id := String(DEMO_STARTER_ORDER[season_setup_archetype_index])
 	var selected_difficulty_id := String(DIFFICULTY_ORDER[season_setup_difficulty_index])
@@ -2202,8 +2226,10 @@ func _show_season_run_setup() -> void:
 		)
 		starter_profiles.append({
 			"id": profile_id,
-			"deck_title": "%s DECK" % _archetype_label(profile_id).to_upper(),
-			"description": String(profile_archetype.get("summary", "")),
+			"deck_title": profile_id.to_upper(),
+			"description": {"spicy": "Pressure and direct damage.", "hearty": "Durable units and healing.", "sweet": "Draw cards and disrupt your rival."}[profile_id],
+			"sample_cards": _starter_card_samples(profile_deck),
+			"cover_card": cards_by_id.get({"spicy": "spicy_sriracharrow", "hearty": "hearty_gravy_gazelle", "sweet": "sweet_strawberry_sharkcake"}[profile_id], {}),
 			"detail": "%s\n%d-card starter  •  40 persistent life" % [
 				_format_metrics_short(_calculate_deck_metrics(profile_deck, {})),
 				_deck_total(profile_deck),
@@ -2212,7 +2238,7 @@ func _show_season_run_setup() -> void:
 	var screen = SEASON_SETUP_MENU_SCENE.instantiate()
 	screen.name = "SeasonRegistration"
 	screen.back_requested.connect(_show_start, CONNECT_DEFERRED)
-	screen.starter_selected_requested.connect(_select_season_setup_archetype, CONNECT_DEFERRED)
+	screen.starter_selected_requested.connect(_select_season_setup_archetype)
 	screen.deck_list_requested.connect(
 		func(index: int) -> void:
 			var requested_index := clampi(index, 0, 2)
@@ -2221,9 +2247,16 @@ func _show_season_run_setup() -> void:
 	)
 	screen.previous_border_requested.connect(func() -> void: _shift_season_setup_difficulty(-1), CONNECT_DEFERRED)
 	screen.next_border_requested.connect(func() -> void: _shift_season_setup_difficulty(1), CONNECT_DEFERRED)
+	screen.difficulty_selected_requested.connect(_select_season_setup_difficulty)
 	screen.confirm_requested.connect(_confirm_season_run_setup, CONNECT_DEFERRED)
-	screen.difficulty_closed_requested.connect(_close_season_setup_difficulty, CONNECT_DEFERRED)
+	screen.difficulty_closed_requested.connect(_close_season_setup_difficulty)
 	content.add_child(screen)
+	var difficulty_options: Array[Dictionary] = []
+	for difficulty_id in DIFFICULTY_ORDER:
+		var option := _difficulty_data(String(difficulty_id)).duplicate(true)
+		option.starting_money = run_state_service.starting_money_for_difficulty(String(difficulty_id))
+		option.starting_life = route_run_service.STARTING_LIFE
+		difficulty_options.append(option)
 	screen.configure({
 		"route_mode": true,
 		"starter_id": selected_starter_id,
@@ -2231,13 +2264,15 @@ func _show_season_run_setup() -> void:
 		"difficulty_id": selected_difficulty_id,
 		"difficulty_index": season_setup_difficulty_index,
 		"difficulty_open": season_setup_difficulty_open,
+		"difficulty_chosen": season_setup_difficulty_chosen,
+		"difficulty_options": difficulty_options,
 		"starter_title": starter_title,
 		"info_title": "Draft Night" if draft_night_selected else "%s Deck" % starter_title,
 		"info_detail": "%s  •  %s" % [starter_summary, starter_detail],
 		"difficulty_name": String(difficulty.get("name", "Black")),
-		"difficulty_rules": "Begin with 40 persistent life. Choose connected stops, grow a 15-card starter, and defeat the city champion.",
-		"border_stats": "Enemy • Shop • Event • Local Champion • City Champion",
-		"route_hint": "STARTS AT DRAFT NIGHT" if draft_night_selected else "STARTS IN STARTER CITY",
+		"difficulty_rules": "Begin with 40 life and a 15-card deck. Life carries between rounds. Each new week fully heals Black and Blue borders; Yellow, Silver and Gold heal 20, up to maximum life.",
+		"border_stats": "Four rounds • Growing deck • One free bye",
+		"route_hint": "STARTS AT DRAFT NIGHT" if draft_night_selected else "TAKE YOUR SEAT AT LOCALS",
 		"starter_profiles": starter_profiles,
 	}, starter_art)
 	_add_starter_info_symbol(screen.get_symbol_mount(), selected_starter_id, draft_night_selected)
@@ -2255,6 +2290,23 @@ func _begin_draft(difficulty_id: String = "white") -> void:
 	_show_draft()
 
 
+func _starter_card_samples(deck: Dictionary) -> Array:
+	var samples: Array = []
+	var used: Array[String] = []
+	for category in ["meal", "keyword", "ingredient"]:
+		for id_value in deck:
+			var id := String(id_value)
+			var data: Dictionary = cards_by_id[id]
+			if used.has(id):
+				continue
+			var matches: bool = not data.get("keywords", []).is_empty() if category == "keyword" else String(data.get("card_type", "")) == category
+			if matches:
+				samples.append(data.duplicate(true))
+				used.append(id)
+				break
+	return samples
+
+
 func _show_draft() -> void:
 	current_screen = "draft"
 	_apply_screen_chrome()
@@ -2262,24 +2314,59 @@ func _show_draft() -> void:
 	_clear(content)
 	_remove_draft_hover_preview()
 	_update_status()
-	var drafted_count := _draft_total()
-	var signpost_step := not draft_signpost_chosen
-	_set_footer("Click a card to add it to your deck.")
-
-	var screen = DRAFT_MENU_SCENE.instantiate()
-	screen.name = "DraftWorkspaceScreen"
-	screen.abandon_requested.connect(_show_start, CONNECT_DEFERRED)
-	content.add_child(screen)
-	screen.configure(
-		"Choose your opening dual-flavor Meal."
-		if signpost_step
-		else "Pick %d of %d  •  Click one card to add it to your deck." % [drafted_count + 1, DRAFT_DECK_SIZE],
-		"%02d / %02d" % [drafted_count, DRAFT_DECK_SIZE]
-	)
-	_populate_draft_offer_row(screen.get_offer_row())
-	_add_draft_deck_rail(screen.get_workspace())
-	_create_draft_hover_preview()
-	_add_draft_distribution_charts(screen)
+	_set_footer("")
+	var margin := MarginContainer.new()
+	margin.name = "DraftWorkspaceScreen"
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_%s" % edge, 28)
+	content.add_child(margin)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 24)
+	margin.add_child(layout)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 22)
+	layout.add_child(header)
+	var back := TOPDECK_UI_SCRIPT.make_button("Back", "secondary", Vector2(120, 48), "DraftBackButton")
+	back.focus_mode = Control.FOCUS_ALL
+	back.pressed.connect(_show_start, CONNECT_DEFERRED)
+	header.add_child(back)
+	var title := TOPDECK_UI_SCRIPT.make_label("DRAFT", "screen_title")
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var review := TOPDECK_UI_SCRIPT.make_button("Your deck · %d/%d" % [_draft_total(), DRAFT_DECK_SIZE], "secondary", Vector2(240, 48), "ViewDraftedCardsButton")
+	review.focus_mode = Control.FOCUS_ALL
+	review.pressed.connect(_show_drafted_cards_menu)
+	header.add_child(review)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TOPDECK_UI_SCRIPT.style_scroll(scroll)
+	layout.add_child(scroll)
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(center)
+	var offers := HBoxContainer.new()
+	offers.name = "DraftOfferRow"
+	offers.add_theme_constant_override("separation", 44)
+	center.add_child(offers)
+	for card_id_value in draft_offer:
+		var card_id := String(card_id_value)
+		var column := VBoxContainer.new()
+		column.name = "DraftOffer_%s" % card_id
+		column.add_theme_constant_override("separation", 18)
+		offers.add_child(column)
+		var face := _make_card_face(cards_by_id[card_id], Vector2(280, 398), not _reduced_motion_enabled())
+		face.mouse_filter = Control.MOUSE_FILTER_STOP
+		column.add_child(face)
+		CARD_HOVER_PREVIEW.bind(face, cards_by_id[card_id], draft_difficulty_id)
+		CARD_INSPECTION_OVERLAY.bind(face, cards_by_id[card_id], draft_difficulty_id, true)
+		var pick := TOPDECK_UI_SCRIPT.make_button("Pick", "confirm", Vector2(280, 54), "DraftPick_%s" % card_id)
+		pick.focus_mode = Control.FOCUS_ALL
+		pick.pressed.connect(func() -> void: _draft_pick(card_id, face), CONNECT_DEFERRED)
+		column.add_child(pick)
+	TOPDECK_UI_SCRIPT.enter(margin)
 
 
 func _populate_draft_offer_row(offer_row: HBoxContainer) -> void:
@@ -2337,8 +2424,8 @@ func _populate_draft_offer_row(offer_row: HBoxContainer) -> void:
 
 func _draft_offer_panel_style(hovered: bool) -> StyleBoxFlat:
 	return WORKSPACE_UI_SCRIPT.clean_style(
-		Color(PALETTE.BLUSH, 0.34) if hovered else Color(PALETTE.CREAM, 0.96),
-		PALETTE.SKY if hovered else PALETTE.NAVY,
+		Color(PALETTE.BLUSH, 0.34) if hovered else Color(PALETTE.PEACH_PAPER, 0.96),
+		PALETTE.PEACH_TEAL if hovered else PALETTE.PEACH_INK,
 		3 if hovered else 2,
 		16,
 		Vector4(12, 10, 12, 12),
@@ -2375,13 +2462,13 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 	heading.text = "YOUR DECK"
 	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.76))
 	heading.add_theme_font_size_override("font_size", 24)
-	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	rail.add_child(heading)
 	var hint := Label.new()
-	hint.text = "%d/%d cards  •  Hover to inspect" % [_draft_total(), DRAFT_DECK_SIZE]
+	hint.text = "%d/%d cards" % [_draft_total(), DRAFT_DECK_SIZE]
 	hint.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
 	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	hint.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
 	rail.add_child(hint)
 
 	var scroll_box := ScrollContainer.new()
@@ -2410,7 +2497,7 @@ func _add_draft_deck_rail(parent: HBoxContainer) -> void:
 		tile.add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI_SCRIPT.clean_style(
-				Color(PALETTE.CREAM, 0.96),
+				Color(PALETTE.PEACH_PAPER, 0.96),
 				_affinity_color(_card_archetype(card)).darkened(0.28),
 				2,
 				7,
@@ -2517,7 +2604,7 @@ func _show_draft_hover_preview(source: Control, card_id: String) -> void:
 		heading.text = "KEYWORD GUIDE"
 		heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.66))
 		heading.add_theme_font_size_override("font_size", 12)
-		heading.add_theme_color_override("font_color", PALETTE.NAVY)
+		heading.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 		glossary.add_child(heading)
 		for keyword_id in known_keywords:
 			_add_draft_keyword_explanation(glossary, keyword_id)
@@ -2535,65 +2622,9 @@ func _add_draft_keyword_explanation(parent: VBoxContainer, keyword_id: String) -
 
 
 func _add_keyword_explanation(parent: VBoxContainer, keyword_id: String, node_prefix: String) -> void:
-	var tooltip: Dictionary = KEYWORD_TOOLTIPS.get(keyword_id, {})
-	if tooltip.is_empty():
+	if not KEYWORD_TOOLTIPS.has(keyword_id):
 		return
-	var accent := _keyword_accent_color(keyword_id)
-	var panel := PanelContainer.new()
-	panel.clip_contents = true
-	panel.add_theme_stylebox_override(
-		"panel",
-		WORKSPACE_UI_SCRIPT.clean_style(
-			PALETTE.CREAM,
-			PALETTE.NAVY,
-			2,
-			12,
-			Vector4.ZERO,
-			0,
-			true
-		)
-	)
-	panel.name = "%s_%s" % [node_prefix, keyword_id]
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(panel)
-	var row := HBoxContainer.new()
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 0)
-	panel.add_child(row)
-	var accent_bar := ColorRect.new()
-	accent_bar.name = "KeywordAccentBar"
-	accent_bar.color = accent
-	accent_bar.custom_minimum_size = Vector2(7, 0)
-	accent_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(accent_bar)
-	var margin := MarginContainer.new()
-	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	row.add_child(margin)
-	var copy := VBoxContainer.new()
-	copy.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	copy.add_theme_constant_override("separation", 8)
-	margin.add_child(copy)
-	var title_badge := WORKSPACE_UI_SCRIPT.make_badge(
-		String(tooltip.title).to_upper(),
-		accent.lightened(0.50),
-		PALETTE.NAVY
-	)
-	title_badge.name = "KeywordTitleBadge"
-	title_badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	copy.add_child(title_badge)
-	var body := Label.new()
-	body.text = String(tooltip.body)
-	body.custom_minimum_size = Vector2(214, 0)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font())
-	body.add_theme_font_size_override("font_size", 14)
-	body.add_theme_color_override("font_color", PALETTE.NAVY)
-	body.add_theme_constant_override("line_spacing", 2)
-	copy.add_child(body)
+	parent.add_child(CARD_INSPECTION_CONTENT.make_glossary({"keywords": [keyword_id]}, 244, node_prefix))
 
 
 func _keyword_accent_color(keyword_id: String) -> Color:
@@ -2601,13 +2632,13 @@ func _keyword_accent_color(keyword_id: String) -> Color:
 		"piercing":
 			return PALETTE.CORAL
 		"stalwart":
-			return PALETTE.PERIWINKLE
+			return PALETTE.PEACH_EDGE
 		"taunt":
 			return PALETTE.FRESH_YELLOW
 		"hand_trap":
 			return PALETTE.FUNKY_PLUM
 		_:
-			return PALETTE.SKY
+			return PALETTE.PEACH_TEAL
 
 
 func _hide_draft_hover_preview() -> void:
@@ -2680,7 +2711,7 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 	chart_title.text = title
 	chart_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
 	chart_title.add_theme_font_size_override("font_size", 19)
-	chart_title.add_theme_color_override("font_color", PALETTE.NAVY)
+	chart_title.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	chart.add_child(chart_title)
 	var columns := HBoxContainer.new()
 	columns.name = title.to_pascal_case() + "Graph"
@@ -2710,8 +2741,8 @@ func _add_draft_bar_chart(parent: HBoxContainer, title: String, counts: Dictiona
 		var bar_track := PanelContainer.new()
 		bar_track.custom_minimum_size = Vector2(38, 68)
 		var track_style := StyleBoxFlat.new()
-		track_style.bg_color = Color(PALETTE.LAVENDER_GLASS, 0.82)
-		track_style.border_color = PALETTE.NAVY_MUTED
+		track_style.bg_color = Color(PALETTE.PEACH_PAPER_MUTED, 0.82)
+		track_style.border_color = PALETTE.PEACH_INK_SOFT
 		track_style.set_border_width_all(1)
 		track_style.set_corner_radius_all(5)
 		bar_track.add_theme_stylebox_override("panel", track_style)
@@ -2920,124 +2951,11 @@ func _draft_entry_sort_key(entry: Dictionary, sort_mode: String) -> String:
 func _show_drafted_cards_menu() -> void:
 	if current_screen != "draft" or find_child("DraftedCardsMenu", true, false) != null:
 		return
-	var overlay := Control.new()
-	overlay.name = "DraftedCardsMenu"
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.z_index = 1500
-	add_child(overlay)
-
-	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.12, 0.09, 0.07, 0.76)
-	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay.add_child(dimmer)
-
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(center)
-
-	var menu_panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(660, 0),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.TEAL,
-		Vector4(30, 26, 30, 28),
-		1
-	)
-	menu_panel.name = "DraftedCardsMenuPanel"
-	center.add_child(menu_panel)
-	var menu := VBoxContainer.new()
-	menu.add_theme_constant_override("separation", 10)
-	menu.set_meta("light_surface", true)
-	menu_panel.add_child(menu)
-	var heading := Label.new()
-	heading.text = "DRAFTED DECK — %d/%d CARDS" % [_draft_total(), DRAFT_DECK_SIZE]
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.82))
-	heading.add_theme_font_size_override("font_size", 30)
-	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	menu.add_child(heading)
-
-	var sort_row := HBoxContainer.new()
-	sort_row.name = "DraftedCardsSortRow"
-	sort_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sort_row.add_theme_constant_override("separation", 8)
-	menu.add_child(sort_row)
-	for sort_option in [
-		{"id": DRAFT_SORT_NAME, "label": "Name", "node_name": "DraftSortNameButton"},
-		{"id": DRAFT_SORT_TYPE, "label": "Card Type", "node_name": "DraftSortTypeButton"},
-		{"id": DRAFT_SORT_AFFINITY, "label": "Affinity", "node_name": "DraftSortAffinityButton"},
-	]:
-		var sort_mode := String(sort_option.id)
-		var sort_button := SKETCH_UI_SCRIPT.make_button(
-			("✓ " if sort_mode == draft_menu_sort_mode else "") + String(sort_option.label).to_upper(),
-			Vector2(0, 58),
-			sort_mode == draft_menu_sort_mode,
-			18,
-			sort_mode != draft_menu_sort_mode
-		)
-		sort_button.name = String(sort_option.node_name)
-		sort_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_connect_pressed(sort_button, func() -> void: _set_drafted_cards_sort_mode(sort_mode))
-		sort_row.add_child(sort_button)
-
-	var entries := _draft_summary_entries()
-	if entries.is_empty():
-		_add_body_text(menu, "You have not drafted any cards yet.")
-	else:
-		var list_scroll := ScrollContainer.new()
-		list_scroll.name = "DraftedCardsMenuScroll"
-		list_scroll.custom_minimum_size = Vector2(0, minf(420.0, 18.0 + float(entries.size()) * 42.0))
-		list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		menu.add_child(list_scroll)
-
-		var list := VBoxContainer.new()
-		list.name = "DraftedCardsMenuList"
-		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		list.add_theme_constant_override("separation", 6)
-		list_scroll.add_child(list)
-
-		for entry in entries:
-			var card_id := String(entry.id)
-			var card: Dictionary = cards_by_id[card_id]
-			var row := HBoxContainer.new()
-			row.name = "DraftedCardEntry_%s" % card_id
-			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			row.add_theme_constant_override("separation", 12)
-			list.add_child(row)
-
-			var card_label := Label.new()
-			card_label.text = "%s  —  %s  —  %s" % [
-				_card_display_name(card),
-				String(entry.type),
-				String(entry.affinity),
-			]
-			card_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			card_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.12))
-			card_label.add_theme_font_size_override("font_size", 17)
-			card_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-			row.add_child(card_label)
-
-			var count_label := Label.new()
-			count_label.name = "DraftedCardCount_%s" % card_id
-			count_label.text = "×%d" % int(entry.count)
-			count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			count_label.add_theme_font_size_override("font_size", 18)
-			count_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.TEAL)
-			row.add_child(count_label)
-
-	var close_button := SKETCH_UI_SCRIPT.make_button(
-		"CLOSE DRAFTED DECK",
-		Vector2(0, 68),
-		true,
-		22,
-		false
-	)
-	close_button.name = "CloseDraftedCardsButton"
-	_connect_pressed(close_button, _close_drafted_cards_menu)
-	menu.add_child(close_button)
+	var modal = GAME_MODAL.create(self, "YOUR DECK", "DraftedCardsMenu", _close_drafted_cards_menu)
+	modal.back.name = "CloseDraftedCardsButton"
+	var browser = CARD_BROWSER.new()
+	browser.configure(_deck_browser_entries(draft_deck, false), draft_difficulty_id, "DraftedCards")
+	modal.body.add_child(browser)
 
 
 func _close_drafted_cards_menu() -> void:
@@ -3079,6 +2997,7 @@ func _shift_season_setup_archetype(delta: int) -> void:
 
 
 func _select_season_setup_archetype(index: int) -> void:
+	season_setup_difficulty_chosen = false
 	season_setup_archetype_index = clampi(index, 0, DEMO_STARTER_ORDER.size() - 1)
 	season_setup_difficulty_open = true
 	var setup := find_child("SeasonRegistration", true, false) as SeasonSetupMenu
@@ -3088,6 +3007,7 @@ func _select_season_setup_archetype(index: int) -> void:
 
 func _close_season_setup_difficulty() -> void:
 	season_setup_difficulty_open = false
+	season_setup_difficulty_chosen = false
 	var setup := find_child("SeasonRegistration", true, false) as SeasonSetupMenu
 	if setup != null and setup.selected_index >= 0:
 		setup._collapse_selection()
@@ -3095,7 +3015,14 @@ func _close_season_setup_difficulty() -> void:
 
 func _shift_season_setup_difficulty(delta: int) -> void:
 	season_setup_difficulty_index = posmod(season_setup_difficulty_index + delta, DIFFICULTY_ORDER.size())
+	season_setup_difficulty_chosen = true
 	_show_season_run_setup()
+
+
+func _select_season_setup_difficulty(index: int) -> void:
+	# The table owns its selected-box transition; do not rebuild it on a swatch click.
+	season_setup_difficulty_index = clampi(index, 0, DIFFICULTY_ORDER.size() - 1)
+	season_setup_difficulty_chosen = true
 
 
 func _confirm_season_run_setup() -> void:
@@ -3317,9 +3244,9 @@ func _apply_screen_chrome() -> void:
 	if current_screen not in ["route_remove", "route_upgrade", "route_break_upgrade"] and is_instance_valid(route_shop_service_overlay):
 		_clear_route_shop_service_overlay()
 	if title_label != null:
-		title_label.add_theme_color_override("font_color", PALETTE.NAVY if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.INK)
+		title_label.add_theme_color_override("font_color", PALETTE.PEACH_INK if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.INK)
 	if status_label != null:
-		status_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.TEAL_DEEP)
+		status_label.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT if _uses_workspace_interface() or current_screen == "result" else UI_THEME_SCRIPT.TEAL_DEEP)
 	theme = (
 		workspace_ui_theme
 		if _uses_workspace_interface()
@@ -3329,42 +3256,43 @@ func _apply_screen_chrome() -> void:
 	)
 	var compact_duel := current_screen in ["kitchen_match", "tutorial"]
 	var compact_deck := current_screen == "deck" and _run_mode() == "season"
-	var title_flow := current_screen in ["start", "season_setup"]
+	var title_flow := current_screen in ["start", "season_setup", "food_prototype_menu", "food_prototype_opening"]
 	var store_chrome := current_screen == "shop" and _run_mode() == "season"
 	var season_menu := current_screen == "season"
 	var pack_screen := current_screen == "packs"
 	var finale_screen := current_screen == "thanks"
-	var route_map_screen := current_screen in ["route_map", "route_hub"]
+	var hub_counter := current_screen in ["route_shop", "route_remove", "route_upgrade"] and bool(run.get("pending_route_node", {}).get("hub_shop", false))
+	var route_map_screen := current_screen in ["route_map", "route_hub"] or hub_counter
 	var route_encounter_screen := current_screen in [
 		"route_encounter_intro", "route_shop", "route_remove", "route_upgrade",
 		"route_break_upgrade", "route_event", "route_game_over", "route_victory",
-	]
+	] and not hub_counter
 	var route_presentation_screen := route_encounter_screen or current_screen in ["route_reward_reveal", "route_reward_pack", "route_reward"]
-	var full_frame_screen := current_screen in ["deck", "settings"]
+	var full_frame_screen := current_screen in ["deck", "settings", "result", "route_game_over", "route_victory", "thanks", "draft", "week_transition"]
 	var immersive_screen := pack_screen or finale_screen or route_map_screen or route_encounter_screen
 	var hide_footer := title_flow or compact_duel or compact_deck or full_frame_screen or season_menu or immersive_screen or route_presentation_screen or current_screen == "draft" or (current_screen == "shop" and _run_mode() == "season")
 	var shell_background := get_node_or_null("PaperBackground") as ColorRect
 	var pastel_workspace_background := get_node_or_null("PastelWorkspaceBackground") as ColorRect
 	var route_presentation_background := get_node_or_null("RoutePresentationBackground") as ColorRect
 	var pastel_workspace_screens := [
-		"new_game", "settings", "draft", "path_choice", "season", "singles",
-		"trading", "deck", "tournament", "result", "thanks", "meta", "card_lab",
+		"new_game", "settings", "path_choice", "season", "singles",
+		"trading", "tournament", "meta", "card_lab",
 	]
-	var use_pastel_workspace := current_screen in pastel_workspace_screens
+	var use_pastel_workspace := false
 	if shell_background != null:
-		shell_background.visible = not use_pastel_workspace and not route_encounter_screen
+		shell_background.visible = not use_pastel_workspace and not route_encounter_screen and current_screen not in ["result", "thanks", "draft", "deck"]
 	if pastel_workspace_background != null:
 		pastel_workspace_background.visible = use_pastel_workspace
 	if route_presentation_background != null:
-		route_presentation_background.visible = route_encounter_screen
+		route_presentation_background.visible = route_encounter_screen or current_screen in pastel_workspace_screens or current_screen in ["result", "thanks", "draft", "deck", "route_reward_reveal", "route_reward_pack", "route_reward"]
 	if header_bar != null:
 		header_bar.visible = not compact_duel and not full_frame_screen and not title_flow and not store_chrome and not season_menu and not immersive_screen and not route_presentation_screen
 	if nav != null:
-		nav.visible = not compact_duel and not full_frame_screen and not title_flow and not store_chrome and not immersive_screen and not route_presentation_screen
+		nav.visible = not compact_duel and not full_frame_screen and not title_flow and not store_chrome and not immersive_screen and not route_presentation_screen and current_screen != "result"
 	footer_label.visible = not hide_footer
 	footer_label.custom_minimum_size = Vector2(0, 0 if hide_footer else 78)
 	var compact_margin := compact_duel or compact_deck
-	var immersive_margin := 0 if pack_screen else 12
+	var immersive_margin := 0 if pack_screen or current_screen == "route_hub" or hub_counter else 12
 	root_margin.add_theme_constant_override("margin_left", 0 if compact_duel or full_frame_screen else (immersive_margin if immersive_screen else (6 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 18))))))
 	root_margin.add_theme_constant_override("margin_right", 0 if compact_duel or full_frame_screen else (immersive_margin if immersive_screen else (6 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 18))))))
 	root_margin.add_theme_constant_override("margin_top", 0 if compact_duel or full_frame_screen else (immersive_margin if immersive_screen else (4 if compact_margin else (0 if store_chrome else (12 if season_menu else (0 if title_flow else 14))))))
@@ -3372,8 +3300,8 @@ func _apply_screen_chrome() -> void:
 	shell.add_theme_constant_override("separation", 0 if pack_screen or full_frame_screen else (3 if compact_margin else (0 if title_flow or store_chrome else 10)))
 	content.add_theme_constant_override("separation", 0 if full_frame_screen or title_flow else (4 if compact_margin else 10))
 	if scroll != null:
-		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen else ScrollContainer.SCROLL_MODE_AUTO
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen or season_menu else ScrollContainer.SCROLL_MODE_AUTO
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen or current_screen == "route_hub" or hub_counter or current_screen in ["result", "route_game_over", "route_victory", "thanks", "draft", "deck"] else ScrollContainer.SCROLL_MODE_AUTO
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if compact_deck or title_flow or pack_screen or season_menu or current_screen == "route_hub" or hub_counter or current_screen in ["result", "route_game_over", "route_victory", "thanks", "draft", "deck"] else ScrollContainer.SCROLL_MODE_AUTO
 
 
 func _uses_sketch_interface() -> bool:
@@ -3484,48 +3412,133 @@ func _show_run_map(resolve_pending: bool = true) -> void:
 	_show_tournament_hub(resolve_pending)
 
 
+func _play_shop_entry_sound(previous_screen: String) -> void:
+	# Panel redraws, service pickers, and settings are still the same visit.
+	var origin := previous_screen
+	if origin == "settings":
+		origin = settings_return_screen
+	if origin == "deck":
+		origin = deckbuilder_return_screen
+	if origin in ["route_hub", "route_shop", "route_upgrade", "route_remove", "route_break_upgrade", "shop", "singles", "packs", "set_decks"]:
+		return
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_shop_bell()
+
+
 func _show_tournament_hub(resolve_pending: bool = true) -> void:
+	if FOOD_PROTOTYPE.active(run) and bool(run.get("food_opening_pending", false)):
+		_show_food_prototype_opening()
+		return
 	if _guard_run_over():
 		return
 	_clear_route_reward_overlay()
 	_clear_route_encounter_overlay()
 	route_encounter_transitioning = false
+	if resolve_pending and String(run.get("week_transition", "")) in ["deckbox", "deckbox_reward", "week_intro"]:
+		_show_week_transition()
+		return
 	if resolve_pending and not run.get("pending_route_node", {}).is_empty():
 		_resolve_pending_route_node()
 		return
-	var existing_hub := content.find_child("TournamentHub", false, false)
-	if existing_hub != null and not existing_hub.is_queued_for_deletion():
-		current_screen = "route_hub"
-		_apply_screen_chrome()
-		_render_nav()
-		_update_status()
-		existing_hub.call("configure", _tournament_hub_snapshot(), _reduced_motion_enabled())
-		_play_card_shop_music()
-		return
+	var previous_screen := current_screen
 	current_screen = "route_hub"
 	_apply_screen_chrome()
 	_render_nav()
-	_clear(content)
 	_update_status()
-	_set_footer("")
+	var hub := _mount_tournament_hub()
+	hub.configure(_tournament_hub_snapshot(), _reduced_motion_enabled())
+	hub.set_shop_open(false)
+	_play_card_shop_music()
+	# False is also used to build the backdrop underneath battle rewards.
+	if resolve_pending:
+		_play_shop_entry_sound(previous_screen)
 
-	var hub = TOURNAMENT_HUB_SCRIPT.new()
+
+func _mount_tournament_hub() -> Control:
+	var existing_hub := content.find_child("TournamentHub", false, false) as Control
+	if existing_hub != null and not existing_hub.is_queued_for_deletion():
+		return existing_hub
+	if is_instance_valid(existing_hub):
+		existing_hub.name = "RetiringTournamentHub"
+	_clear(content)
+	_set_footer("")
+	var hub = TOURNAMENT_HUB_SCENE.instantiate()
 	hub.name = "TournamentHub"
 	hub.configure(_tournament_hub_snapshot(), _reduced_motion_enabled())
 	hub.shop_requested.connect(_open_hub_shop)
+	hub.deck_requested.connect(_show_shop_deck)
+	hub.seller_requested.connect(_open_hub_seller)
+	hub.machine_requested.connect(_open_hub_view.bind("machine"))
+	hub.shop_closed.connect(_leave_hub_shop)
+	hub.buy_requested.connect(_route_shop_buy_card)
+	hub.reroll_requested.connect(_reroll_hub_shop)
+	hub.remove_requested.connect(_show_route_remove_card)
 	hub.heal_requested.connect(_use_hub_break_heal)
 	hub.upgrade_requested.connect(_show_hub_break_upgrade)
+	hub.seller_upgrade_requested.connect(_show_route_upgrade_card)
 	hub.next_round_requested.connect(_start_next_hub_round)
 	hub.save_requested.connect(_save_run)
 	hub.settings_requested.connect(_show_settings)
 	content.add_child(hub)
+	return hub
+
+
+func _show_hub_counter() -> void:
+	_show_hub_closeup(false)
+
+
+func _show_hub_closeup(seller: bool) -> void:
+	var previous_screen := current_screen
+	var previous_hub := content.find_child("TournamentHub", false, false)
+	var animate := is_instance_valid(previous_hub) and not previous_hub.is_queued_for_deletion()
+	current_screen = "route_shop"
+	_apply_screen_chrome()
+	_render_nav()
+	_update_status()
+	var hub := _mount_tournament_hub()
+	hub.configure(_tournament_hub_snapshot(), _reduced_motion_enabled())
+	if String(run.get("pending_route_node", {}).get("hub_view", "")) == "machine":
+		hub.set_machine_open(true, animate)
+	elif seller:
+		hub.set_seller_open(true, animate)
+	else:
+		hub.set_shop_open(true, animate)
 	_play_card_shop_music()
+	_play_shop_entry_sound(previous_screen)
 
 
 func _tournament_hub_snapshot() -> Dictionary:
+	var shop_state: Dictionary = run.get("pending_route_node", {})
+	if not bool(shop_state.get("hub_shop", false)):
+		shop_state = _ensure_hub_shop()
+	var shop_cards: Array = []
+	for card_id in shop_state.get("inventory", []):
+		if cards_by_id.has(card_id):
+			var shop_card: Dictionary = cards_by_id[card_id].duplicate(true)
+			shop_card.shop_price = _card_price(String(card_id))
+			shop_card.owned_count = int(run.deck.get(card_id, 0))
+			shop_card.deck_count = _deck_total(run.deck)
+			shop_cards.append(shop_card)
 	var round_number := clampi(int(run.get("hub_round", 1)), 1, maxi(1, int(run.get("hub_rounds_per_floor", 4))))
+	var reroll_cost: int = shop_economy_service.shop_reroll_cost(shop_state)
 	return {
+		"shop_cards": shop_cards,
+		"reroll_cost": reroll_cost,
+		"can_reroll": int(run.get("money", 0)) >= reroll_cost and not route_shop_purchase_busy,
+		"shop_purchase_busy": route_shop_purchase_busy,
+		"remove_cost": route_run_service.SHOP_REMOVE_COST,
+		"remove_used": bool(shop_state.get("remove_purchased", false)),
+		"can_remove": not bool(shop_state.get("remove_purchased", false)) and int(run.money) >= route_run_service.SHOP_REMOVE_COST and _deck_total(run.deck) > MIN_MAIN_DECK_SIZE,
+		"shop_upgrade_cost": route_run_service.SHOP_UPGRADE_COST,
+		"shop_upgrade_used": bool(shop_state.get("upgrade_purchased", false)),
+		"can_shop_upgrade": not bool(shop_state.get("upgrade_purchased", false)) and int(run.money) >= route_run_service.SHOP_UPGRADE_COST and not route_run_service.upgradeable_card_ids(run).is_empty(),
+		"starter": String(run.get("starter", "spicy")),
+		"difficulty": _run_difficulty_id(),
 		"floor": String(run.get("hub_floor", "locals")).capitalize(),
+		"week": int(run.get("week", 1)),
+		"deckbox": run.get("deckbox", {}).duplicate(true),
+		"deckbox_reward": run.get("deckbox_reward", {}).duplicate(true),
+		"bye_heal": route_run_service.HUB_BREAK_HEAL_AMOUNT + WEEKLY_DEMO.bonus(run, "bye_heal"),
 		"round": round_number,
 		"total_rounds": int(run.get("hub_rounds_per_floor", 4)),
 		"life": int(run.get("life", 0)),
@@ -3537,7 +3550,7 @@ func _tournament_hub_snapshot() -> Dictionary:
 		"can_heal": int(run.get("life", 0)) < int(run.get("max_life", route_run_service.STARTING_LIFE)),
 		"can_upgrade": not route_run_service.upgradeable_card_ids(run).is_empty(),
 		"next_label": _hub_round_label(round_number),
-		"notice": String(run.get("hub_notice", "Choose the shop, use your one break, or report to the next round.")),
+		"notice": String(run.get("hub_notice", "")),
 	}
 
 
@@ -3566,27 +3579,31 @@ func _hub_round_node(round_number: int) -> Dictionary:
 		"Locals Final — Store Champion",
 	]
 	return {
-		"id": "%s_round_%d" % [String(run.get("hub_floor", "locals")), round_number],
+		"id": "%s_week_%d_round_%d" % [String(run.get("hub_floor", "locals")), int(run.get("week", 1)), round_number],
 		"type": node_type,
 		"label": labels[clampi(round_number - 1, 0, labels.size() - 1)],
 		"location": "Local Card Store — Table %d" % (3 if round_number == 2 else round_number),
 		"hub_round_node": true,
 		"hub_round": round_number,
+		"week": int(run.get("week", 1)),
 	}
 
 
 func _start_next_hub_round() -> void:
+	if String(run.get("week_transition", "")) in ["deckbox", "deckbox_reward", "week_intro"]:
+		_show_week_transition()
+		return
 	if not run.get("pending_route_node", {}).is_empty():
 		_resolve_pending_route_node()
 		return
 	var round_number := clampi(int(run.get("hub_round", 1)), 1, maxi(1, int(run.get("hub_rounds_per_floor", 4))))
-	run.hub_notice = "Round %d called. Your life and locked deck carry into the match." % round_number
+	run.hub_notice = "Round %d" % round_number
 	run.pending_route_node = _hub_round_node(round_number)
 	_autosave_now("route_encounter_intro")
 	_resolve_pending_route_node()
 
 
-func _open_hub_shop() -> void:
+func _ensure_hub_shop(refresh_stock: bool = false) -> Dictionary:
 	var shop_state: Dictionary = run.get("hub_shop", {}).duplicate(true)
 	if shop_state.is_empty():
 		shop_state = {
@@ -3597,27 +3614,88 @@ func _open_hub_shop() -> void:
 		}
 	else:
 		shop_state.hub_shop = true
+	shop_state.rerolls_used = maxi(0, int(shop_state.get("rerolls_used", 0)))
+	if refresh_stock or not shop_state.has("inventory"):
+		_generate_shop_inventory()
+		shop_state.inventory = run.shop.slice(0, 4)
+	run.hub_shop = shop_state
+	return shop_state
+
+
+func _reroll_hub_shop(expected_cost: int) -> void:
+	if route_shop_purchase_busy or current_screen != "route_shop" or bool(run.get("run_over", false)):
+		return
+	var shop_state: Dictionary = run.get("pending_route_node", {})
+	if not bool(shop_state.get("hub_shop", false)) or String(shop_state.get("hub_view", "counter")) != "counter":
+		return
+	var hub := content.find_child("TournamentHub", false, false)
+	if not is_instance_valid(hub) or hub._transitioning or not hub._shop_open or not hub._shop_view._interactive or hub._shop_view._busy:
+		return
+	var result: Dictionary = shop_economy_service.reroll_hub_shop(run, shop_state, String(run.get("starter", "spicy")), expected_cost)
+	if not bool(result.get("ok", false)):
+		hub.show_notice(String(result.get("message", "Unable to reroll the shop.")))
+		return
+	selected_route_shop_card_id = ""
 	run.pending_route_node = shop_state
+	run.hub_shop = shop_state.duplicate(true)
+	run.hub_notice = ""
+	# Keep stock, price progression and payment together across save/resume.
+	_autosave_now("route_shop")
+	hub.clear_reroll_selection()
+	_show_hub_counter()
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_purchase()
+
+
+func _open_hub_shop() -> void:
+	_open_hub_view("counter")
+
+
+func _open_hub_seller() -> void:
+	_open_hub_view("seller")
+
+
+func _open_hub_view(view: String) -> void:
+	if route_shop_purchase_busy:
+		return
+	var pending: Dictionary = run.get("pending_route_node", {})
+	if not pending.is_empty() and not bool(pending.get("hub_shop", false)):
+		return
+	if pending.is_empty():
+		pending = _ensure_hub_shop().duplicate(true)
+	if String(pending.get("hub_view", "")) != view and is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_shop_focus(view)
+	pending.hub_view = view
+	run.pending_route_node = pending
 	_autosave_now("route_shop")
 	_show_route_shop()
 
 
 func _leave_hub_shop() -> void:
+	if not bool(run.get("pending_route_node", {}).get("hub_shop", false)):
+		return
 	var shop_state: Dictionary = run.get("pending_route_node", {}).duplicate(true)
 	shop_state.hub_shop = true
+	shop_state.erase("hub_view")
 	run.hub_shop = shop_state
 	run.pending_route_node = {}
-	run.hub_notice = "Purchases were added directly to your locked deck."
+	run.hub_notice = ""
 	_autosave_now("route_hub")
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_popup_close()
 	_show_tournament_hub()
 
 
 func _use_hub_break_heal() -> void:
 	var result: Dictionary = route_run_service.use_hub_break_heal(run)
-	run.hub_notice = String(result.get("message", "The break machine did not respond."))
+	run.hub_notice = "" if bool(result.get("ok", false)) else String(result.get("message", "Unavailable"))
 	if bool(result.get("ok", false)):
 		_autosave_now("route_hub")
 	_show_tournament_hub()
+	if bool(result.get("ok", false)):
+		if is_instance_valid(ui_sound_controller):
+			ui_sound_controller.play_heal()
+		TOPDECK_UI_SCRIPT.toast(self, "+%d life" % int(result.get("healed", 0)))
 
 
 func _show_hub_break_upgrade() -> void:
@@ -3778,6 +3856,11 @@ func _resolve_pending_route_node() -> void:
 		_show_run_map()
 		return
 	match String(node.get("type", "enemy")):
+		"week_pack":
+			if bool(run.get("route_pack_opened", false)):
+				_show_route_card_reward()
+			else:
+				_show_route_sealed_pack()
 		"enemy", "mini_boss", "final_boss":
 			if not run.get("reward_offer", []).is_empty():
 				if bool(run.get("route_pack_opened", false)) or bool(run.get("route_reward_intro_seen", false)):
@@ -3834,7 +3917,7 @@ func _start_route_battle(resume_saved: bool = false) -> void:
 			)),
 			"npc_personality": String(node.get("npc_personality", "competitive")),
 			"opponent_affinity": opponent_affinity,
-			"opponent_life": route_run_service.encounter_life(node_type),
+			"opponent_life": route_run_service.encounter_life(node_type) + (int(route_run_service.weekly.config.get("week_two_opponent_life_bonus", 2)) if WEEKLY_DEMO.is_weekly_run(run) and int(run.get("week", 1)) > 1 else 0),
 			"ai": route_run_service.encounter_ai(node_type),
 			"intro_seen": false,
 			"location": String(node.get(
@@ -3842,6 +3925,12 @@ func _start_route_battle(resume_saved: bool = false) -> void:
 				["Park Table", "Sidewalk Table", "Waterfront Table"][posmod(encounter_seed, 3)]
 			)),
 		}
+		var prototype_encounter := FOOD_PROTOTYPE.encounter_settings(run, node_type)
+		if not prototype_encounter.is_empty():
+			battle.opponent_life = int(prototype_encounter.life)
+			battle.deck_upgrades = int(prototype_encounter.deck_upgrades)
+		if FOOD_PROTOTYPE.active(run):
+			battle.opponent_deck = _route_rival_deck(battle)
 		run.route_battle = battle
 	elif not battle.has("rival_portrait_id"):
 		battle.rival_portrait_id = _route_rival_portrait_id(
@@ -3854,7 +3943,7 @@ func _start_route_battle(resume_saved: bool = false) -> void:
 		_show_route_encounter_intro()
 		return
 	var ai := String(battle.get("ai", "medium"))
-	var rival_deck := _opponent_deck_for_round(String(battle.opponent_affinity), 1, {}, ai)
+	var rival_deck := _route_rival_deck(battle)
 	var resume_snapshot: Dictionary = run.get("kitchen_match", {}).get("snapshot", {}).duplicate(true) if resume_saved else {}
 	_begin_kitchen_match(
 		run.deck,
@@ -3873,8 +3962,29 @@ func _start_route_battle(resume_saved: bool = false) -> void:
 			"turn_hand_floor": 3,
 			"reshuffle_pressure": true,
 			"reshuffle_damage": [3, 5, 7],
+			"special_serve_enabled": not WEEKLY_DEMO.is_weekly_run(run) or int(run.get("week", 1)) >= 2,
+			"deckbox_effects": run.get("deckbox", {}).get("effects", {}).duplicate(true),
 		}
 	)
+
+
+func _route_rival_deck(battle: Dictionary) -> Dictionary:
+	if FOOD_PROTOTYPE.active(run) and battle.has("opponent_deck"):
+		return battle.opponent_deck.duplicate(true)
+	var rival_deck: Dictionary = tournament_service.opponent_deck_for_round(self, String(battle.opponent_affinity), 1, {}, String(battle.get("ai", "medium")), int(battle.get("deck_upgrades", -1)) if FOOD_PROTOTYPE.active(run) else -1)
+	if WEEKLY_DEMO.is_weekly_run(run):
+		for card_id in rival_deck.keys():
+			if not WEEKLY_DEMO.card_available(cards_by_id.get(card_id, {}), run):
+				rival_deck.erase(card_id)
+		if int(run.get("week", 1)) > 1:
+			# New-week rivals demonstrate the same expansion without changing old tier lists.
+			for data in cards:
+				if String(data.get("archetype", "")) == String(battle.opponent_affinity) and data.has("special_serve"):
+					rival_deck[String(data.id)] = 1
+					break
+	if FOOD_PROTOTYPE.active(run):
+		battle.opponent_deck = rival_deck.duplicate(true)
+	return rival_deck
 
 
 func _show_route_encounter_intro() -> void:
@@ -3897,16 +4007,18 @@ func _show_route_encounter_intro() -> void:
 	))
 	battle.rival_portrait_id = portrait_id
 	run.route_battle = battle
+	var presentation := _route_rival_presentation(battle)
 	route_encounter_overlay = ROUTE_RIVAL_INTRO_SCRIPT.new()
 	add_child(route_encounter_overlay)
 	route_encounter_overlay.call(
 		"configure",
-		_route_rival_portrait(portrait_id),
-		String(battle.get("label", "Starter City Rival")),
+		_route_rival_portrait(String(presentation.id)),
+		String(presentation.name),
 		_route_rival_intro_line(affinity, node_type, portrait_id),
 		_route_rival_intro_accent(node_type),
 		_reduced_motion_enabled(),
-		_running_automated_test()
+		_running_automated_test(),
+		String(presentation.id)
 	)
 	route_encounter_overlay.connect("continue_requested", _begin_route_battle_from_intro)
 
@@ -3942,6 +4054,8 @@ func _route_rival_intro_line(affinity: String, node_type: String = "enemy", port
 
 
 func _route_rival_portrait_id(node_type: String, encounter_seed: int) -> String:
+	# Preserve the authored/save identity used by the existing encounter and
+	# dialogue contracts. Peach Soda cast identity is a presentation mapping.
 	if node_type == "mini_boss":
 		return "npc2"
 	if node_type == "final_boss":
@@ -3950,7 +4064,25 @@ func _route_rival_portrait_id(node_type: String, encounter_seed: int) -> String:
 
 
 func _route_rival_portrait(portrait_id: String) -> Texture2D:
-	return ROUTE_RIVAL_PORTRAITS.get(portrait_id, ROUTE_RIVAL_PORTRAITS.npc1) as Texture2D
+	# Registry owns supplied character art and replaceable generated placeholders.
+	# The animated intro uses the same cast ID; this API remains a static preview.
+	return PEACH_SODA_CAST.texture_for(PEACH_SODA_CAST.resolve_id(portrait_id))
+
+
+func _route_rival_presentation(battle: Dictionary) -> Dictionary:
+	# Derive this each time, so both existing saves and new encounters reach the
+	# same intro and battle portrait without migrating or rewriting run state.
+	var node_type := String(battle.get("node_type", "enemy"))
+	var cast_id := PEACH_SODA_CAST.resolve_id(
+		String(battle.get("rival_portrait_id", "")),
+		String(battle.get("label", "")),
+		int(battle.get("seed", 0))
+	)
+	if node_type == "mini_boss":
+		cast_id = "mina"
+	elif node_type == "final_boss":
+		cast_id = "ellis"
+	return {"id": cast_id, "name": PEACH_SODA_CAST.name_for(cast_id)}
 
 
 func _route_rival_intro_accent(node_type: String) -> Color:
@@ -4020,21 +4152,38 @@ func _clear_route_encounter_overlay() -> void:
 
 func _finish_route_battle(won: bool, remaining_life: int) -> void:
 	var battle: Dictionary = run.get("route_battle", {})
-	if battle.is_empty():
+	if battle.is_empty() or not bool(battle.get("active", true)):
 		return
 	battle.active = false
 	run.route_battle = battle
+	# The completed-battle guard also prevents a duplicate result from resetting
+	# a price that has already increased again in the next shop visit.
+	var shop_state: Dictionary = run.get("hub_shop", {})
+	shop_state.rerolls_used = 0
+	run.hub_shop = shop_state
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_result(won)
 	run.life = maxi(0, remaining_life)
+	var history: Array = run.get("route_round_results", [])
+	history.append({"week": int(run.get("week", 1)), "round": int(run.get("hub_round", 1)), "node_id": String(battle.get("node_id", "")), "opponent_name": String(battle.get("label", "Rival")), "opponent_archetype": String(battle.get("opponent_affinity", "")).capitalize(), "won": won, "turn": int(run.get("kitchen_match_result", {}).get("turn", 0)), "player_life": int(run.life)})
+	run.route_round_results = history
 	if not won:
+		var match_bonus := WEEKLY_DEMO.bonus(run, "match_money")
+		run.money = int(run.get("money", 0)) + match_bonus
+		history.back()["cash"] = match_bonus
 		run.run_over = true
 		run.last_result = ["Your Starter City run ended at %s." % String(battle.get("label", "a rival"))]
 		_autosave_now("route_game_over")
 		_show_route_game_over()
 		return
+	run.life = mini(int(run.get("max_life", 40)), int(run.life) + WEEKLY_DEMO.bonus(run, "victory_heal"))
+	# Refresh only the cards; removal resets when the next round begins.
+	# Persist the new stock with the victory so reloads cannot reroll it.
+	_ensure_hub_shop(true)
 	var node_type := String(battle.get("node_type", "enemy"))
-	var cash_reward := 8 if node_type == "final_boss" else 5 if node_type == "mini_boss" else 2
+	var cash_reward := (8 if node_type == "final_boss" else 5 if node_type == "mini_boss" else 2) + WEEKLY_DEMO.bonus(run, "victory_money") + WEEKLY_DEMO.bonus(run, "match_money")
 	run.reward_offer = route_run_service.generate_reward_offer(
-		String(run.get("starter", "spicy")), node_type, int(battle.get("seed", 1)) + 97
+		String(run.get("starter", "spicy")), node_type, int(battle.get("seed", 1)) + 97, [], run
 	)
 	run.reward_picks_remaining = route_run_service.reward_pick_count(node_type)
 	run.reward_selected = []
@@ -4071,6 +4220,9 @@ func _play_route_post_battle_sequence() -> void:
 		var starting_money := int(run.get("money", 0))
 		run.money = starting_money + cash_reward
 		run.route_reward_cash_awarded = true
+		var history: Array = run.get("route_round_results", [])
+		if not history.is_empty():
+			history.back()["cash"] = cash_reward
 		await _animate_route_funds_gain(starting_money, int(run.money), cash_reward)
 	run.route_pack_presented = true
 	_autosave_now("route_reward_pack")
@@ -4127,10 +4279,10 @@ func _show_route_sealed_pack() -> void:
 		_show_run_map(false)
 	current_screen = "route_reward_pack"
 	_update_status()
-	var reward_host := _route_reward_overlay_host()
+	var reward_host := _route_reward_overlay_host(true)
 	var panel_parts := TOPDECK_UI_SCRIPT.make_surface_panel(
 		"RouteSealedPackScreen",
-		PALETTE.SURFACE_RAISED,
+		PALETTE.PEACH_PAPER,
 		PALETTE.STATE_REWARD,
 		Vector2(0, 520),
 		Vector4(20, 20, 20, 20),
@@ -4149,17 +4301,18 @@ func _show_route_sealed_pack() -> void:
 	var pack_stack := VBoxContainer.new()
 	pack_stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	pack_center.add_child(pack_stack)
-	var pack_button := TextureButton.new()
+	var pack_button = preload("res://scripts/ui/LocalsRewardPack.gd").new()
 	pack_button.name = "RouteSealedPackButton"
 	pack_button.custom_minimum_size = Vector2(285, 390)
-	pack_button.texture_normal = _route_reward_pack_art()
-	pack_button.ignore_texture_size = true
-	pack_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-	pack_button.tooltip_text = ""
+	pack_button.configure(String(run.get("pending_route_node", {}).get("type", "enemy")), run.get("reward_offer", []).size())
 	pack_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	pack_button.pivot_offset = pack_button.custom_minimum_size * 0.5
 	pack_button.pressed.connect(_crack_route_victory_pack, CONNECT_DEFERRED)
 	pack_stack.add_child(pack_button)
+	var open_hint := TOPDECK_UI_SCRIPT.make_label("Open Second Helpings · New this week" if String(run.get("pending_route_node", {}).get("type", "")) == "week_pack" else "Open your reward pack", "section", PALETTE.PEACH_INK)
+	open_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pack_stack.add_child(open_hint)
+	pack_button.grab_focus()
 	if not _reduced_motion_enabled():
 		var float_tween := create_tween().set_loops(6)
 		float_tween.tween_property(pack_button, "scale", Vector2(1.035, 1.035), 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -4187,74 +4340,116 @@ func _play_route_pack_open_sound() -> void:
 	if _running_automated_test() or ROUTE_PACK_OPEN_SOUND_PATHS.is_empty():
 		return
 	var player := AudioStreamPlayer.new()
-	player.stream = load(String(ROUTE_PACK_OPEN_SOUND_PATHS[rng.randi_range(0, ROUTE_PACK_OPEN_SOUND_PATHS.size() - 1)])) as AudioStream
+	player.stream = load(String(ROUTE_PACK_OPEN_SOUND_PATHS[audio_rng.randi_range(0, ROUTE_PACK_OPEN_SOUND_PATHS.size() - 1)])) as AudioStream
 	player.bus = &"SFX"
-	player.volume_db = -4.0
+	player.volume_db = -12.0
 	player.finished.connect(player.queue_free)
 	add_child(player)
 	player.play()
 
 
 func _show_route_card_reward(animate_from_pack: bool = false) -> void:
+	_clear_route_reward_overlay()
+	# A final claim is saved before its flight. Reloading that save should
+	# complete the pending reward, without replaying or granting it twice.
+	if run.get("reward_offer", []).is_empty() and int(run.get("reward_picks_remaining", 0)) <= 0 and not run.get("pending_route_node", {}).is_empty():
+		_finish_route_reward()
+		return
 	if find_child("StarterCityMap", true, false) == null:
 		_show_run_map(false)
 	current_screen = "route_reward"
 	_update_status()
-	var reward_host := _route_reward_overlay_host()
+	var reward_host := _route_reward_overlay_host(true)
 	var node_type := String(run.get("pending_route_node", {}).get("type", "enemy"))
-	var picks := int(run.get("reward_picks_remaining", 1))
-	var reward_instruction := "Click a card to lift it, then choose Add to Deck. Take any or all %d remaining card%s, or skip the rest." % [picks, "s" if picks != 1 else ""]
-	var reward_stats := "Life %d/%d  •  Deck %d cards  •  Reward tier: %s" % [
-		int(run.get("life", 0)), int(run.get("max_life", 40)), _deck_total(run.deck),
-		"City Champion" if node_type == "final_boss" else "Local Champion" if node_type == "mini_boss" else "Regular Rival"
-	]
+	var offer_ids: Array[String] = []
+	# Claimed cards are already in the visible deck. Only unclaimed offers
+	# return to the table when a partially collected pack is reopened.
+	for card_id_value in run.get("reward_offer", []):
+		var offered_id := String(card_id_value)
+		if cards_by_id.has(offered_id) and not offer_ids.has(offered_id):
+			offer_ids.append(offered_id)
+	var pack_count: int = offer_ids.size() + run.get("reward_selected", []).size()
+	var top_row := HBoxContainer.new()
+	top_row.name = "RouteRewardTableHeader"
+	top_row.add_theme_constant_override("separation", 20)
+	reward_host.add_child(top_row)
 	var header_parts := TOPDECK_UI_SCRIPT.make_reward_header(
-		"Choose Your Cards", reward_instruction, reward_stats, PALETTE.FOCUS_EDGE
+		"Second Helpings" if node_type == "week_pack" else "Your champion reward" if node_type == "final_boss" else "Your top-cut reward" if node_type == "mini_boss" else "Your round reward",
+		"Take any or all %d cards." % pack_count, "", PALETTE.PEACH_TEAL
 	)
 	var header := header_parts.panel as PanelContainer
 	header.name = "RouteCardRewardScreen"
+	header.size_flags_stretch_ratio = 2.0
 	(header_parts.surface as Node).name = "RouteCardRewardHeaderAngularSurface"
 	(header_parts.title as Label).name = "RouteCardRewardTitle"
+	(header_parts.title as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	(header_parts.title as Label).add_theme_font_size_override("font_size", 28)
 	(header_parts.instruction as Label).name = "RouteCardRewardInstruction"
+	(header_parts.instruction as Label).add_theme_font_size_override("font_size", 18)
 	(header_parts.stats as Label).name = "RouteCardRewardStats"
-	reward_host.add_child(header)
-	var offer_ids: Array[String] = []
-	for card_id_value in run.get("reward_offer", []):
-		var offered_id := String(card_id_value)
-		if cards_by_id.has(offered_id):
-			offer_ids.append(offered_id)
-	if not offer_ids.has(selected_route_reward_card_id):
-		selected_route_reward_card_id = ""
+	(header_parts.stats as Label).add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
+	top_row.add_child(header)
+	var wrapper = preload("res://scripts/ui/LocalsRewardPack.gd").new()
+	wrapper.name = "RouteOpenedPackWrapper"
+	wrapper.opened_remnant = true
+	wrapper.configure(node_type, pack_count)
+	top_row.add_child(wrapper)
+	var slip := TOPDECK_UI_SCRIPT.make_surface_panel("RouteRewardRoundSlip", PALETTE.PEACH_PAPER, PALETTE.PEACH_EDGE, Vector2(220, 0), Vector4(18, 12, 18, 12), false)
+	slip.panel.size_flags_horizontal = Control.SIZE_SHRINK_END
+	slip.body.add_child(TOPDECK_UI_SCRIPT.make_label("LOCALS · WEEK %d" % int(run.get("week", 1)), "small", PALETTE.PEACH_INK_SOFT))
+	slip.body.add_child(TOPDECK_UI_SCRIPT.make_label("NEW THIS WEEK" if node_type == "week_pack" else "ROUND %d WON" % int(run.get("hub_round", 1)), "section", PALETTE.PEACH_INK))
+	top_row.add_child(slip.panel)
+	selected_route_reward_card_id = ""
+	# Only the cards scroll. Keep the header and decision buttons in the viewport.
+	var card_area := MarginContainer.new()
+	card_area.name = "RouteRewardCardArea"
+	card_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for edge in ["left", "right", "top", "bottom"]:
+		card_area.add_theme_constant_override("margin_" + edge, 22)
+	reward_host.add_child(card_area)
+	var cloth = preload("res://scripts/ui/RewardTableSurface.gd").new()
+	cloth.name = "RouteRewardChoiceCloth"
+	card_area.add_child(cloth)
+	var card_scroll := ScrollContainer.new()
+	card_scroll.name = "RouteRewardCardScroll"
+	card_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	card_scroll.custom_minimum_size.y = 100
+	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	card_scroll.follow_focus = true
+	card_area.add_child(card_scroll)
+	var scroll_bar := card_scroll.get_v_scroll_bar()
+	scroll_bar.custom_minimum_size.x = 16
+	var scroll_track := StyleBoxFlat.new()
+	scroll_track.bg_color = PALETTE.PEACH_MAT.darkened(0.18)
+	scroll_track.set_corner_radius_all(6)
+	scroll_bar.add_theme_stylebox_override("scroll", scroll_track)
+	for state in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		var thumb := StyleBoxFlat.new()
+		thumb.bg_color = PALETTE.PEACH_MINT if state == "grabber" else PALETTE.PEACH_PAPER
+		thumb.set_corner_radius_all(6)
+		scroll_bar.add_theme_stylebox_override(state, thumb)
 	var fan_center := CenterContainer.new()
 	fan_center.name = "RouteRewardFanCenter"
 	fan_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var fan_height := 400.0 if offer_ids.size() <= 5 else 680.0
-	fan_center.custom_minimum_size = Vector2(0, fan_height)
-	reward_host.add_child(fan_center)
+	fan_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	card_scroll.add_child(fan_center)
 	var fan := Control.new()
 	fan.name = "RouteRewardFan"
-	fan.custom_minimum_size = Vector2(1160, fan_height)
+	fan.custom_minimum_size = Vector2(1160, 400)
 	fan.size = fan.custom_minimum_size
 	fan_center.add_child(fan)
-	var card_size := Vector2(220, 310) if offer_ids.size() <= 3 else Vector2(180, 254) if offer_ids.size() <= 5 else Vector2(175, 247)
-	var columns := offer_ids.size() if offer_ids.size() <= 5 else 4
-	var gap_x := 64.0 if offer_ids.size() <= 3 else 42.0 if offer_ids.size() <= 5 else 54.0
-	var row_step := card_size.y + 82.0
+	var card_size := Vector2(300, 426) if pack_count <= 3 else Vector2(210, 298) if pack_count <= 5 else Vector2(240, 341)
 	for card_index in range(offer_ids.size()):
 		var card_id := offer_ids[card_index]
-		var row_index := int(card_index / columns)
-		var column_index := card_index % columns
-		var row_count := mini(columns, offer_ids.size() - row_index * columns)
-		var row_width := card_size.x * row_count + gap_x * maxi(0, row_count - 1)
-		var base_position := Vector2((1160.0 - row_width) * 0.5 + column_index * (card_size.x + gap_x), 10.0 + row_index * row_step)
 		var choice := Control.new()
 		choice.name = "RouteReward_%s" % card_id
-		choice.custom_minimum_size = Vector2(card_size.x, card_size.y + 60.0)
+		choice.custom_minimum_size = Vector2(card_size.x, card_size.y + 72.0)
 		choice.size = choice.custom_minimum_size
-		choice.position = base_position
 		choice.pivot_offset = Vector2(card_size.x * 0.5, card_size.y * 0.5)
-		choice.set_meta("base_position", base_position)
+		choice.set_meta("card_size", card_size)
 		choice.set_meta("card_id", card_id)
+		choice.set_meta("claimed", false)
 		var face := _make_card_face(cards_by_id[card_id], card_size, true)
 		face.position = Vector2.ZERO
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4268,35 +4463,77 @@ func _show_route_card_reward(animate_from_pack: bool = false) -> void:
 		select_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		select_button.pressed.connect(_select_route_reward_card.bind(card_id), CONNECT_DEFERRED)
 		choice.add_child(select_button)
+		var owned := TOPDECK_UI_SCRIPT.make_label("Owned ×%d" % int(run.deck.get(card_id, 0)), "small", PALETTE.PEACH_PAPER_MUTED)
+		owned.name = "RewardOwnedCount"
+		owned.text = "Owned ×%d" % int(run.deck.get(card_id, 0))
+		owned.position = Vector2(0, -26)
+		owned.size.x = card_size.x
+		owned.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		owned.autowrap_mode = TextServer.AUTOWRAP_OFF
+		choice.add_child(owned)
+		CARD_HOVER_PREVIEW.bind(select_button, cards_by_id[card_id], _run_difficulty_id())
 		var add_button := TOPDECK_UI_SCRIPT.make_button(
-			"Add to Deck", "confirm", Vector2(card_size.x, 48), "RouteRewardAddButton_%s" % card_id
+			"Add to deck", "secondary", Vector2(card_size.x, 56), "RouteRewardAddButton_%s" % card_id
 		)
 		add_button.position = Vector2(0, card_size.y + 10.0)
-		add_button.size = Vector2(card_size.x, 48)
-		add_button.visible = selected_route_reward_card_id == card_id
+		add_button.size = Vector2(card_size.x, 56)
+		add_button.hide()
+		add_button.disabled = true
 		_connect_pressed(add_button, _pick_route_reward.bind(card_id))
 		choice.add_child(add_button)
-		if selected_route_reward_card_id == card_id:
-			choice.position.y -= 24.0
-			choice.scale = Vector2(1.025, 1.025)
 		fan.add_child(choice)
 	var actions := HBoxContainer.new()
 	actions.name = "RouteRewardActions"
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.alignment = BoxContainer.ALIGNMENT_END
 	actions.add_theme_constant_override("separation", 18)
 	reward_host.add_child(actions)
-	var add_all := TOPDECK_UI_SCRIPT.make_button("Add All", "confirm", Vector2(210, 54), "RouteRewardAddAllButton")
+	var receipt := TOPDECK_UI_SCRIPT.make_surface_panel("RouteRewardDeckReceipt", PALETTE.PEACH_PAPER, PALETTE.PEACH_EDGE, Vector2(390, 116), Vector4(12, 6, 16, 6), false)
+	receipt.panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var deck_row := HBoxContainer.new()
+	deck_row.add_theme_constant_override("separation", 12)
+	receipt.body.add_child(deck_row)
+	var deck_stack = preload("res://scripts/ui/RewardDeckStack.gd").new()
+	deck_stack.name = "RouteRewardDeckStack"
+	deck_stack.set_card_count(_deck_total(run.deck))
+	deck_row.add_child(deck_stack)
+	var receipt_copy := VBoxContainer.new()
+	receipt_copy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	receipt_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	receipt_copy.add_theme_constant_override("separation", 2)
+	deck_row.add_child(receipt_copy)
+	receipt_copy.add_child(TOPDECK_UI_SCRIPT.make_label("YOUR DECK", "small", PALETTE.PEACH_INK_SOFT))
+	var deck_count := TOPDECK_UI_SCRIPT.make_label("", "section", PALETTE.PEACH_INK)
+	deck_count.name = "RouteRewardDeckCount"
+	receipt_copy.add_child(deck_count)
+	var receipt_detail := TOPDECK_UI_SCRIPT.make_label("", "small", PALETTE.PEACH_INK_SOFT)
+	receipt_detail.name = "RouteRewardDeckReceiptDetail"
+	receipt_detail.custom_minimum_size.x = 220
+	receipt_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	receipt_copy.add_child(receipt_detail)
+	actions.add_child(receipt.panel)
+	var action_gap := Control.new()
+	action_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(action_gap)
+	var add_all := TOPDECK_UI_SCRIPT.make_button("Add All", "primary", Vector2(240, 56), "RouteRewardAddAllButton")
+	add_all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_connect_pressed(add_all, _add_all_route_rewards)
 	actions.add_child(add_all)
-	var skip := TOPDECK_UI_SCRIPT.make_button("Skip", "secondary", Vector2(210, 54), "RouteRewardSkipButton")
+	var skip := TOPDECK_UI_SCRIPT.make_button("Skip", "secondary", Vector2(210, 56), "RouteRewardSkipButton")
+	skip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_connect_pressed(skip, _finish_route_reward)
 	actions.add_child(skip)
+	_recenter_route_reward_choices(fan, false)
+	cloth.content_height = fan.custom_minimum_size.y + 20.0
+	cloth.queue_redraw()
+	_refresh_route_reward_copy()
+	_update_route_reward_focus_order(fan)
+	add_all.grab_focus()
 	if animate_from_pack:
 		_animate_route_reward_cards_from_pack(fan)
 
 
 func _select_route_reward_card(card_id: String) -> void:
-	if not run.get("reward_offer", []).has(card_id):
+	if route_reward_collecting or not run.get("reward_offer", []).has(card_id):
 		return
 	selected_route_reward_card_id = card_id
 	var fan := find_child("RouteRewardFan", true, false)
@@ -4313,7 +4550,8 @@ func _select_route_reward_card(card_id: String) -> void:
 		var target_scale := Vector2(1.025, 1.025) if selected else Vector2.ONE
 		var add_button := choice.get_node_or_null("RouteRewardAddButton_%s" % choice_id) as Button
 		if add_button != null:
-			add_button.visible = selected
+			add_button.visible = selected and not bool(choice.get_meta("claimed", false))
+			add_button.disabled = not add_button.visible
 		if _reduced_motion_enabled() or _running_automated_test():
 			choice.position = target_position
 			choice.scale = target_scale
@@ -4322,16 +4560,31 @@ func _select_route_reward_card(card_id: String) -> void:
 			tween.tween_property(choice, "position", target_position, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			tween.tween_property(choice, "scale", target_scale, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
+	_update_route_reward_focus_order(fan)
+	_scroll_selected_route_reward_into_view.call_deferred(card_id)
+
+
+func _scroll_selected_route_reward_into_view(card_id: String) -> void:
+	# A pick or dismissal can remove the card before this deferred layout update.
+	if selected_route_reward_card_id != card_id or not is_instance_valid(route_reward_overlay) or route_reward_overlay.is_queued_for_deletion():
+		return
+	var card_scroll := route_reward_overlay.find_child("RouteRewardCardScroll", true, false) as ScrollContainer
+	if card_scroll == null:
+		return
+	var selected_choice := card_scroll.find_child("RouteReward_%s" % card_id, true, false) as Control
+	if selected_choice != null:
+		# Include the revealed Add to Deck button when bringing a card into view.
+		card_scroll.ensure_control_visible(selected_choice)
+
 
 func _animate_route_reward_cards_from_pack(fan: Control) -> void:
 	if _reduced_motion_enabled() or _running_automated_test():
 		return
-	var pack_remnant := TextureRect.new()
+	var pack_remnant = preload("res://scripts/ui/LocalsRewardPack.gd").new()
 	pack_remnant.name = "RouteOpenedPackArtwork"
-	pack_remnant.texture = _route_reward_pack_art()
-	pack_remnant.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pack_remnant.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pack_remnant.size = Vector2(165, 225)
+	pack_remnant.opened_remnant = true
+	pack_remnant.configure(String(run.get("pending_route_node", {}).get("type", "enemy")), run.get("reward_offer", []).size())
+	pack_remnant.size = Vector2(300, 112)
 	pack_remnant.position = Vector2((fan.size.x - pack_remnant.size.x) * 0.5, (fan.size.y - pack_remnant.size.y) * 0.5)
 	pack_remnant.pivot_offset = pack_remnant.size * 0.5
 	pack_remnant.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4362,103 +4615,259 @@ func _animate_route_reward_cards_from_pack(fan: Control) -> void:
 
 
 func _pick_route_reward(card_id: String) -> void:
-	if int(run.get("reward_picks_remaining", 0)) <= 0 or not run.get("reward_offer", []).has(card_id):
+	if route_reward_collecting or int(run.get("reward_picks_remaining", 0)) <= 0 or not run.get("reward_offer", []).has(card_id):
 		return
+	var deck_before := _deck_total(run.deck)
 	run.deck[card_id] = int(run.deck.get(card_id, 0)) + 1
 	run.collection[card_id] = int(run.collection.get(card_id, 0)) + 1
 	run.reward_offer.erase(card_id)
 	run.reward_picks_remaining = int(run.reward_picks_remaining) - 1
 	run.reward_selected.append(card_id)
 	selected_route_reward_card_id = ""
-	if int(run.reward_picks_remaining) <= 0:
+	# Commit before presenting: interruption cannot lose or duplicate a claim.
+	_autosave_now("route_reward")
+	await _continue_route_reward_after_pick([card_id], deck_before)
+
+
+func _continue_route_reward_after_pick(card_ids: Array, deck_before: int) -> void:
+	if not await _collect_route_reward_cards(card_ids, deck_before):
+		return
+	route_reward_collecting = false
+	if int(run.get("reward_picks_remaining", 0)) <= 0:
 		_finish_route_reward()
-	else:
-		_continue_route_reward_after_pick(card_id)
-
-
-func _continue_route_reward_after_pick(card_id: String) -> void:
-	# Keep the live map, dimmer, header, and reward fan in place. Rebuilding the
-	# overlay here momentarily exposed the undimmed map and made every individual
-	# pick feel like leaving and re-entering the reward screen.
-	var fan := find_child("RouteRewardFan", true, false) as Control
+		return
+	if not is_instance_valid(route_reward_overlay):
+		_show_route_card_reward()
+		return
+	var fan := route_reward_overlay.find_child("RouteRewardFan", true, false) as Control
 	if fan == null:
 		_show_route_card_reward()
 		return
-	var picked_choice := fan.get_node_or_null("RouteReward_%s" % card_id) as Control
-	if picked_choice == null:
-		_show_route_card_reward()
-		return
-	var active_overlay := find_child("RouteRewardOverlay", true, false) as Control
-	if active_overlay != null:
-		for button_node in active_overlay.find_children("*", "Button", true, false):
-			(button_node as Button).disabled = true
-	var add_button := picked_choice.get_node_or_null("RouteRewardAddButton_%s" % card_id) as Button
-	if add_button != null:
-		add_button.disabled = true
-	var select_button := picked_choice.get_node_or_null("RouteRewardCardButton_%s" % card_id) as Button
-	if select_button != null:
-		select_button.disabled = true
-	await _animate_card_added_to_deck(picked_choice, "reward_pack")
-	if current_screen != "route_reward" or not is_instance_valid(fan):
-		return
-	if is_instance_valid(picked_choice):
-		fan.remove_child(picked_choice)
-		picked_choice.queue_free()
+	_recenter_route_reward_choices(fan, false)
+	var cloth := route_reward_overlay.find_child("RouteRewardChoiceCloth", true, false)
+	if cloth != null:
+		cloth.content_height = fan.custom_minimum_size.y + 20.0
+		cloth.queue_redraw()
+	for button in route_reward_overlay.find_children("*", "Button", true, false):
+		button.disabled = false
 	_refresh_route_reward_copy()
-	_recenter_route_reward_choices(fan)
-	if is_instance_valid(active_overlay):
-		for button_node in active_overlay.find_children("*", "Button", true, false):
-			(button_node as Button).disabled = false
+	_update_route_reward_focus_order(fan)
+	var add_all := route_reward_overlay.find_child("RouteRewardAddAllButton", true, false) as Button
+	if add_all != null:
+		add_all.grab_focus()
 
 
-func _animate_card_added_to_deck(card_control: Control, context: String) -> void:
-	last_card_add_effect_context = context
-	if card_control == null:
-		return
-	card_control.set_meta("card_add_effect_context", context)
-	if _reduced_motion_enabled() or _running_automated_test():
-		return
-	var collect_tween := create_tween().set_parallel(true)
-	collect_tween.tween_property(card_control, "position:y", card_control.position.y - 46.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	collect_tween.tween_property(card_control, "scale", Vector2(1.08, 1.08), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	collect_tween.tween_property(card_control, "modulate:a", 0.0, 0.18).set_delay(0.06)
-	await collect_tween.finished
+func _reward_collection_is_current(overlay: Control, generation: int) -> bool:
+	return is_instance_valid(overlay) and not overlay.is_queued_for_deletion() and route_reward_overlay == overlay and route_reward_collection_generation == generation and current_screen == "route_reward"
+
+
+func _update_route_reward_deck_landing(deck_count: int, card_id: String, reduced: bool) -> void:
+	var stack = route_reward_overlay.find_child("RouteRewardDeckStack", true, false)
+	if stack != null:
+		stack.set_card_count(deck_count)
+		stack.play_arrival(reduced)
+	var count := route_reward_overlay.find_child("RouteRewardDeckCount", true, false) as Label
+	if count != null:
+		var original_count: int = _deck_total(run.deck) - run.get("reward_selected", []).size()
+		count.text = "%d → %d cards" % [original_count, deck_count]
+	var detail := route_reward_overlay.find_child("RouteRewardDeckReceiptDetail", true, false) as Label
+	if detail != null:
+		detail.text = String(cards_by_id.get(card_id, {}).get("name", "Card")) + " added"
+
+
+func _collect_route_reward_cards(card_ids: Array, deck_before: int) -> bool:
+	last_card_add_effect_context = "reward_pack"
+	if not is_instance_valid(route_reward_overlay):
+		# Nonvisual callers still complete the same saved reward transaction.
+		return true
+	var overlay := route_reward_overlay
+	route_reward_collecting = true
+	route_reward_collection_generation += 1
+	var generation := route_reward_collection_generation
+	for button in overlay.find_children("*", "Button", true, false):
+		button.disabled = true
+	var fan := overlay.find_child("RouteRewardFan", true, false) as Control
+	var stack = overlay.find_child("RouteRewardDeckStack", true, false)
+	var scroll := overlay.find_child("RouteRewardCardScroll", true, false) as ScrollContainer
+	if fan == null or stack == null or scroll == null:
+		return true
+	var instant := _reduced_motion_enabled() or _running_automated_test()
+	if instant:
+		for card_id in card_ids:
+			var choice := fan.get_node_or_null("RouteReward_%s" % card_id) as Control
+			if choice != null:
+				choice.hide()
+				fan.remove_child(choice)
+				choice.queue_free()
+		_update_route_reward_deck_landing(deck_before + card_ids.size(), String(card_ids.back()), true)
+		return true
+	var layer := Control.new()
+	layer.name = "RouteRewardCollectionLayer"
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.z_index = 30
+	overlay.add_child(layer)
+	var stats := overlay.find_child("RouteCardRewardStats", true, false) as Label
+	if stats != null:
+		stats.text = "Adding %d card%s…" % [card_ids.size(), "" if card_ids.size() == 1 else "s"]
+	var flights: Array[Dictionary] = []
+	for index in range(card_ids.size()):
+		var card_id := String(card_ids[index])
+		var choice := fan.get_node_or_null("RouteReward_%s" % card_id) as Control
+		var source_size := Vector2(210, 298)
+		var source_rect := Rect2(scroll.get_global_rect().get_center() - source_size * 0.5, source_size)
+		if choice != null:
+			choice.set_meta("claimed", true)
+			choice.set_meta("card_add_effect_context", "reward_pack")
+			var source_face := choice.get_child(0) as Control
+			source_rect = source_face.get_global_rect()
+			source_size = source_rect.size
+		# Add-all can include scrolled-away rows. Let those cards emerge from
+		# the nearest visible part of the pack rather than outside the window.
+		var visible_area := scroll.get_global_rect()
+		if not visible_area.encloses(source_rect):
+			source_rect.position.x = clampf(source_rect.position.x, visible_area.position.x, maxf(visible_area.position.x, visible_area.end.x - source_size.x))
+			source_rect.position.y = clampf(source_rect.position.y, visible_area.position.y, maxf(visible_area.position.y, visible_area.end.y - source_size.y))
+		var flight := Control.new()
+		flight.name = "RewardCardFlight_" + card_id
+		flight.set_meta("card_id", card_id)
+		flight.set_meta("flight_phase", "waiting")
+		flight.size = source_size
+		flight.pivot_offset = source_size * 0.5
+		flight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		flight.visible = false
+		layer.add_child(flight)
+		var face := _make_card_face(cards_by_id[card_id], source_size, true)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		flight.add_child(face)
+		var back := TextureRect.new()
+		back.name = "SleevedCardBack"
+		back.texture = preload("res://assets/cards/card_backs/living_table.png")
+		back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		back.stretch_mode = TextureRect.STRETCH_SCALE
+		back.size = source_size
+		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		back.hide()
+		flight.add_child(back)
+		flights.append({"card_id": card_id, "choice": choice, "node": flight, "face": face, "back": back, "from": source_rect.get_center(), "size": source_size, "delay": index * 0.065, "started": false, "landed": false})
+	var started_at := Time.get_ticks_msec()
+	var duration := 0.54
+	var total_duration := duration + maxf(0, card_ids.size() - 1) * 0.065 + 0.20
+	var landed := 0
+	while true:
+		if not is_instance_valid(overlay) or not _reward_collection_is_current(overlay, generation):
+			if route_reward_collection_generation == generation:
+				route_reward_collecting = false
+			return false
+		var elapsed := float(Time.get_ticks_msec() - started_at) / 1000.0
+		var landing: Rect2 = stack.get_landing_rect_global()
+		var to_local := layer.get_global_transform().affine_inverse()
+		for entry in flights:
+			if entry.landed or elapsed < float(entry.delay):
+				continue
+			var flight: Control = entry.node
+			if not entry.started:
+				entry.started = true
+				flight.show()
+				flight.set_meta("flight_phase", "travelling")
+				if is_instance_valid(entry.choice):
+					entry.choice.hide()
+			var progress := clampf((elapsed - float(entry.delay)) / duration, 0.0, 1.0)
+			var eased := progress * progress * (3.0 - 2.0 * progress)
+			var origin: Vector2 = entry.from
+			var destination := landing.get_center()
+			var arc := (origin + destination) * 0.5 + Vector2(0, -minf(130, origin.distance_to(destination) * 0.23))
+			var center := origin * pow(1.0 - eased, 2) + arc * 2.0 * (1.0 - eased) * eased + destination * eased * eased
+			flight.position = to_local * center - Vector2(entry.size) * 0.5
+			flight.scale = Vector2.ONE.lerp(landing.size / Vector2(entry.size), eased)
+			flight.rotation = sin(progress * PI) * -0.10
+			# Turn the revealed face into its sleeve before tucking it into the
+			# real top-card rectangle. The stack and counter settle on arrival.
+			var turn := clampf((progress - 0.64) / 0.26, 0.0, 1.0)
+			flight.scale.x *= maxf(0.04, absf(1.0 - turn * 2.0))
+			entry.face.visible = turn < 0.5
+			entry.back.visible = turn >= 0.5
+			if progress >= 1.0:
+				entry.landed = true
+				landed += 1
+				flight.set_meta("flight_phase", "landed")
+				flight.hide()
+				flight.queue_free()
+				if is_instance_valid(entry.choice):
+					fan.remove_child(entry.choice)
+					entry.choice.queue_free()
+				_update_route_reward_deck_landing(deck_before + landed, String(entry.card_id), false)
+		if elapsed >= total_duration:
+			break
+		await get_tree().process_frame
+	layer.queue_free()
+	return true
 
 
 func _refresh_route_reward_copy() -> void:
-	var picks := int(run.get("reward_picks_remaining", 0))
-	var instruction := find_child("RouteCardRewardInstruction", true, false) as Label
-	if instruction != null:
-		instruction.text = "Click a card to lift it, then choose Add to Deck. Take any or all %d remaining card%s, or skip the rest." % [picks, "s" if picks != 1 else ""]
-	var stats := find_child("RouteCardRewardStats", true, false) as Label
+	if not is_instance_valid(route_reward_overlay):
+		return
+	var remaining: int = run.get("reward_offer", []).size()
+	var claimed: Array = run.get("reward_selected", [])
+	var deck_count := _deck_total(run.deck)
+	var stats := route_reward_overlay.find_child("RouteCardRewardStats", true, false) as Label
 	if stats != null:
-		var node_type := String(run.get("pending_route_node", {}).get("type", "enemy"))
-		stats.text = "Life %d/%d  •  Deck %d cards  •  Reward tier: %s" % [
-			int(run.get("life", 0)), int(run.get("max_life", 40)), _deck_total(run.deck),
-			"City Champion" if node_type == "final_boss" else "Local Champion" if node_type == "mini_boss" else "Regular Rival"
-		]
+		stats.text = "%d added · %d available" % [claimed.size(), remaining]
+		if claimed.size() + remaining > 5:
+			stats.text += " · Scroll for more"
+	var stack = route_reward_overlay.find_child("RouteRewardDeckStack", true, false)
+	if stack != null:
+		stack.set_card_count(deck_count)
+	var receipt := route_reward_overlay.find_child("RouteRewardDeckCount", true, false) as Label
+	if receipt != null:
+		receipt.text = "%d cards" % deck_count if claimed.is_empty() else "%d → %d cards" % [deck_count - claimed.size(), deck_count]
+	var detail := route_reward_overlay.find_child("RouteRewardDeckReceiptDetail", true, false) as Label
+	if detail != null:
+		detail.text = "Choose what joins your deck." if claimed.is_empty() else "%s added" % String(cards_by_id.get(String(claimed.back()), {}).get("name", "Card"))
+	for button in route_reward_overlay.find_children("RouteRewardAddButton_*", "Button", true, false):
+		var choice := button.get_parent() as Control
+		var card_id := String(choice.get_meta("card_id", ""))
+		var was_claimed: bool = not run.get("reward_offer", []).has(card_id)
+		choice.set_meta("claimed", was_claimed)
+		button.text = "Added ✓" if was_claimed else "Add to deck"
+		button.visible = card_id == selected_route_reward_card_id and not was_claimed
+		button.disabled = not button.visible or route_reward_collecting
+		button.tooltip_text = "Already added from this pack." if was_claimed else "Add this card. Your deck will have %d cards." % (deck_count + 1)
+		(choice.get_node("RewardOwnedCount") as Label).text = "Owned ×%d" % int(run.deck.get(card_id, 0))
+	var add_all := route_reward_overlay.find_child("RouteRewardAddAllButton", true, false) as Button
+	if add_all != null:
+		add_all.text = "Add all %d" % remaining if claimed.is_empty() else "Add remaining %d" % remaining
+		add_all.tooltip_text = "Add every available card. Your deck will have %d cards." % (deck_count + remaining)
+	var skip := route_reward_overlay.find_child("RouteRewardSkipButton", true, false) as Button
+	if skip != null:
+		skip.text = "Skip" if claimed.is_empty() else "Continue →"
+		skip.tooltip_text = "Leave the remaining cards. Keep the cards already added." if not claimed.is_empty() else "Leave this pack without adding cards."
 
 
-func _recenter_route_reward_choices(fan: Control) -> void:
+func _recenter_route_reward_choices(fan: Control, animate: bool = true) -> void:
 	var choices: Array[Control] = []
 	for choice_node in fan.get_children():
-		if choice_node is Control and choice_node.has_meta("card_id"):
+		if choice_node is Control and choice_node.has_meta("card_id") and not choice_node.is_queued_for_deletion() and not bool(choice_node.get_meta("claimed", false)):
 			choices.append(choice_node as Control)
 	if choices.is_empty():
 		return
-	var card_size := Vector2(choices[0].size.x, choices[0].size.y - 60.0)
+	var card_size: Vector2 = choices[0].get_meta("card_size", Vector2(240, 341))
 	var columns := choices.size() if choices.size() <= 5 else 4
-	var gap_x := 64.0 if choices.size() <= 3 else 42.0 if choices.size() <= 5 else 54.0
-	var row_step := card_size.y + 82.0
+	var gap_x := 54.0 if choices.size() <= 3 else 20.0 if choices.size() <= 5 else 28.0
+	columns = mini(columns, maxi(1, floori((fan.size.x + gap_x) / (card_size.x + gap_x))))
+	var row_step := card_size.y + 94.0
+	var rows := ceili(float(choices.size()) / columns)
+	# The extra top space contains the selected card's lift, even inside a clip.
+	fan.custom_minimum_size.y = 56.0 + (rows - 1) * row_step + choices[0].size.y + 12.0
 	for card_index in range(choices.size()):
 		var choice := choices[card_index]
 		var row_index := int(card_index / columns)
 		var column_index := card_index % columns
 		var row_count := mini(columns, choices.size() - row_index * columns)
 		var row_width := card_size.x * row_count + gap_x * maxi(0, row_count - 1)
-		var target_position := Vector2((fan.size.x - row_width) * 0.5 + column_index * (card_size.x + gap_x), 10.0 + row_index * row_step)
+		var target_position := Vector2((fan.size.x - row_width) * 0.5 + column_index * (card_size.x + gap_x), 56.0 + row_index * row_step)
 		choice.set_meta("base_position", target_position)
-		if _reduced_motion_enabled() or _running_automated_test():
+		if not animate or _reduced_motion_enabled() or _running_automated_test():
 			choice.position = target_position
 			choice.scale = Vector2.ONE
 		else:
@@ -4467,12 +4876,34 @@ func _recenter_route_reward_choices(fan: Control) -> void:
 			settle_tween.tween_property(choice, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
+func _update_route_reward_focus_order(fan: Control) -> void:
+	var controls: Array[Control] = []
+	for choice in fan.get_children():
+		if not choice.has_meta("card_id"):
+			continue
+		for child in choice.get_children():
+			if child is Button and child.visible and not child.disabled:
+				controls.append(child)
+	for name in ["RouteRewardAddAllButton", "RouteRewardSkipButton"]:
+		var button := find_child(name, true, false) as Button
+		if button != null and not button.disabled:
+			controls.append(button)
+	for index in range(controls.size()):
+		controls[index].focus_next = controls[index].get_path_to(controls[(index + 1) % controls.size()])
+		controls[index].focus_previous = controls[index].get_path_to(controls[(index - 1 + controls.size()) % controls.size()])
+
+
 func _add_all_route_rewards() -> void:
+	if route_reward_collecting:
+		return
 	var offer_ids: Array[String] = []
 	for card_id_value in run.get("reward_offer", []):
 		var card_id := String(card_id_value)
 		if cards_by_id.has(card_id):
 			offer_ids.append(card_id)
+	if offer_ids.is_empty():
+		return
+	var deck_before := _deck_total(run.deck)
 	for card_id in offer_ids:
 		run.deck[card_id] = int(run.deck.get(card_id, 0)) + 1
 		run.collection[card_id] = int(run.collection.get(card_id, 0)) + 1
@@ -4480,10 +4911,13 @@ func _add_all_route_rewards() -> void:
 	run.reward_offer = []
 	run.reward_picks_remaining = 0
 	selected_route_reward_card_id = ""
-	_finish_route_reward()
+	_autosave_now("route_reward")
+	await _continue_route_reward_after_pick(offer_ids, deck_before)
 
 
 func _finish_route_reward() -> void:
+	if route_reward_collecting:
+		return
 	run.reward_offer = []
 	run.reward_picks_remaining = 0
 	run.route_reward_cash = 0
@@ -4495,7 +4929,7 @@ func _finish_route_reward() -> void:
 	_complete_route_node()
 
 
-func _route_reward_overlay_host() -> VBoxContainer:
+func _route_reward_overlay_host(pin_actions: bool = false) -> VBoxContainer:
 	_clear_route_reward_overlay()
 	route_reward_overlay = Control.new()
 	route_reward_overlay.name = "RouteRewardOverlay"
@@ -4506,39 +4940,48 @@ func _route_reward_overlay_host() -> VBoxContainer:
 	var dimmer := ColorRect.new()
 	dimmer.name = "RouteRewardDimmer"
 	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = PALETTE.OVERLAY_DIM
+	dimmer.color = Color(PALETTE.PEACH_INK, 0.42)
 	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	route_reward_overlay.add_child(dimmer)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 70)
-	margin.add_theme_constant_override("margin_top", 34)
-	margin.add_theme_constant_override("margin_right", 70)
-	margin.add_theme_constant_override("margin_bottom", 34)
+	margin.add_theme_constant_override("margin_left", 44)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 44)
+	margin.add_theme_constant_override("margin_bottom", 24)
 	route_reward_overlay.add_child(margin)
-	var scroll_host := ScrollContainer.new()
-	scroll_host.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(scroll_host)
+	var reward_mat := preload("res://scripts/ui/RewardTableSurface.gd").new()
+	reward_mat.name = "RewardTableMat"
+	reward_mat.tabletop = current_screen == "route_reward"
+	reward_mat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(reward_mat)
 	var host := VBoxContainer.new()
 	host.name = "RouteRewardModalContent"
 	host.custom_minimum_size.x = 1160
 	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	host.add_theme_constant_override("separation", 12)
-	scroll_host.add_child(host)
+	if pin_actions:
+		host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		margin.add_child(host)
+	else:
+		var scroll_host := ScrollContainer.new()
+		scroll_host.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		margin.add_child(scroll_host)
+		scroll_host.add_child(host)
 	if not _reduced_motion_enabled() and not _running_automated_test():
 		dimmer.modulate.a = 0.0
 		host.modulate.a = 0.0
-		host.position.y = 18.0
 		var reveal := create_tween().set_parallel(true)
 		reveal.tween_property(dimmer, "modulate:a", 1.0, 0.22)
 		reveal.tween_property(host, "modulate:a", 1.0, 0.24).set_delay(0.08)
-		reveal.tween_property(host, "position:y", 0.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	return host
 
 
 func _clear_route_reward_overlay() -> void:
+	route_reward_collection_generation += 1
+	route_reward_collecting = false
 	if is_instance_valid(route_reward_overlay):
 		route_reward_overlay.queue_free()
 	route_reward_overlay = null
@@ -4546,6 +4989,9 @@ func _clear_route_reward_overlay() -> void:
 
 func _show_route_shop() -> void:
 	_clear_route_shop_service_overlay()
+	if bool(run.get("pending_route_node", {}).get("hub_shop", false)):
+		_show_hub_closeup(String(run.pending_route_node.get("hub_view", "counter")) == "seller")
+		return
 	current_screen = "route_shop"
 	_apply_screen_chrome()
 	_render_nav()
@@ -4890,10 +5336,14 @@ func _route_shop_heal() -> void:
 		return
 	run.money = int(run.money) - route_run_service.SHOP_HEAL_COST
 	run.life = mini(int(run.max_life), int(run.life) + route_run_service.SHOP_HEAL_AMOUNT)
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_heal()
 	_show_route_shop()
 
 
 func _route_shop_buy_card(card_id: String) -> void:
+	if route_shop_purchase_busy:
+		return
 	var price := _card_price(card_id)
 	var node: Dictionary = run.pending_route_node
 	if int(run.money) < price or not node.get("inventory", []).has(card_id):
@@ -4912,6 +5362,20 @@ func _route_shop_buy_card(card_id: String) -> void:
 	run.pending_route_node = node
 	selected_route_shop_card_id = ""
 	_update_status()
+	if bool(node.get("hub_shop", false)):
+		route_shop_purchase_busy = true
+		var hub := content.find_child("TournamentHub", false, false)
+		var source: Control = hub._shop_view.purchase_control(card_id) if is_instance_valid(hub) else null
+		run.hub_shop = node.duplicate(true)
+		_autosave_now("route_shop")
+		await _animate_route_shop_purchase(source, card_id, price, starting_money, starting_deck_size)
+		route_shop_purchase_busy = false
+		if current_screen == "route_shop":
+			_show_hub_counter()
+			hub.show_notice("")
+			if _reduced_motion_enabled():
+				TOPDECK_UI_SCRIPT.toast(self, "Bought · −$%d" % price)
+		return
 	var shop_stats := find_child("EncounterStats", true, false) as Label
 	if shop_stats != null:
 		shop_stats.text = _route_run_stats_text()
@@ -4943,17 +5407,23 @@ func _animate_route_shop_purchase(
 	var ending_deck_size := _deck_total(run.get("deck", {}))
 	var funds_chip := find_child("RouteFundsChip", true, false) as Label
 	var deck_chip := find_child("RouteDeckChip", true, false) as Label
+	var hub_purchase := bool(run.get("pending_route_node", {}).get("hub_shop", false))
+	if hub_purchase:
+		funds_chip = find_child("HubFundsLabel", true, false) as Label
+		deck_chip = find_child("HubDeckLabel", true, false) as Label
+	var funds_format := "$%d" if hub_purchase else "FUNDS  $%d"
+	var deck_format := "%d CARDS" if hub_purchase else "DECK  %d"
 	if funds_chip != null:
-		funds_chip.text = "FUNDS  $%d" % ending_money
+		funds_chip.text = funds_format % ending_money
 	if deck_chip != null:
-		deck_chip.text = "DECK  %d" % ending_deck_size
+		deck_chip.text = deck_format % ending_deck_size
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_purchase()
 	if _running_automated_test() or _reduced_motion_enabled() or card_control == null:
-		if not _running_automated_test() and ui_sound_controller != null:
-			ui_sound_controller.play_success()
 		return
 
-	if ui_sound_controller != null:
-		ui_sound_controller.play_success()
+	if deck_chip != null:
+		deck_chip.text = deck_format % starting_deck_size
 
 	var effect_layer := Control.new()
 	effect_layer.name = "RouteShopPurchaseEffect"
@@ -4998,15 +5468,15 @@ func _animate_route_shop_purchase(
 	banner.modulate.a = 0.0
 	var banner_surface = ANGULAR_SURFACE_SCRIPT.new()
 	banner_surface.name = "RouteShopPurchaseBannerSurface"
-	banner_surface.configure(PALETTE.SURFACE_RAISED, PALETTE.ACTION_CONFIRM, true, true)
+	banner_surface.configure(PALETTE.PEACH_PAPER, PALETTE.HEALTH_FILL, false, false)
 	banner.add_child(banner_surface)
-	var banner_title := TOPDECK_UI_SCRIPT.make_label("DECK UPGRADED", "section", PALETTE.TEXT_PRIMARY)
+	var banner_title := TOPDECK_UI_SCRIPT.make_label("Added to deck", "section", PALETTE.PEACH_INK)
 	banner_title.position = Vector2(22, 11)
 	banner_title.size = Vector2(396, 28)
 	banner.add_child(banner_title)
 	var card_name := String(cards_by_id.get(card_id, {}).get("name", card_id))
 	var banner_detail := TOPDECK_UI_SCRIPT.make_label(
-		"%s added  •  -$%d" % [card_name, price], "small", PALETTE.STATE_REWARD
+		"%s added  •  -$%d" % [card_name, price], "small", PALETTE.PEACH_INK_SOFT
 	)
 	banner_detail.position = Vector2(22, 48)
 	banner_detail.size = Vector2(396, 24)
@@ -5017,11 +5487,11 @@ func _animate_route_shop_purchase(
 	banner.position = Vector2(clampf(get_viewport_rect().size.x * 0.04, 24.0, 64.0), 104.0)
 
 	if funds_chip != null:
-		funds_chip.text = "FUNDS  $%d" % starting_money
+		funds_chip.text = funds_format % starting_money
 		funds_chip.pivot_offset = funds_chip.size * 0.5
 		var funds_tween := create_tween().set_parallel(true)
 		funds_tween.tween_method(func(progress: float) -> void:
-			funds_chip.text = "FUNDS  $%d" % roundi(lerpf(float(starting_money), float(ending_money), progress)),
+			funds_chip.text = funds_format % roundi(lerpf(float(starting_money), float(ending_money), progress)),
 			0.0, 1.0, 0.44
 		)
 		funds_tween.tween_property(funds_chip, "modulate", PALETTE.STATE_REWARD, 0.12)
@@ -5054,11 +5524,11 @@ func _animate_route_shop_purchase(
 	await collect.finished
 
 	if deck_chip != null:
-		deck_chip.text = "DECK  %d" % starting_deck_size
+		deck_chip.text = deck_format % starting_deck_size
 		deck_chip.pivot_offset = deck_chip.size * 0.5
 		var deck_confirm := create_tween().set_parallel(true)
 		deck_confirm.tween_method(func(progress: float) -> void:
-			deck_chip.text = "DECK  %d" % roundi(lerpf(float(starting_deck_size), float(ending_deck_size), progress)),
+			deck_chip.text = deck_format % roundi(lerpf(float(starting_deck_size), float(ending_deck_size), progress)),
 			0.0, 1.0, 0.18
 		)
 		deck_confirm.tween_property(deck_chip, "scale", Vector2(1.18, 1.18), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -5115,10 +5585,20 @@ func _show_route_remove_card() -> void:
 
 func _route_remove_card(card_id: String) -> void:
 	var node: Dictionary = run.get("pending_route_node", {})
-	var result: Dictionary = route_run_service.buy_card_removal(run, node, card_id, MIN_MAIN_DECK_SIZE)
+	var result: Dictionary = route_run_service.buy_card_removal(run, node, card_id, MIN_MAIN_DECK_SIZE, int(route_shop_service_overlay.get_meta("copy_index", -1)) if is_instance_valid(route_shop_service_overlay) else -1)
 	run.pending_route_node = node
+	if bool(node.get("hub_shop", false)):
+		run.hub_shop = node.duplicate(true)
+		_autosave_now("route_shop")
 	_set_footer(String(result.get("message", "Could not remove that card.")))
 	_show_route_shop()
+	if bool(result.get("ok", false)):
+		if is_instance_valid(ui_sound_controller):
+			ui_sound_controller.play_remove()
+		TOPDECK_UI_SCRIPT.toast(self, "Card removed")
+	if bool(node.get("hub_shop", false)):
+		var hub := content.find_child("TournamentHub", false, false)
+		hub.show_notice("" if bool(result.get("ok", false)) else String(result.get("message", "Unavailable")))
 
 
 func _show_route_upgrade_card() -> void:
@@ -5144,253 +5624,99 @@ func _show_route_upgrade_card() -> void:
 	)
 
 
-func _show_route_shop_service_picker(
-	service_kind: String,
-	candidates: Array[String],
-	title: String,
-	description: String,
-	accent: Color
-) -> void:
+func _show_route_shop_service_picker(service_kind: String, candidates: Array[String], _title: String, _description: String, _accent: Color) -> void:
 	_clear_route_shop_service_overlay()
 	selected_route_service_card_id = ""
-	_set_route_shopkeeper_picker_visibility(false)
-
-	route_shop_service_overlay = Control.new()
-	route_shop_service_overlay.name = "RouteShopServiceOverlay"
-	route_shop_service_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	route_shop_service_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	route_shop_service_overlay.z_index = 950
-	route_shop_service_overlay.set_meta("service_kind", service_kind)
-	add_child(route_shop_service_overlay)
-
-	var dimmer := ColorRect.new()
-	dimmer.name = "RouteShopServiceDimmer"
-	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = PALETTE.OVERLAY_DIM
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	route_shop_service_overlay.add_child(dimmer)
-
-	var margin := MarginContainer.new()
-	margin.name = "RouteShopServiceMargin"
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 74)
-	margin.add_theme_constant_override("margin_top", 28)
-	margin.add_theme_constant_override("margin_right", 74)
-	margin.add_theme_constant_override("margin_bottom", 28)
-	route_shop_service_overlay.add_child(margin)
-
-	var modal_parts := TOPDECK_UI_SCRIPT.make_surface_panel(
-		"RouteShopServiceModal",
-		PALETTE.SURFACE_RAISED,
-		accent,
-		Vector2.ZERO,
-		Vector4(26, 18, 26, 20),
-		true
-	)
-	var modal := modal_parts.panel as PanelContainer
-	modal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	modal.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(modal)
-	var body := modal_parts.body as VBoxContainer
-	body.add_theme_constant_override("separation", 8)
-
-	body.add_child(TOPDECK_UI_SCRIPT.make_label("DECK SERVICE", "eyebrow", accent))
-	var heading := TOPDECK_UI_SCRIPT.make_label(title.to_upper(), "screen_title", PALETTE.TEXT_PRIMARY)
-	heading.name = "RouteShopServiceTitle"
-	body.add_child(heading)
-	var detail := TOPDECK_UI_SCRIPT.make_label(description, "body", PALETTE.TEXT_SECONDARY)
-	detail.name = "RouteShopServiceDescription"
-	body.add_child(detail)
-	var stats := TOPDECK_UI_SCRIPT.make_label(_route_run_stats_text(), "status", PALETTE.STATE_REWARD)
-	stats.name = "RouteShopServiceStats"
-	body.add_child(stats)
-
-	var divider := ColorRect.new()
-	divider.custom_minimum_size = Vector2(0, 3)
-	divider.color = accent
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(divider)
-
-	var card_scroll := ScrollContainer.new()
-	card_scroll.name = "RouteShopServiceCardScroll"
-	card_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	body.add_child(card_scroll)
-	var choices := GridContainer.new()
-	choices.name = "RouteRemoveChoices" if service_kind == "remove" else "RouteUpgradeChoices"
-	choices.columns = 6
-	choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	choices.add_theme_constant_override("h_separation", 20)
-	choices.add_theme_constant_override("v_separation", 12)
-	card_scroll.add_child(choices)
-	for card_id in candidates:
-		_add_route_shop_service_card_choice(choices, service_kind, card_id, accent)
-	if candidates.is_empty():
-		var empty_copy := TOPDECK_UI_SCRIPT.make_label(
-			"Every eligible card in your deck has already been upgraded." if service_kind in ["upgrade", "break_upgrade"] else "There are no cards available for this service.",
-			"body",
-			PALETTE.TEXT_SECONDARY
-		)
-		empty_copy.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		choices.add_child(empty_copy)
-
-	var actions := HBoxContainer.new()
-	actions.name = "RouteShopServiceActions"
-	actions.alignment = BoxContainer.ALIGNMENT_END
-	actions.add_theme_constant_override("separation", 14)
-	body.add_child(actions)
-	var instruction := TOPDECK_UI_SCRIPT.make_label("Select a card to continue.", "small", PALETTE.TEXT_SECONDARY)
-	instruction.name = "RouteShopServiceSelectionInstruction"
-	instruction.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	instruction.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	actions.add_child(instruction)
-	var back_name := "RouteRemoveBackButton" if service_kind == "remove" else "RouteUpgradeBackButton"
-	var back_text := "Back to Hub" if service_kind == "break_upgrade" else "Back to Shop"
-	var back := TOPDECK_UI_SCRIPT.make_button(back_text, "secondary", Vector2(210, 52), back_name)
-	_connect_pressed(back, _close_route_shop_service_overlay)
-	actions.add_child(back)
-	var confirm_name := "RouteRemoveConfirmButton" if service_kind == "remove" else "RouteUpgradeConfirmButton"
-	var confirm_text := "Remove Selected Card" if service_kind == "remove" else "Upgrade Selected Card"
-	var confirm_variant := "danger" if service_kind == "remove" else "special"
-	var confirm := TOPDECK_UI_SCRIPT.make_button(confirm_text, confirm_variant, Vector2(250, 52), confirm_name)
+	var modal = GAME_MODAL.create(self, "Remove a card" if service_kind == "remove" else "Upgrade a card", "RouteShopServiceOverlay", _close_route_shop_service_overlay)
+	route_shop_service_overlay = modal
+	modal.set_meta("service_kind", service_kind)
+	modal.set_meta("copy_index", -1)
+	var columns := HBoxContainer.new()
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.add_theme_constant_override("separation", 24)
+	modal.body.add_child(columns)
+	var eligible: Array = []
+	for entry in _deck_browser_entries(run.deck):
+		if candidates.has(String(entry.id)) and (service_kind == "remove" or not bool(entry.card.get("upgraded", false))):
+			eligible.append(entry)
+	var browser := CARD_BROWSER.new()
+	browser.name = "RouteServiceBrowser"
+	browser.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	browser.configure(eligible, _run_difficulty_id(), "RouteService", true, true)
+	browser.card_selected.connect(func(entry: Dictionary) -> void: _select_route_shop_service_card(service_kind, String(entry.id), int(entry.copy_index)))
+	columns.add_child(browser)
+	var preview := PanelContainer.new()
+	preview.name = "RouteServicePreview"
+	preview.custom_minimum_size.x = 510
+	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview.add_theme_stylebox_override("panel", TOPDECK_UI_SCRIPT.paper_style(PALETTE.PEACH_PAPER_MUTED, 20))
+	columns.add_child(preview)
+	var center := CenterContainer.new()
+	center.name = "RouteServicePreviewContent"
+	preview.add_child(center)
+	center.add_child(TOPDECK_UI_SCRIPT.make_label("Select a card", "section"))
+	var hub_service := bool(run.get("pending_route_node", {}).get("hub_shop", false))
+	var service_limit := "Once per round" if service_kind == "remove" else "Once per week"
+	var context := TOPDECK_UI_SCRIPT.make_label("Uses your bye" if service_kind == "break_upgrade" else service_limit if hub_service else "Once per shop", "small")
+	context.name = "RouteShopServiceSelectionInstruction"
+	context.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	modal.actions.add_child(context)
+	var price := "Free" if service_kind == "break_upgrade" else "$%d" % (route_run_service.SHOP_REMOVE_COST if service_kind == "remove" else route_run_service.SHOP_UPGRADE_COST)
+	var confirm := TOPDECK_UI_SCRIPT.make_button("%s · %s" % ["Remove" if service_kind == "remove" else "Upgrade", price], "danger" if service_kind == "remove" else "confirm", Vector2(240, 56), "RouteRemoveConfirmButton" if service_kind == "remove" else "RouteUpgradeConfirmButton")
 	confirm.disabled = true
-	_connect_pressed(confirm, _confirm_route_shop_service_selection.bind(service_kind))
-	actions.add_child(confirm)
-
-	if not _reduced_motion_enabled() and not _running_automated_test():
-		dimmer.modulate.a = 0.0
-		modal.modulate.a = 0.0
-		modal.position.y = 18.0
-		var reveal := create_tween().set_parallel(true)
-		reveal.tween_property(dimmer, "modulate:a", 1.0, 0.18)
-		reveal.tween_property(modal, "modulate:a", 1.0, 0.22).set_delay(0.05)
-		reveal.tween_property(modal, "position:y", 0.0, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	confirm.pressed.connect(_confirm_route_shop_service_selection.bind(service_kind))
+	modal.actions.add_child(confirm)
 
 
-func _add_route_shop_service_card_choice(
-	parent: GridContainer,
-	service_kind: String,
-	card_id: String,
-	accent: Color
-) -> void:
-	if not cards_by_id.has(card_id):
+func _select_route_shop_service_card(service_kind: String, card_id: String, copy_index: int = -1) -> void:
+	if is_instance_valid(route_shop_service_overlay) and route_shop_service_overlay.get_meta("busy", false):
 		return
-	var card: Dictionary = cards_by_id[card_id]
-	var card_size := Vector2(166, 236)
-	var choice := VBoxContainer.new()
-	choice.name = "RouteServiceChoice_%s" % card_id
-	choice.custom_minimum_size = Vector2(176, 278)
-	choice.add_theme_constant_override("separation", 4)
-	choice.set_meta("card_id", card_id)
-	choice.set_meta("service_kind", service_kind)
-	parent.add_child(choice)
-
-	var card_visual := Control.new()
-	card_visual.name = "RouteServiceCardVisual"
-	card_visual.custom_minimum_size = card_size
-	card_visual.size = card_size
-	card_visual.pivot_offset = card_size * 0.5
-	choice.add_child(card_visual)
-	var face := _make_card_face(card, card_size, not _reduced_motion_enabled())
-	face.name = "RouteServiceCardFace"
-	face.size = card_size
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card_visual.add_child(face)
-
-	var outline := Panel.new()
-	outline.name = "RouteServiceSelectionOutline"
-	outline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	outline.z_index = 4
-	outline.visible = false
-	var outline_style := StyleBoxFlat.new()
-	outline_style.bg_color = Color.TRANSPARENT
-	outline_style.border_color = accent
-	outline_style.set_border_width_all(4)
-	outline_style.corner_radius_top_left = 4
-	outline_style.corner_radius_top_right = 4
-	outline_style.corner_radius_bottom_right = 4
-	outline_style.corner_radius_bottom_left = 4
-	outline.add_theme_stylebox_override("panel", outline_style)
-	card_visual.add_child(outline)
-
-	var select_button := Button.new()
-	select_button.name = ("RouteRemoveCard_%s" if service_kind == "remove" else "RouteUpgradeCard_%s") % card_id
-	select_button.flat = true
-	select_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	select_button.tooltip_text = "Select %s" % _card_display_name(card)
-	select_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	select_button.pressed.connect(_select_route_shop_service_card.bind(service_kind, card_id), CONNECT_DEFERRED)
-	card_visual.add_child(select_button)
-
-	var quantity := TOPDECK_UI_SCRIPT.make_label("×%d" % int(run.deck.get(card_id, 0)), "small", PALETTE.TEXT_PRIMARY)
-	quantity.name = "RouteServiceQuantity"
-	quantity.position = Vector2(card_size.x - 49.0, 7.0)
-	quantity.size = Vector2(42, 28)
-	quantity.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	quantity.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	quantity.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	quantity.z_index = 6
-	var quantity_style := StyleBoxFlat.new()
-	quantity_style.bg_color = Color(PALETTE.SURFACE_ROOT, 0.94)
-	quantity_style.border_color = accent
-	quantity_style.set_border_width_all(2)
-	quantity_style.corner_radius_top_left = 3
-	quantity_style.corner_radius_top_right = 6
-	quantity_style.corner_radius_bottom_right = 3
-	quantity_style.corner_radius_bottom_left = 6
-	quantity.add_theme_stylebox_override("normal", quantity_style)
-	card_visual.add_child(quantity)
-
-	var info_text := "ONE COPY WILL BE REMOVED"
-	if service_kind in ["upgrade", "break_upgrade"]:
-		var upgraded_count: int = route_run_service.upgrade_count(run, card_id)
-		info_text = String(route_run_service.upgrade_summary(card_id)).to_upper()
-		if upgraded_count > 0:
-			info_text += "  •  %d UPGRADED" % upgraded_count
-	var info := TOPDECK_UI_SCRIPT.make_label(info_text, "small", PALETTE.TEXT_SECONDARY)
-	info.name = "RouteServiceCardInfo"
-	info.custom_minimum_size = Vector2(0, 32)
-	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	choice.add_child(info)
-
-
-func _select_route_shop_service_card(service_kind: String, card_id: String) -> void:
-	if not is_instance_valid(route_shop_service_overlay):
-		return
-	if String(route_shop_service_overlay.get_meta("service_kind", "")) != service_kind:
+	if not is_instance_valid(route_shop_service_overlay) or String(route_shop_service_overlay.get_meta("service_kind", "")) != service_kind:
 		return
 	selected_route_service_card_id = card_id
-	var choices_name := "RouteRemoveChoices" if service_kind == "remove" else "RouteUpgradeChoices"
-	var choices := route_shop_service_overlay.find_child(choices_name, true, false)
-	if choices != null:
-		for choice_node in choices.get_children():
-			if not choice_node is Control or not choice_node.has_meta("card_id"):
-				continue
-			var choice := choice_node as Control
-			var selected := String(choice.get_meta("card_id", "")) == card_id
-			var visual := choice.get_node_or_null("RouteServiceCardVisual") as Control
-			var outline := choice.find_child("RouteServiceSelectionOutline", true, false) as Control
-			if outline != null:
-				outline.visible = selected
-			if visual != null:
-				var target_scale := Vector2(1.035, 1.035) if selected else Vector2.ONE
-				if _reduced_motion_enabled() or _running_automated_test():
-					visual.scale = target_scale
-				else:
-					create_tween().tween_property(visual, "scale", target_scale, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	var confirm_name := "RouteRemoveConfirmButton" if service_kind == "remove" else "RouteUpgradeConfirmButton"
-	var confirm := route_shop_service_overlay.find_child(confirm_name, true, false) as Button
-	if confirm != null:
-		confirm.disabled = false
+	if copy_index < 0:
+		copy_index = mini(route_run_service.upgrade_count(run, card_id), int(run.deck.get(card_id, 1)) - 1)
+	route_shop_service_overlay.set_meta("copy_index", copy_index)
+	var center := route_shop_service_overlay.find_child("RouteServicePreviewContent", true, false) as CenterContainer
+	_clear(center)
+	var comparison := VBoxContainer.new()
+	comparison.add_theme_constant_override("separation", 18)
+	center.add_child(comparison)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	comparison.add_child(row)
+	var before := _result_card_copy(card_id, copy_index)
+	for side in ["Before", "After"] if service_kind != "remove" else ["Remove"]:
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation", 10)
+		row.add_child(column)
+		var caption := TOPDECK_UI_SCRIPT.make_label(side, "eyebrow", PALETTE.PEACH_INK_SOFT)
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(caption)
+		var data: Dictionary = route_run_service.upgraded_card_data(card_id) if side == "After" else before
+		var face := _make_card_face(data, Vector2(220, 312), not _reduced_motion_enabled())
+		face.name = "RouteService%sCard" % side
+		face.mouse_filter = Control.MOUSE_FILTER_STOP
+		var visual := Control.new()
+		visual.name = "RouteService%sCardVisual" % side
+		visual.custom_minimum_size = Vector2(220, 312)
+		column.add_child(visual)
+		visual.add_child(face)
+		face.size = Vector2(220, 312)
+		CARD_INSPECTION_OVERLAY.bind(face, data, _run_difficulty_id(), true)
+	var change: String = "%d → %d cards" % [_deck_total(run.deck), _deck_total(run.deck) - 1] if service_kind == "remove" else route_run_service.upgrade_summary(card_id)
+	var delta := TOPDECK_UI_SCRIPT.make_label(change, "body", PALETTE.ACTION_DANGER.darkened(0.22) if service_kind == "remove" else PALETTE.HEALTH_FILL)
+	delta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	comparison.add_child(delta)
+	var confirm := route_shop_service_overlay.find_child("RouteRemoveConfirmButton" if service_kind == "remove" else "RouteUpgradeConfirmButton", true, false) as Button
+	confirm.disabled = false
 	var instruction := route_shop_service_overlay.find_child("RouteShopServiceSelectionInstruction", true, false) as Label
-	if instruction != null:
-		instruction.text = "%s selected." % _card_display_name(cards_by_id.get(card_id, {}))
+	instruction.text = "1 upgraded copy" if bool(before.get("upgraded", false)) else "1 copy · Uses your bye" if service_kind == "break_upgrade" else "1 copy"
 
 
 func _confirm_route_shop_service_selection(service_kind: String) -> void:
+	if is_instance_valid(route_shop_service_overlay) and route_shop_service_overlay.get_meta("busy", false):
+		return
 	if selected_route_service_card_id.is_empty():
 		return
 	match service_kind:
@@ -5403,6 +5729,8 @@ func _confirm_route_shop_service_selection(service_kind: String) -> void:
 
 
 func _close_route_shop_service_overlay() -> void:
+	if _card_upgrade_reveal_active:
+		return
 	var service_kind := ""
 	if is_instance_valid(route_shop_service_overlay):
 		service_kind = String(route_shop_service_overlay.get_meta("service_kind", ""))
@@ -5413,6 +5741,10 @@ func _close_route_shop_service_overlay() -> void:
 	current_screen = "route_shop"
 	_apply_screen_chrome()
 	_update_status()
+	if bool(run.get("pending_route_node", {}).get("hub_shop", false)):
+		var source := content.find_child("HubSellerUpgradeButton" if service_kind == "upgrade" else "RouteShopRemoveButton", true, false) as Button
+		if source != null and source.is_visible_in_tree() and not source.disabled:
+			source.grab_focus()
 
 
 func _clear_route_shop_service_overlay() -> void:
@@ -5432,15 +5764,20 @@ func _set_route_shopkeeper_picker_visibility(show_shopkeeper: bool) -> void:
 
 
 func _route_upgrade_card(card_id: String) -> void:
-	var selected_choice := find_child("RouteServiceChoice_%s" % card_id, true, false) as Control
-	var selected_visual := selected_choice.get_node_or_null("RouteServiceCardVisual") as Control if selected_choice != null else null
-	var selected_face := selected_visual.get_node_or_null("RouteServiceCardFace") as Control if selected_visual != null else null
+	if _card_upgrade_reveal_active:
+		return
+	var selected_visual := find_child("RouteServiceBeforeCardVisual", true, false) as Control
+	var selected_face := find_child("RouteServiceBeforeCard", true, false) as Control
 	if is_instance_valid(route_shop_service_overlay):
+		route_shop_service_overlay.set_meta("busy", true)
 		for button_node in route_shop_service_overlay.find_children("*", "Button", true, false):
 			(button_node as Button).disabled = true
 	var node: Dictionary = run.get("pending_route_node", {})
 	var result: Dictionary = route_run_service.buy_card_upgrade(run, node, card_id)
 	run.pending_route_node = node
+	if bool(node.get("hub_shop", false)):
+		run.hub_shop = node.duplicate(true)
+		_autosave_now("route_shop")
 	_set_footer(String(result.get("message", "Could not upgrade that card.")))
 	if not bool(result.get("ok", false)):
 		_show_route_shop()
@@ -5452,17 +5789,20 @@ func _route_upgrade_card(card_id: String) -> void:
 	await _play_route_card_upgrade_reveal(card_id, selected_visual, selected_face)
 	if current_screen == "route_upgrade":
 		_show_route_shop()
+		TOPDECK_UI_SCRIPT.toast(self, "Upgraded")
 
 
 func _route_hub_upgrade_card(card_id: String) -> void:
-	var selected_choice := find_child("RouteServiceChoice_%s" % card_id, true, false) as Control
-	var selected_visual := selected_choice.get_node_or_null("RouteServiceCardVisual") as Control if selected_choice != null else null
-	var selected_face := selected_visual.get_node_or_null("RouteServiceCardFace") as Control if selected_visual != null else null
+	if _card_upgrade_reveal_active:
+		return
+	var selected_visual := find_child("RouteServiceBeforeCardVisual", true, false) as Control
+	var selected_face := find_child("RouteServiceBeforeCard", true, false) as Control
 	if is_instance_valid(route_shop_service_overlay):
+		route_shop_service_overlay.set_meta("busy", true)
 		for button_node in route_shop_service_overlay.find_children("*", "Button", true, false):
 			(button_node as Button).disabled = true
 	var result: Dictionary = route_run_service.use_hub_break_upgrade(run, card_id)
-	run.hub_notice = String(result.get("message", "Could not upgrade that card."))
+	run.hub_notice = "" if bool(result.get("ok", false)) else String(result.get("message", "Unavailable"))
 	if not bool(result.get("ok", false)):
 		_show_tournament_hub()
 		return
@@ -5474,6 +5814,7 @@ func _route_hub_upgrade_card(card_id: String) -> void:
 	await _play_route_card_upgrade_reveal(card_id, selected_visual, selected_face)
 	if current_screen == "route_break_upgrade":
 		_show_tournament_hub()
+		TOPDECK_UI_SCRIPT.toast(self, "Upgraded")
 
 
 func _play_route_card_upgrade_reveal(
@@ -5481,49 +5822,45 @@ func _play_route_card_upgrade_reveal(
 	card_visual: Control = null,
 	card_face: Control = null
 ) -> void:
-	if not cards_by_id.has(card_id):
+	if _card_upgrade_reveal_active or not cards_by_id.has(card_id):
 		return
-	var temporary_overlay: Control
-	if card_visual == null or card_face == null:
-		temporary_overlay = Control.new()
-		temporary_overlay.name = "RouteCardUpgradeRevealOverlay"
-		temporary_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		temporary_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-		temporary_overlay.z_index = 1200
-		add_child(temporary_overlay)
-		var dimmer := ColorRect.new()
-		dimmer.name = "RouteCardUpgradeRevealDimmer"
-		dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		dimmer.color = PALETTE.OVERLAY_DIM
-		dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-		temporary_overlay.add_child(dimmer)
-		card_visual = Control.new()
-		card_visual.name = "RouteEventUpgradeCardVisual"
-		card_visual.set_anchors_preset(Control.PRESET_CENTER)
-		card_visual.position = Vector2(-115.0, -163.0)
-		card_visual.size = Vector2(230.0, 326.0)
-		card_visual.custom_minimum_size = card_visual.size
-		card_visual.pivot_offset = card_visual.size * 0.5
-		temporary_overlay.add_child(card_visual)
-		card_face = _make_card_face(cards_by_id[card_id], card_visual.size, not _reduced_motion_enabled())
-		card_face.name = "RouteEventUpgradeCardFace"
-		card_face.size = card_visual.size
-		card_visual.add_child(card_face)
-
+	_card_upgrade_reveal_active = true
+	last_card_upgrade_animation_stages.clear()
+	if is_instance_valid(ui_sound_controller):
+		ui_sound_controller.play_upgrade()
+	# The service commits the existing copy before this cosmetic ceremony. Use
+	# its pre-upgrade preview for the lift, never insert a second deck copy.
+	var before_card: Dictionary = cards_by_id[card_id].duplicate(true)
+	if is_instance_valid(card_face) and card_face.has_meta("inspection_card"):
+		before_card = card_face.get_meta("inspection_card").duplicate(true)
+	var source_rect := Rect2()
+	if is_instance_valid(card_visual) and card_visual.is_visible_in_tree():
+		source_rect = get_global_transform_with_canvas().affine_inverse() * card_visual.get_global_rect()
+	var picker := route_shop_service_overlay
+	var picker_was_visible := is_instance_valid(picker) and picker.visible
+	if picker_was_visible:
+		picker.hide()
+		_set_route_shopkeeper_picker_visibility(true)
+	for inspection in get_tree().get_nodes_in_group("shared_card_inspection"):
+		inspection.dismiss(false)
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused != null:
+		focused.release_focus()
 	var upgraded_card: Dictionary = route_run_service.upgraded_card_data(card_id)
 	var reveal = CARD_UPGRADE_REVEAL_SCRIPT.new()
 	last_card_upgrade_animation_stages = await reveal.play(
 		self,
-		card_visual,
-		card_face,
+		before_card,
 		upgraded_card,
 		_run_difficulty_id(),
-		not _reduced_motion_enabled(),
 		_reduced_motion_enabled(),
-		_running_automated_test()
+		_running_automated_test(),
+		_deck_total(run.get("deck", {})),
+		source_rect
 	)
-	if is_instance_valid(temporary_overlay):
-		temporary_overlay.queue_free()
+	_card_upgrade_reveal_active = false
+	if picker_was_visible and is_instance_valid(picker) and not picker.is_queued_for_deletion():
+		picker.show()
 
 
 func _show_route_event() -> void:
@@ -5782,6 +6119,8 @@ func _add_route_event_button(parent: Node, text_value: String, outcome: String, 
 
 
 func _resolve_route_event(choice: String, card_id: String = "", replacement_card_id: String = "") -> void:
+	if _card_upgrade_reveal_active:
+		return
 	var result: Dictionary = route_run_service.resolve_event(
 		run,
 		choice,
@@ -5883,113 +6222,44 @@ func _complete_route_node() -> void:
 		_autosave_now("route_game_over")
 		_show_route_game_over()
 		return
+	if node_type == "week_pack":
+		run.week_transition = ""
+		_ensure_hub_shop(true)
+		_autosave_now("route_hub")
+		_show_run_map()
+		return
+	if node_type == "final_boss" and hub_round_node and int(run.get("week", 1)) < int(run.get("demo_weeks", 1)):
+		route_run_service.weekly.prepare_deckbox_choice(run)
+		_autosave_now("week_transition")
+		_show_week_transition()
+		return
 	if node_type == "final_boss":
 		run.demo_complete = true
 		run.run_over = true
-		run.last_result = ["Locals Champion defeated.", "Regionals waits beyond the demo."] if hub_round_node else ["Starter City Champion defeated.", "Cloud City waits beyond the bridge."]
+		run.last_result = ["Both weeks at Locals complete!", "Thanks for playing. Regionals waits beyond the demo."] if hub_round_node and int(run.get("demo_weeks", 1)) > 1 else ["Locals Champion defeated.", "Regionals waits beyond the demo."] if hub_round_node else ["Starter City Champion defeated.", "Cloud City waits beyond the bridge."]
 		_autosave_now("route_victory")
 		_show_route_victory()
 		return
 	if hub_round_node:
 		var completed_round := int(node.get("hub_round", run.get("hub_round", 1)))
+		var previous_round := int(run.get("hub_round", 1))
 		run.hub_round = mini(completed_round + 1, int(run.get("hub_rounds_per_floor", 4)))
-		run.hub_notice = "Round %d cleared. Life remains at %d/%d; your deck stays locked." % [
-			completed_round,
-			int(run.get("life", 0)),
-			int(run.get("max_life", route_run_service.STARTING_LIFE)),
-		]
+		if int(run.hub_round) > previous_round:
+			var shop_state := _ensure_hub_shop()
+			shop_state.remove_purchased = false
+		run.hub_notice = ""
 	_autosave_now("route_hub")
 	_show_run_map()
+	if hub_round_node:
+		TOPDECK_UI_SCRIPT.toast(self, "Shop restocked", "reward")
 
 
 func _show_route_game_over() -> void:
-	current_screen = "route_game_over"
-	_apply_screen_chrome()
-	_render_nav()
-	_clear(content)
-	_update_status()
-	var shell_parts := TOPDECK_UI_SCRIPT.make_encounter_shell(
-		"RouteGameOver",
-		"Run Ended",
-		"Run Over",
-		String(run.get("last_result", ["Your run ended."])[0]),
-		PALETTE.ACTION_DANGER,
-		"STOPS %d  •  FINAL DECK %d CARDS" % [run.get("route_resolved", []).size() - 1, _deck_total(run.deck)],
-		_route_node_icon("event"),
-		"RouteGameOverArtwork"
-	)
-	content.add_child(shell_parts.panel)
-	(shell_parts.content as VBoxContainer).add_child(
-		TOPDECK_UI_SCRIPT.make_label("Starter City will generate a fresh route when you begin again.", "body", PALETTE.TEXT_SECONDARY)
-	)
-	var again := TOPDECK_UI_SCRIPT.make_button("Start a New Run", "primary", Vector2(240, 52), "RouteGameOverAgainButton")
-	_connect_pressed(again, _show_season_run_setup)
-	(shell_parts.actions as HBoxContainer).add_child(again)
-	var title := TOPDECK_UI_SCRIPT.make_button("Return to Title", "secondary", Vector2(220, 52), "RouteGameOverTitleButton")
-	_connect_pressed(title, _show_start)
-	(shell_parts.actions as HBoxContainer).add_child(title)
+	_show_tournament_result(run.get("last_result", []), false, "route_game_over")
 
 
 func _show_route_victory() -> void:
-	current_screen = "route_victory"
-	_apply_screen_chrome()
-	_render_nav()
-	_clear(content)
-	_update_status()
-	var starter_id := String(run.get("starter", "spicy"))
-	var victory_art: Texture2D = STARTER_VICTORY_POSES.get(starter_id, _route_node_icon("final_boss"))
-	var shell_parts := TOPDECK_UI_SCRIPT.make_encounter_shell(
-		"RouteDemoComplete",
-		"Starter City Complete",
-		"Thanks for Playing!",
-		"You started at a folding table and made it across Starter City. Beyond the championship bridge, Cloud City is waiting.",
-		PALETTE.STATE_REWARD,
-		"STARTER CITY CHAMPION",
-		victory_art,
-		"RouteVictoryArtwork"
-	)
-	var panel := shell_parts.panel as PanelContainer
-	panel.name = "RouteDemoComplete"
-	content.add_child(panel)
-	var encounter_body := shell_parts.content as VBoxContainer
-	var stats := HBoxContainer.new()
-	stats.name = "RouteVictoryStats"
-	stats.alignment = BoxContainer.ALIGNMENT_CENTER
-	stats.add_theme_constant_override("separation", 12)
-	encounter_body.add_child(stats)
-	_add_route_victory_stat(stats, "STOPS CLEARED", str(maxi(0, run.get("route_resolved", []).size() - 1)), PALETTE.ACTION_SPECIAL)
-	_add_route_victory_stat(stats, "LIFE LEFT", "%d/%d" % [int(run.life), int(run.max_life)], PALETTE.ACTION_CONFIRM)
-	_add_route_victory_stat(stats, "FINAL DECK", "%d CARDS" % _deck_total(run.deck), PALETTE.FOCUS_EDGE)
-	_add_route_victory_stat(stats, "CASH", "$%d" % int(run.money), PALETTE.STATE_REWARD)
-	var links := HBoxContainer.new()
-	links.name = "RouteVictoryLinks"
-	links.add_theme_constant_override("separation", 10)
-	encounter_body.add_child(links)
-	var discord := TOPDECK_UI_SCRIPT.make_button("Join the Discord", "primary", Vector2(0, 52), "RouteVictoryDiscordButton")
-	discord.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_connect_external_link(discord, DISCORD_INVITE_URL)
-	links.add_child(discord)
-	if not STEAM_STORE_URL.is_empty():
-		var steam := TOPDECK_UI_SCRIPT.make_button("Wishlist on Steam", "warning", Vector2(0, 52), "RouteVictorySteamButton")
-		steam.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_connect_external_link(steam, STEAM_STORE_URL)
-		links.add_child(steam)
-	var actions := HBoxContainer.new()
-	actions.name = "RouteVictoryActions"
-	actions.add_theme_constant_override("separation", 10)
-	encounter_body.add_child(actions)
-	var deck_button := TOPDECK_UI_SCRIPT.make_button("Review Winning Deck", "special", Vector2(0, 48), "RouteVictoryDeckButton")
-	_connect_pressed(deck_button, _show_deckbuilder)
-	deck_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_child(deck_button)
-	var again := TOPDECK_UI_SCRIPT.make_button("Start Another Run", "primary", Vector2(0, 48), "RouteVictoryAgainButton")
-	_connect_pressed(again, _show_season_run_setup)
-	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_child(again)
-	var title := TOPDECK_UI_SCRIPT.make_button("Return to Title", "secondary", Vector2(0, 48), "RouteVictoryTitleButton")
-	_connect_pressed(title, _show_start)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_child(title)
+	_show_tournament_result([], true, "route_victory")
 
 
 func _add_route_victory_stat(parent: Node, label_text: String, value_text: String, accent: Color) -> void:
@@ -5999,10 +6269,10 @@ func _add_route_victory_stat(parent: Node, label_text: String, value_text: Strin
 	parent.add_child(stat)
 	var copy := parts.body as VBoxContainer
 	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	var value := TOPDECK_UI_SCRIPT.make_label(value_text, "section", PALETTE.TEXT_PRIMARY)
+	var value := TOPDECK_UI_SCRIPT.make_label(value_text, "section", PALETTE.PEACH_INK)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	copy.add_child(value)
-	var caption := TOPDECK_UI_SCRIPT.make_label(label_text, "small", PALETTE.TEXT_SECONDARY)
+	var caption := TOPDECK_UI_SCRIPT.make_label(label_text, "small", PALETTE.PEACH_INK_SOFT)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	copy.add_child(caption)
 
@@ -6028,13 +6298,16 @@ func _show_shop() -> void:
 	elif _run_mode() == "season":
 		_show_shop_overworld()
 	else:
+		var previous_screen := current_screen
 		card_shop_screen.show(self)
 		_play_card_shop_music()
+		_play_shop_entry_sound(previous_screen)
 
 
 func _show_shop_overworld() -> void:
 	if _guard_run_over():
 		return
+	var previous_screen := current_screen
 	_cache_active_shop_overworld()
 	current_screen = "shop"
 	_render_nav()
@@ -6071,6 +6344,7 @@ func _show_shop_overworld() -> void:
 		shop_world.call("configure_shop", _shop_overworld_context())
 		shop_world.set_meta("shop_configured", true)
 	_play_card_shop_music()
+	_play_shop_entry_sound(previous_screen)
 
 
 func _cache_active_shop_overworld() -> void:
@@ -6381,7 +6655,7 @@ func _start_pack(pack: Array) -> void:
 
 func _generate_pack(booster_id: String) -> Array:
 	var affinity := _strongest_pack_affinity() if booster_id == PRIZE_BOOSTER_ID else _current_primary_archetype()
-	return shop_economy_service.generate_pack(booster_id, affinity)
+	return shop_economy_service.generate_pack(booster_id, affinity, run)
 
 
 func _pick_card_by_rarity(rarity: String) -> String:
@@ -6450,6 +6724,8 @@ func _current_primary_archetype() -> String:
 	# Rewards, packs, and shop offers are keyed to the starter identity, rather
 	# than the deck's current majority, so a run cannot discover a fourth color.
 	var starter := String(run.get("starter", ""))
+	if FOOD_PROTOTYPE.active(run):
+		return FOOD_PROTOTYPE.ID
 	if starter in ["spicy", "sweet", "hearty"]:
 		return starter
 	return String(_calculate_deck_metrics(run.get("deck", {}), run.get("sideboard", {})).primary)
@@ -6465,6 +6741,9 @@ func _strongest_pack_affinity() -> String:
 
 
 func _show_deckbuilder() -> void:
+	if bool(run.get("run_over", false)):
+		_show_final_deck_review()
+		return
 	var rebuilding_deckbuilder := current_screen == "deck"
 	if rebuilding_deckbuilder:
 		_capture_deckbuilder_scroll_positions()
@@ -6658,6 +6937,11 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 	_dismiss_round_result_popup()
 	current_screen = "kitchen_match"
 	_render_nav()
+	# A reload may replace the live table before its queued deletion runs.
+	# Retire its name so snapshot capture and input find the new table reliably.
+	var previous_table := content.get_node_or_null("Tabletop3DPrototype")
+	if previous_table != null:
+		previous_table.name = "RetiringTabletop"
 	_clear(content)
 	_update_status()
 	var metrics := _calculate_deck_metrics(player_deck, {})
@@ -6667,6 +6951,7 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 	var active: Dictionary = run.get("active_tournament", {})
 	var configured_player_deck := player_deck.duplicate(true)
 	var configured_match_rules := match_rules.duplicate(true)
+	var presented_opponent_name := opponent_name
 	var match_context := {
 		"tournament_round": tournament_round,
 		"player_starter": String(run.get("starter", metrics.get("primary", ""))),
@@ -6679,23 +6964,39 @@ func _begin_kitchen_match(player_deck: Dictionary, opponent_deck: Dictionary, op
 	var route_battle: Dictionary = run.get("route_battle", {})
 	if bool(route_battle.get("active", false)):
 		var prepared_deck: Dictionary = route_run_service.prepare_player_combat_deck(run, player_deck)
+		var rival_presentation := _route_rival_presentation(route_battle)
+		presented_opponent_name = String(rival_presentation.name)
 		configured_player_deck = prepared_deck.get("deck", player_deck).duplicate(true)
-		configured_match_rules.custom_cards = prepared_deck.get("cards", {}).duplicate(true)
+		configured_match_rules.custom_cards = cards_by_id.duplicate(true) if FOOD_PROTOTYPE.active(run) else {}
+		configured_match_rules.custom_cards.merge(prepared_deck.get("cards", {}).duplicate(true), true)
+		if FOOD_PROTOTYPE.active(run):
+			configured_match_rules.ruleset = FOOD_PROTOTYPE.ID
+			player_name = "Food Prototype"
 		match_context = {
 			"route_encounter": true,
+			"tournament_round": String(run.get("campaign_presentation", "")) == "tournament_hub",
+			"week": int(run.get("week", 1)),
+			"round": int(run.get("hub_round", 1)),
+			"rounds": int(run.get("hub_rounds_per_floor", 4)),
 			"player_starter": String(run.get("starter", metrics.get("primary", ""))),
 			"opponent_affinity": String(route_battle.get("opponent_affinity", "neutral")),
 			"rival_portrait_id": String(route_battle.get("rival_portrait_id", "npc1")),
+			"rival_cast_id": String(rival_presentation.id),
+			"rival_display_name": presented_opponent_name,
+			"legacy_rival_name": String(route_battle.get("label", opponent_name)),
 			"node_id": String(route_battle.get("node_id", "")),
 			"node_type": String(route_battle.get("node_type", "enemy")),
-			"event_name": String(route_battle.get("label", "Starter City Rival")),
+			"event_name": presented_opponent_name,
 			"location": String(route_battle.get("location", "Starter City Table")),
 		}
+	# Keep the equipped saved identity alongside presentation data, including
+	# legacy snapshots. An empty box lets the table show its cosmetic fallback.
+	match_context.deckbox = run.get("deckbox", {}).duplicate(true)
 	kitchen_game.configure_match(
 		configured_player_deck,
 		opponent_deck,
 		player_name,
-		opponent_name,
+		presented_opponent_name,
 		seed_value,
 		first_side,
 		"Forfeit / Return to Tournament" if tournament_round else "Exit Practice Match",
@@ -6834,10 +7135,7 @@ func _show_season_round_result_popup(won: bool) -> void:
 		return
 	_dismiss_round_result_popup()
 	if is_instance_valid(ui_sound_controller):
-		if won:
-			ui_sound_controller.play_success()
-		else:
-			ui_sound_controller.play_error()
+		ui_sound_controller.play_result(won)
 
 	var active: Dictionary = run.get("active_tournament", {})
 	var round_number := int(active.get("round", 1))
@@ -7209,9 +7507,9 @@ func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("radius", 0.0)
-	material.set_shader_parameter("paper_color", PALETTE.PERIWINKLE.darkened(0.28))
+	material.set_shader_parameter("paper_color", PALETTE.PEACH_EDGE.darkened(0.28))
 	material.set_shader_parameter("accent_color", PALETTE.FRESH_YELLOW)
-	material.set_shader_parameter("highlight_color", PALETTE.CREAM)
+	material.set_shader_parameter("highlight_color", PALETTE.PEACH_PAPER)
 	wipe.material = material
 	overlay.add_child(wipe)
 
@@ -7223,8 +7521,8 @@ func _play_round_circle_wipe(event_name: String, round_number: int) -> void:
 	label.text = "%s\nROUND %d" % [event_name.to_upper(), round_number]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 46)
-	label.add_theme_color_override("font_color", PALETTE.CREAM)
-	label.add_theme_color_override("font_outline_color", PALETTE.NAVY)
+	label.add_theme_color_override("font_color", PALETTE.PEACH_PAPER)
+	label.add_theme_color_override("font_outline_color", PALETTE.PEACH_INK)
 	label.add_theme_constant_override("outline_size", 8)
 	label.modulate.a = 0.0
 	center.add_child(label)
@@ -7498,56 +7796,147 @@ func _run_tournament() -> void:
 	_show_tournament_result(logs, wins >= int(event.requiredWins))
 
 
-func _show_tournament_result(logs: Array, survived: bool) -> void:
-	current_screen = "result"
+func _show_tournament_result(logs: Array, survived: bool, screen_id: String = "result") -> void:
+	current_screen = screen_id
 	_render_nav()
 	_clear(content)
 	_update_status()
+	_set_footer("")
 
-	var champion := bool(run.get("season_champion", false))
+	var champion := bool(run.get("season_champion", false)) or bool(run.get("demo_complete", false)) or current_screen in ["route_victory", "thanks"]
 	var result_summary: Dictionary = run.get("last_event_result", {})
-	if result_summary.is_empty():
+	if String(run.get("run_loop", "")) == "route":
+		result_summary = _route_result_summary()
+	elif result_summary.is_empty():
 		result_summary = _result_summary_from_logs(logs, survived)
 	var made_record := bool(result_summary.get("made_record", survived))
 	var run_over := bool(result_summary.get("run_over", run.get("run_over", false)))
-	if champion:
-		_set_footer("League Cup cleared. Claim your prizes, then see what waits beyond the demo.")
-	elif made_record:
-		_set_footer("%s cleared. Your next event is waiting." % String(result_summary.get("event_name", "Event")))
-	elif run_over:
-		_set_footer("The season ends here. Review the run or begin a new road.")
-	else:
-		_set_footer("So close. Tune your deck and take another shot.")
-
 	var screen := VBoxContainer.new()
 	screen.name = "TournamentResultScreen"
 	screen.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	screen.add_theme_constant_override("separation", 12)
-	content.add_child(screen)
+	screen.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	screen.add_theme_constant_override("separation", 18)
+	var margin := MarginContainer.new()
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_%s" % edge, 30)
+	content.add_child(margin)
+	margin.add_child(screen)
 
 	_add_tournament_result_hero(screen, result_summary, made_record, champion, run_over)
+
+	var columns := HBoxContainer.new()
+	columns.name = "TournamentResultColumns"
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.add_theme_constant_override("separation", 24)
+	screen.add_child(columns)
+	_add_result_profile(columns, result_summary, champion)
+
+	# Long recaps scroll independently so the next action is always on screen.
+	var recap_scroll := ScrollContainer.new()
+	recap_scroll.name = "TournamentResultScroll"
+	recap_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	recap_scroll.custom_minimum_size.y = 100
+	recap_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	recap_scroll.follow_focus = true
+	recap_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var recap_paper := PanelContainer.new()
+	recap_paper.name = "TournamentRecapPaper"
+	recap_paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	recap_paper.add_theme_stylebox_override("panel", TOPDECK_UI_SCRIPT.paper_style(PALETTE.PEACH_PAPER, 22))
+	columns.add_child(recap_paper)
+	recap_paper.add_child(recap_scroll)
+	var recap_body := VBoxContainer.new()
+	recap_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	recap_body.add_theme_constant_override("separation", 16)
+	recap_scroll.add_child(recap_body)
+	for style_name in ["scroll", "grabber", "grabber_highlight", "grabber_pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = PALETTE.PEACH_PAPER if style_name == "scroll" else PALETTE.PEACH_TEAL if style_name == "grabber_pressed" else PALETTE.PEACH_EDGE
+		style.content_margin_left = 5
+		style.content_margin_right = 5
+		recap_scroll.get_v_scroll_bar().add_theme_stylebox_override(style_name, style)
 	if not champion and not run_over:
-		_add_tournament_result_stats(screen, result_summary)
-		_add_tournament_result_next_step(screen, result_summary, made_record, champion, run_over)
-	_add_tournament_round_recap(screen, result_summary)
-
+		_add_tournament_result_stats(recap_body, result_summary)
+		_add_tournament_result_next_step(recap_body, result_summary, made_record, champion, run_over)
+	_add_tournament_round_recap(recap_body, result_summary)
 	if _development_tools_enabled():
-		_add_tournament_result_technical_details(screen, logs)
+		_add_tournament_result_technical_details(recap_body, logs)
 
-	if _run_mode() == "season":
-		_add_season_result_action_buttons(screen)
+	if _run_mode() == "season" or champion:
+		_add_season_result_action_buttons(screen, result_summary)
 	else:
-		var continue_button := _make_button("Return to Card Shop")
-		continue_button.name = "TournamentResultContinueButton"
-		continue_button.custom_minimum_size.y = 50
-		_style_button(continue_button, "action")
+		var continue_button := TOPDECK_UI_SCRIPT.make_button("Return to Card Shop", "primary", Vector2(0, 60), "TournamentResultContinueButton")
 		_connect_pressed(continue_button, _show_shop)
 		screen.add_child(continue_button)
-
+	var primary := screen.find_child("SeasonResultPrimaryAction", true, false) as Button
+	if primary != null:
+		primary.grab_focus()
 	if not _reduced_motion_enabled() and not _running_automated_test():
 		screen.modulate.a = 0.0
-		var result_tween := create_tween()
-		result_tween.tween_property(screen, "modulate:a", 1.0, 0.24)
+		create_tween().tween_property(screen, "modulate:a", 1.0, 0.24)
+
+
+func _route_result_summary() -> Dictionary:
+	var history: Array = run.get("route_round_results", [])
+	var wins := 0
+	var earnings := 0
+	for result in history:
+		wins += 1 if bool(result.get("won", false)) else 0
+		earnings += int(result.get("cash", 0))
+	return {
+		"event_name": String(run.get("hub_floor", "locals")).capitalize(),
+		"stage": "Week %d · Round %d" % [int(run.get("week", 1)), int(run.get("hub_round", 1))],
+		"wins": wins, "losses": history.size() - wins,
+		"rounds": history.size(), "round_results": history,
+		"record_known": not history.is_empty(),
+		"earnings_known": not history.is_empty(),
+		"record_complete": history.size() >= int(run.get("hub_round", 1)),
+		"round_cash_earned": earnings, "run_over": bool(run.get("run_over", false)), "made_record": bool(run.get("demo_complete", false)),
+	}
+
+
+func _show_shop_deck() -> void:
+	if route_shop_purchase_busy or find_child("ShopDeckReview", true, false) != null:
+		return
+	var modal = GAME_MODAL.create(self, "Your deck", "ShopDeckReview", Callable())
+	modal.back.name = "ShopDeckReviewClose"
+	var browser := CARD_BROWSER.new()
+	browser.name = "ShopDeckBrowser"
+	browser.configure(_deck_browser_entries(run.get("deck", {})), _run_difficulty_id(), "ShopDeckReview")
+	modal.body.add_child(browser)
+
+
+func _show_final_deck_review() -> void:
+	if run.get("deck", {}).is_empty() or find_child("FinalDeckReview", true, false) != null:
+		return
+	var modal = GAME_MODAL.create(self, "Final deck", "FinalDeckReview", _close_final_deck_review)
+	modal.back.name = "FinalDeckReviewClose"
+	var browser := CARD_BROWSER.new()
+	browser.name = "FinalDeckBrowser"
+	browser.configure(_deck_browser_entries(run.deck), _run_difficulty_id(), "FinalDeckReview")
+	modal.body.add_child(browser)
+
+
+func _deck_browser_entries(deck: Dictionary, show_upgrades: bool = true) -> Array:
+	var entries: Array = []
+	for card_id in deck:
+		if not cards_by_id.has(card_id):
+			continue
+		for index in range(int(deck[card_id])):
+			var data: Dictionary = _result_card_copy(String(card_id), index) if show_upgrades else cards_by_id[card_id].duplicate(true)
+			entries.append({"id": String(card_id), "card": data, "copy_index": index, "count": 1})
+	return entries
+
+
+func _close_final_deck_review() -> void:
+	var overlay := find_child("FinalDeckReview", true, false)
+	if overlay != null:
+		remove_child(overlay)
+		overlay.queue_free()
+	var review := find_child("FinalDeckReviewButton", true, false) as Button
+	if review != null:
+		review.grab_focus()
 
 
 func _result_summary_from_logs(logs: Array, survived: bool) -> Dictionary:
@@ -7564,7 +7953,9 @@ func _result_summary_from_logs(logs: Array, survived: bool) -> Dictionary:
 		"stage": "Event",
 		"wins": wins,
 		"losses": losses,
-		"rounds": maxi(1, wins + losses),
+		"rounds": wins + losses,
+		"record_known": wins + losses > 0,
+		"earnings_known": false,
 		"required_wins": wins if survived else wins + 1,
 		"made_record": survived,
 		"reward_money": 0,
@@ -7575,234 +7966,128 @@ func _result_summary_from_logs(logs: Array, survived: bool) -> Dictionary:
 	}
 
 
-func _add_tournament_result_hero(
-	parent: Node,
-	summary: Dictionary,
-	made_record: bool,
-	champion: bool,
-	run_over: bool
-) -> void:
-	var accent := PALETTE.FRESH_YELLOW if champion else (PALETTE.SKY if made_record else PALETTE.CORAL)
-	var fill := (
-		PALETTE.CREAM.lerp(PALETTE.FRESH_YELLOW, 0.22)
-		if champion
-		else PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.25)
-		if run_over
-		else PALETTE.CREAM.lerp(PALETTE.SKY, 0.18)
-		if made_record
-		else PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.18)
-	)
-	var hero := _make_cute_result_panel(
-		Vector2(0, 166),
-		fill,
-		PALETTE.NAVY,
-		Vector4(38, 18, 38, 20),
-		22
-	)
-	hero.set_meta("result_accent", accent)
-	hero.name = "TournamentResultHero"
-	parent.add_child(hero)
-	if champion or run_over:
-		hero.custom_minimum_size.y = 220
-		_add_season_result_list_hero(hero, summary, champion)
-		return
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	hero.add_child(row)
-	var copy := VBoxContainer.new()
-	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	copy.add_theme_constant_override("separation", -1)
-	row.add_child(copy)
-
-	var event_label := Label.new()
-	event_label.name = "TournamentResultEventName"
-	event_label.text = ("%s  •  %s" % [
-		String(summary.get("stage", "Event")),
-		String(summary.get("event_name", "Tournament")),
-	]).to_upper()
-	event_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.46))
-	event_label.add_theme_font_size_override("font_size", 15)
-	event_label.add_theme_color_override("font_color", accent.darkened(0.18))
-	copy.add_child(event_label)
-
-	var outcome_label := Label.new()
-	outcome_label.name = "TournamentResultOutcome"
-	if champion:
-		outcome_label.text = "LEAGUE CUP CHAMPION"
-	elif made_record:
-		outcome_label.text = "EVENT CLEARED"
-	elif run_over:
-		outcome_label.text = "SEASON ENDED"
-	else:
-		outcome_label.text = "ONE MORE TRY"
-	outcome_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
-	outcome_label.add_theme_font_size_override("font_size", 42)
-	outcome_label.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.PAPER if run_over else SKETCH_UI_SCRIPT.INK)
-	copy.add_child(outcome_label)
-
-	var detail := Label.new()
-	detail.name = "TournamentResultOutcomeDetail"
-	if champion:
-		detail.text = "You conquered the local circuit. The road gets bigger from here."
-	elif made_record:
-		detail.text = "You made the cut. A tougher table is waiting."
-	elif run_over:
-		detail.text = "The run is over, but the deck—and everything you learned—is yours."
-	else:
-		detail.text = "The event stays open. Make an adjustment and run it back."
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.16))
-	detail.add_theme_font_size_override("font_size", 16)
-	detail.add_theme_color_override("font_color", Color("#D7CBE0") if run_over else SKETCH_UI_SCRIPT.MUTED_INK)
-	copy.add_child(detail)
-
-	var record_box := VBoxContainer.new()
-	record_box.name = "TournamentResultRecord"
-	record_box.custom_minimum_size = Vector2(190, 0)
-	record_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_child(record_box)
-	var record := Label.new()
-	record.text = "%d–%d" % [int(summary.get("wins", 0)), int(summary.get("losses", 0))]
-	record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	record.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.94))
-	record.add_theme_font_size_override("font_size", 64)
-	record.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.PAPER if run_over else SKETCH_UI_SCRIPT.INK)
-	record_box.add_child(record)
-	var record_caption := Label.new()
-	record_caption.text = "FINAL RECORD"
-	record_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	record_caption.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
-	record_caption.add_theme_font_size_override("font_size", 13)
-	record_caption.add_theme_color_override("font_color", accent.lightened(0.12) if run_over else accent.darkened(0.18))
-	record_box.add_child(record_caption)
+func _add_tournament_result_hero(parent: Node, summary: Dictionary, made_record: bool, champion: bool, run_over: bool) -> void:
+	var accent := PALETTE.SIGNAL_YELLOW.darkened(0.54) if champion else PALETTE.ACTION_DANGER.darkened(0.22) if run_over else PALETTE.HEALTH_FILL
+	var parts := TOPDECK_UI_SCRIPT.make_surface_panel("TournamentResultHero", PALETTE.PEACH_PAPER, accent, Vector2(0, 112), Vector4(28, 14, 28, 14), false)
+	parent.add_child(parts.panel)
+	var heading := TOPDECK_UI_SCRIPT.make_label("Locals champion!" if champion else "Defeated" if run_over else "Round won" if made_record else "Try again", "screen_title", PALETTE.PEACH_INK)
+	heading.name = "TournamentResultProgress"
+	heading.add_theme_font_size_override("font_size", 38)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	(parts.body as VBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
+	(parts.body as VBoxContainer).add_child(heading)
+	(parts.body as VBoxContainer).add_child(TOPDECK_UI_SCRIPT.make_label(_result_progress_text(summary, champion, made_record), "body", PALETTE.PEACH_INK_SOFT))
 
 
-func _add_season_result_list_hero(hero: PanelContainer, summary: Dictionary, champion: bool) -> void:
-	var copy := VBoxContainer.new()
-	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	copy.add_theme_constant_override("separation", 7)
-	hero.add_child(copy)
-
-	var eyebrow := Label.new()
-	eyebrow.name = "TournamentResultEyebrow"
-	eyebrow.text = "YOUR SEASON SCRAPBOOK" if not champion else "A SEASON TO REMEMBER"
-	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.48))
-	eyebrow.add_theme_font_size_override("font_size", 13)
-	eyebrow.add_theme_color_override("font_color", PALETTE.CORAL.darkened(0.18) if not champion else PALETTE.FRESH_YELLOW.darkened(0.28))
-	copy.add_child(eyebrow)
-
-	var heading_row := HBoxContainer.new()
-	heading_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	heading_row.add_theme_constant_override("separation", 16)
-	copy.add_child(heading_row)
-	var left_sparkle := TextureRect.new()
-	left_sparkle.texture = ICON_STAR
-	left_sparkle.custom_minimum_size = Vector2(30, 30)
-	left_sparkle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	left_sparkle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	left_sparkle.modulate = PALETTE.FRESH_YELLOW
-	left_sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	heading_row.add_child(left_sparkle)
-	var outcome := Label.new()
-	outcome.name = "TournamentResultOutcome"
-	outcome.text = "SEASON WON" if champion else "SEASON ENDED"
-	outcome.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	outcome.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
-	outcome.add_theme_font_size_override("font_size", 45)
-	outcome.add_theme_color_override("font_color", PALETTE.NAVY)
-	heading_row.add_child(outcome)
-	var right_sparkle := TextureRect.new()
-	right_sparkle.texture = ICON_STAR
-	right_sparkle.custom_minimum_size = Vector2(24, 24)
-	right_sparkle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	right_sparkle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	right_sparkle.modulate = PALETTE.SKY
-	right_sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	heading_row.add_child(right_sparkle)
-
-	var encouragement := Label.new()
-	encouragement.name = "TournamentResultEncouragement"
-	encouragement.text = (
-		"You cleared the local circuit. Keep this page—the road gets bigger from here."
-		if champion
-		else "The table is cleared, but every round leaves something worth carrying into your next run."
-	)
-	encouragement.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	encouragement.add_theme_font_size_override("font_size", 15)
-	encouragement.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	copy.add_child(encouragement)
-
-	var stat_row := HBoxContainer.new()
-	stat_row.name = "TournamentResultSeasonStats"
-	stat_row.add_theme_constant_override("separation", 10)
-	copy.add_child(stat_row)
-	_add_season_result_chip(
-		stat_row,
-		"LAST STOP",
-		"%s · %s" % [String(summary.get("stage", "Season")), String(summary.get("event_name", "Final Event"))],
-		"TournamentResultReached",
-		PALETTE.CREAM.lerp(PALETTE.SKY, 0.19),
-		PALETTE.SKY
-	)
-	_add_season_result_chip(
-		stat_row,
-		"FINAL RECORD",
-		"%d–%d" % [int(summary.get("wins", 0)), int(summary.get("losses", 0))],
-		"TournamentResultRecord",
-		PALETTE.LAVENDER_GLASS,
-		PALETTE.PERIWINKLE
-	)
-	_add_season_result_chip(
-		stat_row,
-		"TABLE EARNINGS",
-		"$%d" % int(summary.get("round_cash_earned", 0)),
-		"TournamentResultEarnings",
-		PALETTE.CREAM.lerp(PALETTE.BLUSH, 0.19),
-		PALETTE.CORAL
-	)
+func _result_progress_text(summary: Dictionary, champion: bool, made_record: bool) -> String:
+	if FOOD_PROTOTYPE.active(run):
+		return "Food Prototype · Four rounds complete" if champion else "Food Prototype · Reached round %d of 4" % int(run.get("hub_round", 1))
+	if String(run.get("run_loop", "")) == "route":
+		var floor_name := String(run.get("hub_floor", "locals")).capitalize()
+		if champion or bool(run.get("demo_complete", false)):
+			return "Won both weekly Locals tournaments" if int(run.get("demo_weeks", 1)) > 1 else "Won the %s Championship" % floor_name
+		var round_number := int(run.get("hub_round", 1))
+		if round_number >= int(run.get("hub_rounds_per_floor", 4)):
+			return "Reached the %s Final" % floor_name
+		if round_number == 3:
+			return "Reached the %s Top Cut" % floor_name
+		return "Reached %s · Round %d" % [floor_name, round_number]
+	var event_name := String(summary.get("event_name", ""))
+	if event_name in ["", "Tournament"]:
+		return "Your season, in review"
+	return "%s %s" % ["Won" if champion else "Cleared" if made_record else "Reached", event_name]
 
 
-func _add_season_result_chip(
-	parent: Node,
-	title: String,
-	value: String,
-	value_name: String,
-	fill: Color,
-	accent: Color
-) -> void:
-	var panel := _make_cute_result_panel(
-		Vector2(0, 64),
-		fill,
-		PALETTE.NAVY,
-		Vector4(14, 7, 14, 8),
-		15
-	)
-	panel.set_meta("result_accent", accent)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+func _add_result_profile(parent: Node, summary: Dictionary, champion: bool) -> void:
+	var parts := TOPDECK_UI_SCRIPT.make_surface_panel("TournamentResultProfile", PALETTE.PEACH_PAPER, PALETTE.PEACH_EDGE, Vector2(392, 0), Vector4(22, 20, 22, 20), false)
+	var panel := parts.panel as PanelContainer
+	panel.size_flags_horizontal = Control.SIZE_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(panel)
-	var chip_copy := VBoxContainer.new()
-	chip_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	chip_copy.add_theme_constant_override("separation", -2)
-	panel.add_child(chip_copy)
-	var heading := Label.new()
-	heading.text = title
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.44))
-	heading.add_theme_font_size_override("font_size", 11)
-	heading.add_theme_color_override("font_color", accent.darkened(0.24))
-	chip_copy.add_child(heading)
-	var amount := Label.new()
-	amount.name = value_name
-	amount.text = value
-	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	amount.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
-	amount.add_theme_font_size_override("font_size", 19)
-	amount.add_theme_color_override("font_color", PALETTE.NAVY)
-	chip_copy.add_child(amount)
+	var body := parts.body as VBoxContainer
+	body.add_theme_constant_override("separation", 16)
+	var starter := String(run.get("starter", "spicy"))
+	body.add_child(TOPDECK_UI_SCRIPT.make_label("%s run" % starter.capitalize().replace("_", " "), "section"))
+	var identity := HBoxContainer.new()
+	identity.add_theme_constant_override("separation", 18)
+	body.add_child(identity)
+	var showcase := _result_showcase_ids()
+	var signature_id := String({"spicy": "spicy_sriracharrow", "hearty": "hearty_gravy_gazelle", "sweet": "sweet_strawberry_sharkcake"}.get(starter, ""))
+	if not run.get("deck", {}).has(signature_id):
+		signature_id = showcase[0] if not showcase.is_empty() else ""
+	if cards_by_id.has(signature_id):
+		var signature_data := _result_card_copy(signature_id, 0)
+		var signature := _make_card_face(signature_data, Vector2(150, 212), false)
+		signature.name = "TournamentResultSignatureCard"
+		identity.add_child(signature)
+		CARD_HOVER_PREVIEW.bind(signature, signature_data, _run_difficulty_id())
+		CARD_INSPECTION_OVERLAY.bind(signature, signature_data, _run_difficulty_id(), true)
+	var stats := VBoxContainer.new()
+	stats.name = "TournamentResultSeasonStats"
+	stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stats.alignment = BoxContainer.ALIGNMENT_CENTER
+	stats.add_theme_constant_override("separation", 8)
+	identity.add_child(stats)
+	var record := TOPDECK_UI_SCRIPT.make_label("%d–%d" % [int(summary.get("wins", 0)), int(summary.get("losses", 0))] if bool(summary.get("record_known", true)) else "—", "screen_title")
+	record.name = "TournamentResultRecord"
+	record.add_theme_font_size_override("font_size", 48)
+	stats.add_child(record)
+	stats.add_child(TOPDECK_UI_SCRIPT.make_label("Final record" if bool(summary.get("record_complete", true)) else "Recorded matches", "eyebrow", PALETTE.PEACH_INK_SOFT))
+	var earnings_text := "$%d earned" % int(summary.get("round_cash_earned", 0)) if bool(summary.get("earnings_known", true)) else "Earnings not saved"
+	var earnings := TOPDECK_UI_SCRIPT.make_label(earnings_text, "body", PALETTE.SIGNAL_YELLOW.darkened(0.54))
+	earnings.name = "TournamentResultEarnings"
+	stats.add_child(earnings)
+	var deck_size := TOPDECK_UI_SCRIPT.make_label("%d cards" % _deck_total(run.deck), "body")
+	deck_size.name = "TournamentResultDeck"
+	stats.add_child(deck_size)
+	var divider := ColorRect.new()
+	divider.custom_minimum_size.y = 1
+	divider.color = PALETTE.PEACH_EDGE
+	body.add_child(divider)
+	body.add_child(TOPDECK_UI_SCRIPT.make_label("Final deck", "eyebrow", PALETTE.PEACH_INK_SOFT))
+	var cards_row := HBoxContainer.new()
+	cards_row.name = "TournamentResultDeckShowcase"
+	cards_row.add_theme_constant_override("separation", 10)
+	body.add_child(cards_row)
+	for card_id in _result_showcase_ids():
+		var copy := VBoxContainer.new()
+		cards_row.add_child(copy)
+		var data := _result_card_copy(card_id, 0)
+		var face := _make_card_face(data, Vector2(108, 153), false)
+		face.mouse_filter = Control.MOUSE_FILTER_STOP
+		copy.add_child(face)
+		CARD_HOVER_PREVIEW.bind(face, data, _run_difficulty_id())
+		CARD_INSPECTION_OVERLAY.bind(face, data, _run_difficulty_id(), true)
+		var copies := TOPDECK_UI_SCRIPT.make_label("×%d" % int(run.deck[card_id]), "small")
+		copies.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		copy.add_child(copies)
+
+
+func _result_showcase_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for value in run.get("deck", {}):
+		if int(run.deck[value]) > 0 and cards_by_id.has(value):
+			ids.append(String(value))
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		var a_art := not String(cards_by_id[a].get("art_path", "")).is_empty()
+		var b_art := not String(cards_by_id[b].get("art_path", "")).is_empty()
+		if a_art != b_art:
+			return a_art
+		if int(run.deck[a]) != int(run.deck[b]):
+			return int(run.deck[a]) > int(run.deck[b])
+		return a < b
+	)
+	return ids.slice(0, 3)
+
+
+func _result_card_copy(card_id: String, copy_index: int) -> Dictionary:
+	var data: Dictionary = cards_by_id[card_id].duplicate(true)
+	if copy_index < route_run_service.upgrade_count(run, card_id):
+		var upgraded: Dictionary = route_run_service.upgraded_card_data(card_id)
+		if not upgraded.is_empty():
+			data = upgraded
+			data.id = card_id
+	return route_run_service.deckbox_card_data(run, data)
 
 
 func _add_tournament_result_stats(parent: Node, summary: Dictionary) -> void:
@@ -7815,14 +8100,14 @@ func _add_tournament_result_stats(parent: Node, summary: Dictionary) -> void:
 		"TARGET",
 		"%d WINS" % int(summary.get("required_wins", 0)),
 		"%d rounds played" % maxi(1, int(summary.get("wins", 0)) + int(summary.get("losses", 0))),
-		SKETCH_UI_SCRIPT.TEAL
+		PALETTE.HEALTH_FILL
 	)
 	_add_tournament_result_stat(
 		row,
 		"TABLE EARNINGS",
 		"$%d" % int(summary.get("round_cash_earned", 0)),
 		"earned match by match",
-		SKETCH_UI_SCRIPT.ORANGE
+		PALETTE.PEACH_EDGE
 	)
 	var reward_packs := int(summary.get("reward_packs", 0))
 	var reward_value := "$%d" % int(summary.get("reward_money", 0))
@@ -7833,144 +8118,65 @@ func _add_tournament_result_stats(parent: Node, summary: Dictionary) -> void:
 		"EVENT PRIZE",
 		reward_value,
 		"claimed for making the cut" if bool(summary.get("made_record", false)) else "no event prize",
-		SKETCH_UI_SCRIPT.MUSTARD
+		PALETTE.SIGNAL_YELLOW.darkened(0.54)
 	)
 
 
-func _add_tournament_result_stat(
-	parent: Node,
-	title: String,
-	value: String,
-	detail: String,
-	accent: Color
-) -> void:
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 105),
-		SKETCH_UI_SCRIPT.PAPER,
-		SKETCH_UI_SCRIPT.INK,
-		accent,
-		Vector4(20, 12, 20, 14),
-		parent.get_child_count() % 2
+func _add_tournament_result_stat(parent: Node, title: String, value: String, detail: String, accent: Color) -> void:
+	var parts := TOPDECK_UI_SCRIPT.make_surface_panel(
+		"TournamentResultStat", PALETTE.PEACH_PAPER, accent,
+		Vector2(0, 104), Vector4(22, 14, 22, 14), false
 	)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(panel)
-	var copy := VBoxContainer.new()
-	copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	copy.add_theme_constant_override("separation", -1)
-	panel.add_child(copy)
-	var heading := Label.new()
-	heading.text = title
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.42))
-	heading.add_theme_font_size_override("font_size", 12)
-	heading.add_theme_color_override("font_color", accent.darkened(0.2))
-	copy.add_child(heading)
-	var amount := Label.new()
-	amount.text = value
-	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	amount.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.82))
-	amount.add_theme_font_size_override("font_size", 27)
-	amount.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	copy.add_child(amount)
-	var caption := Label.new()
-	caption.text = detail
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_font_size_override("font_size", 12)
-	caption.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	copy.add_child(caption)
+	parent.add_child(parts.panel)
+	var copy := parts.body as VBoxContainer
+	copy.add_theme_constant_override("separation", 4)
+	copy.add_child(TOPDECK_UI_SCRIPT.make_label(title, "eyebrow", PALETTE.PEACH_INK_SOFT))
+	copy.add_child(TOPDECK_UI_SCRIPT.make_label(value, "section"))
+	copy.add_child(TOPDECK_UI_SCRIPT.make_label(detail, "small"))
 
 
-func _add_tournament_result_next_step(
-	parent: Node,
-	summary: Dictionary,
-	made_record: bool,
-	champion: bool,
-	run_over: bool
-) -> void:
-	var panel := SKETCH_UI_SCRIPT.make_rough_panel(
-		Vector2(0, 82),
-		Color("#FFF8E9"),
-		SKETCH_UI_SCRIPT.INK,
-		SKETCH_UI_SCRIPT.MUSTARD if champion else SKETCH_UI_SCRIPT.TEAL,
-		Vector4(26, 13, 26, 15),
-		0
+func _add_tournament_result_next_step(parent: Node, summary: Dictionary, made_record: bool, _champion: bool, _run_over: bool) -> void:
+	var parts := TOPDECK_UI_SCRIPT.make_surface_panel(
+		"TournamentResultNextStep", PALETTE.PEACH_PAPER, PALETTE.PEACH_EDGE,
+		Vector2(0, 80), Vector4(22, 14, 22, 14), false
 	)
-	panel.name = "TournamentResultNextStep"
-	parent.add_child(panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	panel.add_child(row)
-	var heading := Label.new()
-	heading.custom_minimum_size = Vector2(260, 0)
-	if champion:
-		heading.text = "THE ROAD CONTINUES →"
-	elif made_record:
-		heading.text = "UP NEXT  •  %s →" % String(summary.get("next_event_name", "Next Event")).to_upper()
-	elif run_over:
-		heading.text = "THE ROAD ENDS HERE"
-	else:
-		heading.text = "EVENT STILL OPEN"
-	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
-	heading.add_theme_font_size_override("font_size", 25)
-	heading.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.INK)
-	row.add_child(heading)
-	var detail := Label.new()
-	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if champion:
-		detail.text = "State Championships. Nationals. Worlds. This was only the first chapter."
-	elif made_record:
-		detail.text = "A stronger field and a bigger prize. Shop, tune, then take your seat."
-	elif run_over:
-		detail.text = "Start fresh with a new strategy, or look back at the deck that got you here."
-	else:
-		detail.text = "Your calendar spot is safe. Tune the list, then challenge the event again."
-	detail.add_theme_font_size_override("font_size", 14)
-	detail.add_theme_color_override("font_color", SKETCH_UI_SCRIPT.MUTED_INK)
-	row.add_child(detail)
+	parent.add_child(parts.panel)
+	var copy := parts.body as VBoxContainer
+	copy.add_theme_constant_override("separation", 5)
+	copy.add_child(TOPDECK_UI_SCRIPT.make_label("UP NEXT  /  %s" % String(summary.get("next_event_name", "Next Event")).to_upper() if made_record else "EVENT STILL OPEN", "section"))
+	copy.add_child(TOPDECK_UI_SCRIPT.make_label("A stronger field and a bigger prize. Prepare, then take your seat." if made_record else "Make an adjustment before challenging this event again.", "small"))
 
 
 func _add_tournament_round_recap(parent: Node, summary: Dictionary) -> void:
 	var section := VBoxContainer.new()
 	section.name = "TournamentResultRoundRecap"
-	section.add_theme_constant_override("separation", 4)
+	section.add_theme_constant_override("separation", 12)
 	parent.add_child(section)
 	var heading_row := HBoxContainer.new()
 	heading_row.add_theme_constant_override("separation", 10)
 	section.add_child(heading_row)
 	var heading := Label.new()
-	heading.text = "ROUND RECAP"
+	heading.text = "Round recap"
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
+	heading.add_theme_font_override("font", TOPDECK_UI_SCRIPT.DISPLAY_FONT)
 	heading.add_theme_font_size_override("font_size", 19)
-	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	heading_row.add_child(heading)
 	var recap_note := Label.new()
-	recap_note.text = "%d MATCHES  ·  $%d EARNED" % [
-		maxi(1, int(summary.get("wins", 0)) + int(summary.get("losses", 0))),
-		int(summary.get("round_cash_earned", 0)),
-	]
-	recap_note.add_theme_font_size_override("font_size", 12)
-	recap_note.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	var match_count := int(summary.get("wins", 0)) + int(summary.get("losses", 0))
+	recap_note.text = "%d MATCH%s" % [match_count, "" if match_count == 1 else "ES"] if match_count > 0 else ""
+	recap_note.add_theme_font_size_override("font_size", 14)
+	recap_note.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
 	recap_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	heading_row.add_child(recap_note)
 	var list := VBoxContainer.new()
 	list.name = "TournamentResultRoundList"
-	list.add_theme_constant_override("separation", 5)
+	list.add_theme_constant_override("separation", 10)
 	section.add_child(list)
 
 	var round_results: Array = summary.get("round_results", [])
 	if round_results.is_empty():
-		var wins := int(summary.get("wins", 0))
-		var losses := int(summary.get("losses", 0))
-		for round_index in range(maxi(1, wins + losses)):
-			_add_tournament_round_card(
-				list,
-				round_index + 1,
-				{"won": round_index < wins}
-			)
+		list.add_child(TOPDECK_UI_SCRIPT.make_label("Round details were not saved for this run. Your final deck is still available to review.", "body"))
 		return
 	for round_value in round_results:
 		_add_tournament_round_card(list, int(round_value.get("round", list.get_child_count() + 1)), round_value)
@@ -7978,110 +8184,101 @@ func _add_tournament_round_recap(parent: Node, summary: Dictionary) -> void:
 
 func _add_tournament_round_card(parent: Node, round_number: int, result: Dictionary) -> void:
 	var won := bool(result.get("won", false))
-	var accent := PALETTE.SKY if won else PALETTE.CORAL
-	var fill := PALETTE.CREAM.lerp(PALETTE.SKY if won else PALETTE.BLUSH, 0.16)
-	var panel := _make_cute_result_panel(
-		Vector2(0, 64),
-		fill,
-		PALETTE.NAVY,
-		Vector4(16, 8, 16, 9),
-		14
-	)
-	panel.set_meta("result_accent", accent)
-	panel.name = "TournamentResultRoundCard_%d" % round_number
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(panel)
-	var copy := HBoxContainer.new()
-	copy.add_theme_constant_override("separation", 18)
-	panel.add_child(copy)
-	var top := Label.new()
-	top.custom_minimum_size = Vector2(180, 0)
-	top.text = "ROUND %d   •   %s" % [round_number, "WIN" if won else "LOSS"]
-	top.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
-	top.add_theme_font_size_override("font_size", 19)
-	top.add_theme_color_override("font_color", PALETTE.NAVY)
-	top.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	copy.add_child(top)
-	var opponent_name := String(result.get("opponent_name", ""))
-	var opponent_archetype := String(result.get("opponent_archetype", ""))
-	var matchup := Label.new()
-	matchup.text = (
-		"vs %s  •  %s" % [opponent_name, opponent_archetype]
-		if opponent_name != ""
-		else ("Made the cut" if won else "Run ended")
-	)
-	matchup.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	matchup.clip_text = true
-	matchup.add_theme_font_size_override("font_size", 13)
-	matchup.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	matchup.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	copy.add_child(matchup)
-	if result.has("turn") or result.has("cash"):
-		var detail := Label.new()
-		detail.custom_minimum_size = Vector2(190, 0)
-		detail.text = "Turn %d  •  %d life  •  +$%d" % [
-			int(result.get("turn", 0)),
-			int(result.get("player_life", 0)),
-			int(result.get("cash", 0)),
-		]
-		detail.add_theme_font_size_override("font_size", 12)
-		detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		copy.add_child(detail)
-
-
-func _make_cute_result_panel(
-	minimum_size: Vector2,
-	fill: Color,
-	border: Color,
-	content_margins: Vector4,
-	corner_radius: int
-) -> PanelContainer:
+	var accent := PALETTE.HEALTH_FILL if won else PALETTE.ACTION_DANGER.darkened(0.22)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = minimum_size
-	panel.set_meta("cute_result_panel", true)
+	panel.name = "TournamentResultRoundCard_%d" % round_number
+	panel.custom_minimum_size.y = 90
 	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(corner_radius)
-	style.content_margin_left = content_margins.x
-	style.content_margin_top = content_margins.y
-	style.content_margin_right = content_margins.z
-	style.content_margin_bottom = content_margins.w
-	style.shadow_color = Color(PALETTE.NAVY, 0.15)
-	style.shadow_size = 6
-	style.shadow_offset = Vector2(0, 4)
-	style.anti_aliasing = true
+	style.bg_color = PALETTE.PEACH_PAPER_MUTED.lightened(0.035)
+	style.set_corner_radius_all(5)
+	style.border_color = PALETTE.PEACH_EDGE
+	style.border_width_bottom = 1
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 14
+	style.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", style)
-	return panel
+	parent.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	panel.add_child(row)
+	var number := TOPDECK_UI_SCRIPT.make_label("%02d" % round_number, "hud_title", PALETTE.PEACH_INK_SOFT)
+	number.custom_minimum_size.x = 34
+	number.size_flags_horizontal = Control.SIZE_FILL
+	number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(number)
+	var outcome := TOPDECK_UI_SCRIPT.make_label("Won" if won else "Lost", "section", accent)
+	outcome.custom_minimum_size.x = 62
+	outcome.size_flags_horizontal = Control.SIZE_FILL
+	outcome.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(outcome)
+	var matchup := VBoxContainer.new()
+	matchup.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	matchup.alignment = BoxContainer.ALIGNMENT_CENTER
+	matchup.add_theme_constant_override("separation", 3)
+	row.add_child(matchup)
+	var opponent_name := String(result.get("opponent_name", ""))
+	var opponent := TOPDECK_UI_SCRIPT.make_label(opponent_name if not opponent_name.is_empty() else "Round %d" % round_number, "section")
+	opponent.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	opponent.tooltip_text = opponent.text
+	matchup.add_child(opponent)
+	var archetype := String(result.get("opponent_archetype", ""))
+	if not archetype.is_empty():
+		matchup.add_child(TOPDECK_UI_SCRIPT.make_label(archetype, "small"))
+	var details: Array[String] = []
+	if result.has("week"):
+		details.append("WEEK %d" % int(result.week))
+	if int(result.get("turn", 0)) > 0:
+		details.append("TURN %d" % int(result.turn))
+	if result.has("player_life"):
+		details.append("%d LIFE" % int(result.player_life))
+	if result.has("cash"):
+		details.append("+$%d" % int(result.cash))
+	if not details.is_empty():
+		var detail := TOPDECK_UI_SCRIPT.make_label("  ·  ".join(details), "small")
+		detail.size_flags_horizontal = Control.SIZE_FILL
+		detail.custom_minimum_size.x = 215
+		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(detail)
 
 
 func _add_tournament_result_technical_details(parent: Node, logs: Array) -> void:
-	var toggle := _make_button("Show Technical Details")
-	toggle.name = "TournamentResultTechnicalToggle"
-	toggle.custom_minimum_size.y = 34
+	var toggle := TOPDECK_UI_SCRIPT.make_button("Show Technical Details", "secondary", Vector2(0, 56), "TournamentResultTechnicalToggle")
 	parent.add_child(toggle)
-	var details := _add_panel(parent, "Technical Details", "#5D5148")
+	var parts := TOPDECK_UI_SCRIPT.make_section("Technical Details", PALETTE.STRUCTURAL_EDGE)
+	var details := parts.panel as PanelContainer
 	details.name = "TournamentResultTechnicalDetails"
 	details.visible = false
+	parent.add_child(details)
 	for line in logs:
-		_add_body_text(details, String(line))
+		(parts.body as VBoxContainer).add_child(TOPDECK_UI_SCRIPT.make_label(String(line), "small"))
 	toggle.pressed.connect(func() -> void:
 		details.visible = not details.visible
 		toggle.text = "Hide Technical Details" if details.visible else "Show Technical Details"
 	)
 
 
-func _add_season_result_action_buttons(parent: Node) -> void:
+func _add_season_result_action_buttons(parent: Node, summary: Dictionary = {}) -> void:
+	if summary.is_empty():
+		summary = run.get("last_event_result", {})
+	if bool(summary.get("run_over", run.get("run_over", false))) or bool(run.get("demo_complete", false)) or bool(run.get("season_champion", false)) or current_screen in ["route_victory", "thanks"]:
+		var end_actions := HBoxContainer.new()
+		end_actions.name = "SeasonResultActions"
+		end_actions.add_theme_constant_override("separation", 14)
+		parent.add_child(end_actions)
+		var again := _add_season_result_button(end_actions, "New Prototype" if FOOD_PROTOTYPE.active(run) else "Start New Run", _start_food_prototype if FOOD_PROTOTYPE.active(run) else _show_season_run_setup, true)
+		again.size_flags_stretch_ratio = 1.5
+		_add_season_result_button(end_actions, "Review Deck", _show_final_deck_review, false).name = "FinalDeckReviewButton"
+		_add_season_result_button(end_actions, "Main Menu", _show_start, false).name = "ResultMainMenuButton"
+		return
 	var actions := VBoxContainer.new()
 	actions.name = "SeasonResultActions"
 	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_theme_constant_override("separation", 8)
 	parent.add_child(actions)
 
-	var primary_action := _season_result_primary_action()
+	var primary_action := _season_result_primary_action(summary)
 	if not primary_action.is_empty():
 		var primary_callback: Callable = primary_action.get("callback", _show_season_run)
 		_add_season_result_button(
@@ -8098,17 +8295,10 @@ func _add_season_result_action_buttons(parent: Node) -> void:
 	secondary.add_theme_constant_override("separation", 8)
 	actions.add_child(secondary)
 
-	var summary: Dictionary = run.get("last_event_result", {})
 	var made_record := bool(summary.get("made_record", true))
-	var run_over := bool(summary.get("run_over", false))
 	var seen_labels: Dictionary = {}
 	if not primary_action.is_empty():
 		seen_labels[String(primary_action.get("text", ""))] = true
-
-	if run_over:
-		_add_season_result_secondary_button(secondary, "Review Deck", _show_deckbuilder, seen_labels)
-		_add_season_result_secondary_button(secondary, "Main Menu", _show_start, seen_labels)
-		return
 
 	if not made_record and not bool(summary.get("run_over", false)):
 		var event_id := String(summary.get("event_id", _selected_season_event_id()))
@@ -8134,8 +8324,11 @@ func _add_season_result_action_buttons(parent: Node) -> void:
 	_add_season_result_secondary_button(secondary, "View Calendar", _show_season_run, seen_labels)
 
 
-func _season_result_primary_action() -> Dictionary:
-	var summary: Dictionary = run.get("last_event_result", {})
+func _season_result_primary_action(summary: Dictionary = {}) -> Dictionary:
+	if summary.is_empty():
+		summary = run.get("last_event_result", {})
+	if bool(summary.get("run_over", run.get("run_over", false))):
+		return { "text": "Start New Run", "callback": _show_season_run_setup }
 	if summary.is_empty():
 		return { "text": "Visit Card Shop", "callback": _show_shop }
 	if _current_pack_needs_attention():
@@ -8144,8 +8337,6 @@ func _season_result_primary_action() -> Dictionary:
 		return { "text": "Open Prize Packs (%d)" % int(run.get("prize_packs", 0)), "callback": _open_reward_pack_flow }
 	if bool(summary.get("season_champion", false)):
 		return { "text": "Thanks for Playing", "callback": _show_thanks_for_playing }
-	if bool(summary.get("run_over", false)):
-		return { "text": "Start New Run", "callback": _show_start }
 	if not bool(summary.get("made_record", true)):
 		var event_id := String(summary.get("event_id", _selected_season_event_id()))
 		var event := _season_event_by_id(event_id)
@@ -8165,16 +8356,9 @@ func _add_season_result_secondary_button(parent: Node, text: String, callback: C
 
 
 func _add_season_result_button(parent: Node, text: String, callback: Callable, primary: bool, disabled: bool = false) -> Button:
-	var button := _make_button(text)
+	var button := TOPDECK_UI_SCRIPT.make_button(text, "primary" if primary else "secondary", Vector2(0, 60), "SeasonResultPrimaryAction" if primary else "SeasonResultSecondaryAction")
 	button.disabled = disabled
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.custom_minimum_size.y = 50 if primary else 44
-	if primary:
-		button.name = "SeasonResultPrimaryAction"
-		_style_button(button, "action")
-	else:
-		button.name = "SeasonResultSecondaryAction"
-	_style_season_result_button(button, primary)
 	_connect_pressed(button, callback)
 	parent.add_child(button)
 	return button
@@ -8183,8 +8367,8 @@ func _add_season_result_button(parent: Node, text: String, callback: Callable, p
 func _style_season_result_button(button: Button, primary: bool) -> void:
 	button.set_meta("ui_button_variant", "primary" if primary else "secondary")
 	button.set_meta("ui_button_variant_inferred", false)
-	var normal_fill := PALETTE.CORAL if primary else PALETTE.LAVENDER_GLASS
-	var hover_fill := normal_fill.lightened(0.08) if primary else PALETTE.CREAM.lerp(PALETTE.SKY, 0.18)
+	var normal_fill := PALETTE.CORAL if primary else PALETTE.PEACH_PAPER_MUTED
+	var hover_fill := normal_fill.lightened(0.08) if primary else PALETTE.PEACH_PAPER.lerp(PALETTE.PEACH_TEAL, 0.18)
 	var pressed_fill := normal_fill.darkened(0.07)
 	button.add_theme_stylebox_override("normal", _season_result_button_style(normal_fill, false))
 	button.add_theme_stylebox_override("hover", _season_result_button_style(hover_fill, false, true))
@@ -8195,7 +8379,7 @@ func _style_season_result_button(button: Button, primary: bool) -> void:
 		"font_color", "font_hover_color", "font_pressed_color",
 		"icon_normal_color", "icon_hover_color", "icon_pressed_color",
 	]:
-		button.add_theme_color_override(color_name, PALETTE.NAVY)
+		button.add_theme_color_override(color_name, PALETTE.PEACH_INK)
 	button.add_theme_color_override("font_disabled_color", PALETTE.DISABLED_INK)
 	button.add_theme_color_override("icon_disabled_color", PALETTE.DISABLED_INK)
 
@@ -8203,7 +8387,7 @@ func _style_season_result_button(button: Button, primary: bool) -> void:
 func _season_result_button_style(fill: Color, pressed: bool, hovered: bool = false) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
-	style.border_color = PALETTE.SKY if hovered else PALETTE.NAVY
+	style.border_color = PALETTE.PEACH_TEAL if hovered else PALETTE.PEACH_INK
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(13)
 	style.content_margin_left = 17
@@ -8212,7 +8396,7 @@ func _season_result_button_style(fill: Color, pressed: bool, hovered: bool = fal
 	style.content_margin_bottom = 9 if not pressed else 7
 	style.anti_aliasing = true
 	if not pressed:
-		style.shadow_color = Color(PALETTE.NAVY, 0.18 if not hovered else 0.24)
+		style.shadow_color = Color(PALETTE.PEACH_INK, 0.18 if not hovered else 0.24)
 		style.shadow_size = 4 if not hovered else 6
 		style.shadow_offset = Vector2(0, 3)
 	return style
@@ -8242,181 +8426,7 @@ func _finish_pack_opening() -> void:
 
 
 func _show_thanks_for_playing() -> void:
-	current_screen = "thanks"
-	_render_nav()
-	_clear(content)
-	_update_status()
-	_set_footer("Your road has only just begun.")
-
-	var finale := VBoxContainer.new()
-	finale.name = "SeasonFinale"
-	finale.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	finale.add_theme_constant_override("separation", 11)
-	content.add_child(finale)
-
-	var hero := PanelContainer.new()
-	hero.name = "FinaleHero"
-	hero.custom_minimum_size = Vector2(0, 184)
-	hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hero.add_theme_stylebox_override(
-		"panel",
-		_finale_panel_style(
-			Color(PALETTE.CREAM, 0.97),
-			PALETTE.NAVY,
-			20,
-			Vector4(42, 24, 42, 26),
-			0.18
-		)
-	)
-	finale.add_child(hero)
-	var hero_copy := VBoxContainer.new()
-	hero_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	hero_copy.add_theme_constant_override("separation", 5)
-	hero.add_child(hero_copy)
-	var eyebrow := Label.new()
-	eyebrow.text = "DEMO COMPLETE  •  SEASON SCRAPBOOK"
-	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	eyebrow.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.46))
-	eyebrow.add_theme_font_size_override("font_size", 16)
-	eyebrow.add_theme_color_override("font_color", PALETTE.TEAL_DARK)
-	hero_copy.add_child(eyebrow)
-	var champion_title := Label.new()
-	champion_title.name = "FinaleChampionTitle"
-	champion_title.text = "Thanks for Playing the Demo!"
-	champion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	champion_title.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.9))
-	champion_title.add_theme_font_size_override("font_size", 50)
-	champion_title.add_theme_color_override("font_color", PALETTE.NAVY)
-	hero_copy.add_child(champion_title)
-	var hero_detail := Label.new()
-	hero_detail.name = "FinaleHeroDetail"
-	hero_detail.text = "Hope you liked it! The fact that people are actually getting to the end of my demo is dope so thank you!"
-	hero_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hero_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
-	hero_detail.add_theme_font_size_override("font_size", 16)
-	hero_detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	hero_copy.add_child(hero_detail)
-	var hero_accent := ColorRect.new()
-	hero_accent.custom_minimum_size = Vector2(180, 5)
-	hero_accent.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	hero_accent.color = PALETTE.CORAL
-	hero_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hero_copy.add_child(hero_accent)
-
-	var achievement_heading := Label.new()
-	achievement_heading.text = "YOUR SEASON AT A GLANCE"
-	achievement_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	achievement_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.7))
-	achievement_heading.add_theme_font_size_override("font_size", 19)
-	achievement_heading.add_theme_color_override("font_color", PALETTE.NAVY)
-	finale.add_child(achievement_heading)
-
-	var achievement_list := GridContainer.new()
-	achievement_list.name = "FinaleAchievementList"
-	achievement_list.columns = 2
-	achievement_list.add_theme_constant_override("h_separation", 10)
-	achievement_list.add_theme_constant_override("v_separation", 10)
-	finale.add_child(achievement_list)
-	_add_finale_milestone(achievement_list, "✓", "WEEKLY LOCALS", "Cleared", PALETTE.TEAL)
-	_add_finale_milestone(achievement_list, "★", "LEAGUE CUP", "Champion", PALETTE.FRESH_YELLOW)
-	_add_finale_milestone(
-		achievement_list,
-		"▣",
-		"WINNING DECK",
-		"%d cards" % _deck_total(run.get("deck", {})),
-		PALETTE.PERIWINKLE
-	)
-	_add_finale_milestone(
-		achievement_list,
-		"$",
-		"FINAL EARNINGS",
-		"$%d" % int(run.get("money", 0)),
-		PALETTE.CORAL
-	)
-
-	var road_ahead := PanelContainer.new()
-	road_ahead.name = "FinaleTeaser"
-	road_ahead.custom_minimum_size = Vector2(0, 112)
-	road_ahead.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	road_ahead.add_theme_stylebox_override(
-		"panel",
-		_finale_panel_style(
-			Color(PALETTE.LAVENDER_GLASS, 0.92),
-			PALETTE.PERIWINKLE,
-			16,
-			Vector4(30, 16, 30, 18),
-			0.14
-		)
-	)
-	finale.add_child(road_ahead)
-	var road_copy := VBoxContainer.new()
-	road_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	road_copy.add_theme_constant_override("separation", 4)
-	road_ahead.add_child(road_copy)
-	var road_heading := Label.new()
-	road_heading.text = "The Road Ahead"
-	road_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	road_heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.75))
-	road_heading.add_theme_font_size_override("font_size", 24)
-	road_heading.add_theme_color_override("font_color", PALETTE.NAVY)
-	road_copy.add_child(road_heading)
-	var road_detail := Label.new()
-	road_detail.name = "FinaleRoadDetail"
-	road_detail.text = "Still working on getting multiple packs in and making the path all the way to worlds. Join the discord or comment your feedback to help make the game better!"
-	road_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	road_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	road_detail.add_theme_font_override("font", SKETCH_UI_SCRIPT.body_font(0.18))
-	road_detail.add_theme_font_size_override("font_size", 15)
-	road_detail.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
-	road_copy.add_child(road_detail)
-
-	var community_links := HBoxContainer.new()
-	community_links.name = "FinaleCommunityLinks"
-	community_links.add_theme_constant_override("separation", 10)
-	finale.add_child(community_links)
-	if not STEAM_STORE_URL.is_empty():
-		var steam_button := _make_button("Wishlist on Steam")
-		steam_button.name = "FinaleSteamWishlistButton"
-		steam_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		steam_button.custom_minimum_size.y = 46
-		_style_season_result_button(steam_button, false)
-		_connect_external_link(steam_button, STEAM_STORE_URL)
-		community_links.add_child(steam_button)
-	if not DISCORD_INVITE_URL.is_empty():
-		var discord_button := _make_button("Join the Discord")
-		discord_button.name = "FinaleDiscordButton"
-		discord_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		discord_button.custom_minimum_size.y = 46
-		_style_season_result_button(discord_button, true)
-		_connect_external_link(discord_button, DISCORD_INVITE_URL)
-		community_links.add_child(discord_button)
-
-	var actions := HBoxContainer.new()
-	actions.name = "FinaleActions"
-	actions.add_theme_constant_override("separation", 10)
-	finale.add_child(actions)
-	var deck_button := _make_button("Review Winning Deck")
-	deck_button.name = "FinaleDeckButton"
-	deck_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	deck_button.custom_minimum_size.y = 46
-	_style_season_result_button(deck_button, false)
-	_connect_pressed(deck_button, _show_deckbuilder)
-	actions.add_child(deck_button)
-	var title_button := _make_button("Return to Main Menu")
-	title_button.name = "ThanksMainMenuButton"
-	title_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_button.custom_minimum_size.y = 46
-	_style_season_result_button(title_button, false)
-	_connect_pressed(title_button, _show_start)
-	actions.add_child(title_button)
-
-	if not _reduced_motion_enabled() and not _running_automated_test():
-		hero.modulate.a = 0.0
-		road_ahead.modulate.a = 0.0
-		var finale_tween := create_tween()
-		finale_tween.tween_property(hero, "modulate:a", 1.0, 0.28)
-		finale_tween.tween_property(road_ahead, "modulate:a", 1.0, 0.32)
+	_show_tournament_result([], true, "thanks")
 
 
 func _add_finale_milestone(parent: Node, symbol: String, title: String, status: String, accent: Color) -> void:
@@ -8426,8 +8436,8 @@ func _add_finale_milestone(parent: Node, symbol: String, title: String, status: 
 	panel.add_theme_stylebox_override(
 		"panel",
 		_finale_panel_style(
-			PALETTE.CREAM.lerp(accent, 0.10),
-			PALETTE.NAVY,
+			PALETTE.PEACH_PAPER.lerp(accent, 0.10),
+			PALETTE.PEACH_INK,
 			15,
 			Vector4(18, 12, 18, 12),
 			0.12
@@ -8451,14 +8461,14 @@ func _add_finale_milestone(parent: Node, symbol: String, title: String, status: 
 	symbol_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	symbol_label.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.78))
 	symbol_label.add_theme_font_size_override("font_size", 23)
-	symbol_label.add_theme_color_override("font_color", PALETTE.NAVY)
+	symbol_label.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	symbol_badge.add_child(symbol_label)
 	var heading := Label.new()
 	heading.text = title
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_override("font", SKETCH_UI_SCRIPT.display_font(0.72))
 	heading.add_theme_font_size_override("font_size", 19)
-	heading.add_theme_color_override("font_color", PALETTE.NAVY)
+	heading.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	copy.add_child(heading)
 	var detail := Label.new()
@@ -8491,7 +8501,7 @@ func _finale_panel_style(
 	style.content_margin_bottom = margins.w
 	style.anti_aliasing = true
 	if shadow_strength > 0.0:
-		style.shadow_color = Color(PALETTE.NAVY, shadow_strength)
+		style.shadow_color = Color(PALETTE.PEACH_INK, shadow_strength)
 		style.shadow_size = 6
 		style.shadow_offset = Vector2(0, 3)
 	return style
@@ -9132,7 +9142,8 @@ func _update_status() -> void:
 		return
 	var main_count := _deck_total(run.deck)
 	if String(run.get("run_loop", "")) == "route":
-		status_label.text = "Starter City | Life %d/%d | $%d | Deck %d" % [
+		status_label.text = "Week %d · %s · Round %d/%d | Life %d/%d | $%d | Deck %d" % [
+			int(run.get("week", 1)), String(run.get("hub_floor", "locals")).capitalize(), int(run.get("hub_round", 1)), int(run.get("hub_rounds_per_floor", 4)),
 			int(run.get("life", 0)), int(run.get("max_life", 40)), int(run.get("money", 0)), main_count
 		]
 		return
@@ -9184,6 +9195,10 @@ func _save_run() -> void:
 		resume_screen = "kitchen_match"
 	var result: Dictionary = _autosave_now(resume_screen) if autosave_enabled else run_state_service.save_run(run, resume_screen)
 	_set_footer(result.message)
+	if current_screen in ["route_hub", "route_shop"]:
+		var hub := content.find_child("TournamentHub", false, false)
+		if is_instance_valid(hub):
+			hub.show_notice(String(result.message), bool(result.get("ok", false)))
 
 
 func _load_run_from_disk() -> void:
@@ -9256,6 +9271,9 @@ func _generate_shop_inventory_for_run(target_run: Dictionary) -> void:
 
 
 func _resume_loaded_screen(saved_screen: String) -> void:
+	if FOOD_PROTOTYPE.active(run) and bool(run.get("food_opening_pending", false)):
+		_show_food_prototype_opening()
+		return
 	if bool(run.get("run_over", false)):
 		if String(run.get("run_loop", "")) == "route":
 			if bool(run.get("demo_complete", false)):
@@ -9266,6 +9284,9 @@ func _resume_loaded_screen(saved_screen: String) -> void:
 			_show_tournament_result(run.get("last_result", ["The run is over."]), false)
 		return
 	if String(run.get("run_loop", "")) == "route":
+		if String(run.get("week_transition", "")) in ["deckbox", "deckbox_reward", "week_intro"]:
+			_show_week_transition()
+			return
 		match saved_screen:
 			"kitchen_match":
 				_resume_autosaved_kitchen_match()
@@ -9355,3 +9376,107 @@ func _finish_autosave_resume() -> void:
 
 func _migrate_legacy_run_archetypes() -> void:
 	run_state_service.migrate_legacy_run_archetypes(run)
+
+
+func _show_week_transition() -> void:
+	_clear_route_reward_overlay()
+	_clear_route_encounter_overlay()
+	if String(run.get("week_transition", "")) == "deckbox_reward":
+		route_run_service.settle_deckbox_reward(run)
+		_autosave_now("week_transition")
+	current_screen = "week_transition"
+	_apply_screen_chrome()
+	_render_nav()
+	_clear(content)
+	_update_status()
+	if String(run.get("week_transition", "")) == "deckbox_reward":
+		_show_deckbox_card_reward()
+		_play_card_shop_music()
+		return
+	var choices: Array = []
+	for id in run.get("deckbox_offer", []):
+		choices.append(route_run_service.weekly.deckbox(String(id)))
+	var screen := WEEKLY_DEMO_SCREEN.new()
+	screen.configure(run, choices)
+	screen.deckbox_chosen.connect(_choose_demo_deckbox)
+	screen.continue_requested.connect(_start_demo_week_two)
+	screen.save_requested.connect(func() -> void:
+		_save_run()
+		TOPDECK_UI_SCRIPT.toast(self, "Run saved")
+	)
+	content.add_child(screen)
+	_play_card_shop_music()
+
+
+func _choose_demo_deckbox(id: String) -> void:
+	if not route_run_service.weekly.choose_deckbox(run, id):
+		return
+	_autosave_now("week_transition")
+	_show_week_transition()
+
+
+func _show_deckbox_card_reward() -> void:
+	for previous in content.get_children():
+		if previous.name == "DeckboxCardRewardScreen" and previous.is_queued_for_deletion():
+			previous.name = "RetiringDeckboxCardRewardScreen"
+	var kind := String(run.get("deckbox_reward", {}).get("kind", ""))
+	var entries: Array = []
+	var upgrades := {}
+	for entry in _deck_browser_entries(run.deck):
+		if kind == "upgrade":
+			if bool(entry.card.get("upgraded", false)) or not route_run_service.card_is_upgradeable(String(entry.id)):
+				continue
+			upgrades[String(entry.id)] = route_run_service.upgraded_card_data(String(entry.id))
+		entries.append(entry)
+	var screen := DECKBOX_CARD_REWARD_SCREEN.new()
+	screen.configure(run, entries, upgrades, _run_difficulty_id())
+	screen.card_confirmed.connect(_claim_demo_deckbox_card_reward.bind(screen))
+	screen.save_requested.connect(func() -> void:
+		_save_run()
+		TOPDECK_UI_SCRIPT.toast(self, "Run saved")
+	)
+	content.add_child(screen)
+
+
+func _claim_demo_deckbox_card_reward(entry: Dictionary, screen: Control) -> void:
+	if _card_upgrade_reveal_active or not is_instance_valid(screen) or screen.is_queued_for_deletion() or screen.get_meta("busy", false) or current_screen != "week_transition":
+		return
+	screen.set_busy()
+	var kind := String(run.get("deckbox_reward", {}).get("kind", ""))
+	var result: Dictionary = route_run_service.claim_deckbox_card_reward(run, String(entry.get("id", "")), int(entry.get("copy_index", -1)))
+	if not bool(result.get("ok", false)):
+		_show_week_transition()
+		TOPDECK_UI_SCRIPT.toast(self, String(result.get("message", "Choose another card")))
+		return
+	# Persist the chosen copy before its ceremony so a reload cannot repeat it.
+	_autosave_now("week_transition")
+	if kind == "upgrade":
+		await _play_route_card_upgrade_reveal(String(entry.id), screen.before_visual, screen.before_face)
+	elif kind == "remove":
+		if is_instance_valid(ui_sound_controller):
+			ui_sound_controller.play_remove()
+		if not _reduced_motion_enabled() and not _running_automated_test():
+			var leave := create_tween().set_parallel(true)
+			leave.tween_property(screen.before_visual, "modulate:a", 0.0, 0.18)
+			leave.tween_property(screen.before_visual, "position:y", screen.before_visual.position.y + 24, 0.18)
+			await leave.finished
+	if current_screen == "week_transition" and is_instance_valid(screen) and not screen.is_queued_for_deletion():
+		_show_week_transition()
+		TOPDECK_UI_SCRIPT.toast(self, "Card removed" if kind == "remove" else "Card upgraded")
+
+
+func _start_demo_week_two() -> void:
+	if not route_run_service.weekly.start_next_week(run):
+		return
+	run.pending_route_node = {"id": "week_two_intro_pack", "type": "week_pack", "label": "Second Helpings"}
+	run.reward_offer = route_run_service.weekly.make_intro_pack(run, cards, route_run_service.card_is_starter_eligible)
+	run.reward_picks_remaining = run.reward_offer.size()
+	run.reward_selected = []
+	run.route_pack_presented = true
+	run.route_pack_opened = false
+	run.route_reward_intro_seen = false
+	run.route_reward_cash = 0
+	run.route_reward_cash_awarded = true
+	selected_route_reward_card_id = ""
+	_autosave_now("route_reward_pack")
+	_show_route_sealed_pack()

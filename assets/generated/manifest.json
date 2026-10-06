@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "peach_soda_opponent_pip",
+      "path": "assets/generated/peach_soda_opponents/pip.png",
+      "sha256": "e7e468183a129a3a51df6e8032b9f26e6599ca93484f21650044dedd1b1ff030",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/pip-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/01-pip.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "source_sha256": "7e43bfe2df0a9fdafa732f1718523e9d1585f17fa83728beee11c8029b57e09b",
+      "original_generation_file": "exec-3456a2ac-c708-4519-8a4f-103e03ca81db.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Pip seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_otis",
+      "path": "assets/generated/peach_soda_opponents/otis.png",
+      "sha256": "fb6bc897d2bead140b9891fdfb87931ce76c0c76e7f5f3aca71c72e87061b4ee",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/otis-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/02-otis.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/02-otis.png"
+      ],
+      "source_sha256": "b9ee7b08c3ed26029651af246920f7ba84330a209d536d531c0d16a6b7e2ade6",
+      "original_generation_file": "exec-ba1953df-a0ea-4bec-895e-37fc53e3f236.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Otis seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_ines",
+      "path": "assets/generated/peach_soda_opponents/ines.png",
+      "sha256": "63d6e291b871bcb60e36eb4c10305d8f3bec7eab02e73ae559dc1552af592719",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/ines-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/03-ines.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/03-ines.png"
+      ],
+      "source_sha256": "3626c1553188d910b5b17d9fef79d3f4f0f5b2127f81e99c72369a869d32c6f8",
+      "original_generation_file": "exec-aa89411a-60e8-45a0-8952-ea80960cbfa1.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Ines seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_sana",
+      "path": "assets/generated/peach_soda_opponents/sana.png",
+      "sha256": "9a3cde816ff5f7e870cbeb9e95d26fcbdf2f3cc0fb851a08daf3222a9a3e1b06",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/sana-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/04-sana.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/04-sana.png"
+      ],
+      "source_sha256": "b156f8f6667180260c829d21b847028cf3aba09a539e743f713d8f96ac1ad4d6",
+      "original_generation_file": "exec-e9883086-3b0c-42fc-b8b7-de28a79e6002.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Sana seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_milo",
+      "path": "assets/generated/peach_soda_opponents/milo.png",
+      "sha256": "76fb0cb2cbe4663f303b1dd0ec5651c73720995c48a3a20a633bf70733e6cd19",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/milo-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/05-milo.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/05-milo.png"
+      ],
+      "source_sha256": "df1ff0a13bda70fb3091e4017bd6f471f4d684a31025ae4c603394ec09373309",
+      "original_generation_file": "exec-4b32acf6-6e81-43bb-a469-c7aecf19960b.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Milo seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_bea",
+      "path": "assets/generated/peach_soda_opponents/bea.png",
+      "sha256": "c33f5dd98603e0c5dae941ee3ca745ddbbbe05021830713a5cf5f60c68a99ae8",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/bea-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/06-bea.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/06-bea.png"
+      ],
+      "source_sha256": "862380878e1a5aade86c991064e5aa0ca3cf263ca7a6822885128d2e15e3c47e",
+      "original_generation_file": "exec-990db743-a494-43db-99bd-6f7d5b310a34.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Bea seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_kit",
+      "path": "assets/generated/peach_soda_opponents/kit.png",
+      "sha256": "6cbaae10e8e0fe28c127ea8d90dad2c84efa6e53040d25ce759c111afb1462a8",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/kit-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/07-kit.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/07-kit.png"
+      ],
+      "source_sha256": "382a5b92d4715bfc65c5cf14ae6a2c1161bead4cbcc3b29651f1cdec4e4ce20f",
+      "original_generation_file": "exec-55762966-87fa-48e3-9519-50f994e7eefc.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Kit seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    },
+    {
+      "id": "peach_soda_opponent_ellis",
+      "path": "assets/generated/peach_soda_opponents/ellis.png",
+      "sha256": "73d617814b7dbeb443239934749b5b9202dc208ecbad837cb557e148ddd3b401",
+      "status": "generated_working_art",
+      "kind": "seated_opponent_cutout_and_derived_profile_portrait",
+      "generator": "OpenAI built-in image generation; authorized programmatic background extraction",
+      "generated_on": "2026-09-07",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "prompt_file": "docs/ai-prompts/peach-soda-opponents/ellis-original-generation.txt",
+      "consumers": [
+        "scripts/ui/PeachSodaCast.gd",
+        "scripts/Tabletop3DPrototype.gd",
+        "scripts/Main.gd"
+      ],
+      "source_reference": "outputs/locals_opponents/peach_soda_cast_v1/08-ellis.png",
+      "source_assets": [
+        "outputs/locals_opponents/peach_soda_cast_v1/08-ellis.png"
+      ],
+      "source_sha256": "3696b838effa9fa698c3dc939e1fdaf2aa4d18f6042b6d763c75a27a98b364f4",
+      "original_generation_file": "exec-bdc061f8-46b2-4363-8cb4-d48ba838ce87.png",
+      "preparation_record": "assets/generated/peach_soda_opponents/provenance.json",
+      "preparation_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+      "replacement_notes": "Ellis seated working art, loaded dynamically through PeachSodaCast.asset_path/texture_for; battle and Main.gd rival intros/profile portraits consume that mapping. Replace with final artist-authored RGBA on the 1448x1200 canvas with y=1000 resting-arm baseline, preserving hands below the baseline. Set PeachSodaCast.GENERATED_ART_ENABLED=false to disable all eight generated rivals and use native card-club fallback. One relaxed expression only; any painted held card backs are decorative, while live hand counts and attack targets remain runtime state. Original card-face art is untouched. See docs/ai-prompts/peach-soda-opponents/README.md."
+    }
+  ]
+}

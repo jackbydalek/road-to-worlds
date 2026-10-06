@@ -1,6 +1,7 @@
 extends Node
 
 const BUTTON_FACE_SCRIPT := preload("res://scripts/ui/BattleAngularButtonFace.gd")
+const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const STYLE_STATES := ["normal", "hover", "pressed", "disabled", "focus"]
 
 
@@ -33,6 +34,8 @@ func _style_button(button: Button) -> void:
 		return
 	if button.text.strip_edges().is_empty() and button.icon == null and not bool(button.get_meta("ui_button_style_force", false)):
 		return
+	button.custom_minimum_size.y = maxf(46.0, button.custom_minimum_size.y)
+	button.add_theme_font_override("font", BODY_FONT)
 	var authored_variant := (
 		button.has_meta("ui_button_variant")
 		and not bool(button.get_meta("ui_button_variant_inferred", false))

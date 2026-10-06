@@ -44,12 +44,10 @@ func _run() -> void:
 	_expect(
 		settings_display_panel != null
 		and not settings_display_panel.visible
-		and settings_display_panel.find_child("SettingsAngularSurface", false, false) != null
 		and settings_battle_panel != null
 		and settings_battle_panel.visible
-		and settings_battle_panel.find_child("SettingsAngularSurface", false, false) != null
 		and main.find_child("SettingsCategoryRail", true, false) != null
-		and main.find_child("DisplayAccentRule", true, false) is ColorRect,
+		and main.find_child("DisplayAccentRule", true, false) == null,
 		"Options did not open directly to its styled Battle category."
 	)
 	var play_speed_select := main.find_child("PlaySpeedSelect", true, false) as OptionButton

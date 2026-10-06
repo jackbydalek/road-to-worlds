@@ -410,7 +410,7 @@ func _run() -> void:
 		_fail("Firecracker Shrimp did not animate its selected Prep hit after the Plated combat hit.")
 		return
 
-	# Board-target Tools and Blow Torch's sequential choices resolve selected targets.
+	# Board-target Tools resolve only their selected targets.
 	var mixer_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6986)
 	mixer_state.player.prep = [_test_unit(905, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
 	mixer_state.opponent.plated = [_test_unit(906, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
@@ -464,29 +464,30 @@ func _run() -> void:
 	if int(grater_state.opponent.plated[0].attack) != 2 or int(grater_state.opponent.plated[0].health) != 3 or not grater_state.opponent.plated[0].spices.is_empty() or not grater_state.opponent.discard.has("spice_sugar_glaze"):
 		_fail("Grater did not remove the chosen Spice and its bonuses.")
 		return
-	var blow_torch_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6988)
-	blow_torch_state.player.life = 10
-	blow_torch_state.opponent.life = 20
-	blow_torch_state.opponent.prep = [_test_unit(910, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)]
-	blow_torch_state.opponent.plated = [_test_unit(911, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
-	blow_torch_state.player.hand = ["item_blow_torch"]
-	production_service.play_card(blow_torch_state, 0)
-	if production_service.choice_target_ids(blow_torch_state) != [910, 911]:
-		_fail("Blow Torch did not offer opposing units while the opposing Chef had more health.")
-		return
-	production_service.choose_effect_target(blow_torch_state, 911)
-	if not blow_torch_state.pending_choice.is_empty() or not blow_torch_state.opponent.plated.is_empty() or not blow_torch_state.opponent.discard.has("hearty_dumpling_tortoise"):
-		_fail("Blow Torch did not destroy its selected opposing unit.")
-		return
-	var blocked_blow_torch_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 69881)
-	blocked_blow_torch_state.player.life = 20
-	blocked_blow_torch_state.opponent.life = 10
-	blocked_blow_torch_state.opponent.plated = [_test_unit(912, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
-	blocked_blow_torch_state.player.hand = ["item_blow_torch"]
-	production_service.play_card(blocked_blow_torch_state, 0)
-	if not production_service.choice_target_ids(blocked_blow_torch_state).is_empty() or blocked_blow_torch_state.opponent.plated.is_empty():
-		_fail("Blow Torch ignored its opposing-Chef-health condition.")
-		return
+	# Blow Torch can destroy either opposing zone, regardless of Chef health.
+	for life_totals in [Vector2i(10, 20), Vector2i(20, 20), Vector2i(20, 10)]:
+		for target_zone in ["prep", "plated"]:
+			var blow_torch_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6988)
+			blow_torch_state.player.life = life_totals.x
+			blow_torch_state.opponent.life = life_totals.y
+			blow_torch_state.player.prep = [_test_unit(909, "spicy_hot_honey_bee", "Hot Honey Bee", "ingredient", 1, 1, false, 2)]
+			blow_torch_state.opponent.prep = [_test_unit(910, "hearty_macaroni_manatee", "Macaronatee", "ingredient", 2, 3, false, 2)]
+			blow_torch_state.opponent.plated = [_test_unit(911, "hearty_dumpling_tortoise", "Dumpling-Backed Tortoise", "meal", 4, 5, false, 2)]
+			blow_torch_state.player.hand = ["item_blow_torch"]
+			production_service.play_card(blow_torch_state, 0)
+			if production_service.choice_target_ids(blow_torch_state) != [910, 911]:
+				_fail("Blow Torch did not offer exactly the opposing units at Chef health %s." % life_totals)
+				return
+			var target_id := 910 if target_zone == "prep" else 911
+			var target_card_id := "hearty_macaroni_manatee" if target_zone == "prep" else "hearty_dumpling_tortoise"
+			var other_zone := "plated" if target_zone == "prep" else "prep"
+			production_service.choose_effect_target(blow_torch_state, target_id)
+			if not blow_torch_state.pending_choice.is_empty() or not blow_torch_state.opponent[target_zone].is_empty() or not blow_torch_state.opponent.discard.has(target_card_id):
+				_fail("Blow Torch did not destroy its selected opposing %s unit at Chef health %s." % [target_zone, life_totals])
+				return
+			if blow_torch_state.opponent[other_zone].size() != 1 or blow_torch_state.player.prep.size() != 1:
+				_fail("Blow Torch affected a unit other than its selected opposing target.")
+				return
 
 	# Discard recovery uses explicit card pickers, while Tongs selects two opposing board cards.
 	var strainer_choice_state: Dictionary = production_service.start_game("spicy_test_kitchen", "hearty_test_kitchen", 6989)
@@ -885,8 +886,8 @@ func _run() -> void:
 	var arena_button_style := arena_play_button.get_theme_stylebox("normal") as StyleBoxFlat if arena_play_button != null else null
 	var arena_inspector := arena_prototype.find_child("CookingInspectPanel", true, false) as PanelContainer
 	var arena_inspector_rules := arena_inspector.find_child("CardRules", true, false) as Label if arena_inspector != null else null
-	if arena_actions == null or arena_play_button == null or arena_button_style == null or arena_button_style.corner_radius_top_left < 8 or arena_inspector == null or String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
-		_fail("Clicking the full hand card did not immediately open details and reveal rounded play buttons above it.")
+	if arena_actions == null or arena_play_button == null or arena_play_button.get_node_or_null("BattleAngularButtonFace") == null or arena_inspector == null or String(arena_prototype.inspected_card.get("card_id", "")) != "spicy_hot_honey_bee":
+		_fail("Clicking the full hand card did not open details and reveal the shared play controls.")
 		return
 	if arena_inspector_rules == null or not arena_inspector_rules.visible:
 		_fail("The card inspector did not show the full authored rules text for a compact hand card.")

@@ -102,13 +102,11 @@ func _test_pack_and_finale_layouts() -> void:
 		main._show_thanks_for_playing()
 		await process_frame
 		await process_frame
-		var finale_actions := main.find_child("FinaleActions", true, false) as Control
-		var community_links := main.find_child("FinaleCommunityLinks", true, false) as Control
-		_expect(finale_actions != null and community_links != null, "The season finale is missing its action rows at %s." % context)
-		if finale_actions != null and community_links != null:
-			var finale_viewport: Rect2 = main.scroll.get_global_rect()
-			_expect(finale_viewport.encloses(community_links.get_global_rect()), "The community links are clipped at %s." % context)
-			_expect(finale_viewport.encloses(finale_actions.get_global_rect()), "The finale actions are clipped at %s." % context)
+		var finale_actions := main.find_child("SeasonResultActions", true, false) as Control
+		_expect(finale_actions != null, "The finale has no pinned actions at %s." % context)
+		if finale_actions != null:
+			_expect(main.scroll.get_global_rect().encloses(finale_actions.get_global_rect()), "Finale actions clip at %s." % context)
+
 		_expect(not main.scroll.get_h_scroll_bar().visible, "The finale requires horizontal scrolling at %s." % context)
 
 		main._show_start()

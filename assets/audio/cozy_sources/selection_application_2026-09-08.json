@@ -1,0 +1,112 @@
+{
+  "date": "2026-09-08",
+  "selection_file": "assets/audio/cozy_sources/selected_choices_2026-09-08.json",
+  "selection_sha256": "29d42e77c9ca4f584bd748151c7b03f3e7dd087fb587fa6e427cc167e9abb822",
+  "preserved": [
+    "original_shop_bell",
+    "actual_reshuffle_only",
+    "attack_contact_timing"
+  ],
+  "actions": [
+    {
+      "action": "ui_click",
+      "selection": "a",
+      "gain_db": -15,
+      "clips": [
+        {
+          "resource": "res://assets/audio/ui/cute_cozy_full/Actions/Clicked_In_01.wav",
+          "sha256": "c109a23f1a3832accbf6cac302b39edb58d00f4a3ccd64e79fa56faced8a732f"
+        }
+      ]
+    },
+    {
+      "action": "card_draw",
+      "selection": "a",
+      "gain_db": -20,
+      "clips": [
+        {
+          "resource": "res://assets/audio/kenney_casino/card-slide-1.ogg",
+          "sha256": "006cf9822d15d7063f8899e56041f41646df30adb6fbd8b974ee5d5420012690"
+        }
+      ]
+    },
+    {
+      "action": "card_play",
+      "selection": "current",
+      "gain_db": -18,
+      "clips": [
+        {
+          "resource": "res://assets/audio/kenney_casino/card-place-1.ogg",
+          "sha256": "d8f26c33a665dcbdcc6f632f6050bc9dd548feb0d4942d4547615926d3926810"
+        },
+        {
+          "resource": "res://assets/audio/kenney_casino/card-place-2.ogg",
+          "sha256": "903d5050718595e87864dd755643b476ab1a5533080dcc2dddc72570d33ba9f8"
+        },
+        {
+          "resource": "res://assets/audio/kenney_casino/card-place-3.ogg",
+          "sha256": "1d988631a6e5201ed1bb0d728f2e43a3ec79401258426858793598044ac95841"
+        },
+        {
+          "resource": "res://assets/audio/kenney_casino/card-place-4.ogg",
+          "sha256": "18e3ba713b7259605fd27cdc048085ed56cf86b32403f070b6cb125019f77183"
+        }
+      ]
+    },
+    {
+      "action": "normal_hit",
+      "selection": "b",
+      "gain_db": -5,
+      "clips": [
+        {
+          "resource": "res://assets/audio/kenney_impacts/impactPunch_medium_000.ogg",
+          "sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c"
+        }
+      ]
+    },
+    {
+      "action": "heavy_hit",
+      "selection": "b",
+      "gain_db": -3,
+      "clips": [
+        {
+          "resource": "res://assets/audio/kenney_impacts/impactPunch_heavy_000.ogg",
+          "sha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8"
+        }
+      ]
+    },
+    {
+      "action": "ability",
+      "selection": "a",
+      "gain_db": -18,
+      "clips": [
+        {
+          "resource": "res://assets/audio/ui/cute_cozy_full/Actions/Confirm_05.wav",
+          "sha256": "7635b19754c91b9109f4bd6ba0b051e8b33fc8485d083ec1e30316e91dec3505"
+        }
+      ]
+    },
+    {
+      "action": "heal",
+      "selection": "b",
+      "gain_db": -14,
+      "clips": [
+        {
+          "resource": "res://assets/audio/ui/cute_cozy_full/Dialogue/Dialogue_Expression_Positive_01.wav",
+          "sha256": "e1d79d97fdbfee70236b60f7f986375e7fca22b295b4772b94a1c1431550a7cf"
+        }
+      ]
+    },
+    {
+      "action": "purchase",
+      "selection": "a",
+      "gain_db": -16,
+      "clips": [
+        {
+          "resource": "res://assets/audio/ui/cute_cozy_full/Currency/Purchase_01.wav",
+          "sha256": "2c460d43f2a9bb7abda93d3c0edfc501fb3152ea889e89b488f1bb55625a9032"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,509 @@
+{
+  "created_utc": "2026-09-07T19:12:46.082349+00:00",
+  "status": "Replaceable working AI character assets prepared for battle overhaul; consumer registry maintained centrally",
+  "tool": "OpenAI built-in image generation (original illustrations); authorized local Pillow/NumPy extraction",
+  "brush_assets_used": [],
+  "method": "Original source RGB unchanged; closed-ink exterior flood; verified enclosed-background seeds; remove horizontal table rules outside local character envelope; translate to shared canvas without scaling. Final PNGs contain actual alpha.",
+  "authorization_record": "docs/generated-art-register.md:136",
+  "canvas_dimensions": [
+    1448,
+    1200
+  ],
+  "resting_arm_baseline_y": 1000,
+  "coordinate_notes": "All subjects centered horizontally on their foreground bounds. Hands may hang below resting-arm baseline, notably Kit. Do not crop at y=1000. Character source camera and natural height proportions are preserved.",
+  "extraction_script": "docs/ai-prompts/peach-soda-opponents/extract_portraits.py",
+  "extraction_script_sha256": "3dd462fceff23fce497aa7c281d7f2af156db5d1c9be20412fe2c5fc6df02581",
+  "source_manifest": "outputs/locals_opponents/peach_soda_cast_v1/manifest.json",
+  "source_manifest_sha256": "e3f4441dbe2203a6b4ead45f2ac6877f93c4f0c0e624074bd245dab9b798e32d",
+  "original_style_references": [
+    {
+      "path": "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+      "bytes": 1833245,
+      "sha256": "0d51b64638fd11d0a929e86567a1f90ecda31653d46d000b3a4379d9c6b8a637",
+      "role": "Latest title screen: Peach Soda palette and restrained ink/shape treatment"
+    },
+    {
+      "path": "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+      "bytes": 2011823,
+      "sha256": "ca558c14466eee5e43bc6b0586df485ffdb841906028dbbb9ed086ee507176bf",
+      "role": "Current battle concept: seated across-table camera and simplified character language; Mina identity excluded"
+    },
+    {
+      "path": "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+      "bytes": 2649495,
+      "sha256": "61b0e7830dd11c2cb222ed8fbfce909bcce9e8f4c84474bbdaeb58648b1eb31e",
+      "role": "User-supplied original drawing reference, visibly credited to @Blotter_art; drawing language only"
+    },
+    {
+      "path": "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png",
+      "bytes": 1534994,
+      "sha256": "7e43bfe2df0a9fdafa732f1718523e9d1585f17fa83728beee11c8029b57e09b",
+      "role": "First portrait generated in this set; additional consistency reference for characters 2 through 8"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "pip",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/01-pip.png",
+      "source_sha256": "7e43bfe2df0a9fdafa732f1718523e9d1585f17fa83728beee11c8029b57e09b",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        278,
+        87,
+        1173,
+        940
+      ],
+      "source_resting_arm_y": 940,
+      "background_seeds": [
+        [
+          720,
+          949
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/pip.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -2,
+        60
+      ],
+      "foreground_bounds": [
+        276,
+        147,
+        1171,
+        1000
+      ],
+      "alpha_zero_pixels": 1258227,
+      "alpha_partial_pixels": 0,
+      "sha256": "e7e468183a129a3a51df6e8032b9f26e6599ca93484f21650044dedd1b1ff030",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/pip-original-generation.txt",
+      "original_prompt_sha256": "45405be0b31a4e6331a98948046ecbd8807cc1e7e75b754fd33d761b4dd3f253",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-3456a2ac-c708-4519-8a4f-103e03ca81db.png",
+      "original_generation_sha256": "7e43bfe2df0a9fdafa732f1718523e9d1585f17fa83728beee11c8029b57e09b",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG"
+      ],
+      "bytes": 683212
+    },
+    {
+      "name": "otis",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/02-otis.png",
+      "source_sha256": "b9ee7b08c3ed26029651af246920f7ba84330a209d536d531c0d16a6b7e2ade6",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        244,
+        80,
+        1218,
+        996
+      ],
+      "source_resting_arm_y": 970,
+      "background_seeds": [],
+      "output": "assets/generated/peach_soda_opponents/otis.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -7,
+        30
+      ],
+      "foreground_bounds": [
+        237,
+        110,
+        1211,
+        1026
+      ],
+      "alpha_zero_pixels": 1170291,
+      "alpha_partial_pixels": 0,
+      "sha256": "fb6bc897d2bead140b9891fdfb87931ce76c0c76e7f5f3aca71c72e87061b4ee",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/otis-original-generation.txt",
+      "original_prompt_sha256": "a96ed3e91e5eee83e214ecaa23d61eb77087d5646a63cc1b39f1e3fcb275b1d7",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-ba1953df-a0ea-4bec-895e-37fc53e3f236.png",
+      "original_generation_sha256": "b9ee7b08c3ed26029651af246920f7ba84330a209d536d531c0d16a6b7e2ade6",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 649023
+    },
+    {
+      "name": "ines",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/03-ines.png",
+      "source_sha256": "3626c1553188d910b5b17d9fef79d3f4f0f5b2127f81e99c72369a869d32c6f8",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        354,
+        67,
+        1180,
+        952
+      ],
+      "source_resting_arm_y": 950,
+      "background_seeds": [
+        [
+          595,
+          839
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/ines.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -43,
+        50
+      ],
+      "foreground_bounds": [
+        311,
+        117,
+        1137,
+        1002
+      ],
+      "alpha_zero_pixels": 1247587,
+      "alpha_partial_pixels": 0,
+      "sha256": "63d6e291b871bcb60e36eb4c10305d8f3bec7eab02e73ae559dc1552af592719",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/ines-original-generation.txt",
+      "original_prompt_sha256": "376ea780143686734d4f9a1c5d62d98f5b8464f8880ca0183d2522089960c5ae",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-aa89411a-60e8-45a0-8952-ea80960cbfa1.png",
+      "original_generation_sha256": "3626c1553188d910b5b17d9fef79d3f4f0f5b2127f81e99c72369a869d32c6f8",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 708296
+    },
+    {
+      "name": "sana",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/04-sana.png",
+      "source_sha256": "b156f8f6667180260c829d21b847028cf3aba09a539e743f713d8f96ac1ad4d6",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        296,
+        27,
+        1197,
+        982
+      ],
+      "source_resting_arm_y": 972,
+      "background_seeds": [],
+      "output": "assets/generated/peach_soda_opponents/sana.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -22,
+        28
+      ],
+      "foreground_bounds": [
+        274,
+        55,
+        1175,
+        1010
+      ],
+      "alpha_zero_pixels": 1225675,
+      "alpha_partial_pixels": 0,
+      "sha256": "9a3cde816ff5f7e870cbeb9e95d26fcbdf2f3cc0fb851a08daf3222a9a3e1b06",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/sana-original-generation.txt",
+      "original_prompt_sha256": "cde060bbbe58c17ed7174a09b68b4f34090d241eef64f3d775d5ae1be8f45458",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-e9883086-3b0c-42fc-b8b7-de28a79e6002.png",
+      "original_generation_sha256": "b156f8f6667180260c829d21b847028cf3aba09a539e743f713d8f96ac1ad4d6",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 672202
+    },
+    {
+      "name": "milo",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/05-milo.png",
+      "source_sha256": "df1ff0a13bda70fb3091e4017bd6f471f4d684a31025ae4c603394ec09373309",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        257,
+        45,
+        1229,
+        968
+      ],
+      "source_resting_arm_y": 954,
+      "background_seeds": [
+        [
+          513,
+          761
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/milo.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -19,
+        46
+      ],
+      "foreground_bounds": [
+        238,
+        91,
+        1210,
+        1014
+      ],
+      "alpha_zero_pixels": 1174041,
+      "alpha_partial_pixels": 0,
+      "sha256": "76fb0cb2cbe4663f303b1dd0ec5651c73720995c48a3a20a633bf70733e6cd19",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/milo-original-generation.txt",
+      "original_prompt_sha256": "f0e45f9d2c48c22baac70e813cfa16211ace5b63a40eb5d1185e48807c503732",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-4b32acf6-6e81-43bb-a469-c7aecf19960b.png",
+      "original_generation_sha256": "df1ff0a13bda70fb3091e4017bd6f471f4d684a31025ae4c603394ec09373309",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 808034
+    },
+    {
+      "name": "bea",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/06-bea.png",
+      "source_sha256": "862380878e1a5aade86c991064e5aa0ca3cf263ca7a6822885128d2e15e3c47e",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        303,
+        60,
+        1172,
+        945
+      ],
+      "source_resting_arm_y": 947,
+      "background_seeds": [
+        [
+          721,
+          920
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/bea.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -14,
+        53
+      ],
+      "foreground_bounds": [
+        289,
+        113,
+        1158,
+        998
+      ],
+      "alpha_zero_pixels": 1277963,
+      "alpha_partial_pixels": 0,
+      "sha256": "c33f5dd98603e0c5dae941ee3ca745ddbbbe05021830713a5cf5f60c68a99ae8",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/bea-original-generation.txt",
+      "original_prompt_sha256": "0faa6703b74bba14e84b9cb46ae76fe8df847010a44824c927c67208281967f0",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-990db743-a494-43db-99bd-6f7d5b310a34.png",
+      "original_generation_sha256": "862380878e1a5aade86c991064e5aa0ca3cf263ca7a6822885128d2e15e3c47e",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 617556
+    },
+    {
+      "name": "kit",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/07-kit.png",
+      "source_sha256": "382a5b92d4715bfc65c5cf14ae6a2c1161bead4cbcc3b29651f1cdec4e4ce20f",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        261,
+        58,
+        1261,
+        1074
+      ],
+      "source_resting_arm_y": 973,
+      "background_seeds": [
+        [
+          1022,
+          815
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/kit.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -37,
+        27
+      ],
+      "foreground_bounds": [
+        224,
+        85,
+        1224,
+        1101
+      ],
+      "alpha_zero_pixels": 1203402,
+      "alpha_partial_pixels": 0,
+      "sha256": "6cbaae10e8e0fe28c127ea8d90dad2c84efa6e53040d25ce759c111afb1462a8",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/kit-original-generation.txt",
+      "original_prompt_sha256": "ad56c0c3e0304cf6548c0c8c93606146d2d68dab018f26a3b480fb6d64a327a9",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-55762966-87fa-48e3-9519-50f994e7eefc.png",
+      "original_generation_sha256": "382a5b92d4715bfc65c5cf14ae6a2c1161bead4cbcc3b29651f1cdec4e4ce20f",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 867247
+    },
+    {
+      "name": "ellis",
+      "source": "outputs/locals_opponents/peach_soda_cast_v1/08-ellis.png",
+      "source_sha256": "3696b838effa9fa698c3dc939e1fdaf2aa4d18f6042b6d763c75a27a98b364f4",
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "source_foreground_bounds": [
+        253,
+        35,
+        1216,
+        993
+      ],
+      "source_resting_arm_y": 952,
+      "background_seeds": [
+        [
+          495,
+          821
+        ],
+        [
+          990,
+          818
+        ],
+        [
+          721,
+          930
+        ]
+      ],
+      "output": "assets/generated/peach_soda_opponents/ellis.png",
+      "dimensions": [
+        1448,
+        1200
+      ],
+      "mode": "RGBA",
+      "resting_arm_y": 1000,
+      "paste_offset": [
+        -10,
+        48
+      ],
+      "foreground_bounds": [
+        243,
+        83,
+        1206,
+        1041
+      ],
+      "alpha_zero_pixels": 1241629,
+      "alpha_partial_pixels": 0,
+      "sha256": "73d617814b7dbeb443239934749b5b9202dc208ecbad837cb557e148ddd3b401",
+      "origin": "AI-generated working character illustration; programmatically extracted from the exact retained opaque source",
+      "original_prompt": "docs/ai-prompts/peach-soda-opponents/ellis-original-generation.txt",
+      "original_prompt_sha256": "a745ec1af96efd741ba8e03b10a7f5d2902b3bff357e2a777fb948809d9f4126",
+      "original_generation_output": "/Users/jack.bydalek/.codex/generated_images/01a07982-dc2d-7602-965c-bbd7c850678b/exec-bdc061f8-46b2-4363-8cb4-d48ba838ce87.png",
+      "original_generation_sha256": "3696b838effa9fa698c3dc939e1fdaf2aa4d18f6042b6d763c75a27a98b364f4",
+      "reference_images": [
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_title_v3/title.png",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_screen_concepts/peach_soda_flat_v2/03-battle.png",
+        "/Users/jack.bydalek/Downloads/IMG_3793.PNG",
+        "/Users/jack.bydalek/Documents/Road to Worlds/outputs/locals_opponents/peach_soda_cast_v1/01-pip.png"
+      ],
+      "bytes": 562741
+    }
+  ],
+  "unsuccessful_edits": [
+    {
+      "path": "docs/ai-prompts/peach-soda-opponents/pip-rejected-background-extraction.png",
+      "prompt": "docs/ai-prompts/peach-soda-opponents/pip.txt",
+      "generation_source": "/Users/jack.bydalek/.codex/generated_images/01a07d41-db4d-7202-a5c9-1263ba2db6d1/exec-dcfc1209-3aea-485f-8818-4a7993bed202.png",
+      "reason": "RGB file with baked checkerboard; not used by runtime",
+      "sha256": "60f3888108be62fe9008f8c92d65051bc7963441eb3f8fabc9cf462d2fca9b75",
+      "dimensions": [
+        1448,
+        1086
+      ],
+      "mode": "RGB"
+    },
+    {
+      "path": "docs/ai-prompts/peach-soda-opponents/pip-rejected-alpha-retry.png",
+      "prompt": "docs/ai-prompts/peach-soda-opponents/pip-alpha-retry.txt",
+      "generation_source": "/Users/jack.bydalek/.codex/generated_images/01a07d41-db4d-7202-a5c9-1263ba2db6d1/exec-093dd51c-a1b2-40ba-8a6c-2e913c0dca10.png",
+      "reason": "RGB file with baked checkerboard; not used by runtime",
+      "sha256": "e221f8447aa43c58ad97a85a308e510a55f67f28f67eeb4955354deb3e28c8ca",
+      "dimensions": [
+        1448,
+        1086
+      ],
+      "mode": "RGB"
+    }
+  ],
+  "known_limitations": [
+    "Single relaxed expression per character; no generated hurt/smile sprites in this pack.",
+    "Held card backs are baked decorative art, not live hand counts.",
+    "Binary extraction alpha follows existing dark contour; rendering at game scale uses normal texture filtering.",
+    "Ines, Milo, Kit and Ellis have intentionally cleared small background gaps between their arms and torso.",
+    "Original concept names remain provisional; integration routing belongs to runtime code."
+  ],
+  "replacement": "Replace these eight PNGs with artist-authored RGBA drawings on the same canvas and y=1000 resting-arm baseline, or update the centralized runtime cast art mapping. Programmatic extraction does not change AI origin."
+}

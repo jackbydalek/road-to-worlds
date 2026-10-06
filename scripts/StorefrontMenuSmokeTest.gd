@@ -95,10 +95,10 @@ func _run() -> void:
 		"The Deck Edit, Save, or Settings HUD control is not using its supplied icon."
 	)
 	_expect(
-		deck_hud != null and deck_hud.expand_icon and deck_hud.get_theme_constant("icon_max_width") == 60 and deck_hud.get_theme_color("icon_normal_color") == Color.WHITE
-		and save_hud != null and save_hud.expand_icon and save_hud.get_theme_constant("icon_max_width") == 60 and save_hud.get_theme_color("icon_normal_color") == Color.WHITE
-		and settings_hud != null and settings_hud.expand_icon and settings_hud.get_theme_constant("icon_max_width") == 60 and settings_hud.get_theme_color("icon_normal_color") == Color.WHITE,
-		"The supplied toolbar icons are still being stretched or tinted."
+		deck_hud != null and deck_hud.expand_icon and deck_hud.get_theme_constant("icon_max_width") == 60 and deck_hud.get_theme_color("icon_normal_color") == deck_hud.get_theme_color("font_color")
+		and save_hud != null and save_hud.expand_icon and save_hud.get_theme_constant("icon_max_width") == 60 and save_hud.get_theme_color("icon_normal_color") == save_hud.get_theme_color("font_color")
+		and settings_hud != null and settings_hud.expand_icon and settings_hud.get_theme_constant("icon_max_width") == 60 and settings_hud.get_theme_color("icon_normal_color") == settings_hud.get_theme_color("font_color"),
+		"Toolbar icons do not preserve their size or share the control foreground."
 	)
 	_expect(
 		autosave != null and autosave.get_parent() == main and not autosave.visible,
@@ -140,7 +140,7 @@ func _run() -> void:
 			and round_button.get_theme_font_size("font_size") >= 24
 			and round_face != null
 			and round_face.variant == "primary"
-			and round_face.fill_color_for_state("normal").is_equal_approx(PALETTE.SELECTION_BLUE),
+			and round_face.fill_color_for_state("normal").is_equal_approx(PALETTE.PEACH_TEAL),
 			"Start Round does not have the larger tournament-CTA silhouette."
 		)
 	shop_world.call("_return_to_shopkeeper_menu")

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+<!-- Native vector drawing; no generated bitmap or external artwork. -->
+<rect x="3" y="3" width="154" height="154" rx="12" fill="#C7DFD5" stroke="#293047" stroke-width="3"/>
+<g fill="#FFF4DF" stroke="#293047" stroke-width="3" stroke-linejoin="round">
+<path d="M28 42L65 33L89 119L52 129Z"/>
+<path d="M95 33L132 42L108 129L71 119Z"/>
+<rect x="57" y="28" width="46" height="96" rx="5" fill="#126866"/>
+</g><path d="M80 57L85 70L99 71L88 80L91 94L80 86L69 94L72 80L61 71L75 70Z" fill="#FFF4DF"/>
+</svg>

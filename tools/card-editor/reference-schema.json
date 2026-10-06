@@ -1,0 +1,715 @@
+{
+  "fields": {
+    "id": {
+      "kind": "string"
+    },
+    "name": {
+      "kind": "string"
+    },
+    "card_type": {
+      "kind": "string"
+    },
+    "archetype": {
+      "kind": "string"
+    },
+    "ingredient_types": {
+      "kind": "array",
+      "items": {
+        "kind": "string"
+      }
+    },
+    "rare": {
+      "kind": "boolean"
+    },
+    "attack": {
+      "kind": "number"
+    },
+    "health": {
+      "kind": "number"
+    },
+    "text": {
+      "kind": "string"
+    },
+    "art_frames": {
+      "kind": "array",
+      "items": {
+        "kind": "string"
+      }
+    },
+    "art_frame_duration": {
+      "kind": "number"
+    },
+    "on_play": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "amount": {
+            "kind": "number"
+          },
+          "archetype": {
+            "kind": "string"
+          },
+          "target": {
+            "kind": "string"
+          },
+          "token_id": {
+            "kind": "string"
+          },
+          "zone": {
+            "kind": "string"
+          },
+          "card_type": {
+            "kind": "string"
+          },
+          "destination": {
+            "kind": "string"
+          },
+          "exclude_card_id": {
+            "kind": "string"
+          },
+          "card_types": {
+            "kind": "array",
+            "items": {
+              "kind": "string"
+            }
+          },
+          "attack": {
+            "kind": "number"
+          },
+          "health": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "subtitle": {
+      "kind": "string"
+    },
+    "abilities": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "id": {
+            "kind": "string"
+          },
+          "timing": {
+            "kind": "string"
+          },
+          "cost": {
+            "kind": "object",
+            "fields": {
+              "sacrifice_self": {
+                "kind": "boolean"
+              }
+            }
+          },
+          "effects": {
+            "kind": "array",
+            "items": {
+              "kind": "object",
+              "fields": {
+                "type": {
+                  "kind": "string"
+                },
+                "archetype": {
+                  "kind": "string"
+                },
+                "attack": {
+                  "kind": "number"
+                },
+                "health": {
+                  "kind": "number"
+                },
+                "target": {
+                  "kind": "string"
+                },
+                "amount": {
+                  "kind": "number"
+                }
+              }
+            }
+          },
+          "active_zone": {
+            "kind": "string"
+          },
+          "once_per_turn": {
+            "kind": "boolean"
+          },
+          "target": {
+            "kind": "object",
+            "fields": {
+              "side": {
+                "kind": "string"
+              },
+              "exclude_self": {
+                "kind": "boolean"
+              },
+              "zone": {
+                "kind": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "keywords": {
+      "kind": "array",
+      "items": {
+        "kind": "string"
+      }
+    },
+    "archetypes": {
+      "kind": "array",
+      "items": {
+        "kind": "string"
+      }
+    },
+    "hand_trap": {
+      "kind": "object",
+      "fields": {
+        "trigger": {
+          "kind": "string"
+        },
+        "effect": {
+          "kind": "string"
+        }
+      }
+    },
+    "play_from_discard_to_prep": {
+      "kind": "boolean"
+    },
+    "discard_cost": {
+      "kind": "number"
+    },
+    "on_combat_damage_to_chef": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          }
+        }
+      }
+    },
+    "on_sacrifice": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "amount": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "hand_trigger": {
+      "kind": "object",
+      "fields": {
+        "trigger": {
+          "kind": "string"
+        },
+        "effect": {
+          "kind": "string"
+        },
+        "token_archetype": {
+          "kind": "string"
+        },
+        "token_attack": {
+          "kind": "number"
+        },
+        "token_health": {
+          "kind": "number"
+        }
+      }
+    },
+    "protect_other_friendly_prep_from_effect_damage": {
+      "kind": "boolean"
+    },
+    "recipe": {
+      "kind": "array",
+      "items": {
+        "kind": "string"
+      }
+    },
+    "on_attack_animation_after_combat": {
+      "kind": "boolean"
+    },
+    "on_attack": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "amount": {
+            "kind": "number"
+          },
+          "attack_per_card": {
+            "kind": "number"
+          },
+          "health_per_card": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "hand_trap_guard": {
+      "kind": "boolean"
+    },
+    "hand_trap_guard_zone": {
+      "kind": "string"
+    },
+    "art_path": {
+      "kind": "string"
+    },
+    "opponent_healing_reduction": {
+      "kind": "number"
+    },
+    "auras": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "active_zone": {
+            "kind": "string"
+          },
+          "target": {
+            "kind": "string"
+          },
+          "extra_any": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "extra_meal_each_turn": {
+      "kind": "boolean"
+    },
+    "can_attack_from_prep": {
+      "kind": "boolean"
+    },
+    "on_move_to_plated": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "attack": {
+            "kind": "number"
+          },
+          "health": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "self_attack_per_friendly_prep_archetype": {
+      "kind": "number"
+    },
+    "count_archetype": {
+      "kind": "string"
+    },
+    "effects": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "amount": {
+            "kind": "number"
+          },
+          "card_types": {
+            "kind": "array",
+            "items": {
+              "kind": "string"
+            }
+          },
+          "card_type": {
+            "kind": "string"
+          },
+          "archetype": {
+            "kind": "string"
+          },
+          "count": {
+            "kind": "number"
+          }
+        }
+      }
+    },
+    "attack_bonus": {
+      "kind": "number"
+    },
+    "health_bonus": {
+      "kind": "number"
+    },
+    "attached_archetype": {
+      "kind": "string"
+    },
+    "meal_attack_bonus": {
+      "kind": "number"
+    },
+    "meal_attack_archetype": {
+      "kind": "string"
+    },
+    "ingredient_growth": {
+      "kind": "number"
+    },
+    "ingredient_growth_archetype": {
+      "kind": "string"
+    },
+    "meal_health_bonus": {
+      "kind": "number"
+    },
+    "meal_health_archetype": {
+      "kind": "string"
+    },
+    "on_turn_start": {
+      "kind": "array",
+      "items": {
+        "kind": "object",
+        "fields": {
+          "type": {
+            "kind": "string"
+          },
+          "token_id": {
+            "kind": "string"
+          },
+          "zone": {
+            "kind": "string"
+          }
+        }
+      }
+    },
+    "return_attached_on_ko": {
+      "kind": "boolean"
+    },
+    "draw_on_attached_attack": {
+      "kind": "number"
+    },
+    "expansion_id": {
+      "kind": "string"
+    },
+    "unlock_week": {
+      "kind": "number"
+    },
+    "prototype": {
+      "kind": "boolean"
+    },
+    "special_serve": {
+      "kind": "object",
+      "fields": {
+        "recipe": {
+          "kind": "array",
+          "items": {
+            "kind": "string"
+          }
+        },
+        "ingredient_filter": {
+          "kind": "object",
+          "fields": {
+            "spiced": {
+              "kind": "boolean"
+            },
+            "min_attack": {
+              "kind": "number"
+            },
+            "keyword": {
+              "kind": "string"
+            },
+            "min_health": {
+              "kind": "number"
+            },
+            "damaged": {
+              "kind": "boolean"
+            },
+            "token": {
+              "kind": "boolean"
+            }
+          }
+        },
+        "text": {
+          "kind": "string"
+        },
+        "require_ready": {
+          "kind": "boolean"
+        }
+      }
+    },
+    "is_token": {
+      "kind": "boolean"
+    }
+  },
+  "effects": [
+    {
+      "type": "damage_enemy_player",
+      "amount": 1
+    },
+    {
+      "type": "search",
+      "archetype": "spicy"
+    },
+    {
+      "type": "discard_hand_then_draw_if_any",
+      "amount": 3
+    },
+    {
+      "type": "discard_top_then_buff_if_unit",
+      "attack": 1,
+      "health": 1
+    },
+    {
+      "type": "draw",
+      "amount": 1
+    },
+    {
+      "type": "return_enemy_ingredient"
+    },
+    {
+      "type": "search",
+      "archetype": "sweet"
+    },
+    {
+      "type": "disable_enemy_items_next_turn"
+    },
+    {
+      "type": "heal_unit",
+      "amount": 2,
+      "target": "selected"
+    },
+    {
+      "type": "heal_player",
+      "amount": 2
+    },
+    {
+      "type": "heal_all_friendly_units",
+      "amount": 1
+    },
+    {
+      "type": "create_token",
+      "token_id": "token_fresh_ingredient",
+      "zone": "prep"
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "destination": "prep",
+      "exclude_card_id": "fresh_crisp_capybara"
+    },
+    {
+      "type": "damage_all_enemy_plated",
+      "amount": 1
+    },
+    {
+      "type": "damage_prep_unit",
+      "amount": 1
+    },
+    {
+      "type": "damage_enemy_prep",
+      "amount": 2
+    },
+    {
+      "type": "recover",
+      "amount": 1,
+      "card_types": [
+        "ingredient",
+        "meal"
+      ]
+    },
+    {
+      "type": "sacrifice_friendly_then_damage_all_enemy_units_by_attack"
+    },
+    {
+      "type": "revive",
+      "amount": 1,
+      "card_types": [
+        "ingredient",
+        "meal"
+      ]
+    },
+    {
+      "type": "buff_self_from_discard_attack"
+    },
+    {
+      "type": "disable_enemy_chefs_next_turn"
+    },
+    {
+      "type": "draw",
+      "amount": 2
+    },
+    {
+      "type": "buff_friendly_unit",
+      "attack": 1,
+      "health": 1,
+      "target": "selected"
+    },
+    {
+      "type": "buff_self",
+      "attack": 2,
+      "health": 2
+    },
+    {
+      "type": "heal_player",
+      "amount": 5
+    },
+    {
+      "type": "discard_all_friendly_prep_then_buff_self",
+      "attack_per_card": 1,
+      "health_per_card": 1
+    },
+    {
+      "type": "fill_prep_with_tokens",
+      "token_id": "token_fresh_ingredient"
+    },
+    {
+      "type": "absorb_all_friendly_units"
+    },
+    {
+      "type": "damage_all_enemy_units",
+      "amount": 2
+    },
+    {
+      "type": "damage_enemy_player",
+      "amount": 2
+    },
+    {
+      "type": "recycle",
+      "amount": 2
+    },
+    {
+      "type": "switch_friendly_zones"
+    },
+    {
+      "type": "search",
+      "card_types": [
+        "ingredient",
+        "meal"
+      ]
+    },
+    {
+      "type": "discard_hand"
+    },
+    {
+      "type": "draw",
+      "amount": 4
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient"
+    },
+    {
+      "type": "search",
+      "card_type": "meal"
+    },
+    {
+      "type": "revive",
+      "amount": 1,
+      "card_type": "meal"
+    },
+    {
+      "type": "draw",
+      "amount": 3
+    },
+    {
+      "type": "destroy_all_plated_units"
+    },
+    {
+      "type": "search",
+      "card_type": "environment"
+    },
+    {
+      "type": "recover",
+      "amount": 2,
+      "card_types": [
+        "ingredient",
+        "meal"
+      ]
+    },
+    {
+      "type": "switch_two_each"
+    },
+    {
+      "type": "shuffle_both_hands_then_draw",
+      "amount": 4
+    },
+    {
+      "type": "draw_to_hand_size",
+      "amount": 5
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "archetype": "spicy"
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "archetype": "sweet"
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "archetype": "hearty"
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "archetype": "fresh"
+    },
+    {
+      "type": "search",
+      "card_type": "ingredient",
+      "archetype": "funky"
+    },
+    {
+      "type": "destroy_enemy_unit"
+    },
+    {
+      "type": "look_and_take",
+      "count": 4,
+      "card_type": "tool"
+    },
+    {
+      "type": "switch_enemy_zones"
+    },
+    {
+      "type": "swap_attack_health"
+    },
+    {
+      "type": "remove_enemy_spice"
+    },
+    {
+      "type": "recover",
+      "amount": 1,
+      "archetype": "funky"
+    },
+    {
+      "type": "buff_self",
+      "attack": 1
+    },
+    {
+      "type": "buff_self",
+      "health": 1
+    },
+    {
+      "type": "recover",
+      "amount": 1,
+      "card_types": [
+        "ingredient"
+      ]
+    }
+  ]
+}

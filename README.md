@@ -1,6 +1,8 @@
-# TOP CUT: Locals to Worlds
+# See You at Locals
 
-TOP CUT: Locals to Worlds is a cozy roguelike deckbuilder about starting at tiny neighborhood card-game locals and choosing a path toward a championship in the stars. The current public run promotes the illustrated Starter City overworld into a branching map while retaining the tactical Kitchen Match card game.
+See You at Locals is a cozy roguelike deckbuilder about an afternoon at your neighborhood card shop—and building a deck that can reach Worlds. Pull up a chair, meet the regulars, tune your deck between rounds, and play the tactical Kitchen Match card game.
+
+The current presentation uses paper scorecards, fabric playmats, straightforward blue action tabs, and a welcoming tournament hub. See [Concept Direction](CONCEPT_DIRECTION.md) for the run-loop source of truth and [Art Direction](ART_DIRECTION.md) for the September 2026 locals pivot. Replaceable generated illustration is listed in [the art register](docs/generated-art-register.md); title lettering, the app icon, playmat markings, and interface chrome are editable code or vectors.
 
 Current demo version: `0.1.0-demo.1`. The production catalog is locked to the 87 cards in `data/cards.json`; the rules service also creates one non-collectible Fresh Ingredient token at runtime.
 
@@ -26,11 +28,14 @@ The centered opening screen keeps the run actions directly beneath the logo:
 - **New Game** — choose a Spicy, Hearty, or Sweet 15-card starter and enter Starter City.
 - **How to Play** — follow a seven-step visual walkthrough of recipes, zones, combat, and the turn sequence.
 
-The title screen also keeps a direct **Debug Menu** entry for development access to the three starters and isolated test surfaces.
+The title screen keeps **Settings** at the lower right. With `--dev`, its options also expose the **Debug menu** for isolated test surfaces.
 
 Runs autosave after progression changes and navigation, as well as before returning to the title or closing the game. Saves are versioned and retain a known-good backup for recovery.
 
-## Starter City Run
+## Legacy route prototype
+
+The following route-map sequence describes the older demo prototype. New work
+uses the tournament-hub run in `CONCEPT_DIRECTION.md`.
 
 1. Choose a Spicy, Hearty, or Sweet 15-card starter with 40 persistent life.
 2. Choose a connected Enemy, Shop, or Event stop on the seeded Starter City route.
@@ -73,7 +78,7 @@ Build the versioned, itch-ready Web ZIP (this runs the release gate first):
 scripts/release/build_itch_release.sh
 ```
 
-The artifact is written to `builds/top-cut-locals-to-worlds-<version>-itch-web.zip`, with `index.html` at the ZIP root. Complete the [Chrome, Safari, and Firefox QA matrix](docs/browser-qa.md) against that exact artifact before publishing.
+The artifact is written to `builds/see-you-at-locals-<version>-itch-web.zip`, with `index.html` at the ZIP root. Complete the [Chrome, Safari, and Firefox QA matrix](docs/browser-qa.md) against that exact artifact before publishing.
 
 Pull requests and pushes to `main` or `codex/**` run the same gate in GitHub Actions and retain the versioned itch ZIP for 14 days.
 

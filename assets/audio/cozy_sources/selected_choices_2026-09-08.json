@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "purpose": "Audio pairing preferences; importing this file does not itself change game audio.",
+  "updated_at": "2026-09-08T22:31:48.235Z",
+  "preserve": [
+    "original_shop_bell",
+    "actual_reshuffle_only",
+    "attack_contact_timing"
+  ],
+  "choices": [
+    {
+      "action": "ui_click",
+      "label": "Press a button",
+      "selection": "a",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_In_01.wav",
+          "pack": "Cute & Cozy UI Audio Pack",
+          "seconds": 0.104
+        }
+      ],
+      "audition_gain_db": -15
+    },
+    {
+      "action": "card_draw",
+      "label": "Draw a card",
+      "selection": "a",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Documents/Road to Worlds/assets/audio/kenney_casino/card-slide-1.ogg",
+          "pack": "Kenney Casino Audio",
+          "seconds": 0.601
+        }
+      ],
+      "audition_gain_db": -20
+    },
+    {
+      "action": "card_play",
+      "label": "Place a card",
+      "selection": "current",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Documents/Road to Worlds/assets/audio/kenney_casino/card-place-1.ogg",
+          "pack": "Kenney Casino Audio",
+          "seconds": 0.689
+        },
+        {
+          "path": "/Users/jack.bydalek/Documents/Road to Worlds/assets/audio/kenney_casino/card-place-2.ogg",
+          "pack": "Kenney Casino Audio",
+          "seconds": 0.459
+        },
+        {
+          "path": "/Users/jack.bydalek/Documents/Road to Worlds/assets/audio/kenney_casino/card-place-3.ogg",
+          "pack": "Kenney Casino Audio",
+          "seconds": 0.883
+        },
+        {
+          "path": "/Users/jack.bydalek/Documents/Road to Worlds/assets/audio/kenney_casino/card-place-4.ogg",
+          "pack": "Kenney Casino Audio",
+          "seconds": 0.601
+        }
+      ],
+      "audition_gain_db": -18
+    },
+    {
+      "action": "normal_hit",
+      "label": "Unit attack connects",
+      "selection": "b",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactPunch_medium_000.ogg",
+          "pack": "Kenney Impact Sounds",
+          "seconds": 0.431
+        }
+      ],
+      "audition_gain_db": -5
+    },
+    {
+      "action": "heavy_hit",
+      "label": "Meal hits the opponent",
+      "selection": "b",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactPunch_heavy_000.ogg",
+          "pack": "Kenney Impact Sounds",
+          "seconds": 0.649
+        }
+      ],
+      "audition_gain_db": -3
+    },
+    {
+      "action": "ability",
+      "label": "Activate an ability",
+      "selection": "a",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Confirm_05.wav",
+          "pack": "Cute & Cozy UI Audio Pack",
+          "seconds": 0.831
+        }
+      ],
+      "audition_gain_db": -18
+    },
+    {
+      "action": "heal",
+      "label": "Recover health",
+      "selection": "b",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Dialogue/Dialogue_Expression_Positive_01.wav",
+          "pack": "Cute & Cozy UI Audio Pack",
+          "seconds": 0.395
+        }
+      ],
+      "audition_gain_db": -14
+    },
+    {
+      "action": "purchase",
+      "label": "Buy a card",
+      "selection": "a",
+      "notes": "",
+      "clips": [
+        {
+          "path": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Purchase_01.wav",
+          "pack": "Cute & Cozy UI Audio Pack",
+          "seconds": 0.932
+        }
+      ],
+      "audition_gain_db": -16
+    }
+  ]
+}

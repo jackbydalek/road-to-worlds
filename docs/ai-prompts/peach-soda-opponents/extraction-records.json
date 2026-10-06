@@ -1,0 +1,336 @@
+[
+  {
+    "name": "pip",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/01-pip.png",
+    "source_sha256": "7e43bfe2df0a9fdafa732f1718523e9d1585f17fa83728beee11c8029b57e09b",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      278,
+      87,
+      1173,
+      940
+    ],
+    "source_resting_arm_y": 940,
+    "background_seeds": [
+      [
+        720,
+        949
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/pip.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -2,
+      60
+    ],
+    "foreground_bounds": [
+      276,
+      147,
+      1171,
+      1000
+    ],
+    "alpha_zero_pixels": 1258227,
+    "alpha_partial_pixels": 0,
+    "sha256": "e7e468183a129a3a51df6e8032b9f26e6599ca93484f21650044dedd1b1ff030"
+  },
+  {
+    "name": "otis",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/02-otis.png",
+    "source_sha256": "b9ee7b08c3ed26029651af246920f7ba84330a209d536d531c0d16a6b7e2ade6",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      244,
+      80,
+      1218,
+      996
+    ],
+    "source_resting_arm_y": 970,
+    "background_seeds": [],
+    "output": "assets/generated/peach_soda_opponents/otis.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -7,
+      30
+    ],
+    "foreground_bounds": [
+      237,
+      110,
+      1211,
+      1026
+    ],
+    "alpha_zero_pixels": 1170291,
+    "alpha_partial_pixels": 0,
+    "sha256": "fb6bc897d2bead140b9891fdfb87931ce76c0c76e7f5f3aca71c72e87061b4ee"
+  },
+  {
+    "name": "ines",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/03-ines.png",
+    "source_sha256": "3626c1553188d910b5b17d9fef79d3f4f0f5b2127f81e99c72369a869d32c6f8",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      354,
+      67,
+      1180,
+      952
+    ],
+    "source_resting_arm_y": 950,
+    "background_seeds": [
+      [
+        595,
+        839
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/ines.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -43,
+      50
+    ],
+    "foreground_bounds": [
+      311,
+      117,
+      1137,
+      1002
+    ],
+    "alpha_zero_pixels": 1247587,
+    "alpha_partial_pixels": 0,
+    "sha256": "63d6e291b871bcb60e36eb4c10305d8f3bec7eab02e73ae559dc1552af592719"
+  },
+  {
+    "name": "sana",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/04-sana.png",
+    "source_sha256": "b156f8f6667180260c829d21b847028cf3aba09a539e743f713d8f96ac1ad4d6",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      296,
+      27,
+      1197,
+      982
+    ],
+    "source_resting_arm_y": 972,
+    "background_seeds": [],
+    "output": "assets/generated/peach_soda_opponents/sana.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -22,
+      28
+    ],
+    "foreground_bounds": [
+      274,
+      55,
+      1175,
+      1010
+    ],
+    "alpha_zero_pixels": 1225675,
+    "alpha_partial_pixels": 0,
+    "sha256": "9a3cde816ff5f7e870cbeb9e95d26fcbdf2f3cc0fb851a08daf3222a9a3e1b06"
+  },
+  {
+    "name": "milo",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/05-milo.png",
+    "source_sha256": "df1ff0a13bda70fb3091e4017bd6f471f4d684a31025ae4c603394ec09373309",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      257,
+      45,
+      1229,
+      968
+    ],
+    "source_resting_arm_y": 954,
+    "background_seeds": [
+      [
+        513,
+        761
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/milo.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -19,
+      46
+    ],
+    "foreground_bounds": [
+      238,
+      91,
+      1210,
+      1014
+    ],
+    "alpha_zero_pixels": 1174041,
+    "alpha_partial_pixels": 0,
+    "sha256": "76fb0cb2cbe4663f303b1dd0ec5651c73720995c48a3a20a633bf70733e6cd19"
+  },
+  {
+    "name": "bea",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/06-bea.png",
+    "source_sha256": "862380878e1a5aade86c991064e5aa0ca3cf263ca7a6822885128d2e15e3c47e",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      303,
+      60,
+      1172,
+      945
+    ],
+    "source_resting_arm_y": 947,
+    "background_seeds": [
+      [
+        721,
+        920
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/bea.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -14,
+      53
+    ],
+    "foreground_bounds": [
+      289,
+      113,
+      1158,
+      998
+    ],
+    "alpha_zero_pixels": 1277963,
+    "alpha_partial_pixels": 0,
+    "sha256": "c33f5dd98603e0c5dae941ee3ca745ddbbbe05021830713a5cf5f60c68a99ae8"
+  },
+  {
+    "name": "kit",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/07-kit.png",
+    "source_sha256": "382a5b92d4715bfc65c5cf14ae6a2c1161bead4cbcc3b29651f1cdec4e4ce20f",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      261,
+      58,
+      1261,
+      1074
+    ],
+    "source_resting_arm_y": 973,
+    "background_seeds": [
+      [
+        1022,
+        815
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/kit.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -37,
+      27
+    ],
+    "foreground_bounds": [
+      224,
+      85,
+      1224,
+      1101
+    ],
+    "alpha_zero_pixels": 1203402,
+    "alpha_partial_pixels": 0,
+    "sha256": "6cbaae10e8e0fe28c127ea8d90dad2c84efa6e53040d25ce759c111afb1462a8"
+  },
+  {
+    "name": "ellis",
+    "source": "outputs/locals_opponents/peach_soda_cast_v1/08-ellis.png",
+    "source_sha256": "3696b838effa9fa698c3dc939e1fdaf2aa4d18f6042b6d763c75a27a98b364f4",
+    "source_dimensions": [
+      1448,
+      1086
+    ],
+    "source_foreground_bounds": [
+      253,
+      35,
+      1216,
+      993
+    ],
+    "source_resting_arm_y": 952,
+    "background_seeds": [
+      [
+        495,
+        821
+      ],
+      [
+        990,
+        818
+      ],
+      [
+        721,
+        930
+      ]
+    ],
+    "output": "assets/generated/peach_soda_opponents/ellis.png",
+    "dimensions": [
+      1448,
+      1200
+    ],
+    "mode": "RGBA",
+    "resting_arm_y": 1000,
+    "paste_offset": [
+      -10,
+      48
+    ],
+    "foreground_bounds": [
+      243,
+      83,
+      1206,
+      1041
+    ],
+    "alpha_zero_pixels": 1241629,
+    "alpha_partial_pixels": 0,
+    "sha256": "73d617814b7dbeb443239934749b5b9202dc208ecbad837cb557e148ddd3b401"
+  }
+]

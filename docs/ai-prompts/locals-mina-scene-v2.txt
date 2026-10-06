@@ -1,0 +1,13 @@
+Tool: OpenAI built-in image generation (image_gen.imagegen).
+Date: 2026-09-06.
+Edit target: assets/generated/locals_card_shop/locals-room-reference-v2.png.
+Authoritative character/composition reference: docs/references/locals-table-source-of-truth.jpg.
+Original generated output: exec-dce655af-4fc4-4d3a-b1b4-54c434bababb.png.
+Current output: assets/generated/locals_card_shop/locals-mina-scene-v2.png.
+Returned image: 1585×992 opaque RGB PNG, approximately 16:10; copied unchanged.
+This is an opaque scene variant with embedded Mina, not a transparent cutout. Its HUD portrait is a code-defined AtlasTexture crop of the same image.
+
+Exact generation prompt:
+
+Use case: precise-object-edit / game production background.
+Image 1 is the EDIT TARGET: the clean illustrated room plate. Image 2 is the AUTHORITATIVE original reference for the seated character and their placement. Make exactly one change to Image 1: restore the central brown-haired seated rival from Image 2, in the same pose, size, rich linework and lighting as in Image 2. Their head is near the top edge, the silhouette spans x=38% to61%, and their elbows rest on the table horizon at y=27% to28.5%. They rest their cheek on one hand and hold sleeved cards with the other. Keep the character's identity/clothes/pendant/pose precisely from Image 2. Keep ALL other Image 1 pixels and framing unchanged as far as possible: same shop, props and broad wooden table. Do NOT restore the playmat, game cards, card piles, foreground hand, or UI. The entire tabletop below y=29% must stay exactly the clear wood from Image 1 except its existing peripheral props. Output opaque 16:10 production background. No additional new objects.

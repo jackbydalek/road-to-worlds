@@ -27,13 +27,23 @@ const VALID_CLIPS := [
 	"15_saladmander_summon",
 	"16_sweet_jellyfish_bounce",
 	"17_firecracker_bench_hit",
+	"18_tournament_hub",
+	"19_healing_save",
+	"20_polar_power_move",
+	"21_sharkcake_draw",
+	"22_shrimp_full_combo",
 ]
 
 var main
 var curtain: ColorRect
+var master_viewport: SubViewport
+var master_frame := 0
 
 
 func _init() -> void:
+	# Opt-in offline master capture; leave normal gameplay and preview costs alone.
+	var high_quality := OS.get_environment("TOP_CUT_TRAILER_HQ") == "1"
+	root.set_meta("trailer_high_quality", high_quality)
 	root.size = CAPTURE_SIZE
 	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	root.set_meta("reduced_motion", false)
@@ -50,7 +60,18 @@ func _run() -> void:
 		return
 
 	main = MAIN_SCENE.instantiate()
-	root.add_child(main)
+	if root.get_meta("trailer_high_quality", false):
+		master_viewport = SubViewport.new()
+		master_viewport.size = CAPTURE_SIZE * 2
+		master_viewport.size_2d_override = Vector2i(1600, 900)
+		master_viewport.size_2d_override_stretch = true
+		master_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		root.add_child(master_viewport)
+		curtain.reparent(master_viewport)
+		master_viewport.add_child(main)
+		RenderingServer.frame_post_draw.connect(_save_master_frame)
+	else:
+		root.add_child(main)
 	await _settle(14)
 	main.autosave_enabled = false
 	main.autosave_suspended = true
@@ -60,6 +81,12 @@ func _run() -> void:
 	main.rng.seed = 20260827
 
 	match clip_id:
+		"22_shrimp_full_combo":
+			await _capture_shrimp_full_combo()
+		"19_healing_save", "20_polar_power_move", "21_sharkcake_draw":
+			await _capture_combat_variety(clip_id)
+		"18_tournament_hub":
+			await _capture_tournament_hub()
 		"01_combat_hook":
 			await _capture_combat_hook()
 		"02_title":
@@ -99,6 +126,28 @@ func _run() -> void:
 	await _hold(0.12)
 	print("TRAILER_CLIP_CAPTURED ", clip_id)
 	quit()
+
+
+func _capture_tournament_hub() -> void:
+	_start_capture_run("spicy")
+	main.run.pending_route_node = {}
+	main.run.route_battle = {}
+	main.run.hub_round = 2
+	main.run.life = 25
+	main.run.money = 12
+	main.run.hub_break_used = false
+	main.run.hub_shop = {
+		"id": "locals_card_shop", "type": "shop", "hub_shop": true,
+		"inventory": ["spicy_jalapeno_panther", "item_switchblade", "spicy_hot_honey_bee", "spicy_sriracharrow"],
+	}
+	main.run.hub_notice = "Prepare for your next match. Your life and deck carry into every round."
+	main._show_tournament_hub()
+	await _settle(24)
+	await _fade_from_dark(0.4)
+	await _hold(3.2)
+	main._use_hub_break_heal()
+	await _hold(2.8)
+	await _fade_to_dark(0.3)
 
 
 func _capture_combat_hook() -> void:
@@ -148,7 +197,7 @@ func _capture_logo_end_card() -> void:
 		shop_sign.offset_bottom = 170.0
 	await _settle(3)
 	await _fade_from_dark(0.5)
-	await _hold(4.0)
+	await _hold(5.5 if root.get_meta("trailer_high_quality", false) else 4.0)
 
 
 func _capture_starter_choice() -> void:
@@ -361,12 +410,54 @@ func _capture_firecracker_bench_hit() -> void:
 	await _hold(1.45)
 
 
+func _capture_shrimp_full_combo() -> void:
+	var tabletop: Node = await _open_trailer_match("spicy", "hearty", "Rival Mina", 20260907, 16)
+	if tabletop == null:
+		return
+	_stage_firecracker_bench_board(tabletop)
+	var state: Dictionary = tabletop.state
+	state.player.plated.clear()
+	state.player.environment = ""
+	state.player.hand = ["spicy_firecracker_shrimp", "spicy_sriracharrow", "item_switchblade"]
+	var ingredient := _add_unit(tabletop, "player", "spicy_jalapeno_panther", "prep", 1, true)
+	for unit in state.player.prep:
+		unit.recipe_ready_on_turn = int(state.player.turns_started)
+	state.opponent.plated.clear()
+	var defender := _add_unit(tabletop, "opponent", "hearty_macaroni_manatee", "plated", 0, true)
+	tabletop.service.clear_animation_events(state)
+	tabletop._render_match()
+	await _settle(8)
+	await _fade_from_dark(0.3)
+	await _hold(0.4)
+	await tabletop._play_hand_card(0, "plated", 1)
+	for unit in state.player.prep:
+		tabletop.service.toggle_ingredient_selection(state, int(unit.instance_id))
+	tabletop._render_match()
+	await _hold(0.3)
+	print("SHRIMP_SUMMON_FRAME ", master_frame)
+	await tabletop._confirm_meal_play()
+	assert(state.player.plated.size() == 1, "Shrimp summon failed")
+	var shrimp: Dictionary = state.player.plated[0]
+	assert(String(shrimp.card_id) == "spicy_firecracker_shrimp")
+	await _hold(0.2)
+	print("SHRIMP_ATTACK_FRAME ", master_frame)
+	await _drag_attack_to_unit(tabletop, int(shrimp.instance_id), int(defender.instance_id), 0.35, 0.2)
+	await _hold(0.2)
+	print("SHRIMP_PING_FRAME ", master_frame)
+	await tabletop._choose_effect_target_animated(int(tabletop.get_meta("trailer_firecracker_bench_id")))
+	assert(state.pending_choice.is_empty(), "Shrimp ping did not resolve")
+	print("SHRIMP_DONE_FRAME ", master_frame)
+	await _hold(1.0)
+
+
 func _capture_shop_purchase() -> void:
 	_start_capture_run("spicy")
 	main.run.money = 30
 	main.run.pending_route_node = {
 		"id": "trailer_shop",
 		"type": "shop",
+		"hub_shop": bool(root.get_meta("trailer_high_quality", false)),
+		"hub_view": "counter",
 		"label": "Corner Card Counter",
 		"inventory": [
 			"spicy_jalapeno_panther",
@@ -432,6 +523,8 @@ func _capture_upgrade_foil() -> void:
 		"id": "trailer_upgrade_shop",
 		"type": "shop",
 		"label": "Corner Card Counter",
+		"hub_shop": bool(root.get_meta("trailer_high_quality", false)),
+		"hub_view": "counter",
 	}
 	main._show_route_shop()
 	await _settle(16)
@@ -448,7 +541,7 @@ func _capture_upgrade_foil() -> void:
 	main._select_route_shop_service_card("upgrade", card_id)
 	await _hold(0.65)
 	await main._route_upgrade_card(card_id)
-	await _hold(1.65)
+	await _hold(3.5 if root.get_meta("trailer_high_quality", false) else 1.65)
 
 
 func _capture_battle_combo() -> void:
@@ -476,6 +569,61 @@ func _capture_battle_combo() -> void:
 	await _hold(0.55)
 	await _drag_attack_to_chef(tabletop, gazelle_id, 0.58, 0.5)
 	await _hold(1.05)
+
+
+func _capture_combat_variety(clip_id: String) -> void:
+	var sweet := clip_id == "21_sharkcake_draw"
+	var tabletop: Node = await _open_trailer_match("sweet" if sweet else "hearty", "spicy", "Rival Kai", 20260906, 18)
+	if tabletop == null:
+		return
+	var state: Dictionary = tabletop.state
+	_reset_trailer_board_state(state)
+	state.opponent.life = 18
+	state.opponent.max_life = 18
+	state.opponent.deck = ["spicy_sriracharrow", "spicy_hot_honey_bee"]
+	_add_unit(tabletop, "opponent", "spicy_firecracker_shrimp", "plated", 0, true)
+	_add_unit(tabletop, "opponent", "spicy_jalapeno_panther", "prep", 1, false)
+	_add_unit(tabletop, "opponent", "spicy_wasabi_wasp", "prep", 2, false)
+	state.player.hand = ["hearty_ramen_ram", "item_wooden_spoon", "hearty_macaroni_manatee"]
+	state.player.deck = ["hearty_bagver", "hearty_french_bread_dog", "hearty_gravy_gazelle"]
+	var subject: Dictionary
+	if clip_id == "19_healing_save":
+		subject = _add_unit(tabletop, "player", "hearty_lasagnama", "plated", 0, true)
+		subject.health = 1
+		_add_unit(tabletop, "player", "hearty_gravy_gazelle", "plated", 1, true)
+	elif clip_id == "20_polar_power_move":
+		subject = _add_unit(tabletop, "player", "hearty_polar_pot_pie_bear", "prep", 1, true)
+		_add_unit(tabletop, "player", "hearty_bagver", "prep", 0, true)
+	else:
+		state.player.hand = ["sweet_strawberry_sharkcake", "item_wooden_spoon"]
+		state.player.deck = ["sweet_sugar_glider", "sweet_jellyfish", "sweet_caramel_camel", "sweet_soft_serve_crab"]
+		subject = _add_unit(tabletop, "player", "sweet_caramel_camel", "prep", 1, true)
+		subject.recipe_ready_on_turn = int(state.player.turns_started)
+		_add_unit(tabletop, "player", "sweet_soft_serve_crab", "plated", 0, true)
+	tabletop.service.clear_animation_events(state)
+	tabletop._render_match()
+	await _settle(8)
+	await _fade_from_dark(0.3)
+	await _hold(0.6)
+	print("VARIETY_ACTION_FRAME ", master_frame)
+	if clip_id == "19_healing_save":
+		await tabletop._play_hand_card(0, "prep", 1)
+		await _hold(0.5)
+		await tabletop._choose_effect_target_animated(int(subject.instance_id))
+		assert(int(subject.health) > 1, "Healing did not resolve")
+	elif clip_id == "20_polar_power_move":
+		await _drag_switch_to_slot(tabletop, int(subject.instance_id), "player_plated", 0, 0.55, 0.3)
+		assert(int(subject.attack) >= 5, "Polar move buff did not resolve")
+	else:
+		await tabletop._play_hand_card(0, "plated", 1)
+		await _hold(0.4)
+		tabletop.service.toggle_ingredient_selection(state, int(subject.instance_id))
+		tabletop._render_match()
+		await _hold(0.4)
+		await tabletop._confirm_meal_play()
+		assert(state.player.hand.size() >= 3, "Sharkcake draw did not resolve")
+	print("VARIETY_RESOLVED_FRAME ", master_frame)
+	await _hold(2.0)
 
 
 func _capture_city_champion() -> void:
@@ -544,6 +692,9 @@ func _open_trailer_match(
 	var tabletop: Node = main.find_child("Tabletop3DPrototype", true, false)
 	if tabletop == null:
 		push_error("Trailer battle clip could not create the Living Table.")
+	elif root.get_meta("trailer_high_quality", false):
+		# Production now renders at the actual output density automatically.
+		print("TRAILER_HQ_VIEWPORT root=", root.size, " world=", tabletop.world_viewport.size)
 	return tabletop
 
 
@@ -648,11 +799,6 @@ func _animate_trailer_bounce(tabletop: Node, target_instance_id: int) -> void:
 	var midpoint := origin.lerp(destination, 0.5) + Vector3(0.0, 1.45, 0.0)
 	var accent := Color("#26C7ED")
 	tabletop._play_random_card_sound(tabletop.SLIDE_CARD_SOUNDS, -1.0, 0.04)
-	tabletop._spawn_movement_trail_screen(
-		tabletop._world_to_container(origin + Vector3(0.0, 0.24, 0.0)),
-		tabletop._world_to_container(destination + Vector3(0.0, 0.24, 0.0)),
-		accent
-	)
 	tabletop._play_graphic_vfx_world("card_land", origin, accent)
 	tabletop._spawn_particle_burst(origin + Vector3(0.0, 0.24, 0.0), accent, 11, "◆")
 	var movement := target_card.create_tween()
@@ -947,6 +1093,20 @@ func _fade_to_dark(duration: float) -> void:
 
 func _hold(seconds: float) -> void:
 	await create_timer(seconds).timeout
+
+
+func _save_master_frame() -> void:
+	var frame_dir := OS.get_environment("TOP_CUT_TRAILER_FRAMES")
+	if frame_dir.is_empty():
+		push_error("TOP_CUT_TRAILER_FRAMES must name an existing output directory.")
+		quit(2)
+		return
+	var error := master_viewport.get_texture().get_image().save_png(
+		frame_dir.path_join("frame_%06d.png" % master_frame))
+	if error != OK:
+		push_error("Could not save lossless trailer frame: %s" % error)
+		quit(2)
+	master_frame += 1
 
 
 func _settle(frame_count: int) -> void:

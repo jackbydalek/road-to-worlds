@@ -108,6 +108,16 @@ func load_all() -> bool:
 		cards.append(card)
 		cards_by_id[String(card.get("id", ""))] = card
 
+	var weekly_cards := preload("res://scripts/WeeklyDemoService.gd").read_json(preload("res://scripts/WeeklyDemoService.gd").CARDS_PATH)
+	var weekly_expansion: Dictionary = weekly_cards.get("expansion", {})
+	expansions.append(weekly_expansion)
+	expansions_by_id[String(weekly_expansion.get("id", "second_helpings"))] = weekly_expansion
+	for source_card in weekly_cards.get("cards", []):
+		var card: Dictionary = source_card.duplicate(true)
+		_decorate_card(card, "second_helpings")
+		cards.append(card)
+		cards_by_id[String(card.id)] = card
+
 	_build_archetypes(card_data.get("decks", {}))
 
 	for booster in booster_data.get("boosters", []):

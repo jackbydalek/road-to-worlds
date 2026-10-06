@@ -1,0 +1,786 @@
+{
+  "date": "2026-09-08",
+  "source": "Owner-supplied Desktop packs; selected files copied byte-for-byte. No generated audio or audio processing.",
+  "assets": [
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Button_Pressed_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Button_Pressed_03.wav",
+      "sha256": "6e0fa293d319208b6d37d47936ef600fbbbd093e4a39798184fbdf68a5f8cefa"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Button_Pressed_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Button_Pressed_04.wav",
+      "sha256": "bc0906286fb3bcb47a665fd065c2ac11e348c02e82b74501c1a4dd5052737fa1"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Button_Pressed_06.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Button_Pressed_06.wav",
+      "sha256": "1c888162672fd4e41c4343da6802073f23e2a952a85bbad7ccdace01ff179f6c"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_In_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_In_01.wav",
+      "sha256": "c109a23f1a3832accbf6cac302b39edb58d00f4a3ccd64e79fa56faced8a732f"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_In_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_In_02.wav",
+      "sha256": "a4cf7be10dc8348fb55ea761107311d27993d9755eb0ff211f76ac4f5079d3c6"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_In_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_In_03.wav",
+      "sha256": "7627663d6b147b2726485ae85ee183117ebeb84e74ab77c6d40d243638f1cfec"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_Out_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_Out_01.wav",
+      "sha256": "8ea1ae5830869c3bd2b17bbe1532e497605090e5a8aa901fe7a2e88621eed4af"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_Out_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_Out_03.wav",
+      "sha256": "0e68245724d22513523084868ea4ff5f2a2178fc03643b876274c2964939c79e"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Clicked_Out_06.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Clicked_Out_06.wav",
+      "sha256": "55ebdea7ed04c62c75cabbac037a051e3ce22cdaed59c3fda8ffb09f4206bef9"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Confirm_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Confirm_01.wav",
+      "sha256": "83d962e762f155992b2f5779af51cf09222c2f030edb4ac2ceab99b8605c48c5"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Confirm_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Confirm_02.wav",
+      "sha256": "e988e1f8c3d8248310f1a1f73616fc7e0f6cb4d74a765b6ef3a22122ac5fa474"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Confirm_09.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Confirm_09.wav",
+      "sha256": "86b05a0f3889af366966fed7a7a590d269346006691369e1ee1e76215ccf3d5d"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Highlight_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Highlight_01.wav",
+      "sha256": "1c5e7fa1dba675e9ac9f0974cccd1ca9844bcf114e55ad5898fa9ae344efbb28"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Highlight_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Highlight_02.wav",
+      "sha256": "7dbf69e920b51c7de6c4ed4299b065efcd58db12df0df7c7a1d7ca7d00097e54"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Highlight_06.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Highlight_06.wav",
+      "sha256": "2f95403d76ecc43184e694dc87185ebae814edc6f26ecb015bc2844d2186726e"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Cancel_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Cancel_02.wav",
+      "sha256": "a47009c92b62be0391ab95eb95b2d844e90d058613a3bc61bb036b6e65104196"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Cancel_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Cancel_03.wav",
+      "sha256": "f437ae6adfce760a8428d644e1783bb4e26da7e5b9ca97095e987476a6a444a0"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Unlock_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Unlock_01.wav",
+      "sha256": "9749dfd049231f2c23c900f46bc62dce1b680c663c9d629c1821e961285ec452"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Unlock_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Unlock_02.wav",
+      "sha256": "3f27dcd73d255c8223ca30ca0438634bd51a42635fd58bca793e18775d913562"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Menu_Open_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Menu_Open_01.wav",
+      "sha256": "fc6ff56d2a718ecced9c07bffe697b663ea0ea1dc01267d7798004da97fb0092"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Menu_Open_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Menu_Open_02.wav",
+      "sha256": "5fe5d49b3e0a9308bbcde8da00b2f54dfb020a7cb4301fee6bdc620114427d3b"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Menu_Close_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Menu_Close_01.wav",
+      "sha256": "a74db887726a15f3cc746d1f6b38fb8b7a0402146af80f8e273b5253dfa23f7f"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Menu_Close_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Menu_Close_02.wav",
+      "sha256": "a174ab999d7b07be40c8f4f2a1fe186fec4e40bce3b68c059c9f479a0f0224de"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Transition_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Transition_03.wav",
+      "sha256": "ef065c6812c1a5bececf65f62584825969781d13f5acf7f236a6a733fa2b5d1b"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Transition_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Transition_04.wav",
+      "sha256": "9d04ce5f440a9e743f786306ac13bf1ad6673e764298e18c6e277cdb023afc76"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/Pause_05.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/Pause_05.wav",
+      "sha256": "3e59e56befb9a90122f4dbd7790275d6f8955e6624746976ec315919e84db4e2"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Menus/UnPause_05.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Menus/UnPause_05.wav",
+      "sha256": "70a40daa10842e47b9661a4678fc7f5be0dc8f8496a940de91b61480c08bdac7"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Positive/Level_Up_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Positive/Level_Up_03.wav",
+      "sha256": "58a3438cc18ec554349a49f608d8332e422603ee187e68b4bb46e61b8e826d39"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Positive/Level_Up_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Positive/Level_Up_04.wav",
+      "sha256": "2f6fa461c600c94531a0d8cdf2c668097c09fc5c89d5ec413d4bfb4f521744eb"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Positive/Success_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Positive/Success_04.wav",
+      "sha256": "c24d79df262639e863e20f4fa35d22899806f1c0d6f125631744aaeb68c481be"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Positive/Success_06.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Positive/Success_06.wav",
+      "sha256": "3dc6453e24abfa685bf28acd1a0b3a0e4ebf39b290ecff78c11a1021149d6e94"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Negative/Failure_08.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Negative/Failure_08.wav",
+      "sha256": "3d8b5fc32414654784025fc763bc4d0d142979dad99d5d07f5c7ad8257abc07d"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Negative/Error_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Negative/Error_03.wav",
+      "sha256": "01911cbb4630e89524b6740bdef4f6ae9d1aabebbd405d87632dd44357e60616"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Negative/Error_07.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Negative/Error_07.wav",
+      "sha256": "577eee5b9f646351b2fd1db84bc7f9aa87a934058be908f5cc30799b1ba92094"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Warning/Warning_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Warning/Warning_02.wav",
+      "sha256": "d9ecb95c6f28e113e8494142034984495df200d2a295d3e71081061454ae52ff"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Purchase_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Currency/Purchase_04.wav",
+      "sha256": "9a14fdbac742324abc3079d9eb4ad1d2c97a6a6b44d7e2785f44f8fd32962144"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Sell_04.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Currency/Sell_04.wav",
+      "sha256": "7402705de3c6319f267d7169ebecbc454326cf950d1eef4356f7e083c6517fff"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Currency_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Currency/Currency_02.wav",
+      "sha256": "2b87a997ca8c4f804853f1cd20d1260bb10c951780c151cde2ac57f002981c9f"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Currency_03.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Currency/Currency_03.wav",
+      "sha256": "b26012b214756473b28ec353998b5497865032c5d7bfd42b19aaddfec219ecf4"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Dialogue/Dialogue_Expression_Neutral_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Dialogue/Dialogue_Expression_Neutral_02.wav",
+      "sha256": "882f3a6a1498afe1092c6c1e28699bc7712cc801563920f9e6677d4e3f7a4655"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Dialogue/Dialogue_Expression_Positive_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Dialogue/Dialogue_Expression_Positive_02.wav",
+      "sha256": "12d07e90380ad04a354844d147d9e1f154f9158b27091cb3d950d9bc29422f9f"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Dialogue/Dialogue_Expression_Negative_02.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Dialogue/Dialogue_Expression_Negative_02.wav",
+      "sha256": "631e8cf11bc69b0a059ffa493dbddd971861a563352d0e138b84a5f36c1d33a0"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/license.txt",
+      "path": "assets/audio/ui/cute_cozy_full/license.txt",
+      "sha256": "da3ed9bdb36b8b8b85d0b3ce5b689809f6c3834cd41ebc07fc0c9ae72912aef6"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/readme.txt",
+      "path": "assets/audio/ui/cute_cozy_full/readme.txt",
+      "sha256": "b8d87a7c77e5ab08b2306c913fee6a398da9322014f4468ceed04d7b08b81eb1"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-fan-1.ogg",
+      "path": "assets/audio/kenney_casino/card-fan-1.ogg",
+      "sha256": "7a9758ccad8899baef1b9f60b4064e4baa724a548293832fdaea07e6e07e638d"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-fan-2.ogg",
+      "path": "assets/audio/kenney_casino/card-fan-2.ogg",
+      "sha256": "5743373c9dde00c6eee949a2c8e65d75946522768999167e1f5632451630e848"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-place-1.ogg",
+      "path": "assets/audio/kenney_casino/card-place-1.ogg",
+      "sha256": "d8f26c33a665dcbdcc6f632f6050bc9dd548feb0d4942d4547615926d3926810"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-place-2.ogg",
+      "path": "assets/audio/kenney_casino/card-place-2.ogg",
+      "sha256": "903d5050718595e87864dd755643b476ab1a5533080dcc2dddc72570d33ba9f8"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-place-3.ogg",
+      "path": "assets/audio/kenney_casino/card-place-3.ogg",
+      "sha256": "1d988631a6e5201ed1bb0d728f2e43a3ec79401258426858793598044ac95841"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-place-4.ogg",
+      "path": "assets/audio/kenney_casino/card-place-4.ogg",
+      "sha256": "18e3ba713b7259605fd27cdc048085ed56cf86b32403f070b6cb125019f77183"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-shove-1.ogg",
+      "path": "assets/audio/kenney_casino/card-shove-1.ogg",
+      "sha256": "1ea667aa6795d5f14239192116ebcbd8f3f47eb1c7faaf2ec56844b9067b8b06"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-shove-2.ogg",
+      "path": "assets/audio/kenney_casino/card-shove-2.ogg",
+      "sha256": "8e95c1d3ae94b5b91bc663432ad7c3bf4e03a541c22ec10fa51c65fe0e29054b"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-shove-3.ogg",
+      "path": "assets/audio/kenney_casino/card-shove-3.ogg",
+      "sha256": "399520d483a1466fcaa850b9c407b4edbd5c7f0cbdf17e84dea12e9636326d0d"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-shove-4.ogg",
+      "path": "assets/audio/kenney_casino/card-shove-4.ogg",
+      "sha256": "0a1ad3a2f16bd2ed73349e6342426ca7a59a6e26b7e26e36d51d51c2c2349d6f"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-shuffle.ogg",
+      "path": "assets/audio/kenney_casino/card-shuffle.ogg",
+      "sha256": "96c84883a30845ede723a4cf2e8369e9837e7dd4e0d4eb0212b0a7ed21b0f544"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-1.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-1.ogg",
+      "sha256": "006cf9822d15d7063f8899e56041f41646df30adb6fbd8b974ee5d5420012690"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-2.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-2.ogg",
+      "sha256": "e674a1679ec87b507047fe012d068ad2c412125f56186f0e732684705c2a6888"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-3.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-3.ogg",
+      "sha256": "af2ab62656cb3df73316ce5771b8ee1111a840962b21607e3202151e7413c52c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-4.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-4.ogg",
+      "sha256": "b9c82bcdbe6b7d00a06e2546bd2683a9ab082ca5fd090a42882f33eddd925b7f"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-5.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-5.ogg",
+      "sha256": "8638ab0c17f029aded0e27a4f9b9bb9f8c621b19a6e9975e855cb40ea63e2201"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-6.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-6.ogg",
+      "sha256": "be85da181ac879c20cb667d0f9f156dbdc236d3751737ad27359a15e946430a0"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-7.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-7.ogg",
+      "sha256": "bda2040194f43484d03ee3c65ed6fff57251882ea7227abce4214bfa30bf2705"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/card-slide-8.ogg",
+      "path": "assets/audio/kenney_casino/card-slide-8.ogg",
+      "sha256": "95d9aa26f8c63af9934f27a8e3b7e9b583f177640f0bbd6982f12dba52b9ae6b"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/cards-pack-open-1.ogg",
+      "path": "assets/audio/kenney_casino/cards-pack-open-1.ogg",
+      "sha256": "1214059fdfbf1c396c0702244fc833739cc346d326a71e450b731f456e54d6fb"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/cards-pack-open-2.ogg",
+      "path": "assets/audio/kenney_casino/cards-pack-open-2.ogg",
+      "sha256": "49e02479815c69cd303e0d8f12952c0492d5b3e555838f3485cc25a09818e6fb"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/cards-pack-take-out-1.ogg",
+      "path": "assets/audio/kenney_casino/cards-pack-take-out-1.ogg",
+      "sha256": "6d38b979f64d20e4153173187ed67b04c6c004767c0a43eddb65c75fa925a1c4"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/cards-pack-take-out-2.ogg",
+      "path": "assets/audio/kenney_casino/cards-pack-take-out-2.ogg",
+      "sha256": "d991829eeaf7e5a6f8462594e5be0d91535309ffd6249278f34eec70470395a4"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chip-lay-1.ogg",
+      "path": "assets/audio/kenney_casino/chip-lay-1.ogg",
+      "sha256": "4b2111252ccb64eed67f171e061053849cfbb29873536c03948646f244a3905c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chip-lay-2.ogg",
+      "path": "assets/audio/kenney_casino/chip-lay-2.ogg",
+      "sha256": "8ca8b2d450741c04ed7b4ba51ed3f73c2400c8b3dbe83b974be4fe4774a76712"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chip-lay-3.ogg",
+      "path": "assets/audio/kenney_casino/chip-lay-3.ogg",
+      "sha256": "bf24ebb417b6279568800dffdb0205d3ec8854c7efe179e8964755a6341727aa"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-collide-1.ogg",
+      "path": "assets/audio/kenney_casino/chips-collide-1.ogg",
+      "sha256": "f41b3d106360fc68ebc061a211d4265b4cb5fa1fbe86e4d57d3673510e2c3784"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-collide-2.ogg",
+      "path": "assets/audio/kenney_casino/chips-collide-2.ogg",
+      "sha256": "2a10c5ff4b2fbaa55a317fc258ddce3fec85bd26db2d3c2ad298b3b33ce23bc6"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-collide-3.ogg",
+      "path": "assets/audio/kenney_casino/chips-collide-3.ogg",
+      "sha256": "1c5e885f72b64c38fff7ef05579e49310e7acf026cf123ffb65fffb57fb06e1c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-collide-4.ogg",
+      "path": "assets/audio/kenney_casino/chips-collide-4.ogg",
+      "sha256": "1ffa34af64adc62fce583c5aa9a3c98287b1673ef191576a5571f1ffd39529dd"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-1.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-1.ogg",
+      "sha256": "a2c495237fb0dc0dc96ccc2c9840572edd226e6459398ecb631c6c9f9e5408f0"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-2.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-2.ogg",
+      "sha256": "099b6d7d3a71e7d22171a93d124e7366e326d32eb85d718ba29abded8a49c329"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-3.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-3.ogg",
+      "sha256": "7c5a86e27b2bef839ae096dd655506cf46a82494bd01cc28f51bed6ab26cc342"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-4.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-4.ogg",
+      "sha256": "0d171ea00224709cbe31ef95a111eabaf1382606a4836c5717043b339cbed8e9"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-5.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-5.ogg",
+      "sha256": "589753ea21b1955626e82975be8979f42140f5b0645a8c33c2d1f7e33fba68cb"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-handle-6.ogg",
+      "path": "assets/audio/kenney_casino/chips-handle-6.ogg",
+      "sha256": "527d4d3de55cc261dc476329b71a750c296f3ad633ac50318d913976bb89857c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-1.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-1.ogg",
+      "sha256": "12bf175b9afcea112175b241ad3336c6244ac5fdcdff8b5942ecc03f2225e0c4"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-2.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-2.ogg",
+      "sha256": "9f985e766c3557eef1764240b48e30b2f0ffa870a99f05de85cd6bf0ea758ef5"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-3.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-3.ogg",
+      "sha256": "48cc0f01e2b62be7677f2e8c02177906cab80e96fa8176fa05b3ced35bc2a9c2"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-4.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-4.ogg",
+      "sha256": "129a3af12f096ef9d8326b32c3c674d687f1a0b447157ccd02fb431ba134b580"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-5.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-5.ogg",
+      "sha256": "42dd800e3e24bbd07d3ebfc86c44b6500d376641e30270dc363d95a73e90b56e"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/chips-stack-6.ogg",
+      "path": "assets/audio/kenney_casino/chips-stack-6.ogg",
+      "sha256": "5ec35171aa65bf5edd977e293523a649227accf36e682bf1ac9a84286f04c682"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-grab-1.ogg",
+      "path": "assets/audio/kenney_casino/dice-grab-1.ogg",
+      "sha256": "1952cf1987b2c1ebb035b30b5f0caf23604b6ce4c88b6a226fe6e6257ce730f3"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-grab-2.ogg",
+      "path": "assets/audio/kenney_casino/dice-grab-2.ogg",
+      "sha256": "4eb4940d1e71aa3f6ac5f865b6b47748a492adf6a83d622c8efe6284dbebbd2c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-shake-1.ogg",
+      "path": "assets/audio/kenney_casino/dice-shake-1.ogg",
+      "sha256": "ba603441c857204dbe3ff3345902c7e1c3f523bf1bd314acf088609bc6c1e4e5"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-shake-2.ogg",
+      "path": "assets/audio/kenney_casino/dice-shake-2.ogg",
+      "sha256": "47e8e2cb0adb95bcd7348b58db8dc2bbfe3c553e50a4e9ef007e67891ed51ca2"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-shake-3.ogg",
+      "path": "assets/audio/kenney_casino/dice-shake-3.ogg",
+      "sha256": "aecd1dd0de6e42ebb510d1f9bfe91a580a8af238dd73bdfda368b90b894b5c09"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-throw-1.ogg",
+      "path": "assets/audio/kenney_casino/dice-throw-1.ogg",
+      "sha256": "4e6581c73465cdd7ec32e86a709b4ea5c682e819c9bdb7989d1df1880ba67886"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-throw-2.ogg",
+      "path": "assets/audio/kenney_casino/dice-throw-2.ogg",
+      "sha256": "e0b8c370503b2c5c2a72d311cccae30fe63a6afd48f2be32e771fcf1a98585d6"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/dice-throw-3.ogg",
+      "path": "assets/audio/kenney_casino/dice-throw-3.ogg",
+      "sha256": "09c13d35a9a30bfce31a5e9bca94adc5be189ddecd0b4500237d54c7fd05227c"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/die-throw-1.ogg",
+      "path": "assets/audio/kenney_casino/die-throw-1.ogg",
+      "sha256": "b31d716165be60e442da3c1ca25a3968aad1e0851a7f0859f495aecc02fd9e13"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/die-throw-2.ogg",
+      "path": "assets/audio/kenney_casino/die-throw-2.ogg",
+      "sha256": "a2702cfe14d24aab302483a1499daa88474a4af4acd794b58d97f4af16333b3d"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/die-throw-3.ogg",
+      "path": "assets/audio/kenney_casino/die-throw-3.ogg",
+      "sha256": "52fc44c7bb89328a147738574c925508c34abf4c19a014575b37ffb8c6b02437"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/Audio/die-throw-4.ogg",
+      "path": "assets/audio/kenney_casino/die-throw-4.ogg",
+      "sha256": "6253cabcb10c4152548cbc9d3ea87c1bf1bd484f0bd8d6b73c542e690509c0fd"
+    },
+    {
+      "pack": "Kenney Casino Audio 1.1",
+      "source": "/Users/jack.bydalek/Desktop/kenney_casino-audio/License.txt",
+      "path": "assets/audio/cozy_sources/kenney_casino_LICENSE.txt",
+      "sha256": "3d9c53acb6e236d760da14030f54bc53e1d8c2599f78470c36b96fddcde09221"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_medium_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_medium_000.ogg",
+      "sha256": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_medium_001.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_medium_001.ogg",
+      "sha256": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_medium_002.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_medium_002.ogg",
+      "sha256": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_medium_003.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_medium_003.ogg",
+      "sha256": "5c4a1f35fde7e14046931da7bc3d1b23736541b7190ba107e08a379c4ca43cd6"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_medium_004.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_medium_004.ogg",
+      "sha256": "b0a4dea90eed47accf50b768beff1166f2f1486fb139e4d025b2427637624bca"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_heavy_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_heavy_000.ogg",
+      "sha256": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_heavy_001.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_heavy_001.ogg",
+      "sha256": "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_heavy_002.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_heavy_002.ogg",
+      "sha256": "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_heavy_003.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_heavy_003.ogg",
+      "sha256": "d00286a2dc62ee5cb4d42bf56120e7050a855f69e655fc1294410aadd337eba3"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactSoft_heavy_004.ogg",
+      "path": "assets/audio/kenney_impacts/impactSoft_heavy_004.ogg",
+      "sha256": "e008f0b6b14f62339c8fe9f9b45cbd6317ba4f66604c4899053b8017020a36f0"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_light_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_light_000.ogg",
+      "sha256": "eb45e35b4bed784d3f120de4afec4b0d6ac09d9e143cce8cfcb7d739e1b1f3c3"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_light_001.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_light_001.ogg",
+      "sha256": "4b76bf3ccc8e60d19188f3165b778a7817786faa6887c55d9049bcbeef3b425f"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_light_002.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_light_002.ogg",
+      "sha256": "b183cf7a5bd783817e0e4b82af34ac6658fa1927049089dadc8b15c2ecc771dc"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_light_003.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_light_003.ogg",
+      "sha256": "cdfbe8af2fe7ff9ee28f337a0a989deee0f327620da456c8413644880e9d0004"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_light_004.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_light_004.ogg",
+      "sha256": "e10009f67ddaeb3a59a3e1129cfc1615d84ba60ab578eae07e7092ac223f099c"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_medium_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_medium_000.ogg",
+      "sha256": "1723a9fd25103ed41af06054814e84e65f4a772bac86ab2dc927da93d9592ff5"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_medium_001.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_medium_001.ogg",
+      "sha256": "15271dbe8e2872dbb0ff1aeb7b12b2d2b92b7c1951c88532b9ab9158c36dfc73"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_medium_002.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_medium_002.ogg",
+      "sha256": "3f3f1917428b828f733a963167833c707bf88296ff158e1559c57c5cb813d799"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_medium_003.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_medium_003.ogg",
+      "sha256": "635c37cfcd854b187d643d450ff0397798dcc29ae94da32192b814fae6bd854c"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactWood_medium_004.ogg",
+      "path": "assets/audio/kenney_impacts/impactWood_medium_004.ogg",
+      "sha256": "7ba48f2f99c91c71be420841a91f1e69c0cbc4fe887fcd7213144d67bb87b13a"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactGeneric_light_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactGeneric_light_000.ogg",
+      "sha256": "f0e982611e97512fee5f777986b67e8b435434b601f94992ec044f7e89fb5acb"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactGeneric_light_001.ogg",
+      "path": "assets/audio/kenney_impacts/impactGeneric_light_001.ogg",
+      "sha256": "c3cd1c073d186ae8fa35788ba94de581f1826e7427a7bb26490b2695fac18efa"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactGeneric_light_002.ogg",
+      "path": "assets/audio/kenney_impacts/impactGeneric_light_002.ogg",
+      "sha256": "d0bf60905b59ff630ffe01eb0edeeacd2504eaa8fb6523aeef7d2458b78264d3"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactGeneric_light_003.ogg",
+      "path": "assets/audio/kenney_impacts/impactGeneric_light_003.ogg",
+      "sha256": "0e8896706130f6bc88cdf1f0157aaacdbe88dce86cf0330f9136e44eb1209e81"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactGeneric_light_004.ogg",
+      "path": "assets/audio/kenney_impacts/impactGeneric_light_004.ogg",
+      "sha256": "f906fa3a37acc4372787b496efcedefa2856045d5ec9456a3bd6c303c0eabb41"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/License.txt",
+      "path": "assets/audio/cozy_sources/kenney_impacts_LICENSE.txt",
+      "sha256": "b49aa9c56b04528b95913de13e506a0f7c5e807b9925db9bfef86af1f91120db"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactPunch_medium_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactPunch_medium_000.ogg",
+      "sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c"
+    },
+    {
+      "pack": "Kenney Impact Sounds 1.0",
+      "source": "/Users/jack.bydalek/Desktop/kenney_impact-sounds/Audio/impactPunch_heavy_000.ogg",
+      "path": "assets/audio/kenney_impacts/impactPunch_heavy_000.ogg",
+      "sha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Actions/Confirm_05.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Actions/Confirm_05.wav",
+      "sha256": "7635b19754c91b9109f4bd6ba0b051e8b33fc8485d083ec1e30316e91dec3505"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Dialogue/Dialogue_Expression_Positive_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Dialogue/Dialogue_Expression_Positive_01.wav",
+      "sha256": "e1d79d97fdbfee70236b60f7f986375e7fca22b295b4772b94a1c1431550a7cf"
+    },
+    {
+      "pack": "Case Portman Cute & Cozy full pack",
+      "source": "/Users/jack.bydalek/Desktop/Cute & Cozy UI Audio Pack/WAV/Currency/Purchase_01.wav",
+      "path": "assets/audio/ui/cute_cozy_full/Currency/Purchase_01.wav",
+      "sha256": "2c460d43f2a9bb7abda93d3c0edfc501fb3152ea889e89b488f1bb55625a9032"
+    }
+  ]
+}

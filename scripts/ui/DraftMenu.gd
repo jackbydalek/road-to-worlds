@@ -17,8 +17,8 @@ func _apply_regular_panel_styles() -> void:
 	$DraftModePanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			PALETTE.CREAM,
-			PALETTE.NAVY,
+			PALETTE.PEACH_PAPER,
+			PALETTE.PEACH_INK,
 			2,
 			16,
 			Vector4(22, 10, 18, 10),
@@ -26,24 +26,24 @@ func _apply_regular_panel_styles() -> void:
 			true
 		)
 	)
-	%DraftProgress.add_theme_color_override("font_color", PALETTE.NAVY)
+	%DraftProgress.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	%DraftProgress.add_theme_stylebox_override(
 		"normal",
 		WORKSPACE_UI.clean_style(
-			Color(PALETTE.LAVENDER_GLASS, 0.94),
-			PALETTE.PERIWINKLE,
+			Color(PALETTE.PEACH_PAPER_MUTED, 0.94),
+			PALETTE.PEACH_EDGE,
 			2,
 			12,
 			Vector4(16, 7, 16, 7)
 		)
 	)
-	%DraftInstruction.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
+	%DraftInstruction.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
 	for slot in %DraftOfferRow.get_children():
 		(slot as PanelContainer).add_theme_stylebox_override(
 			"panel",
 			WORKSPACE_UI.clean_style(
-				Color(PALETTE.CREAM, 0.96),
-				PALETTE.NAVY,
+				Color(PALETTE.PEACH_PAPER, 0.96),
+				PALETTE.PEACH_INK,
 				2,
 				16,
 				Vector4(12, 10, 12, 12),
@@ -54,8 +54,8 @@ func _apply_regular_panel_styles() -> void:
 	$DraftWorkspace/DraftDeckRail.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			Color(PALETTE.LAVENDER_GLASS, 0.9),
-			PALETTE.NAVY,
+			Color(PALETTE.PEACH_PAPER_MUTED, 0.9),
+			PALETTE.PEACH_INK,
 			2,
 			16,
 			Vector4(16, 14, 16, 16),
@@ -66,8 +66,8 @@ func _apply_regular_panel_styles() -> void:
 	$DraftDistributionCharts/DraftTypeChartPanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			Color(PALETTE.CREAM, 0.94),
-			PALETTE.PERIWINKLE,
+			Color(PALETTE.PEACH_PAPER, 0.94),
+			PALETTE.PEACH_EDGE,
 			2,
 			14,
 			Vector4(16, 10, 16, 12)
@@ -76,8 +76,8 @@ func _apply_regular_panel_styles() -> void:
 	$DraftDistributionCharts/DraftFlavorChartPanel.add_theme_stylebox_override(
 		"panel",
 		WORKSPACE_UI.clean_style(
-			Color(PALETTE.CREAM, 0.94),
-			PALETTE.SKY,
+			Color(PALETTE.PEACH_PAPER, 0.94),
+			PALETTE.PEACH_TEAL,
 			2,
 			14,
 			Vector4(16, 10, 16, 12)

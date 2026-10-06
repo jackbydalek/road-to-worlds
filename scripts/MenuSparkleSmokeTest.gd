@@ -39,7 +39,7 @@ func _run() -> void:
 	button.button_down.emit()
 	await process_frame
 	var reduced_feedback := button.find_child("MenuPressEdgeFlash", true, false) as Node2D
-	_expect(reduced_feedback != null and reduced_feedback.get_child_count() == 1, "Reduced motion did not simplify menu press feedback to one edge.")
+	_expect(reduced_feedback != null and reduced_feedback.get_child_count() == 1, "Reduced motion did not retain a single restrained press highlight.")
 	_expect(reduced_feedback != null and reduced_feedback.z_index > 0, "Menu press feedback did not render over the button edge.")
 
 	if reduced_feedback != null:
@@ -61,7 +61,7 @@ func _run() -> void:
 	button.button_down.emit()
 	await process_frame
 	var normal_feedback := button.find_child("MenuPressEdgeFlash", true, false) as Node2D
-	_expect(normal_feedback != null and normal_feedback.get_child_count() == 2, "A normal menu click did not create the two-edge press flash.")
+	_expect(normal_feedback != null and normal_feedback.get_child_count() == 1, "A normal menu click did not create the restrained single-line press highlight.")
 
 	var tabletop := Control.new()
 	tabletop.name = "Tabletop3DPrototype"

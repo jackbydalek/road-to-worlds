@@ -1,15 +1,11 @@
 [gd_scene format=3 uid="uid://3517w4bnmwfk"]
 
 [ext_resource type="Script" uid="uid://ce6iocsg0v1ir" path="res://scripts/ui/TitleMenu.gd" id="1_script"]
-[ext_resource type="FontFile" path="res://assets/fonts/Oxanium-SemiBold.ttf" id="3_display"]
+[ext_resource type="FontFile" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="3_display"]
 [ext_resource type="FontFile" uid="uid://de6offqn05r66" path="res://assets/fonts/AtkinsonHyperlegibleNext.ttf" id="4_body"]
-[ext_resource type="Texture2D" path="res://assets/logos/topdeck-to-worlds-storefront.png" id="5_title_logo"]
+[ext_resource type="Script" path="res://scripts/ui/LocalsWordmark.gd" id="5_title_logo"]
 [ext_resource type="Script" path="res://scripts/ui/TitleBackgroundPattern.gd" id="6_title_pattern"]
-
-[sub_resource type="AtlasTexture" id="Texture_title_logo_crop"]
-atlas = ExtResource("5_title_logo")
-region = Rect2(0, 400, 2160, 760)
-filter_clip = true
+[ext_resource type="Script" path="res://scripts/ui/SketchPanelContainer.gd" id="7_cozy_panel"]
 
 [sub_resource type="StyleBoxFlat" id="Style_sign"]
 bg_color = Color(1, 0.968627, 0.945098, 0)
@@ -149,20 +145,18 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -500.0
-offset_top = 34.0
-offset_right = 500.0
-offset_bottom = 374.0
+offset_left = -300.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 370.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("Style_sign")
 
-[node name="TitleLogo" type="TextureRect" parent="ShopSign" unique_id=1392392393]
-modulate = Color(1, 1, 1, 1)
+[node name="TitleLogo" type="Control" parent="ShopSign" unique_id=1392392393]
 layout_mode = 2
-texture = SubResource("Texture_title_logo_crop")
-expand_mode = 1
-stretch_mode = 5
+mouse_filter = 2
+script = ExtResource("5_title_logo")
 
 [node name="PosterLayer" type="Control" parent="." unique_id=1163034413]
 z_index = 10
@@ -187,12 +181,12 @@ theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1
 theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 34
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("Style_start")
 theme_override_styles/pressed = SubResource("Style_start")
 theme_override_styles/hover = SubResource("Style_start_hover")
 theme_override_styles/focus = SubResource("Style_start_hover")
-text = "CONTINUE"
+text = "Continue"
 alignment = 1
 metadata/ui_button_variant = "primary"
 metadata/ui_button_variant_inferred = false
@@ -210,12 +204,12 @@ theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1
 theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 38
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("Style_start")
 theme_override_styles/pressed = SubResource("Style_start")
 theme_override_styles/hover = SubResource("Style_start_hover")
 theme_override_styles/focus = SubResource("Style_start_hover")
-text = "NEW GAME"
+text = "New game"
 alignment = 1
 metadata/ui_button_variant = "secondary"
 metadata/ui_button_variant_inferred = false
@@ -234,12 +228,12 @@ theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("Style_poster")
 theme_override_styles/pressed = SubResource("Style_poster")
 theme_override_styles/hover = SubResource("Style_poster_hover")
 theme_override_styles/focus = SubResource("Style_poster_hover")
-text = "HOW TO PLAY"
+text = "How to play"
 alignment = 1
 
 [node name="CreditsPosterButton" type="Button" parent="PosterLayer" unique_id=957799565]
@@ -255,15 +249,16 @@ theme_override_colors/font_hover_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_pressed_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_colors/font_focus_color = Color(0.160784, 0.211765, 0.372549, 1)
 theme_override_fonts/font = ExtResource("3_display")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("Style_credits")
 theme_override_styles/pressed = SubResource("Style_credits")
 theme_override_styles/hover = SubResource("Style_credits_hover")
 theme_override_styles/focus = SubResource("Style_credits_hover")
-text = "CREDITS"
+text = "Credits"
 alignment = 1
 
 [node name="CreditsPanel" type="PanelContainer" parent="." unique_id=1927921375]
+script = ExtResource("7_cozy_panel")
 visible = false
 z_index = 30
 custom_minimum_size = Vector2(820, 560)
@@ -297,7 +292,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.42, 0.49, 0.71, 1)
 theme_override_fonts/font = ExtResource("3_display")
 theme_override_font_sizes/font_size = 42
-text = "CREDITS & ATTRIBUTIONS"
+text = "Credits & thanks"
 horizontal_alignment = 1
 
 [node name="CreditsScroll" type="ScrollContainer" parent="CreditsPanel/CreditsMargin/CreditsContent"]
@@ -323,7 +318,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "JOIN THE DISCORD"
+text = "Join the Discord"
 
 [node name="CloseCreditsButton" type="Button" parent="CreditsPanel/CreditsMargin/CreditsContent" unique_id=1476452301]
 custom_minimum_size = Vector2(0, 56)
@@ -333,9 +328,10 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "CLOSE"
+text = "Close"
 
 [node name="TitleOptionsPanel" type="PanelContainer" parent="." unique_id=1772339420]
+script = ExtResource("7_cozy_panel")
 visible = false
 z_index = 20
 custom_minimum_size = Vector2(310, 238)
@@ -377,7 +373,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "SETTINGS"
+text = "Settings"
 
 [node name="OpenDebugMenuButton" type="Button" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin/Options" unique_id=2064707407]
 unique_name_in_owner = true
@@ -388,7 +384,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "DEBUG MENU"
+text = "Debug menu"
 
 [node name="ExitGameButton" type="Button" parent="TitleOptionsPanel/OptionsFrame/OptionsMargin/Options" unique_id=1557832062]
 unique_name_in_owner = true
@@ -399,7 +395,7 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "EXIT GAME"
+text = "Exit game"
 
 [node name="TitleOptionsButton" type="Button" parent="." unique_id=1899868321]
 unique_name_in_owner = true
@@ -422,4 +418,4 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("Style_compact")
 theme_override_styles/pressed = SubResource("Style_compact")
 theme_override_styles/hover = SubResource("Style_poster_hover")
-text = "SETTINGS"
+text = "Settings"

@@ -4,11 +4,12 @@ class_name CardRibbon
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const LABEL_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 
-var left_color: Color = PALETTE.CORAL
-var right_color: Color = PALETTE.CORAL
+var left_color: Color = PALETTE.PEACH_TABLE
+var right_color: Color = PALETTE.PEACH_TABLE
 var dual_affinity := false
 var label_text := "INGREDIENT"
 var detail_text := ""
+var draw_copy := true
 
 
 func configure(
@@ -35,7 +36,7 @@ func _draw() -> void:
 	if size.x < 32.0 or size.y < 18.0:
 		return
 
-	var outline_width := clampf(size.y * 0.045, 1.5, 3.0)
+	var outline_width := clampf(size.y * 0.045, 0.65, 3.0)
 	var body_left := size.x * 0.095
 	var body_right := size.x * 0.905
 	var body_top := size.y * 0.04
@@ -61,10 +62,10 @@ func _draw() -> void:
 		Vector2(body_right - fold_width, tail_bottom),
 	])
 
-	_draw_polygon_with_outline(_offset_points(left_tail, shadow_offset), Color(PALETTE.NAVY, 0.18), Color.TRANSPARENT, 0.0)
-	_draw_polygon_with_outline(_offset_points(right_tail, shadow_offset), Color(PALETTE.NAVY, 0.18), Color.TRANSPARENT, 0.0)
-	_draw_polygon_with_outline(left_tail, left_color.darkened(0.06), PALETTE.NAVY, outline_width)
-	_draw_polygon_with_outline(right_tail, right_color.darkened(0.06), PALETTE.NAVY, outline_width)
+	_draw_polygon_with_outline(_offset_points(left_tail, shadow_offset), Color(PALETTE.PEACH_INK, 0.16), Color.TRANSPARENT, 0.0)
+	_draw_polygon_with_outline(_offset_points(right_tail, shadow_offset), Color(PALETTE.PEACH_INK, 0.16), Color.TRANSPARENT, 0.0)
+	_draw_polygon_with_outline(left_tail, left_color.darkened(0.06), PALETTE.PEACH_INK, outline_width)
+	_draw_polygon_with_outline(right_tail, right_color.darkened(0.06), PALETTE.PEACH_INK, outline_width)
 
 	var left_fold := PackedVector2Array([
 		Vector2(body_left, body_bottom - outline_width),
@@ -76,8 +77,8 @@ func _draw() -> void:
 		Vector2(body_right - fold_width, tail_bottom - outline_width),
 		Vector2(body_right - fold_width, body_bottom - outline_width),
 	])
-	_draw_polygon_with_outline(left_fold, left_color.darkened(0.28), PALETTE.NAVY, outline_width)
-	_draw_polygon_with_outline(right_fold, right_color.darkened(0.28), PALETTE.NAVY, outline_width)
+	_draw_polygon_with_outline(left_fold, left_color.darkened(0.18), PALETTE.PEACH_INK, outline_width)
+	_draw_polygon_with_outline(right_fold, right_color.darkened(0.18), PALETTE.PEACH_INK, outline_width)
 
 	var body_rect := Rect2(
 		Vector2(body_left, body_top),
@@ -85,11 +86,14 @@ func _draw() -> void:
 	)
 	_draw_body(body_rect, outline_width)
 	_draw_highlight(body_rect)
-	_draw_copy(body_rect)
+	if label_text == "MEAL" and not detail_text.is_empty():
+		_draw_detail_divider(body_rect)
+	if draw_copy:
+		_draw_copy(body_rect)
 
 
 func _draw_body(rect: Rect2, outline_width: float) -> void:
-	var radius := clampf(rect.size.y * 0.22, 4.0, 12.0)
+	var radius := clampf(rect.size.y * 0.22, 2.0, 12.0)
 	if not dual_affinity:
 		draw_style_box(_body_style(left_color, radius, true, true, outline_width), rect)
 		return
@@ -111,8 +115,8 @@ func _body_style(
 	outline_width: float
 ) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = fill.lightened(0.12)
-	style.border_color = PALETTE.NAVY
+	style.bg_color = fill
+	style.border_color = PALETTE.PEACH_INK
 	var border_width := int(round(outline_width))
 	style.border_width_top = border_width
 	style.border_width_bottom = border_width
@@ -127,12 +131,24 @@ func _body_style(
 
 
 func _draw_highlight(rect: Rect2) -> void:
-	var inset := maxf(3.0, rect.size.y * 0.12)
+	var inset := maxf(1.5, rect.size.y * 0.12)
 	draw_line(
 		Vector2(rect.position.x + inset, rect.position.y + inset),
 		Vector2(rect.end.x - inset, rect.position.y + inset),
-		Color(PALETTE.CREAM, 0.54),
-		maxf(1.0, rect.size.y * 0.025),
+		Color(PALETTE.PEACH_PAPER, 0.42),
+		maxf(0.65, rect.size.y * 0.025),
+		true
+	)
+
+
+func _draw_detail_divider(rect: Rect2) -> void:
+	var divider_y := rect.position.y + rect.size.y * 0.54
+	var divider_inset := rect.size.x * 0.18
+	draw_line(
+		Vector2(rect.position.x + divider_inset, divider_y),
+		Vector2(rect.end.x - divider_inset, divider_y),
+		PALETTE.PEACH_INK,
+		maxf(0.65, rect.size.y * 0.025),
 		true
 	)
 
@@ -148,20 +164,10 @@ func _draw_copy(rect: Rect2) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		rect.size.x,
 		title_size,
-		PALETTE.NAVY
+		PALETTE.PEACH_INK
 	)
 	if detail_text == "":
 		return
-	if label_text == "MEAL":
-		var divider_y := rect.position.y + rect.size.y * 0.56
-		var divider_inset := rect.size.x * 0.18
-		draw_line(
-			Vector2(rect.position.x + divider_inset, divider_y),
-			Vector2(rect.end.x - divider_inset, divider_y),
-			PALETTE.NAVY,
-			maxf(1.0, rect.size.y * 0.025),
-			true
-		)
 	var detail_y := rect.position.y + rect.size.y * 0.82
 	draw_string(
 		LABEL_FONT,
@@ -170,7 +176,7 @@ func _draw_copy(rect: Rect2) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER,
 		rect.size.x,
 		detail_size,
-		PALETTE.NAVY
+		PALETTE.PEACH_INK
 	)
 
 

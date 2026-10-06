@@ -60,18 +60,13 @@ func _spawn_edge_flash(button: BaseButton, accent: Color) -> void:
 	button.add_child(feedback)
 	var width := maxf(1.0, button.size.x)
 	var height := maxf(1.0, button.size.y)
+	# A small printed highlight acknowledges a press. The actual button face
+	# continues to own hover/focus/disabled states; no sharp neon corner burst.
 	feedback.add_child(_edge_line(PackedVector2Array([
-		Vector2(2, minf(12.0, height * 0.25)),
-		Vector2(2, 2),
-		Vector2(maxf(34.0, width * 0.38), 2),
-	]), accent))
-	if not reduced_motion:
-		feedback.add_child(_edge_line(PackedVector2Array([
-			Vector2(width - 2, height - minf(12.0, height * 0.25)),
-			Vector2(width - 2, height - 2),
-			Vector2(minf(width - 34.0, width * 0.62), height - 2),
-		]), PALETTE.COOL_WHITE))
-	var duration := 0.12 if reduced_motion else 0.20
+		Vector2(width * 0.24, height - 4.0),
+		Vector2(width * 0.76, height - 4.0),
+	]), Color(accent, 0.28)))
+	var duration := 0.10 if reduced_motion else 0.14
 	var tween := create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(feedback, "modulate:a", 0.0, duration * 0.58).set_delay(duration * 0.42)
@@ -79,22 +74,18 @@ func _spawn_edge_flash(button: BaseButton, accent: Color) -> void:
 
 
 func _button_accent(button: BaseButton) -> Color:
-	match String(button.get_meta("ui_button_variant", "default")):
-		"danger": return PALETTE.ACTION_DANGER
-		"confirm": return PALETTE.ACTION_CONFIRM
-		"special": return PALETTE.ACTION_SPECIAL
-		"primary": return PALETTE.ACTION_PRIMARY
-		_: return PALETTE.FOCUS_EDGE
+	var variant := String(button.get_meta("ui_button_variant", "default"))
+	return PALETTE.PEACH_PAPER_MUTED if variant in ["primary", "selected", "danger", "confirm"] else PALETTE.PEACH_INK_SOFT
 
 
 func _edge_line(points: PackedVector2Array, color: Color) -> Line2D:
 	var line := Line2D.new()
 	line.points = points
 	line.default_color = color
-	line.width = 3.0
-	line.joint_mode = Line2D.LINE_JOINT_SHARP
-	line.begin_cap_mode = Line2D.LINE_CAP_BOX
-	line.end_cap_mode = Line2D.LINE_CAP_BOX
+	line.width = 1.3
+	line.joint_mode = Line2D.LINE_JOINT_ROUND
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	line.antialiased = true
 	return line
 

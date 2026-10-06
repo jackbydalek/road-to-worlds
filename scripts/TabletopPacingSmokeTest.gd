@@ -133,11 +133,11 @@ func _run() -> void:
 		keyword_popout != null
 		and keyword_popout.visible
 		and keyword_popout.get_global_rect().position.x >= viewed_keyword_card.get_global_rect().end.x + 10.0
-		and keyword_popout.find_child("KeywordPopoutAngularSurface", true, false) != null
+		and keyword_popout.get_theme_stylebox("panel") is StyleBoxFlat
 		and keyword_title != null
 		and keyword_title.text == "BODYGUARD"
 		and keyword_body != null
-		and keyword_body.text.contains("does not pierce"),
+		and keyword_body.text.contains("Piercing"),
 		"The inspected keyword card did not restore its explanation beside the card."
 	)
 	if DisplayServer.get_name() != "headless":
@@ -495,7 +495,7 @@ func _run() -> void:
 	table._reset_camera_pacing()
 	var table_environment := table.find_child("WorldEnvironment", true, false) as WorldEnvironment
 	var battle_backdrop := table.get_node_or_null("BattleBackdrop") as TextureRect
-	var battle_viewport_container := table.get_node_or_null("ViewportContainer") as SubViewportContainer
+	var battle_viewport_container := table.get_node_or_null("ViewportContainer") as TextureRect
 	_expect(
 		table_environment != null
 		and table_environment.environment.background_mode == Environment.BG_CLEAR_COLOR
@@ -648,14 +648,14 @@ func _run() -> void:
 	table.state.phase = "player_main"
 	var floating_start_position := floating_art.position if floating_art != null else Vector3.ZERO
 	var floating_start_rotation := floating_art.rotation if floating_art != null else Vector3.ZERO
-	var floating_start_texture := (floating_art.material_override as StandardMaterial3D).albedo_texture if floating_art != null else null
+	var floating_start_texture: Texture2D = (floating_art.material_override as ShaderMaterial).get_shader_parameter("art_texture") if floating_art != null else null
 	var field_face_viewport := table.texture_viewports.find_child("PrototypeFullCardFaceViewport_spicy_hot_honey_bee_NoArt", false, false) as SubViewport
 	var field_card_art := field_face_viewport.find_child("CardArtwork", true, false) as TextureRect if field_face_viewport != null else null
 	_expect(floating_art != null and is_equal_approx(floating_art.position.y, table.FLOATING_ART_HEIGHT) and floating_art.position.y < 0.75, "Field artwork was not lowered closer to its physical card.")
 	_expect(stat_backing != null and stat_backing.texture != null and stat_backing.pixel_size < 0.004, "Field-card attack and health values do not have their compact rounded backing.")
 	_expect(field_card_art != null and not field_card_art.visible, "A field card duplicated its artwork beneath the floating image.")
 	await create_timer(0.08).timeout
-	var floating_advanced_texture := (floating_art.material_override as StandardMaterial3D).albedo_texture if floating_art != null else null
+	var floating_advanced_texture: Texture2D = (floating_art.material_override as ShaderMaterial).get_shader_parameter("art_texture") if floating_art != null else null
 	_expect(floating_art != null and floating_art.position.is_equal_approx(floating_start_position) and floating_art.rotation.is_equal_approx(floating_start_rotation), "Field artwork still bounced or swayed instead of staying fixed above the card.")
 	_expect(floating_start_texture != null and floating_advanced_texture != floating_start_texture, "Field artwork did not continue looping its authored animation frames.")
 	var prep_position: Vector3 = prep_card.position
@@ -707,7 +707,7 @@ func _run() -> void:
 	table.animation_busy = false
 	_expect(plated_card != null and is_zero_approx(plated_card.rotation_degrees.y), "A Defending card did not rotate upright at the start of its turn.")
 	var removal_art := plated_card.find_child("FloatingArt", true, false) as MeshInstance3D if plated_card != null else null
-	var removal_art_material := removal_art.material_override as StandardMaterial3D if removal_art != null else null
+	var removal_art_material := removal_art.material_override as ShaderMaterial if removal_art != null else null
 	var removal_duration: float = table._start_removal_event_animation({
 		"type": "destroy",
 		"instance_id": int(moved_unit.instance_id)
@@ -717,7 +717,7 @@ func _run() -> void:
 		removal_art != null
 		and removal_art.scale.length() < Vector3.ONE.length() * 0.7
 		and removal_art_material != null
-		and removal_art_material.albedo_color.a < 0.7,
+		and float(removal_art_material.get_shader_parameter("opacity")) < 0.7,
 		"A destroyed card's floating artwork did not shrink and fade with the physical card."
 	)
 	await create_timer(removal_duration * 0.5).timeout
@@ -811,8 +811,8 @@ func _run() -> void:
 			and bool(table.targeting_arrow.get("valid_target"))
 			and String(table.targeting_arrow.get("action_kind")) == "switch"
 			and table.targeting_arrow.is_processing()
-			and (table.targeting_arrow.get("arrow_color") as Color).is_equal_approx(table.PALETTE.ELECTRIC_CYAN),
-			"A legal zone switch did not keep the card seated and show the animated cyan targeting arrow."
+			and (table.targeting_arrow.get("arrow_color") as Color).is_equal_approx(table.PALETTE.SELECTION_BLUE),
+			"A legal zone switch did not keep the card seated and show the animated blue targeting arrow."
 		)
 		await create_timer(0.08).timeout
 		_expect(
@@ -826,7 +826,7 @@ func _run() -> void:
 			and table.swap_move_animation_count == swap_animations_before + 1
 			and not table.service._find_unit_in_zone(table.state.player, "plated", int(swap_prep.instance_id)).is_empty()
 			and not table.service._find_unit_in_zone(table.state.player, "prep", int(swap_plated.instance_id)).is_empty(),
-			"Releasing the cyan zone-switch arrow did not confirm the crossing swap animation."
+			"Releasing the blue zone-switch arrow did not confirm the crossing swap animation."
 		)
 	else:
 		_expect(false, "The zone-switch regression card was not rendered on the Living Table.")

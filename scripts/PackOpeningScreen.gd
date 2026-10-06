@@ -1,7 +1,10 @@
 extends RefCounted
 class_name PackOpeningScreen
 
-const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
+const HOVER_PREVIEW := preload("res://scripts/ui/CardHoverPreview.gd")
+const UI := preload("res://scripts/ui/TopdeckUIComponents.gd")
+const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 
 const PACK_OPENING_SCENE_PATH := "res://scenes/PackOpeningScene.tscn"
 const CARD_BACK_PATH := "res://assets/cards/card_backs/living_table.png"
@@ -9,7 +12,7 @@ const PACK_OPEN_SOUND_PATHS := [
 	"res://assets/audio/kenney_casino/cards-pack-open-1.ogg",
 	"res://assets/audio/kenney_casino/cards-pack-open-2.ogg"
 ]
-const PACK_OPEN_VOLUME_DB := -4.0
+const PACK_OPEN_VOLUME_DB := -12.0
 const BOOSTER_ID := "base_standard_pack"
 const PRIZE_BOOSTER_ID := "season_prize_pack"
 const SCENE_SIZE := Vector2(1360, 680)
@@ -18,7 +21,6 @@ const FAN_CENTER_X := 543.0
 const FAN_BASE_Y := 66.0
 const FAN_SPACING := 185.0
 const FAN_ROTATION_STEP := 0.04
-const HOVER_DELAY_SECONDS := 0.38
 
 var scene_root: Node
 var status_label: Label
@@ -30,9 +32,11 @@ var exit_button: Button
 var card_slots: Array[TextureButton] = []
 var overlay_frame: PanelContainer
 var overlay_shop_world: Control
-var hover_preview: PanelContainer
-var hover_preview_body: CenterContainer
-var hover_request_id := 0
+var _audio_rng := RandomNumberGenerator.new()
+
+
+func _init() -> void:
+	_audio_rng.randomize()
 
 
 func show(host) -> void:
@@ -59,13 +63,12 @@ func show_in_shop_overlay(host, shop_world: Control) -> void:
 	_connect_controls(host)
 	_render(host)
 	_add_store_exit(host)
-	_create_hover_preview()
 	if shop_world.has_method("show_external_overlay"):
-		shop_world.call("show_external_overlay", overlay_frame, "PACK OPENING — crack a pack without leaving the store")
+		shop_world.call("show_external_overlay", overlay_frame, "Open a pack at the counter")
 
 
 func _add_store_exit(host) -> void:
-	exit_button = host._make_button("Exit to Card Store")
+	exit_button = host._make_button("Back to the shop")
 	exit_button.name = "PackExitToStoreButton"
 	exit_button.position = Vector2(1100, 26)
 	exit_button.size = Vector2(220, 44)
@@ -86,15 +89,8 @@ func _add_scene(host) -> Node:
 	frame.name = "PackOpeningSceneFrame"
 	frame.custom_minimum_size = display_size
 	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	frame.add_theme_stylebox_override(
-		"panel",
-		SKETCH_UI.texture_style(
-			SKETCH_UI.PANEL_PAPER,
-			Color.WHITE,
-			Vector4(24, 24, 24, 24),
-			Vector4.ZERO
-		)
-	)
+	frame.add_theme_stylebox_override("panel", _paper_frame_style())
+
 	host.content.add_child(frame)
 
 	var canvas := Control.new()
@@ -123,10 +119,8 @@ func _add_shop_overlay_scene(shop_world: Control) -> Node:
 	overlay_frame.offset_right = display_size.x * 0.5
 	overlay_frame.offset_bottom = display_size.y * 0.5
 	overlay_frame.mouse_filter = Control.MOUSE_FILTER_STOP
-	overlay_frame.add_theme_stylebox_override(
-		"panel",
-		SKETCH_UI.texture_style(SKETCH_UI.PANEL_PAPER, Color.WHITE, Vector4(24, 24, 24, 24), Vector4.ZERO)
-	)
+	overlay_frame.add_theme_stylebox_override("panel", _paper_frame_style())
+
 	var interface := shop_world.get_node_or_null("Interface") as Control
 	if interface != null:
 		interface.add_child(overlay_frame)
@@ -158,11 +152,14 @@ func _instantiate_pack_scene() -> Node:
 
 
 func _cache_nodes(host) -> void:
+	var table_background := _find_node_by_name(scene_root, "TableBackground") as ColorRect
+	if table_background != null:
+		table_background.color = PALETTE.PEACH_PAPER_MUTED
 	pack_button = _find_node_by_name(scene_root, "PackButton") as Button
 	if pack_button != null:
 		host._style_button(pack_button, "action")
 		pack_button.flat = true
-		pack_button.add_theme_font_override("font", SKETCH_UI.display_font(0.72))
+		pack_button.add_theme_font_override("font", BODY_FONT)
 	reveal_all_button = _find_node_by_name(scene_root, "RevealAllButton") as Button
 	done_button = _find_node_by_name(scene_root, "DoneButton") as Button
 	for action_button in [reveal_all_button, done_button]:
@@ -178,8 +175,8 @@ func _cache_nodes(host) -> void:
 		status_label.size = Vector2(780, 50)
 		scene_root.add_child(status_label)
 	status_label.add_theme_font_size_override("font_size", 22)
-	status_label.add_theme_font_override("font", SKETCH_UI.body_font(0.1))
-	status_label.add_theme_color_override("font_color", SKETCH_UI.INK)
+	status_label.add_theme_font_override("font", BODY_FONT)
+	status_label.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	card_slots = []
@@ -215,8 +212,6 @@ func _connect_controls(host) -> void:
 	for index in range(card_slots.size()):
 		var slot_index := index
 		card_slots[index].pressed.connect(func() -> void: _on_card_slot_pressed(host, slot_index), CONNECT_DEFERRED)
-		card_slots[index].mouse_entered.connect(func() -> void: _queue_card_hover_preview(host, card_slots[slot_index], slot_index))
-		card_slots[index].mouse_exited.connect(_hide_card_hover_preview)
 
 
 func _render(host) -> void:
@@ -236,7 +231,7 @@ func _render(host) -> void:
 	if reveal_all_button != null:
 		reveal_all_button.visible = opened and not complete
 		reveal_all_button.disabled = pack.is_empty()
-		reveal_all_button.text = "Reveal All"
+		reveal_all_button.text = "Reveal all"
 
 	if done_button != null:
 		done_button.visible = complete
@@ -303,7 +298,7 @@ func _open_pack_to_table(host) -> void:
 func _play_pack_open_sound(host) -> void:
 	var player := AudioStreamPlayer.new()
 	player.name = "PackOpenSound"
-	var sound_path: String = PACK_OPEN_SOUND_PATHS[randi_range(0, PACK_OPEN_SOUND_PATHS.size() - 1)]
+	var sound_path: String = PACK_OPEN_SOUND_PATHS[_audio_rng.randi_range(0, PACK_OPEN_SOUND_PATHS.size() - 1)]
 	player.stream = load(sound_path) as AudioStream
 	player.bus = &"SFX"
 	player.volume_db = PACK_OPEN_VOLUME_DB
@@ -347,7 +342,9 @@ func _finish_reveal_slot(host, index: int, slot: TextureButton) -> void:
 		var rarity := String(pack[index].get("rarity", "common"))
 		_animate_reveal(slot, rarity)
 	if slot.get_global_rect().has_point(slot.get_viewport().get_mouse_position()):
-		_queue_card_hover_preview(host, slot, index)
+		var hover := slot.get_node_or_null("SharedHoverController")
+		if hover != null:
+			hover._queue_preview(true)
 
 
 func _on_reveal_all_pressed(host) -> void:
@@ -363,6 +360,8 @@ func _on_reveal_all_pressed(host) -> void:
 
 func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary) -> void:
 	for child in slot.get_children():
+		if child.name in ["SharedHoverController", "CardInspectionFocus"]:
+			continue
 		slot.remove_child(child)
 		child.queue_free()
 
@@ -370,6 +369,9 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 	var rarity := String(entry.get("rarity", "common"))
 	var card_id := String(entry.get("cardId", ""))
 	var card: Dictionary = host.cards_by_id.get(card_id, {})
+	slot.set_meta("inspection_available", revealed)
+	if revealed:
+		HOVER_PREVIEW.bind(slot, card, host._run_difficulty_id())
 
 	var aura := PanelContainer.new()
 	aura.name = "PackCardAura%d" % index
@@ -427,65 +429,7 @@ func _render_card_slot(host, slot: TextureButton, index: int, entry: Dictionary)
 		_add_slot_label(box, note, 10, Color("#ffe08a"), HORIZONTAL_ALIGNMENT_CENTER)
 
 
-func _create_hover_preview() -> void:
-	if overlay_frame == null:
-		return
-	hover_preview = SKETCH_UI.make_rough_panel(
-		Vector2(326, 466), SKETCH_UI.PAPER, SKETCH_UI.INK, SKETCH_UI.TEAL, Vector4(12, 12, 12, 12), 1
-	)
-	hover_preview.name = "PackCardHoverPreview"
-	hover_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_preview.z_index = 400
-	hover_preview.visible = false
-	overlay_frame.add_child(hover_preview)
-	hover_preview_body = CenterContainer.new()
-	hover_preview_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_preview.add_child(hover_preview_body)
-
-
-func _queue_card_hover_preview(host, slot: TextureButton, index: int) -> void:
-	hover_request_id += 1
-	var request_id := hover_request_id
-	await slot.get_tree().create_timer(HOVER_DELAY_SECONDS).timeout
-	var pack: Array = host.run.get("current_pack", [])
-	if (
-		request_id != hover_request_id
-		or overlay_shop_world == null
-		or not is_instance_valid(slot)
-		or index < 0 or index >= pack.size()
-		or not bool((pack[index] as Dictionary).get("revealed", false))
-		or not slot.get_global_rect().has_point(slot.get_viewport().get_mouse_position())
-	):
-		return
-	_show_card_hover_preview(host, slot, String((pack[index] as Dictionary).get("cardId", "")))
-
-
-func _show_card_hover_preview(host, slot: TextureButton, card_id: String) -> void:
-	if hover_preview == null or hover_preview_body == null or not host.cards_by_id.has(card_id):
-		return
-	for child in hover_preview_body.get_children():
-		child.queue_free()
-	var card_face: Control = host._make_card_face(host.cards_by_id[card_id], Vector2(300, 426), true)
-	card_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_preview_body.add_child(card_face)
-	hover_preview.visible = true
-	var size := Vector2(326, 466)
-	var source_rect := slot.get_global_rect()
-	var viewport_size := slot.get_viewport_rect().size
-	hover_preview.global_position = Vector2(
-		clampf(source_rect.position.x - size.x - 14, 12, viewport_size.x - size.x - 12),
-		clampf(source_rect.position.y - 110, 12, viewport_size.y - size.y - 12)
-	)
-
-
-func _hide_card_hover_preview() -> void:
-	hover_request_id += 1
-	if hover_preview != null:
-		hover_preview.visible = false
-
-
 func _close_shop_overlay(host) -> void:
-	_hide_card_hover_preview()
 	if bool(host.run.get("pack_opened", false)):
 		host.shop_economy_service.reveal_all_cards(host.run, host._current_primary_archetype())
 		host._finish_pack_state()
@@ -507,8 +451,6 @@ func _close_overlay_frame() -> void:
 		overlay_frame.queue_free()
 	overlay_frame = null
 	overlay_shop_world = null
-	hover_preview = null
-	hover_preview_body = null
 
 
 func _animate_spread() -> void:
@@ -660,6 +602,7 @@ func _add_slot_label(parent: Node, text: String, font_size: int, color: Color, a
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = alignment
+	label.add_theme_font_override("font", BODY_FONT)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -735,4 +678,15 @@ func _style(background: String, border: String, border_width: int = 1, radius: i
 	style.content_margin_right = 6
 	style.content_margin_top = 6
 	style.content_margin_bottom = 6
+	return style
+
+
+func _paper_frame_style() -> StyleBoxFlat:
+	var style := UI.flat_style(PALETTE.PEACH_PAPER, 0)
+	style.border_color = PALETTE.PEACH_EDGE
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.shadow_color = Color(PALETTE.PEACH_INK, 0.16)
+	style.shadow_size = 3
+	style.shadow_offset = Vector2(0, 3)
 	return style

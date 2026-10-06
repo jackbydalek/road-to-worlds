@@ -1,11 +1,15 @@
 extends RefCounted
 class_name DeckbuilderScreen
 
+const UI := preload("res://scripts/ui/TopdeckUIComponents.gd")
+const BROWSER := preload("res://scripts/ui/CardBrowser.gd")
+const PAPER_PANEL := preload("res://scripts/ui/SketchPanelContainer.gd")
+
+const INSPECTION := preload("res://scripts/ui/CardInspectionOverlay.gd")
+const INSPECTION_CONTENT := preload("res://scripts/ui/CardInspectionContent.gd")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const MATERIAL_SYMBOLS := preload("res://scripts/ui/MaterialSymbolsSharp.gd")
-const ANGULAR_SURFACE_SCRIPT := preload("res://scripts/ui/BattleAngularSurface.gd")
-const ANGULAR_BUTTON_FACE_SCRIPT := preload("res://scripts/ui/BattleAngularButtonFace.gd")
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 
 const SORT_NAME := "name"
@@ -16,12 +20,12 @@ const COLLECTION_COLUMNS := 4
 const DECK_COLUMNS := 8
 const COLLECTION_CARD_SIZE := Vector2(150, 213)
 const DECK_CARD_SIZE := Vector2(136, 194)
-const HOVER_CARD_SIZE := Vector2(300, 426)
-const HOVER_PREVIEW_SIZE := Vector2(326, 466)
+const HOVER_CARD_SIZE := INSPECTION_CONTENT.CARD_SIZE
+const HOVER_PREVIEW_SIZE := Vector2(344, 486)
 const HOVER_DELAY_SECONDS := 0.38
-const WORKSHOP_SURFACE := PALETTE.CARBON
-const WORKSHOP_PANEL := PALETTE.SURFACE_PAPER_MUTED
-const WORKSHOP_TILE := PALETTE.SURFACE_PAPER
+const WORKSHOP_SURFACE := PALETTE.PEACH_PAPER
+const WORKSHOP_PANEL := PALETTE.PEACH_PAPER_MUTED
+const WORKSHOP_TILE := PALETTE.PEACH_PAPER
 
 var _hover_preview: PanelContainer
 var _hover_preview_body: CenterContainer
@@ -36,38 +40,45 @@ func show(host) -> void:
 	host._clear(host.content)
 	host._update_status()
 	_remove_hover_preview(host)
-
-	var workshop_shell := PanelContainer.new()
-	workshop_shell.name = "DeckbuilderWorkshopShell"
-	workshop_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	workshop_shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	workshop_shell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	host.content.add_child(workshop_shell)
-	_apply_angular_surface(workshop_shell, PALETTE.CARBON.darkened(0.10), PALETTE.STEEL, true)
-	var shell_margin := MarginContainer.new()
-	shell_margin.add_theme_constant_override("margin_left", 10)
-	shell_margin.add_theme_constant_override("margin_right", 10)
-	shell_margin.add_theme_constant_override("margin_top", 10)
-	shell_margin.add_theme_constant_override("margin_bottom", 10)
-	workshop_shell.add_child(shell_margin)
-	var workshop_content := VBoxContainer.new()
-	workshop_content.name = "DeckbuilderWorkshopContent"
-	workshop_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	workshop_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	workshop_content.add_theme_constant_override("separation", 10)
-	shell_margin.add_child(workshop_content)
-
-	_add_back_bar(host, workshop_content)
-
-	var workspace := VBoxContainer.new()
-	workspace.name = "DeckbuilderWorkspace"
-	workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	workspace.custom_minimum_size = Vector2(0, 600)
-	workshop_content.add_child(workspace)
-
-	_add_deck_rail(host, workspace)
-	_create_hover_preview(host)
+	var margin := MarginContainer.new()
+	margin.name = "DeckbuilderWorkshopShell"
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_%s" % edge, 28)
+	host.content.add_child(margin)
+	var sheet := PAPER_PANEL.new()
+	sheet.name = "DeckbuilderPaperSheet"
+	sheet.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sheet.configure(PALETTE.PEACH_PAPER, PALETTE.PEACH_INK, PALETTE.PEACH_TEAL, Vector4(20, 20, 20, 20))
+	margin.add_child(sheet)
+	var body := VBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 22)
+	sheet.add_child(body)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 22)
+	body.add_child(header)
+	var back: Button = host._add_deckbuilder_back_button(header)
+	back.custom_minimum_size = Vector2(120, 48)
+	back.focus_mode = Control.FOCUS_ALL
+	header.add_child(UI.make_label("Your deck", "screen_title"))
+	if String(host.run.get("run_loop", "")) == "route":
+		var locked := UI.make_label("Locked", "small")
+		locked.autowrap_mode = TextServer.AUTOWRAP_OFF
+		locked.custom_minimum_size.x = 70
+		locked.size_flags_horizontal = Control.SIZE_SHRINK_END
+		locked.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		locked.tooltip_text = "Remove cards through the shopkeeper."
+		header.add_child(locked)
+	var browser := BROWSER.new()
+	browser.name = "DeckBrowser"
+	browser.configure(host._deck_browser_entries(host.run.deck), host._run_difficulty_id(), "DeckbuilderMainDeck")
+	if String(host.run.get("run_loop", "")) != "route":
+		browser.remove_requested.connect(func(card_id: String) -> void: host._remove_from_deck(card_id))
+		browser.allow_remove = true
+	body.add_child(browser)
+	UI.enter(margin)
+	back.grab_focus()
 
 
 func _add_back_bar(host, parent: Node) -> void:
@@ -77,7 +88,7 @@ func _add_back_bar(host, parent: Node) -> void:
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(bar)
-	_apply_angular_surface(bar, WORKSHOP_SURFACE, PALETTE.ELECTRIC_CYAN, true)
+	_apply_paper_surface(bar, WORKSHOP_SURFACE, PALETTE.PEACH_TEAL, true)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
@@ -99,20 +110,14 @@ func _add_collection_binder(host, workspace: HBoxContainer, collection_ids: Arra
 	var collection_panel := _add_workspace_panel(
 		host,
 		workspace,
-		"CARD COLLECTION",
+		"Card collection",
 		WORKSHOP_PANEL,
-		PALETTE.ELECTRIC_CYAN
+		PALETTE.PEACH_TEAL
 	)
 	collection_panel.name = "DeckbuilderCollectionPanel"
 	collection_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	collection_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	collection_panel.custom_minimum_size = Vector2(770 if compact_workspace else 700, 0)
-
-	var hint := Label.new()
-	hint.text = "Hover to inspect  •  Add owned copies to your deck"
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
-	collection_panel.add_child(hint)
 
 	var scroll := ScrollContainer.new()
 	scroll.name = "DeckbuilderCollectionScroll"
@@ -156,9 +161,9 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 
 	var owned_badge := _add_badge(
 		info_row,
-		"OWNED ×%d" % owned,
-		PALETTE.STEEL.darkened(0.12),
-		PALETTE.COOL_WHITE
+		"Owned ×%d" % owned,
+		PALETTE.PEACH_PAPER_MUTED,
+		PALETTE.PEACH_INK
 	)
 	owned_badge.name = "DeckbuilderOwnedBadge"
 
@@ -167,7 +172,7 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	available_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	available_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	available_label.add_theme_font_size_override("font_size", 12)
-	available_label.add_theme_color_override("font_color", PALETTE.EMERALD.darkened(0.30) if available > 0 else Color(PALETTE.TEXT_ON_LIGHT, 0.48))
+	available_label.add_theme_color_override("font_color", PALETTE.HEALTH_FILL if available > 0 else PALETTE.PEACH_INK_SOFT)
 	info_row.add_child(available_label)
 
 	var actions := HBoxContainer.new()
@@ -175,14 +180,14 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	tile.add_child(actions)
 	if String(host.run.get("run_loop", "")) == "route":
 		var route_note := Label.new()
-		route_note.text = "Added through route rewards"
+		route_note.text = "Added after your matches"
 		route_note.add_theme_font_size_override("font_size", 11)
-		route_note.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
+		route_note.add_theme_color_override("font_color", PALETTE.PEACH_INK_SOFT)
 		actions.add_child(route_note)
 		_bind_card_hover(host, tile, card_id)
 		return
 
-	var add_main: Button = host._make_button("+  MAIN DECK")
+	var add_main: Button = host._make_button("+ Main deck")
 	add_main.name = "DeckbuilderAddMainButton"
 	add_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_main.disabled = (
@@ -196,7 +201,7 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 	actions.add_child(add_main)
 
 	if not compact_workspace:
-		var add_side: Button = host._make_button("+ SIDE")
+		var add_side: Button = host._make_button("+ Sideboard")
 		add_side.name = "DeckbuilderAddSideButton"
 		add_side.disabled = (
 			available <= 0
@@ -212,7 +217,7 @@ func _add_collection_card(host, parent: GridContainer, card_id: String, compact_
 
 
 func _add_deck_rail(host, workspace: Node) -> void:
-	var rail := _add_workspace_panel(host, workspace, "ACTIVE DECK", WORKSHOP_PANEL, PALETTE.SELECTION_BLUE)
+	var rail := _add_workspace_panel(host, workspace, "Active deck", WORKSHOP_PANEL, PALETTE.PEACH_TEAL)
 	rail.name = "DeckbuilderDeckRail"
 	rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rail.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -236,19 +241,14 @@ func _add_deck_tab(host, parent: Node, title: String, node_name: String) -> VBox
 
 	if parent is not TabContainer:
 		var title_label := Label.new()
-		title_label.text = title.to_upper()
+		title_label.text = title
 		title_label.add_theme_font_override("font", DISPLAY_FONT)
 		title_label.add_theme_font_size_override("font_size", 16)
-		title_label.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT)
+		title_label.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 		panel.add_child(title_label)
 	else:
 		(parent as TabContainer).set_tab_title((parent as TabContainer).get_tab_count() - 1, title)
 
-	var hint := Label.new()
-	hint.text = "Hover to inspect" if String(host.run.get("run_loop", "")) == "route" else "Hover to inspect  •  Remove a card with −"
-	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", PALETTE.TEXT_ON_LIGHT_SECONDARY)
-	panel.add_child(hint)
 	return panel
 
 
@@ -315,7 +315,7 @@ func _add_workspace_panel(host, parent: Node, title: String, background: Color, 
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
-	_apply_angular_surface(panel, background, accent, false)
+	_apply_paper_surface(panel, background, accent, false)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
@@ -333,13 +333,13 @@ func _add_workspace_panel(host, parent: Node, title: String, background: Color, 
 	var title_bar := PanelContainer.new()
 	title_bar.add_theme_stylebox_override(
 		"panel",
-		_clean_style(PALETTE.CARBON.lightened(0.035), accent, 0, 2, Vector4(10, 5, 10, 5), 5)
+		_clean_style(PALETTE.PEACH_PAPER, accent, 0, 2, Vector4(10, 5, 10, 5), 5)
 	)
 	var title_label := Label.new()
 	title_label.text = title
 	title_label.add_theme_font_override("font", DISPLAY_FONT)
 	title_label.add_theme_font_size_override("font_size", 16)
-	title_label.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
+	title_label.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	title_bar.add_child(title_label)
 	box.add_child(title_bar)
 	return box
@@ -354,8 +354,8 @@ func _add_card_tile(host, parent: Node, card_id: String, card: Dictionary, node_
 	var tile_accent: Color = host._rarity_line_color(card.get("rarity", "common")).darkened(0.30)
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
-	var angular_surface = _apply_angular_surface(panel, tile_fill, tile_accent, false)
-	panel.set_meta("deckbuilder_tile_surface", angular_surface)
+	var paper_surface = _apply_paper_surface(panel, tile_fill, tile_accent, false)
+	panel.set_meta("deckbuilder_tile_surface", paper_surface)
 	panel.set_meta("deckbuilder_tile_fill", tile_fill)
 	panel.set_meta("deckbuilder_tile_accent", tile_accent)
 
@@ -382,7 +382,7 @@ func _make_visual_card(host, card: Dictionary, size: Vector2) -> Control:
 	var fallback := PanelContainer.new()
 	fallback.custom_minimum_size = size
 	var fallback_style := StyleBoxFlat.new()
-	fallback_style.bg_color = PALETTE.INK
+	fallback_style.bg_color = PALETTE.PEACH_PAPER
 	fallback_style.border_color = host._affinity_color(host._card_archetype(card))
 	fallback_style.set_border_width_all(2)
 	fallback_style.set_corner_radius_all(8)
@@ -392,7 +392,7 @@ func _make_visual_card(host, card: Dictionary, size: Vector2) -> Control:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.add_theme_color_override("font_color", PALETTE.GHOST)
+	title.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	fallback.add_child(title)
 	return fallback
 
@@ -403,8 +403,10 @@ func _route_display_card(host, card_id: String, card: Dictionary) -> Dictionary:
 		or host.route_run_service.upgrade_count(host.run, card_id) <= 0
 	):
 		return card
-	var upgraded_card := card.duplicate(true)
-	upgraded_card["upgraded"] = true
+	var upgraded_card: Dictionary = host.route_run_service.upgraded_card_data(card_id)
+	if upgraded_card.is_empty():
+		return card
+	upgraded_card.id = card_id
 	return upgraded_card
 
 
@@ -415,8 +417,10 @@ func _route_display_card_copy(host, card_id: String, card: Dictionary, copy_inde
 		or copy_index >= host.route_run_service.upgrade_count(host.run, card_id)
 	):
 		return card
-	var upgraded_card := card.duplicate(true)
-	upgraded_card["upgraded"] = true
+	var upgraded_card: Dictionary = host.route_run_service.upgraded_card_data(card_id)
+	if upgraded_card.is_empty():
+		return card
+	upgraded_card.id = card_id
 	return upgraded_card
 
 
@@ -444,15 +448,14 @@ func _create_hover_preview(host) -> void:
 	_hover_preview.z_index = 1800
 	_hover_preview.visible = false
 
-	_hover_preview.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	INSPECTION_CONTENT.apply_sketch_paper(_hover_preview, PALETTE.PEACH_PAPER)
 	host.add_child(_hover_preview)
-	_apply_angular_surface(_hover_preview, WORKSHOP_SURFACE, PALETTE.ELECTRIC_CYAN, true)
 
 	var preview_margin := MarginContainer.new()
-	preview_margin.add_theme_constant_override("margin_left", 10)
-	preview_margin.add_theme_constant_override("margin_right", 10)
-	preview_margin.add_theme_constant_override("margin_top", 10)
-	preview_margin.add_theme_constant_override("margin_bottom", 10)
+	preview_margin.add_theme_constant_override("margin_left", 0)
+	preview_margin.add_theme_constant_override("margin_right", 0)
+	preview_margin.add_theme_constant_override("margin_top", 0)
+	preview_margin.add_theme_constant_override("margin_bottom", 0)
 	preview_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hover_preview.add_child(preview_margin)
 	_hover_preview_body = CenterContainer.new()
@@ -471,6 +474,14 @@ func _remove_hover_preview(host) -> void:
 
 
 func _bind_card_hover(host, control: Control, card_id: String, copy_index: int = -1) -> void:
+	var inspect_data := _route_display_card_copy(host, card_id, host.cards_by_id[card_id], copy_index) if copy_index >= 0 else _route_display_card(host, card_id, host.cards_by_id[card_id])
+	INSPECTION.bind(control, inspect_data, host._run_difficulty_id())
+	control.focus_entered.connect(func() -> void: _show_hover_preview(host, control, card_id, copy_index))
+	control.focus_exited.connect(_hide_hover_preview)
+	control.gui_input.connect(func(event: InputEvent) -> void:
+		if event.is_pressed():
+			_hide_hover_preview()
+	)
 	var tile_panel := control.get_parent().get_parent() as PanelContainer
 	control.mouse_entered.connect(func() -> void:
 		_set_card_tile_hover(tile_panel, true)
@@ -512,35 +523,10 @@ func _show_hover_preview(host, source: Control, card_id: String, copy_index: int
 		if copy_index >= 0
 		else _route_display_card(host, card_id, source_card)
 	)
-	var known_keywords: Array[String] = []
-	for keyword_value in card.get("keywords", []):
-		var keyword_id := String(keyword_value)
-		if host.KEYWORD_TOOLTIPS.has(keyword_id):
-			known_keywords.append(keyword_id)
-	var preview_width := HOVER_PREVIEW_SIZE.x if known_keywords.is_empty() else 594.0
+	var known_keywords := INSPECTION_CONTENT.known_keywords(card)
+	var preview_width := HOVER_PREVIEW_SIZE.x if known_keywords.is_empty() else 640.0
 	_hover_preview.custom_minimum_size = Vector2(preview_width, HOVER_PREVIEW_SIZE.y)
-
-	var preview_row := HBoxContainer.new()
-	preview_row.name = "DeckbuilderHoverPreviewContent"
-	preview_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	preview_row.add_theme_constant_override("separation", 12)
-	_hover_preview_body.add_child(preview_row)
-	preview_row.add_child(_make_visual_card(host, card, HOVER_CARD_SIZE))
-	if not known_keywords.is_empty():
-		var glossary := VBoxContainer.new()
-		glossary.name = "DeckbuilderKeywordGlossary"
-		glossary.custom_minimum_size = Vector2(244, 0)
-		glossary.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		glossary.add_theme_constant_override("separation", 9)
-		preview_row.add_child(glossary)
-		var heading := Label.new()
-		heading.text = "KEYWORD GUIDE"
-		heading.add_theme_font_override("font", DISPLAY_FONT)
-		heading.add_theme_font_size_override("font_size", 12)
-		heading.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
-		glossary.add_child(heading)
-		for keyword_id in known_keywords:
-			host._add_keyword_explanation(glossary, keyword_id, "DeckbuilderKeyword")
+	_hover_preview_body.add_child(INSPECTION_CONTENT.make_content(card, host._run_difficulty_id(), HOVER_CARD_SIZE, "DeckbuilderKeyword"))
 	_hover_preview.visible = true
 
 	var source_rect := source.get_global_rect()
@@ -561,9 +547,9 @@ func _hide_hover_preview() -> void:
 
 func _add_sort_controls(host, parent: HBoxContainer) -> void:
 	var sort_label := Label.new()
-	sort_label.text = "SORT"
+	sort_label.text = "Sort"
 	sort_label.add_theme_font_size_override("font_size", 12)
-	sort_label.add_theme_color_override("font_color", Color(PALETTE.COOL_WHITE, 0.62))
+	sort_label.add_theme_color_override("font_color", Color(PALETTE.PEACH_INK, 0.62))
 	parent.add_child(sort_label)
 
 	_add_sort_button(host, parent, "Affinity", SORT_AFFINITY)
@@ -595,7 +581,7 @@ func _add_clean_panel(
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	parent.add_child(panel)
-	_apply_angular_surface(panel, WORKSHOP_SURFACE, accent, true)
+	_apply_paper_surface(panel, WORKSHOP_SURFACE, accent, true)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_top", 10)
@@ -610,7 +596,7 @@ func _add_clean_panel(
 	heading.text = title
 	heading.add_theme_font_override("font", DISPLAY_FONT)
 	heading.add_theme_font_size_override("font_size", 19)
-	heading.add_theme_color_override("font_color", PALETTE.COOL_WHITE)
+	heading.add_theme_color_override("font_color", PALETTE.PEACH_INK)
 	body.add_child(heading)
 	var accent_rule := ColorRect.new()
 	accent_rule.custom_minimum_size = Vector2(116, 3)
@@ -622,41 +608,22 @@ func _add_clean_panel(
 
 
 func _style_deck_button(button: Button, variant: String = "secondary") -> void:
+	# Shared controls own every button state; this screen supplies role and spacing.
 	button.set_meta("ui_button_variant", variant)
 	button.set_meta("ui_button_variant_inferred", false)
-	button.set_meta("ui_button_quiet_keyline", true)
-	button.theme_type_variation = &""
 	button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 34.0)
-	var spacing := StyleBoxFlat.new()
-	spacing.bg_color = Color.TRANSPARENT
-	spacing.border_color = Color.TRANSPARENT
-	spacing.content_margin_left = 13
-	spacing.content_margin_right = 13
-	spacing.content_margin_top = 7
-	spacing.content_margin_bottom = 7
-	spacing.set_meta("global_angular_button_spacing", true)
-	for state_name in ["normal", "hover", "pressed", "disabled", "focus"]:
-		button.add_theme_stylebox_override(state_name, spacing.duplicate())
 	button.add_theme_font_override("font", BODY_FONT)
 	button.add_theme_font_size_override("font_size", 13)
-	var face = button.get_node_or_null("DeckbuilderAngularButtonFace")
-	if face == null:
-		face = ANGULAR_BUTTON_FACE_SCRIPT.new()
-		face.name = "DeckbuilderAngularButtonFace"
-		button.add_child(face)
-	face.configure(button, variant)
-	var text_color: Color = face.text_color()
-	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(color_name, text_color)
-	button.add_theme_color_override("font_disabled_color", Color(PALETTE.COOL_WHITE, 0.46))
 
 
-func _apply_angular_surface(panel: Control, fill: Color, accent: Color, dark: bool):
-	var surface = ANGULAR_SURFACE_SCRIPT.new()
-	surface.name = "DeckbuilderAngularSurface"
+func _apply_paper_surface(panel: Control, fill: Color, accent: Color, _dark: bool) -> Panel:
+	var surface := Panel.new()
+	surface.name = "DeckbuilderPaperSurface"
+	surface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	surface.show_behind_parent = true
+	surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	INSPECTION_CONTENT.apply_sketch_paper(surface, fill, Vector4.ZERO)
 	panel.add_child(surface)
-	surface.configure(fill, accent, dark, false)
 	return surface
 
 
@@ -667,13 +634,7 @@ func _set_card_tile_hover(panel: PanelContainer, hovered: bool) -> void:
 	if not is_instance_valid(surface):
 		return
 	var base_fill: Color = panel.get_meta("deckbuilder_tile_fill", WORKSHOP_TILE)
-	var base_accent: Color = panel.get_meta("deckbuilder_tile_accent", PALETTE.STEEL)
-	surface.configure(
-		PALETTE.SURFACE_PAPER_MUTED if hovered else base_fill,
-		PALETTE.ELECTRIC_CYAN if hovered else base_accent,
-		false,
-		false
-	)
+	INSPECTION_CONTENT.apply_sketch_paper(surface, PALETTE.PEACH_MINT if hovered else base_fill, Vector4.ZERO, PALETTE.PEACH_TEAL if hovered else PALETTE.PEACH_INK)
 
 
 func _clean_style(
@@ -696,9 +657,9 @@ func _clean_style(
 	style.content_margin_right = content_margins.z
 	style.content_margin_bottom = content_margins.w
 	if with_shadow:
-		style.shadow_color = Color(PALETTE.CARBON, 0.20)
-		style.shadow_size = 2
-		style.shadow_offset = Vector2(3, 3)
+		style.shadow_color = Color(PALETTE.PEACH_INK, 0.20)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2(1, 2)
 	return style
 
 

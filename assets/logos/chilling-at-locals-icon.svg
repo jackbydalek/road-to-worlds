@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Code-native card-club icon. Editable vector; no generated image source. -->
+  <rect width="256" height="256" rx="48" fill="#f4efe3"/>
+  <rect x="54" y="52" width="111" height="155" rx="10" transform="rotate(-13 110 129)" fill="#282c31"/>
+  <rect x="84" y="43" width="117" height="164" rx="10" transform="rotate(9 142 125)" fill="#3279aa" stroke="#f4efe3" stroke-width="7"/>
+  <g transform="rotate(9 142 125)" fill="none" stroke="#f4efe3" stroke-width="7" stroke-linecap="round">
+    <path d="M117 111v5M167 111v5"/>
+    <path d="M117 144q25 22 50 0"/>
+  </g>
+</svg>

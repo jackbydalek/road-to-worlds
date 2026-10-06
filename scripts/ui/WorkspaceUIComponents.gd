@@ -3,16 +3,17 @@ class_name WorkspaceUIComponents
 
 const SKETCH_UI := preload("res://scripts/ui/SketchUIComponents.gd")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const SHAPES := preload("res://scripts/ui/PaintedUiShapes.gd")
 
 const INK := SKETCH_UI.INK
 const MUTED_INK := SKETCH_UI.MUTED_INK
 const TEAL := SKETCH_UI.TEAL
 const ORANGE := SKETCH_UI.ORANGE
 const MUSTARD := SKETCH_UI.MUSTARD
-const SURFACE := PALETTE.GHOST
-const SURFACE_WARM := PALETTE.APRICOT
-const BORDER_SOFT := PALETTE.BORDER_SOFT
-const TEAL_SOFT := PALETTE.TEAL_SOFT
+const SURFACE := PALETTE.PEACH_PAPER
+const SURFACE_WARM := PALETTE.PEACH_PAPER_MUTED
+const BORDER_SOFT := PALETTE.PEACH_EDGE
+const TEAL_SOFT := PALETTE.PEACH_MINT
 const ORANGE_SOFT := PALETTE.BRICK_SOFT
 const MUSTARD_SOFT := PALETTE.APRICOT_SOFT
 const PRICE_STICKER := Color("#D5C16D")
@@ -31,22 +32,13 @@ static func clean_style(
 	accent_width: int = 0,
 	with_shadow: bool = false
 ) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = background
+	var style := SHAPES.style(background, content_margins, 0, float(maxi(radius, 7)))
+	# Ordinary containers stay lineless. Explicit thicker selection/focus marks
+	# remain functional for existing callers.
 	style.border_color = border
-	style.set_border_width_all(border_width)
-	if accent_width > 0:
-		style.border_width_left = accent_width
-	style.set_corner_radius_all(radius)
-	style.content_margin_left = content_margins.x
-	style.content_margin_top = content_margins.y
-	style.content_margin_right = content_margins.z
-	style.content_margin_bottom = content_margins.w
-	style.anti_aliasing = true
-	if with_shadow:
-		style.shadow_color = Color(0.08, 0.05, 0.16, 0.24)
-		style.shadow_size = 8
-		style.shadow_offset = Vector2(0, 3)
+	style.set_border_width_all(border_width if border_width > 1 else 0)
+	var _legacy_accent := accent_width
+	var _legacy_shadow := with_shadow
 	return style
 
 

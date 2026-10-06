@@ -19,7 +19,8 @@ const EXPECTED_BY_TYPE := {
 		"sweet_pudding_puma", "sweet_strawberry_sharkcake", "sweet_cinnamon_snail", "sweet_mothchi",
 		"sweet_pup_tart", "sweet_pandacake", "hearty_gravy_gazelle", "hearty_polar_pot_pie_bear",
 		"hearty_lasagnama", "hearty_dumpling_tortoise", "hearty_bison_burrito", "fresh_saladmander",
-		"fresh_harvest_hydra", "fresh_garden_gorilla", "fresh_spicy_yolke_bowl"
+		"fresh_harvest_hydra", "fresh_garden_gorilla", "fresh_spicy_yolke_bowl",
+		"spicy_jalapenowl", "spicy_quesadillama", "sweet_tiramiswan", "sweet_crepebara", "hearty_macawroni", "hearty_wombatato", "fresh_guacamolemur", "funky_kimchilla"
 	],
 	"chef": [
 		"chef_john", "chef_bill", "chef_gusteau", "chef_mary", "chef_soup", "chef_brown", "chef_duff",
@@ -63,8 +64,8 @@ func _init() -> void:
 				_fail("Canonical card %s is registered as %s instead of %s." % [card_id, data.get("card_type", "missing"), card_type])
 				return
 
-	if expected_ids.size() != 87:
-		_fail("The locked demo manifest contains %d ids instead of 87." % expected_ids.size())
+	if expected_ids.size() != 95:
+		_fail("The locked demo manifest contains %d ids instead of 95." % expected_ids.size())
 		return
 	for card_id in service.cards_by_id:
 		if card_id == "token_fresh_ingredient":
@@ -72,11 +73,11 @@ func _init() -> void:
 		if not expected_ids.has(String(card_id)):
 			_fail("Noncanonical collectible %s is still in the production catalog." % card_id)
 			return
-	if service.cards_by_id.size() != 88:
-		_fail("Expected 87 canonical collectibles plus the service-only Fresh token; loaded %d cards." % service.cards_by_id.size())
+	if service.cards_by_id.size() != 96:
+		_fail("Expected 95 canonical collectibles plus the service-only Fresh token; loaded %d cards." % service.cards_by_id.size())
 		return
 
-	print("Canonical catalog smoke test passed: 87 collectibles plus the Fresh token.")
+	print("Canonical catalog smoke test passed: 95 collectibles plus the Fresh token.")
 	quit(0)
 
 

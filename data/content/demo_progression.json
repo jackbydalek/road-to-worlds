@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "weeks": 2,
+  "rounds_per_week": 4,
+  "deckbox_offer_count": 3,
+  "between_week_heal": 20,
+  "between_week_full_heal_difficulties": ["white", "blue"],
+  "week_two_opponent_life_bonus": 2,
+  "week_two_pack": {
+    "id": "second_helpings",
+    "name": "Second Helpings",
+    "size": 5,
+    "guaranteed_special_serves": 2,
+    "guaranteed_spices": 1
+  },
+  "deckboxes": [
+    {
+      "id": "tip_jar",
+      "name": "Tip Jar Box",
+      "description": "Earn $1 extra after every game.",
+      "effects": {
+        "match_money": 1
+      }
+    },
+    {
+      "id": "big_lunch",
+      "name": "Big Lunch Box",
+      "description": "Gain 5 maximum life and heal 5 when chosen.",
+      "effects": {
+        "max_life": 5
+      }
+    },
+    {
+      "id": "loyal_regular",
+      "name": "Light Pack Box",
+      "description": "Choose 3 cards to remove from your deck when chosen. Keep at least 1 card.",
+      "effects": {
+        "remove_cards": 3
+      }
+    },
+    {
+      "id": "chefs_edge",
+      "name": "Chef’s Edge Box",
+      "description": "Choose 2 cards in your deck to upgrade when chosen.",
+      "effects": {
+        "upgrade_cards": 2
+      }
+    },
+    {
+      "id": "padded_picnic",
+      "name": "Padded Picnic Box",
+      "description": "Take 2 less damage each time you reshuffle your deck.",
+      "effects": {
+        "reshuffle_damage_reduction": 2
+      }
+    }
+  ]
+}

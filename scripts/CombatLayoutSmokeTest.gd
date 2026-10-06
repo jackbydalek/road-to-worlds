@@ -2,6 +2,9 @@ extends SceneTree
 
 const TABLE_SCENE := preload("res://scenes/Tabletop3DPrototype.tscn")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const BACKDROP_SCRIPT := preload("res://scripts/ui/PeachSodaBattleBackdrop.gd")
+const TURN_GRAPHIC_SCRIPT := preload("res://scripts/ui/TurnChangeGraphic.gd")
+const HEALTH_BAR_SCRIPT := preload("res://scripts/ui/CozyHealthBar.gd")
 const PREVIEW_PATH := "res://outputs/sketch_campaign/10_battle_ui.png"
 const RULE_ERROR_PREVIEW_PATH := "res://outputs/sketch_campaign/10b_battle_rule_error.png"
 const MEAL_AURA_PREVIEW_PATH := "res://outputs/sketch_campaign/10c_meal_selection_aura.png"
@@ -56,7 +59,7 @@ func _run() -> void:
 	_expect(
 		table.settings_button.text.is_empty()
 		and String(table.settings_button.get_meta("material_symbol", "")) == "settings"
-		and table.settings_button.get_theme_color("icon_normal_color").is_equal_approx(PALETTE.COOL_WHITE)
+		and _contrast_ratio(table.settings_button.get_theme_color("icon_normal_color"), PALETTE.PEACH_PAPER) >= 4.5
 		and table.settings_button.custom_minimum_size.x <= 56.0,
 		"The consolidated match settings control is not represented by a compact cog."
 	)
@@ -71,12 +74,15 @@ func _run() -> void:
 	_expect(not board_info_labels.is_empty(), "The table information labels were not tagged for the HUD toggle.")
 	for board_label in board_info_labels:
 		_expect(not board_label.visible, "A table label or pile count is visible before opening table information.")
+	_expect(not table.tournament_slip.is_visible_in_tree() and not table.locals_venue_label.is_visible_in_tree() and not table.rival_hand_label.is_visible_in_tree(), "Optional match information is visible before enabling Board Info.")
 	table.configure_battle_preferences("normal", 1.0, false, true)
 	for board_label in board_info_labels:
 		_expect(board_label.visible, "The Options board-information preference did not reveal a table label or pile count.")
+	_expect(table.tournament_slip.is_visible_in_tree(), "Board Info did not reveal the live tournament context.")
 	table.configure_battle_preferences("normal", 1.0, false, false)
 	for board_label in board_info_labels:
 		_expect(not board_label.visible, "The Options board-information preference did not hide a table label or pile count.")
+	_expect(not table.tournament_slip.is_visible_in_tree() and not table.locals_venue_label.is_visible_in_tree() and not table.rival_hand_label.is_visible_in_tree(), "Disabling Board Info left a match-information plaque visible.")
 	var first_draw_event: Array[Dictionary] = [{"type": "draw", "side": "player", "from": "deck", "to": "hand"}]
 	table._register_deck_draw_events(first_draw_event)
 	table._render_match()
@@ -121,15 +127,7 @@ func _run() -> void:
 		and absf(hearty_deck_card.rotation_degrees.y) <= 0.1,
 		"A Hearty rival allowed repeated draws to loosen their neat deck stack."
 	)
-	for neat_affinity in ["sweet", "hearty"]:
-		table.configured_match_context.player_starter = neat_affinity
-		table.deck_visual_messiness.player = 0
-		table._register_deck_draw_events(first_draw_event)
-		_expect(
-			int(table.deck_visual_messiness.player) == 0,
-			"%s players did not keep their deck neatly stacked." % neat_affinity.capitalize()
-		)
-	for loose_affinity in ["spicy", "fresh", "funky"]:
+	for loose_affinity in ["spicy", "hearty", "sweet", "fresh", "funky"]:
 		table.configured_match_context.player_starter = loose_affinity
 		table.deck_visual_messiness.player = 0
 		table._register_deck_draw_events(first_draw_event)
@@ -167,7 +165,17 @@ func _run() -> void:
 		and table.battle_log_button.custom_minimum_size.x <= 72.0,
 		"The match log is not represented by its compact history symbol and count."
 	)
-	_expect(not table.turn_label.visible, "The persistent turn counter is still visible in the top HUD.")
+	_expect(
+		not table.turn_label.is_visible_in_tree()
+		and not table.normal_meal_status.is_visible_in_tree()
+		and not table.end_turn_dock.is_visible_in_tree()
+		and table.end_turn_button.is_visible_in_tree()
+		and table.end_turn_button.tooltip_text.to_upper().contains("TURN")
+		and table.end_turn_button.tooltip_text.contains("Meal"),
+		"The solo End Turn control lost its contextual tooltip or retained permanent status plaques."
+	)
+	var end_turn_rect: Rect2 = table.end_turn_button.get_global_rect()
+	_expect(end_turn_rect.position.x >= table.size.x * 0.80 and end_turn_rect.position.y >= table.size.y * 0.42 and end_turn_rect.end.y <= table.size.y * 0.53, "End Turn is not beside the seam between the playmats.")
 	_expect(not table.title_label.visible, "The redundant matchup title is still visible in the top HUD.")
 	_expect(table.find_child("MatchHeader", true, false) == null, "The persistent top-center match panel still exists.")
 	_expect(
@@ -177,66 +185,57 @@ func _run() -> void:
 	_expect(
 		table.player_profile_life_bar != null
 		and table.opponent_profile_life_bar != null
-		and table.player_profile_badge.size.x <= 110.0
-		and table.opponent_profile_badge.size.x <= 110.0
+		and table.player_profile_name.is_visible_in_tree()
+		and table.opponent_profile_name.is_visible_in_tree()
+		and not table.player_profile_name.text.is_empty()
+		and not table.opponent_profile_name.text.is_empty()
 		and not table.player_profile_details.visible
 		and not table.opponent_profile_details.visible
-		and table.player_profile_life_bar.position.y >= table.player_profile_badge.position.y + table.player_profile_badge.size.y - 1.0
-		and table.opponent_profile_life_bar.position.y >= table.opponent_profile_badge.position.y + table.opponent_profile_badge.size.y - 1.0,
-		"The numeric life bars are not positioned beneath both profile boxes."
+		and table.player_profile_badge.get_global_rect().encloses(table.player_profile_life_bar.get_global_rect())
+		and table.opponent_profile_badge.get_global_rect().encloses(table.opponent_profile_life_bar.get_global_rect())
+		and table.player_profile_badge.get_global_rect().encloses(table.player_profile_name.get_global_rect())
+		and table.opponent_profile_badge.get_global_rect().encloses(table.opponent_profile_name.get_global_rect()),
+		"The competitor profiles do not integrate a visible name and numeric life bar."
 	)
-	var player_life_fill := table.player_profile_life_bar.get_theme_stylebox("fill") as StyleBoxFlat
-	var player_life_track := table.player_profile_life_trail_bar.get_theme_stylebox("background") as StyleBoxFlat
-	var player_hp_marker := table.player_profile_life_bar.find_child("PlayerLifeBarMarker", true, false) as Label
+	for side in ["player", "opponent"]:
+		_check_profile_health_layout(table, side)
+	var player_profile_rect: Rect2 = table.player_profile_badge.get_global_rect()
+	var opponent_profile_rect: Rect2 = table.opponent_profile_badge.get_global_rect()
+	_expect(player_profile_rect.position.x <= 32.0 and player_profile_rect.position.y >= table.size.y * 0.77 and player_profile_rect.position.y <= table.size.y * 0.83, "The player profile is not aligned to the lower-left edge.")
+	_expect(player_profile_rect.size.x >= 300.0 and opponent_profile_rect.size.x >= 280.0, "The reference's enlarged competitor scorecards reverted to the smaller HUD.")
 	_expect(
-		table.player_profile_life_bar.size.y >= 36.0
-		and table.opponent_profile_life_bar.size.y >= 36.0
-		and table.player_profile_life_label.get_theme_font_size("font_size") >= 17
-		and table.opponent_profile_life_label.get_theme_font_size("font_size") >= 17
-		and table.player_profile_life_label.get_theme_font("font").resource_path == "res://assets/fonts/Oxanium-SemiBold.ttf"
-		and table.player_profile_life_label.get_theme_constant("outline_size") >= 3
-		and table.player_profile_life_bar.fill_mode == ProgressBar.FILL_BEGIN_TO_END
-		and table.player_profile_life_trail_bar.fill_mode == ProgressBar.FILL_BEGIN_TO_END
-		and table.opponent_profile_life_bar.fill_mode == ProgressBar.FILL_END_TO_BEGIN
-		and table.opponent_profile_life_trail_bar.fill_mode == ProgressBar.FILL_END_TO_BEGIN
-		and player_life_fill != null
-		and player_life_fill.bg_color.is_equal_approx(PALETTE.HEALTH_FILL)
-		and player_life_track != null
-		and player_life_track.bg_color.is_equal_approx(Color(PALETTE.GRAPHITE, 0.99))
-		and player_life_track.border_width_left >= 3
-		and player_hp_marker != null
-		and player_hp_marker.text == "HP"
-		and player_hp_marker.get_theme_color("font_color").is_equal_approx(PALETTE.SIGNAL_YELLOW)
-		and _contrast_ratio(PALETTE.COOL_WHITE, PALETTE.HEALTH_FILL) >= 4.5,
-		"The profile HP readout is not large or high-contrast enough for gameplay."
-	)
-	_expect(table.player_profile_badge.position.x <= 24.0, "The player profile is not aligned to the lower-left edge.")
-	_expect(
-		table.opponent_profile_badge.position.x >= table.get_viewport_rect().size.x * 0.65
-		and table.opponent_profile_badge.position.y <= table.get_viewport_rect().size.y * 0.22,
-		"The opponent profile is not positioned in the open upper-right area."
+		opponent_profile_rect.position.x >= table.size.x * 0.65
+		and opponent_profile_rect.position.y >= table.size.y * 0.12
+		and opponent_profile_rect.position.y <= table.size.y * 0.18
+		and opponent_profile_rect.end.x >= table.size.x * 0.87
+		and opponent_profile_rect.end.x <= table.size.x * 0.93,
+		"The opponent profile is not positioned at the upper right beside the seated rival."
 	)
 	_expect(
 		table.player_profile_badge.find_child("PlayerProfileBadgeAngularSurface", true, false) != null
 		and table.opponent_profile_badge.find_child("OpponentProfileBadgeAngularSurface", true, false) != null
 		and table.player_profile_badge.find_child("PlayerProfileBadgeTechPattern", true, false) == null,
-		"The player and rival profiles do not use the clean angular status treatment."
+		"The player and rival profiles do not use the clean scorecard treatment."
 	)
 	_expect(
 		table.turn_banner_panel.get_theme_stylebox("panel") is StyleBoxEmpty
-		and table.turn_banner_surface.fill_color.is_equal_approx(PALETTE.SURFACE_PAPER)
-		and table.turn_banner_accent_rule.color.is_equal_approx(PALETTE.SELECTION_BLUE),
-		"The turn-change banner still uses the legacy rounded paper treatment."
+		and table.turn_banner_surface.peach_soda_style
+		and table.turn_banner_surface.fill_color.is_equal_approx(PALETTE.PEACH_PAPER)
+		and table.turn_banner_graphic.get_script() == TURN_GRAPHIC_SCRIPT
+		and table.turn_banner_graphic.accent_color.is_equal_approx(table.turn_banner_accent_rule.color),
+		"The turn-change banner does not use the native Peach Soda paper treatment."
 	)
 	table._show_turn_banner("opponent_turn")
 	await create_timer(0.32).timeout
 	_expect(
 		table.turn_banner_title.text == "OPPONENT TURN"
-		and table.turn_banner_title.get_theme_color("font_color").is_equal_approx(PALETTE.SIGNAL_RED)
-		and table.turn_banner_title.get_theme_color("font_outline_color").is_equal_approx(PALETTE.CARBON)
-		and table.turn_banner_title.get_theme_constant("outline_size") >= 6
+		and table.turn_banner_title.get_theme_color("font_color").is_equal_approx(PALETTE.PEACH_INK)
+		and _contrast_ratio(table.turn_banner_title.get_theme_color("font_color"), PALETTE.PEACH_PAPER) >= 4.5
+		and table.turn_banner_title.get_theme_constant("outline_size") == 0
 		and table.turn_banner_title.get_theme_constant("shadow_offset_x") == 0
 		and table.turn_banner_title.get_theme_constant("shadow_offset_y") == 0
+		and table.turn_banner_graphic.accent_color.is_equal_approx(PALETTE.SIGNAL_RED)
+		and table.turn_banner_accent_rule.color.is_equal_approx(PALETTE.SIGNAL_RED)
 		and table.turn_banner_subtitle.text == "TURN 1"
 		and table.turn_banner_subtitle.name == "TurnBannerNumber"
 		and table.turn_banner_subtitle.get_parent().name == "TurnBannerNumberOffset"
@@ -248,35 +247,25 @@ func _run() -> void:
 		_expect(turn_banner_preview.save_png(TURN_BANNER_PREVIEW_PATH) == OK, "Turn banner preview could not be saved.")
 	await create_timer(0.72).timeout
 	_expect(
-		table._card_viewer_action_icon("Play Card").resource_path == "res://assets/ui/battle_actions/play_card.png"
-		and table._card_viewer_action_icon("Activate Ability").resource_path == "res://assets/ui/battle_actions/activate_ability.png"
+		table._card_viewer_action_icon("Play Card").resource_path == "res://assets/ui/peach_soda_actions/play.svg"
+		and table._card_viewer_action_icon("Activate Ability").resource_path == "res://assets/ui/peach_soda_actions/ability.svg"
 		and table.ACTION_ICON_SPECIAL_SERVE.resource_path == "res://assets/ui/battle_actions/special_serve.png"
-		and table._card_viewer_action_icon("Attack").resource_path == "res://assets/ui/battle_actions/attack.png"
-		and table._card_viewer_action_icon("Move").resource_path == "res://assets/ui/battle_actions/move.png"
-		and table._card_viewer_action_icon("Begin Recipe").resource_path == "res://assets/ui/battle_actions/spice.png",
-		"The card inspector is not using the supplied authored action symbols."
+		and table._card_viewer_action_icon("Attack").resource_path == "res://assets/ui/peach_soda_actions/attack.svg"
+		and table._card_viewer_action_icon("Move").resource_path == "res://assets/ui/peach_soda_actions/move.svg"
+		and table._card_viewer_action_icon("Begin Recipe").resource_path == "res://assets/ui/peach_soda_actions/spice.svg",
+		"The card inspector is not using the native Peach Soda symbols for its corresponding actions."
 	)
 	_expect(
 		table.settings_button.get_node_or_null("BattleAngularButtonFace") != null
 		and table.end_turn_button.get_node_or_null("BattleAngularButtonFace") != null,
-		"The battle controls do not use the smooth chamfered treatment."
+		"The battle controls do not use the shared readable button treatment."
 	)
-	var opponent_life_before := float(table.opponent_profile_life_bar.value)
-	table._animate_profile_life_change("opponent", 3)
-	await create_timer(0.5).timeout
-	_expect(
-		is_equal_approx(table.opponent_profile_life_bar.value, opponent_life_before - 3.0)
-		and table.opponent_profile_life_trail_bar.value >= table.opponent_profile_life_bar.value
-		and table.opponent_profile_life_label.text == "%d/%d" % [int(opponent_life_before) - 3, int(table.opponent_profile_life_bar.max_value)],
-		"The opponent life bar did not animate down with a readable trailing damage drain."
-	)
-	table._sync_profile_life_bar("opponent")
-	table._spawn_movement_trail_screen(Vector2(180, 520), Vector2(420, 360), PALETTE.ELECTRIC_CYAN)
+	for side in ["player", "opponent"]:
+		await _check_profile_health_animation(table, side)
 	table._spawn_damage_burst_screen(Vector2(720, 430), PALETTE.SIGNAL_RED)
 	_expect(
-		table.effect_layer.find_child("MovementGraphicVfx", true, false) != null
-		and table.effect_layer.find_child("DamageGraphicVfx", true, false) != null,
-		"The engine-drawn movement trail or damage impact burst did not spawn."
+		table.effect_layer.find_child("DamageGraphicVfx", true, false) != null,
+		"The engine-drawn damage impact burst did not spawn."
 	)
 	var stable_camera_transform: Transform3D = table.camera.global_transform
 	var stable_camera_fov: float = table.camera.fov
@@ -293,18 +282,27 @@ func _run() -> void:
 	table.configured_match_context = {"route_encounter": true, "location": "Sidewalk Market"}
 	table._apply_route_location_theme()
 	var tabletop_mesh := table.get_node("ViewportContainer/WorldViewport/World/Table") as MeshInstance3D
-	var table_material := tabletop_mesh.material_override as StandardMaterial3D
 	var tabletop_box := tabletop_mesh.mesh as BoxMesh
-	var battle_backdrop := table.get_node("BattleBackdrop") as TextureRect
+	var battle_backdrop := table.get_node_or_null("BattleBackdrop") as Control
 	var production_arena := table.get_node("ViewportContainer/WorldViewport/World/ProductionArena") as Node3D
 	var inset_playmat := production_arena.get_node("InsetPlaymat") as MeshInstance3D
-	var inset_material := inset_playmat.get_active_material(0) as ShaderMaterial
-	var center_line := production_arena.get_node("CenterLine") as MeshInstance3D
-	var center_line_material := center_line.get_active_material(0) as StandardMaterial3D
+	var inset_material := inset_playmat.get_active_material(0) as StandardMaterial3D
+	var player_playmat := production_arena.get_node("PlayerPlaymat") as MeshInstance3D
+	var player_mat_material := player_playmat.get_active_material(0) as StandardMaterial3D
+	var opponent_mat_bounds: AABB = inset_playmat.transform * inset_playmat.mesh.get_aabb()
+	var player_mat_bounds: AABB = player_playmat.transform * player_playmat.mesh.get_aabb()
 	_expect(
-		table_material != null and table_material.albedo_color.is_equal_approx(PALETTE.GRAPHITE),
-		"A route-location override changed the tournament table away from graphite."
+		battle_backdrop != null
+		and not battle_backdrop is TextureRect
+		and battle_backdrop.get_script() == BACKDROP_SCRIPT
+		and battle_backdrop.is_visible_in_tree()
+		and String(table.get_meta("battle_visual_style", "")) == "peach_soda"
+		and not tabletop_mesh.is_visible_in_tree(),
+		"The Peach Soda table perimeter is not drawn by the native backdrop, or the old 3D wood is still visible."
 	)
+	if battle_backdrop == null:
+		quit(1)
+		return
 	_expect(
 		tabletop_box != null
 		and tabletop_box.size.x >= table.PRODUCTION_TABLE_WIDTH
@@ -315,40 +313,67 @@ func _run() -> void:
 	)
 	var first_player_prep_slot := production_arena.get_node("PrintedCardSlots/PlayerPrepSlot1") as Node3D
 	var last_player_prep_slot := production_arena.get_node("PrintedCardSlots/PlayerPrepSlot3") as Node3D
-	var first_player_prep_mark := first_player_prep_slot.get_node("Near") as Node3D if first_player_prep_slot != null else null
-	var last_player_prep_mark := last_player_prep_slot.get_node("Near") as Node3D if last_player_prep_slot != null else null
+	var first_slot_bounds := _printed_geometry_bounds(first_player_prep_slot)
+	var last_slot_bounds := _printed_geometry_bounds(last_player_prep_slot)
+	var first_slot_target: Vector3 = table._slot_world_position("player_prep", 0)
+	var last_slot_target: Vector3 = table._slot_world_position("player_prep", 2)
 	_expect(
-		first_player_prep_mark != null
-		and last_player_prep_mark != null
-		and absf(last_player_prep_mark.position.x - first_player_prep_mark.position.x) >= table.PREP_SLOT_SPACING * 2.0 - 0.01,
-		"The battle slots were not expanded horizontally with the wider tabletop."
+		first_player_prep_slot != null
+		and last_player_prep_slot != null
+		and absf(first_slot_bounds.get_center().x - first_slot_target.x) <= 0.03
+		and absf(last_slot_bounds.get_center().x - last_slot_target.x) <= 0.03
+		and first_slot_bounds.size.x >= table.FIELD_CARD_SIZE.x
+		and first_slot_bounds.size.z >= table.ZONE_EXTENTS.player_prep.y * 2.0,
+		"The printed corner marks do not frame the playable Prep destinations."
 	)
 	_expect(
 		production_arena != null
 		and String(production_arena.get_meta("asset_origin", "")) == "engine_geometry"
 		and not bool(production_arena.get_meta("ships_external_art", true))
 		and production_arena.get_node_or_null("InsetPlaymat") != null
-		and production_arena.get_node_or_null("InsetRim") != null
+		and production_arena.get_node_or_null("PlayerPlaymat") != null
+		and production_arena.get_node_or_null("PlaymatPrinting/PlayerBinding") != null
+		and production_arena.get_node_or_null("PlaymatPrinting/OpponentBinding") != null
 		and production_arena.get_node_or_null("PrintedCardSlots/PlayerPrepSlot1") != null
 		and production_arena.get_node_or_null("PlayerDeckTray") != null
 		and production_arena.get_node_or_null("PlayerEnvironmentTray") != null
 		and production_arena.get_node_or_null("OpponentDiscardTray") != null,
-		"The inset tournament mat or its marked deck/discard trays are missing."
+		"The separate cloth mats, their bindings, or marked deck/discard trays are missing."
 	)
 	_expect(
 		inset_material != null
-		and inset_material.shader.resource_path == "res://assets/shaders/tournament_wood.gdshader"
-		and is_equal_approx(center_line.position.z, table.PRODUCTION_BOARD_DIVIDER_Z)
-		and center_line_material != null
-		and center_line_material.albedo_color.is_equal_approx(Color(PALETTE.COOL_WHITE, 0.88))
-		and production_arena.get_node_or_null("CenterCirclePrint") == null
-		and production_arena.get_node_or_null("PlayerDiscardTray/SideMark") == null
-		and production_arena.get_node_or_null("PlayerEnvironmentTray/SideMark") == null
-		and production_arena.get_node_or_null("OpponentDiscardTray/SideMark") == null
-		and production_arena.get_node_or_null("OpponentEnvironmentTray/SideMark") == null
-		and production_arena.get_node_or_null("TournamentDressing") == null,
-		"The battle board did not use the procedural wood treatment or still contains decorative table clutter."
+		and inset_material.albedo_color.is_equal_approx(PALETTE.PEACH_MAT)
+		and inset_material.albedo_texture == null
+		and inset_material.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED
+		and is_zero_approx(inset_material.metallic_specular)
+		and player_mat_material != null
+		and player_mat_material.albedo_color.is_equal_approx(PALETTE.PEACH_MAT.lerp(PALETTE.PEACH_TEAL, 0.22))
+		and player_mat_material.albedo_texture == null
+		and player_mat_material.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED
+		and is_zero_approx(player_mat_material.metallic_specular)
+		and opponent_mat_bounds.size.x < tabletop_box.size.x
+		and opponent_mat_bounds.size.z < tabletop_box.size.z
+		and player_mat_bounds.size.x < tabletop_box.size.x
+		and player_mat_bounds.size.z < tabletop_box.size.z
+		and player_mat_bounds.position.z - opponent_mat_bounds.end.z >= 0.20
+		and String(inset_playmat.get_meta("playmat_side", "")) == "opponent"
+		and String(player_playmat.get_meta("playmat_side", "")) == "player"
+		and production_arena.get_node_or_null("PlaymatPrinting/CenterRule") == null
+		and production_arena.get_node_or_null("PlaymatPrinting/PlayerPrepPrint1") is Label3D
+		and production_arena.get_node_or_null("PlaymatPrinting/OpponentPrepPrint1") is Label3D,
+		"The battle board lost its two flat Peach Soda cloths, exposed center gap, or native printed zone labels."
 	)
+	for side in ["Player", "Opponent"]:
+		var binding := production_arena.get_node("PlaymatPrinting/%sBinding/SoftBoundEdge" % side) as MeshInstance3D
+		var binding_material := binding.get_active_material(0) as StandardMaterial3D
+		_expect(
+			binding_material != null
+			and binding_material.albedo_color.a > 0.0
+			and binding_material.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED
+			and bool(binding.get_meta("flat_playmat_ink", false))
+			and bool(binding.get_meta("procedural_geometry", false)),
+			"The %s cloth is missing its native flat sewn boundary." % side.to_lower()
+		)
 	_expect(
 		table._zone_color("player_plated").is_equal_approx(PALETTE.ZONE_PLAYER_PLATED)
 		and table._zone_color("player_prep").is_equal_approx(PALETTE.ZONE_PLAYER_PREP)
@@ -357,20 +382,27 @@ func _run() -> void:
 		"The table zones do not use the two-color player-blue and rival-red ownership system."
 	)
 	_expect(
-		battle_backdrop.texture.resource_path == "res://assets/battle/field-battle-background.png",
-		"The supplied field battle backdrop was not loaded."
+		battle_backdrop.get_script() == BACKDROP_SCRIPT
+		and table.find_child("RivalAtLocalsTable", true, false) is TextureRect,
+		"The native locals room or separate configured rival was not loaded."
 	)
+	var locals_backdrop_script: Script = battle_backdrop.get_script()
 	table.configured_match_context = {"route_encounter": true, "location": "Waterfront Table"}
 	table._apply_route_location_theme()
-	_expect(battle_backdrop.texture.resource_path == "res://assets/battle/field-battle-background.png", "Route metadata replaced the supplied field backdrop.")
+	_expect(
+		table.get_node_or_null("BattleBackdrop") == battle_backdrop
+		and battle_backdrop.get_script() == locals_backdrop_script
+		and battle_backdrop.is_visible_in_tree(),
+		"Route metadata replaced the native locals room backdrop."
+	)
 	table.configured_match_context = original_match_context
 	table._apply_route_location_theme()
 	_expect(
-		table.end_turn_button.text == "END TURN"
-		and table.end_turn_button.icon != null
-		and table.end_turn_button.get_theme_font("font").resource_path == "res://assets/fonts/Oxanium-SemiBold.ttf"
-		and table.end_turn_button.icon_alignment == HORIZONTAL_ALIGNMENT_RIGHT,
-		"The primary turn action is not clearly labeled with its caret icon."
+		table.end_turn_button.text.to_upper() == "END TURN"
+		and table.end_turn_button.get_theme_font("font").resource_path == "res://assets/fonts/AtkinsonHyperlegibleNext.ttf"
+		and String(table.end_turn_button.get_meta("ui_button_variant", "")) == "primary"
+		and table.end_turn_button.size.y >= 46.0,
+		"The primary turn action is not clearly labeled and large enough to press."
 	)
 	for choice_button in [table.confirm_choice_button, table.cancel_choice_button, table.battle_log_close_button, table.card_tray_confirm_button, table.card_tray_skip_button]:
 		var angular_face = choice_button.get_node_or_null("BattleAngularButtonFace")
@@ -434,7 +466,7 @@ func _run() -> void:
 	table._render_match()
 	_expect(not table.status_panel.visible, "The contextual action bar remained visible after its decision ended.")
 	_expect("CURRENT" in table.battle_log_text.text and String(table.state.message) in table.battle_log_text.text, "Current match guidance was not moved into the match log.")
-	_expect(table.battle_log_text.get_theme_color("default_color") == Color("#29365F"), "Match log copy did not use the readable navy ink color.")
+	_expect(table.battle_log_text.get_theme_color("default_color").is_equal_approx(PALETTE.PEACH_INK), "Match log copy did not use the readable Peach Soda ink color.")
 	table.dragging = true
 	table._refresh_status_panel_visibility()
 	_expect(not table.status_panel.visible, "The rule-error toast appeared during a valid card drag.")
@@ -458,7 +490,7 @@ func _run() -> void:
 	table.state.player.meal_served = true
 	table.state.player.meals_served = 1
 	await table._play_hand_card(table.state.player.hand.size() - 1, "prep", 1)
-	_expect(table.invalid_action_visible and "already served a Meal" in table.status_label.text, "An illegal second Meal did not show its rule explanation.")
+	_expect(table.invalid_action_visible and "Normal Meal already served this turn." in table.status_label.text, "An illegal second Meal did not show its rule explanation.")
 	table._dismiss_invalid_action()
 	table.state.player.meal_served = false
 	table.state.player.meals_served = 0
@@ -494,24 +526,33 @@ func _run() -> void:
 	attacker.ready = attacker_ready
 	table._render_match()
 	_expect(not table.status_panel.visible, "The rule-error toast did not dismiss cleanly.")
-	_expect(
-		table.camera.position.y >= 10.0
-		and table.camera.position.y <= 11.0
-		and table.camera.position.z >= 10.0,
-		"Combat camera is not using the park promenade perspective."
-	)
-	_expect(table.camera.fov >= 42.5 and table.camera.fov <= 44.0, "Combat camera is outside the trailer-readable framing range.")
-	_expect(table.find_children("*PlatedCard_*", "Node3D", true, false).size() == 3, "Camera preview did not render all Plated cards.")
+	for zone_id in table.ZONE_CENTERS:
+		var capacity: int = table.service.PREP_SLOTS if String(zone_id).ends_with("prep") else table.service.PLATED_SLOTS
+		for slot_index in range(capacity):
+			var target: Vector3 = table._slot_world_position(String(zone_id), slot_index)
+			var projected: Vector2 = table._world_to_container(target)
+			var picked: Dictionary = table._slot_at_point(target)
+			_expect(
+				Rect2(Vector2.ZERO, table.viewport_container.size).has_point(projected)
+				and String(picked.get("zone", "")) == String(zone_id)
+				and int(picked.get("slot", -1)) == slot_index,
+				"The battle composition clips a destination or disagrees with its hit target."
+			)
+	_expect(table.card_layer.find_children("*PlatedCard_*", "Node3D", true, false).size() == 3, "Camera preview did not render all Plated cards.")
 	var ability_card: Node3D = table.find_child("PlayerPrepCard_*", true, false)
 	var ability_aura := ability_card.find_child("AbilityReadyAura", true, false) as MeshInstance3D if ability_card != null else null
 	_expect(ability_aura != null and ability_aura.material_override is StandardMaterial3D, "A field card with a ready activated ability has no glowing aura.")
-	_expect(table.find_children("AbilityReadyAura", "MeshInstance3D", true, false).size() == 1, "The ability-ready aura appeared on a card that cannot currently activate an ability.")
+	_expect(table.card_layer.find_children("AbilityReadyAura", "MeshInstance3D", true, false).size() == 1, "The ability-ready aura appeared on a card that cannot currently activate an ability.")
 	var hand_card: Node3D = table.find_child("PlayerHandCard_0", true, false)
 	_expect(hand_card != null, "Camera preview did not render the player's hand.")
 	if hand_card != null:
 		var hand_rect: Rect2 = table._card_screen_rect(hand_card)
 		var visible_hand_rect := hand_rect.intersection(Rect2(Vector2.ZERO, table.viewport_container.size))
-		_expect(hand_card.scale.x >= 1.25, "The player's hand cards did not retain their larger readable scale.")
+		_expect(
+			hand_rect.size.x >= table.viewport_container.size.x * 0.10
+			and hand_rect.size.y >= table.viewport_container.size.y * 0.18,
+			"The player's hand cards are too small on screen to read."
+		)
 		_expect(visible_hand_rect.size.y >= hand_rect.size.y * 0.72, "Too much of the player's hand is clipped below the screen.")
 		_expect(
 			visible_hand_rect.end.y >= table.viewport_container.size.y - 40.0,
@@ -525,12 +566,18 @@ func _run() -> void:
 	var opponent_hand_card := table.find_child("OpponentHandCard_0", true, false) as Node3D
 	_expect(opponent_hand_card != null, "Camera preview did not render the opponent's hand.")
 	if opponent_hand_card != null:
-		var far_table_edge := tabletop_mesh.position.z - tabletop_box.size.z * 0.5
-		_expect(
-			opponent_hand_card.position.z <= far_table_edge - 0.25,
-			"The opponent hand was not moved clear of the far table edge."
-		)
 		var opponent_hand_rect: Rect2 = table._card_screen_rect(opponent_hand_card)
+		_expect(
+			Rect2(Vector2.ZERO, table.viewport_container.size).encloses(opponent_hand_rect),
+			"The rival's visible card backs are clipped by the battle camera."
+		)
+		for field_card in table.interactive_cards:
+			if not is_instance_valid(field_card) or String(field_card.get_meta("kind", "")) != "field":
+				continue
+			_expect(
+				not opponent_hand_rect.intersects(table._card_screen_rect(field_card)),
+				"The rival's card backs overlap a playable field card."
+			)
 		var opponent_hand_click := opponent_hand_rect.get_center()
 		_expect(
 			table._screen_hits_opponent_hand(opponent_hand_click),
@@ -568,11 +615,129 @@ func _unit(table, side: String, card_id: String, zone: String, slot: int, ready:
 	return unit
 
 
+func _check_profile_health_layout(table, side: String) -> void:
+	var is_player := side == "player"
+	var panel: Control = table.player_profile_badge if is_player else table.opponent_profile_badge
+	var name_label: Label = table.player_profile_name if is_player else table.opponent_profile_name
+	var value_label: Label = table.player_profile_life_label if is_player else table.opponent_profile_life_label
+	var bar: ProgressBar = table.player_profile_life_bar if is_player else table.opponent_profile_life_bar
+	var trail: ProgressBar = table.player_profile_life_trail_bar if is_player else table.opponent_profile_life_trail_bar
+	var number_font := value_label.get_theme_font("font")
+	var number_size := value_label.get_theme_font_size("font_size")
+	var number_rect := value_label.get_global_rect()
+	var expected_direction := ProgressBar.FILL_BEGIN_TO_END if is_player else ProgressBar.FILL_END_TO_BEGIN
+	_expect(
+		value_label.is_visible_in_tree()
+		and number_size >= 18
+		and number_font.resource_path == "res://assets/fonts/AtkinsonHyperlegibleNext.ttf"
+		and number_font.get_string_size(value_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, number_size).x <= value_label.size.x
+		and value_label.get_theme_color("font_color").is_equal_approx(PALETTE.PEACH_INK)
+		and _contrast_ratio(value_label.get_theme_color("font_color"), PALETTE.PEACH_PAPER) >= 4.5
+		and panel.get_global_rect().encloses(number_rect)
+		and not number_rect.intersects(name_label.get_global_rect())
+		and number_rect.end.y <= bar.get_global_rect().position.y,
+		"The %s HP numbers do not fit clearly above the meter without overlapping the name." % side
+	)
+	_expect(
+		bar.get_script() == HEALTH_BAR_SCRIPT
+		and trail.get_script() == HEALTH_BAR_SCRIPT
+		and not bool(bar.get("draw_track"))
+		and bool(trail.get("draw_track"))
+		and bar.get("fill_color").is_equal_approx(PALETTE.PEACH_HEALTH)
+		and _contrast_ratio(bar.get("fill_color"), PALETTE.PEACH_PAPER) >= 3.0
+		and trail.get("fill_color").is_equal_approx(PALETTE.PEACH_TABLE)
+		and bar.fill_mode == expected_direction
+		and trail.fill_mode == expected_direction
+		and bar.size.y >= 24.0
+		and panel.get_global_rect().encloses(bar.get_global_rect())
+		and panel.get_global_rect().encloses(trail.get_global_rect())
+		and bar.get_global_rect().is_equal_approx(trail.get_global_rect()),
+		"The %s HP meter does not use the supplied-kit renderer with an aligned damage trail and correct fill direction." % side
+	)
+	if not bar.has_method("fill_rect") or not trail.has_method("fill_rect"):
+		return
+	for meter: ProgressBar in [bar, trail]:
+		var previous_value := meter.value
+		meter.value = meter.min_value
+		var empty_rect: Rect2 = meter.call("fill_rect")
+		meter.value = meter.max_value
+		var full_rect: Rect2 = meter.call("fill_rect")
+		meter.value = lerpf(meter.min_value, meter.max_value, 0.5)
+		var partial_rect: Rect2 = meter.call("fill_rect")
+		meter.value = previous_value
+		_expect(
+			not empty_rect.has_area()
+			and full_rect.has_area()
+			and Rect2(Vector2.ZERO, meter.size).encloses(full_rect)
+			and full_rect.size.x >= meter.size.x * 0.8
+			and partial_rect.has_area()
+			and full_rect.encloses(partial_rect)
+			and is_equal_approx(partial_rect.size.x, full_rect.size.x * 0.5)
+			and is_equal_approx(partial_rect.size.y, full_rect.size.y),
+			"The %s HP fill is not empty at zero, contained at maximum, and proportional at half health." % side
+		)
+		_expect(
+			is_equal_approx(partial_rect.position.x, full_rect.position.x) if is_player
+			else is_equal_approx(partial_rect.end.x, full_rect.end.x),
+			"The %s HP fill is not anchored toward its corresponding portrait." % side
+		)
+
+
+func _check_profile_health_animation(table, side: String) -> void:
+	var is_player := side == "player"
+	var bar: ProgressBar = table.player_profile_life_bar if is_player else table.opponent_profile_life_bar
+	var trail: ProgressBar = table.player_profile_life_trail_bar if is_player else table.opponent_profile_life_trail_bar
+	var value_label: Label = table.player_profile_life_label if is_player else table.opponent_profile_life_label
+	var life_before := bar.value
+	var combat_life_before := int(table.state[side].life)
+	var damage := mini(3, int(life_before))
+	var damaged_life := life_before - float(damage)
+	_expect(damage > 0, "The %s life-animation fixture must begin with positive health." % side)
+	if damage <= 0:
+		return
+	table._animate_profile_life_change(side, damage)
+	await create_timer(0.32).timeout
+	_expect(
+		is_equal_approx(bar.value, damaged_life)
+		and trail.value > bar.value
+		and value_label.text == "%d/%d" % [int(damaged_life), int(bar.max_value)],
+		"The %s life bar did not show the exact damaged total with a trailing drain." % side
+	)
+	await create_timer(0.4).timeout
+	_expect(
+		is_equal_approx(trail.value, damaged_life),
+		"The %s damage trail did not settle at the displayed health." % side
+	)
+	table._animate_profile_life_change(side, damage, true)
+	await create_timer(0.34).timeout
+	_expect(
+		is_equal_approx(bar.value, life_before)
+		and is_equal_approx(trail.value, life_before)
+		and value_label.text == "%d/%d" % [int(life_before), int(bar.max_value)]
+		and int(table.state[side].life) == combat_life_before,
+		"The %s healing animation did not settle at the restored total without changing combat state." % side
+	)
+	table._sync_profile_life_bar(side)
+
+
 func _expect(condition: bool, message: String) -> void:
 	if condition:
 		return
 	failed = true
 	push_error(message)
+
+
+func _printed_geometry_bounds(node: Node3D) -> AABB:
+	var bounds := AABB()
+	var found := false
+	if node == null:
+		return bounds
+	for mesh_node in node.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := mesh_node as MeshInstance3D
+		var world_bounds: AABB = mesh_instance.global_transform * mesh_instance.get_aabb()
+		bounds = bounds.merge(world_bounds) if found else world_bounds
+		found = true
+	return bounds
 
 
 func _contrast_ratio(foreground: Color, background: Color) -> float:

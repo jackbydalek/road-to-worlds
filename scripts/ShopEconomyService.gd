@@ -1,8 +1,11 @@
 extends RefCounted
 class_name ShopEconomyService
 
+const WEEKLY := preload("res://scripts/WeeklyDemoService.gd")
 const AFFINITY_REWARD_POOL := "strongest_affinity_or_support"
 const SUPPORT_CARD_TYPES := ["chef", "environment", "spice", "tool"]
+const SHOP_REROLL_BASE_COST := 5
+const HUB_SHOP_CARD_COUNT := 4
 const STARTER_ALLOWED_AFFINITIES := {
 	"spicy": ["spicy", "fresh", "funky"],
 	"sweet": ["sweet", "hearty", "funky"],
@@ -27,7 +30,7 @@ func buy_and_open_pack(target_run: Dictionary, booster_id: String, current_prima
 	if int(target_run.get("money", 0)) < int(booster.get("price", 0)):
 		return { "ok": false, "message": "Not enough money for a booster." }
 	target_run.money = int(target_run.money) - int(booster.price)
-	start_pack(target_run, generate_pack(booster_id, current_primary))
+	start_pack(target_run, generate_pack(booster_id, current_primary, target_run))
 	return { "ok": true, "message": "You bought a %s. Time to sweat the rare slot." % booster.get("name", "booster") }
 
 
@@ -35,7 +38,7 @@ func open_prize_pack(target_run: Dictionary, booster_id: String, current_primary
 	if int(target_run.get("prize_packs", 0)) <= 0:
 		return { "ok": false, "message": "No prize packs waiting." }
 	target_run.prize_packs = int(target_run.prize_packs) - 1
-	start_pack(target_run, generate_pack(booster_id, current_primary))
+	start_pack(target_run, generate_pack(booster_id, current_primary, target_run))
 	return { "ok": true, "message": "Prize pack opened. Free cardboard always feels a little better." }
 
 
@@ -50,7 +53,7 @@ func start_pack(target_run: Dictionary, pack: Array) -> void:
 	target_run.pack_opened = false
 
 
-func generate_pack(booster_id: String, current_primary: String) -> Array:
+func generate_pack(booster_id: String, current_primary: String, target_run: Dictionary = {}) -> Array:
 	var booster: Dictionary = boosters_by_id[booster_id]
 	var pack: Array = []
 	for slot in booster.get("slots", []):
@@ -73,7 +76,7 @@ func generate_pack(booster_id: String, current_primary: String) -> Array:
 					rarity = slot.get("upgradeRarity", rarity)
 
 			pack.append({
-				"cardId": pick_card_by_rarity(rarity, current_primary),
+				"cardId": pick_card_by_rarity(rarity, current_primary, false, target_run),
 				"rarity": rarity
 			})
 
@@ -82,18 +85,18 @@ func generate_pack(booster_id: String, current_primary: String) -> Array:
 	return pack
 
 
-func pick_card_by_rarity(rarity: String, current_primary: String, affinity_restricted := false) -> String:
+func pick_card_by_rarity(rarity: String, current_primary: String, affinity_restricted := false, target_run: Dictionary = {}) -> String:
 	var pool := []
 	for card in cards:
 		if (
 			card.get("rarity", "") == rarity
-			and card_is_starter_eligible(card, current_primary)
+			and card_is_starter_eligible(card, current_primary) and WEEKLY.card_available(card, target_run)
 		):
 			pool.append(card.id)
 
 	if pool.is_empty():
 		for card in cards:
-			if card_is_starter_eligible(card, current_primary):
+			if card_is_starter_eligible(card, current_primary) and WEEKLY.card_available(card, target_run):
 				pool.append(card.id)
 	if pool.is_empty():
 		return ""
@@ -240,7 +243,7 @@ func generate_shop_inventory(target_run: Dictionary, current_primary: String) ->
 	var rarity_budget := ["common", "common", "uncommon", "uncommon", "rare"]
 
 	for rarity in rarity_budget:
-		shop.append(pick_shop_card(rarity, current_primary, shop))
+		shop.append(pick_shop_card(rarity, current_primary, shop, target_run))
 
 	while shop.size() < 8:
 		var rarity := "common"
@@ -249,19 +252,56 @@ func generate_shop_inventory(target_run: Dictionary, current_primary: String) ->
 			rarity = "rare"
 		elif roll > 0.55:
 			rarity = "uncommon"
-		shop.append(pick_shop_card(rarity, current_primary, shop))
+		shop.append(pick_shop_card(rarity, current_primary, shop, target_run))
 
 	target_run.shop = shop
 
 
-func pick_shop_card(rarity: String, current_primary: String, excluded: Array) -> String:
+func shop_reroll_cost(shop_state: Dictionary) -> int:
+	return SHOP_REROLL_BASE_COST + maxi(0, int(shop_state.get("rerolls_used", 0)))
+
+
+func reroll_hub_shop(target_run: Dictionary, shop_state: Dictionary, current_primary: String, expected_cost: int = -1) -> Dictionary:
+	var cost := shop_reroll_cost(shop_state)
+	if expected_cost >= 0 and expected_cost != cost:
+		return {"ok": false, "message": "The reroll price has changed. It now costs $%d." % cost, "cost": cost}
+	if int(target_run.get("money", 0)) < cost:
+		return {"ok": false, "message": "You need $%d to reroll the singles case." % cost, "cost": cost}
+	var eligible := {}
+	for card in cards:
+		if card_is_starter_eligible(card, current_primary) and WEEKLY.card_available(card, target_run):
+			eligible[String(card.id)] = true
+	if eligible.size() < HUB_SHOP_CARD_COUNT:
+		return {"ok": false, "message": "There are not enough available cards to restock the singles case.", "cost": cost}
+	var old_inventory: Array = shop_state.get("inventory", [])
+	var replacement: Array = []
+	var random_state := rng.state
+	# Match the four visible slots in the existing eight-card inventory. Keep
+	# weighting and rarity fallbacks, while preferring cards outside the old case.
+	for rarity in ["common", "common", "uncommon", "uncommon"]:
+		var id := pick_shop_card(rarity, current_primary, replacement + old_inventory, target_run)
+		if id.is_empty():
+			id = pick_shop_card(rarity, current_primary, replacement, target_run)
+		if id.is_empty() or not eligible.has(id) or replacement.has(id):
+			rng.state = random_state
+			return {"ok": false, "message": "The singles case could not be restocked.", "cost": cost}
+		replacement.append(id)
+	# Publish the new case only after all four valid, distinct cards are ready.
+	target_run.money = int(target_run.get("money", 0)) - cost
+	target_run.shop = replacement.duplicate()
+	shop_state.inventory = replacement
+	shop_state.rerolls_used = maxi(0, int(shop_state.get("rerolls_used", 0))) + 1
+	return {"ok": true, "message": "Rerolled the singles case for $%d." % cost, "cost": cost}
+
+
+func pick_shop_card(rarity: String, current_primary: String, excluded: Array, target_run: Dictionary = {}) -> String:
 	var pool := []
 	for card in cards:
 		if card.rarity != rarity:
 			continue
 		if excluded.has(card.id):
 			continue
-		if not card_is_starter_eligible(card, current_primary):
+		if not card_is_starter_eligible(card, current_primary) or not WEEKLY.card_available(card, target_run):
 			continue
 		var weight := 1
 		if card.archetype == current_primary:
@@ -273,7 +313,7 @@ func pick_shop_card(rarity: String, current_primary: String, excluded: Array) ->
 
 	if pool.is_empty():
 		for card in cards:
-			if not excluded.has(card.id) and card_is_starter_eligible(card, current_primary):
+			if not excluded.has(card.id) and card_is_starter_eligible(card, current_primary) and WEEKLY.card_available(card, target_run):
 				pool.append(card.id)
 
 	if pool.is_empty():
@@ -282,6 +322,10 @@ func pick_shop_card(rarity: String, current_primary: String, excluded: Array) ->
 
 
 func card_is_starter_eligible(card: Dictionary, starter_affinity: String) -> bool:
+	if bool(card.get("starter_only", false)) or bool(card.get("is_token", false)):
+		return false
+	if starter_affinity == "food_prototype":
+		return true
 	var allowed: Array = STARTER_ALLOWED_AFFINITIES.get(starter_affinity, [starter_affinity])
 	for affinity in _card_affinities(card):
 		if not allowed.has(affinity):
@@ -296,7 +340,7 @@ func card_price(target_run: Dictionary, card_id: String) -> int:
 		demand += float(target_run.meta.get(card.archetype, 0.0)) * 0.35
 	if card.get("rarity", "") == "mythic":
 		demand += 0.2
-	return max(1, int(ceil(float(base) * demand)))
+	return max(1, int(ceil(float(base) * demand)) - WEEKLY.bonus(target_run, "shop_discount"))
 
 
 func _pack_reveal_note(target_run: Dictionary, card_id: String, owned_before: int, current_primary: String) -> String:

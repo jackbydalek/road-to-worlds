@@ -1,0 +1,103 @@
+{
+  "source": "Project-owner attachments supplied September 14, 2026",
+  "usage": "Title animation, layered shop and battle environments, and vending snack illustrations. Full-screen shop and battle images are composition references; interactive game elements stay native.",
+  "processing": "Original PNG bytes copied unchanged. Runtime positioning and source regions preserve the artwork.",
+  "assets": [
+    {
+      "file": "battle_background.png",
+      "source_filename": "Battle_just_backgorund.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "0f2413a2e21958dd5edc66cbd7fbd31c64a7473d3556252b8454c5a29a657193"
+    },
+    {
+      "file": "battle_table.png",
+      "source_filename": "Battle_just_table.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "4960f4d2eb26a63773b8cef76f5ae1ecd5c783dc471fc5f8358735c68936ac51"
+    },
+    {
+      "file": "battle_reference.png",
+      "source_filename": "Battle Full screen.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "f55b9594fb61d6b83040fa4fe5695b7b0598221327bf5e08e329aab5411a26df"
+    },
+    {
+      "file": "shop_background.png",
+      "source_filename": "Shop background.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "8f767de1139136b530d0932538ee4285813d4249ba211607ada7652bb973f842"
+    },
+    {
+      "file": "shop_reference.png",
+      "source_filename": "shop full screen.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "a942b7a6adb0c0a212da78b8113c432404edc95d93cfca79ca266d8c6c3f7610"
+    },
+    {
+      "file": "shop_vending.png",
+      "source_filename": "shop jsut vending machine.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "3122ac1960b81345bfa60d2be05ab13281064605b941f4d0eb836299171b200e"
+    },
+    {
+      "file": "shop_counter.png",
+      "source_filename": "shop just counter.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "4073a59ade44ed361c3deecfa0e749029de133e4aab5fe6d622ab5cc59836923"
+    },
+    {
+      "file": "title_frame_1.png",
+      "source_filename": "title frame 1.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "9a76462af3196b70093366d5664e751f0612619908f94507fb43c5815bc58ce2"
+    },
+    {
+      "file": "title_frame_2.png",
+      "source_filename": "title frame 2.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "4c5f529c90d9ddc5f72b7a205265dba34b76a82b0c68f884e4ab96b8f795493f"
+    },
+    {
+      "file": "title_frame_3.png",
+      "source_filename": "title frame 3.PNG",
+      "width": 3840,
+      "height": 2304,
+      "png_color_type": 6,
+      "sha256": "2dae80513e6d2fd9f0ad65cba58ef7d6a9cf5d6931d3c2ea3cfcacfd42837ade"
+    },
+    {
+      "file": "heart_bites.png",
+      "source_filename": "Vending heal snack.PNG",
+      "width": 1620,
+      "height": 2160,
+      "png_color_type": 6,
+      "sha256": "7e1568a41345d667cc93ac4fac6a15c4e54e11b0049e1bf6e98996849eeba61c"
+    },
+    {
+      "file": "foil_crunch.png",
+      "source_filename": "vending upgrade snack.PNG",
+      "width": 1620,
+      "height": 2160,
+      "png_color_type": 6,
+      "sha256": "0c62aa83a2491d998c45370a1f604f86a056532daecea61cfcaa43ec5e6761a8"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 extends RefCounted
 class_name GamePalette
 
-## Pokémon Black and White-inspired UI foundation. These are the target tokens
-## for new and migrated interface chrome.
+## Legacy contrast/state swatches retained for compatibility and combat signals.
+## Current public presentation uses the PEACH_* roles below.
 const CARBON := Color("#12161C")
 const TRUE_BLACK := Color("#000000")
 const GRAPHITE := Color("#252B33")
@@ -37,6 +37,40 @@ const STATE_REWARD := SIGNAL_YELLOW
 const ACTION_SPECIAL := INTERFACE_VIOLET
 const HEALTH_FILL := Color("#177A4B")
 const OVERLAY_DIM := Color("#090C10B8")
+
+## See You at Locals: printed paper UI and tactile card-shop materials.
+const LOCALS_PAPER := Color("#F4EFE3")
+const LOCALS_PAPER_MUTED := Color("#E6DFD0")
+const LOCALS_INK := Color("#282C31")
+const LOCALS_INK_SOFT := Color("#61666B")
+const LOCALS_EDGE := Color("#8B8A82")
+const LOCALS_BLUE := Color("#3279AA")
+const LOCALS_MAT := Color("#24262D")
+const LOCALS_PRINT := Color("#A89E88")
+const LOCALS_PLAYER_SLEEVE := Color("#B74440")
+const LOCALS_RIVAL_SLEEVE := Color("#3B608B")
+const FLOATING_ART_OUTLINE := Color("#FFFFFF")
+
+## Peach Soda presentation across every public screen. Scene/UI roles only: authored card art and
+## the affinity/Ingredient tokens below keep their original colors.
+const PEACH_PAPER := Color("#FFF4DF")
+const PEACH_PAPER_MUTED := Color("#F5E8CE")
+# Darker card stock separates white-cutout artwork from the readable paper text.
+const PEACH_CARD_FRAME := Color("#BEB4A1")
+## Pastel paper tint for the restored ribbon frame, independent of identity inks.
+const PEACH_CARD_RIBBON_PAPER_MIX := 0.48
+const PEACH_INK := Color("#293047")
+const PEACH_INK_SOFT := Color("#576568")
+const PEACH_TEAL := Color("#126866")
+## Muted leaf green keeps life distinct from teal actions and clear on cream.
+const PEACH_HEALTH := Color("#6B8A60")
+const PEACH_TABLE := Color("#F2B398")
+## Extends the supplied September 14 shop floor beyond its image on tall windows.
+const PEACH_SHOP_FLOOR := Color("#FFCFAC")
+const PEACH_MINT := Color("#C7DFD5")
+const PEACH_EDGE := Color("#87938A")
+const PEACH_MAT := Color("#244F52")
+const PEACH_PRINT := Color("#C7DFD5")
 
 ## Living Table ownership colors. Plated slots use the full player/rival signal;
 ## Prep keeps the same hue with lower saturation so zone function remains clear
@@ -76,14 +110,31 @@ const CITY_GLASS := Color("#8FB3C3")
 const CITY_SAGE := Color("#78906F")
 const CITY_WARM_ACCENT := Color("#C47D67")
 
+## Card-club floor, shared with the authored vector room scenery.
+const HUB_FLOOR := Color("#CEBBA4")
+
 ## Tournament-table material colors. These are intentionally warmer and more
 ## natural than the UI chassis while retaining enough value contrast for cards.
 const TOURNAMENT_WOOD_BASE := Color("#62503F")
 const TOURNAMENT_WOOD_LIGHT := Color("#806A52")
 const TOURNAMENT_WOOD_DARK := Color("#362D27")
 
+## Neutral woven tournament mat and its subdued printed registration marks.
+const PLAYMAT_FABRIC := Color("#424A54")
+const PLAYMAT_FABRIC_LIGHT := Color("#4A535E")
+const PLAYMAT_PRINT := Color("#A6AFBA")
+const PLAYMAT_STITCH := Color("#828C98")
+
 ## Authored card identities from ART_DIRECTION.md. Affinity accents should use
 ## these tokens rather than borrowing semantic UI-state colors.
+## Selected card rims retain their established colors independently of the room.
+## The saved identifier "white" is the current Black border option.
+const CARD_BORDER_BLACK := Color("#090909")
+const CARD_BORDER_BLUE := Color("#6aa8ff")
+const CARD_BORDER_YELLOW := Color("#f0c94a")
+const CARD_BORDER_SILVER := Color("#cfd6df")
+const CARD_BORDER_GOLD := Color("#e2b84c")
+
 const AFFINITY_SPICY := Color("#EF3D56")
 const AFFINITY_HEARTY := Color("#45B96B")
 const AFFINITY_SWEET := Color("#4E8FE8")
@@ -149,3 +200,12 @@ const SKY := Color("#68C5E8")
 const LAVENDER_GLASS := Color("#E8E3F5")
 const FRESH_YELLOW := Color("#D8B35F")
 const FUNKY_PLUM := Color("#9A6EAE")
+
+
+static func card_border_color(border_id: String) -> Color:
+	match border_id.to_lower():
+		"blue": return CARD_BORDER_BLUE
+		"yellow": return CARD_BORDER_YELLOW
+		"silver": return CARD_BORDER_SILVER
+		"gold": return CARD_BORDER_GOLD
+		_: return CARD_BORDER_BLACK

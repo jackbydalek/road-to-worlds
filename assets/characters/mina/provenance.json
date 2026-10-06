@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "asset_id": "mina-user-supplied-idle",
+  "origin": "User-supplied GIF; authorship and upstream production method are not independently attested.",
+  "ai_used_in_preparation": false,
+  "source": {
+    "supplied_filename": "IMG_0450.GIF",
+    "preserved_path": "assets/characters/mina/source.gif",
+    "sha256": "46ee2d4380c0c4e954ca2a08d4b2ebdb9022f17bc999977a21b286aff9053afd",
+    "size": [
+      4096,
+      1714
+    ],
+    "frame_count": 6,
+    "durations_ms": [
+      70,
+      70,
+      70,
+      70,
+      70,
+      70
+    ],
+    "gif_loop": 0
+  },
+  "preparation": {
+    "script": "scripts/art/prepare_mina_gif.py",
+    "operations": [
+      "Decode GIF disposal/compositing to RGBA",
+      "Apply one shared integer crop",
+      "Save lossless RGBA PNGs"
+    ],
+    "resampling": false,
+    "recoloring": false,
+    "background_removal": false,
+    "alpha_bounds_union_xyxy": [
+      1751,
+      35,
+      2436,
+      647
+    ],
+    "crop_in_source_xyxy": [
+      1743,
+      27,
+      2444,
+      655
+    ],
+    "transparent_padding_px": 8,
+    "verification": "Each reloaded PNG exactly matches its decoded source crop byte-for-byte; all source opaque pixels are retained."
+  },
+  "runtime_alignment": {
+    "canvas_size": [
+      701,
+      628
+    ],
+    "lower_arm_baseline_y": 610,
+    "maximum_opaque_bottom_exclusive_y": 620,
+    "face_region_xywh": [
+      130,
+      90,
+      335,
+      335
+    ],
+    "notes": "Use the same canvas transform for all frames. Forearms sit around y=590-610; the near hand extends to y=619. Face region is a square unscaled AtlasTexture crop centered on the face and supporting hand."
+  },
+  "distinct_rgba_frames": 2,
+  "total_duration_ms": 420,
+  "outputs": [
+    {
+      "path": "assets/characters/mina/idle-00.png",
+      "sha256": "b426931ee920e676600298daaef241689168a95c37f3dd9bfb1257cf22f4ae4c",
+      "rgba_pixel_sha256": "4fc98f7d2fea7724d8c7c0190462a056c62ac25cef2f498554e90d31bb582182",
+      "duration_ms": 70,
+      "distinct_frame_index": 0,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        9,
+        8,
+        693,
+        619
+      ]
+    },
+    {
+      "path": "assets/characters/mina/idle-01.png",
+      "sha256": "b426931ee920e676600298daaef241689168a95c37f3dd9bfb1257cf22f4ae4c",
+      "rgba_pixel_sha256": "4fc98f7d2fea7724d8c7c0190462a056c62ac25cef2f498554e90d31bb582182",
+      "duration_ms": 70,
+      "distinct_frame_index": 0,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        9,
+        8,
+        693,
+        619
+      ]
+    },
+    {
+      "path": "assets/characters/mina/idle-02.png",
+      "sha256": "b426931ee920e676600298daaef241689168a95c37f3dd9bfb1257cf22f4ae4c",
+      "rgba_pixel_sha256": "4fc98f7d2fea7724d8c7c0190462a056c62ac25cef2f498554e90d31bb582182",
+      "duration_ms": 70,
+      "distinct_frame_index": 0,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        9,
+        8,
+        693,
+        619
+      ]
+    },
+    {
+      "path": "assets/characters/mina/idle-03.png",
+      "sha256": "705985463938edc475f3d4090ac103ad05924acec53c6175cc7b96208c3ff1fe",
+      "rgba_pixel_sha256": "784200cc2bcc312c8503a75c3636e6dd9de206a82f20058343fd5e11481b723f",
+      "duration_ms": 70,
+      "distinct_frame_index": 1,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        8,
+        8,
+        693,
+        620
+      ]
+    },
+    {
+      "path": "assets/characters/mina/idle-04.png",
+      "sha256": "705985463938edc475f3d4090ac103ad05924acec53c6175cc7b96208c3ff1fe",
+      "rgba_pixel_sha256": "784200cc2bcc312c8503a75c3636e6dd9de206a82f20058343fd5e11481b723f",
+      "duration_ms": 70,
+      "distinct_frame_index": 1,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        8,
+        8,
+        693,
+        620
+      ]
+    },
+    {
+      "path": "assets/characters/mina/idle-05.png",
+      "sha256": "705985463938edc475f3d4090ac103ad05924acec53c6175cc7b96208c3ff1fe",
+      "rgba_pixel_sha256": "784200cc2bcc312c8503a75c3636e6dd9de206a82f20058343fd5e11481b723f",
+      "duration_ms": 70,
+      "distinct_frame_index": 1,
+      "size": [
+        701,
+        628
+      ],
+      "alpha_bounds_xyxy": [
+        8,
+        8,
+        693,
+        620
+      ]
+    }
+  ]
+}

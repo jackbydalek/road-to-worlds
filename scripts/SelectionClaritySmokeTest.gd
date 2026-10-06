@@ -12,6 +12,7 @@ func _init() -> void:
 
 
 func _run() -> void:
+	root.size = Vector2i(1440, 900)
 	var table = TABLE_SCENE.instantiate()
 	root.add_child(table)
 	await process_frame
@@ -55,36 +56,44 @@ func _run() -> void:
 	table._render_match()
 	var ability_card: Node3D = table._card_node_for_instance(int(ability_unit.instance_id))
 	var ability_aura := ability_card.find_child("AbilityReadyAura", true, false) as MeshInstance3D if ability_card != null else null
-	_expect(ability_aura != null, "Usable ability has no celestial frame.")
+	_expect(ability_aura != null, "Usable ability has no printed frame.")
 	_expect(
 		ability_aura != null
 		and (ability_aura.mesh as QuadMesh).size.x >= 1.60
-		and float(ability_aura.get_meta("pulse_energy_max", 0.0)) >= 1.25
+		and not (ability_aura.material_override as StandardMaterial3D).emission_enabled
 		and (ability_aura.material_override as StandardMaterial3D).albedo_color.a >= 0.95,
-		"Usable ability glow is too subtle to read clearly on the battlefield."
+		"Usable ability must retain its clear printed frame without emissive glow."
 	)
 	_expect(
 		ability_card != null and ability_card.find_child("AbilityReadySparkles", true, false) == null,
 		"Usable ability frame still has distracting sparkle specks around its edges."
 	)
-	_expect(ability_card != null and ability_card.find_child("AbilityReadyBadge", true, false) == null, "Usable ability should communicate through its frame without a text badge.")
+	var ability_badge := ability_card.find_child("AbilityReadyBadge", true, false) as Label3D if ability_card != null else null
+	_expect(ability_badge != null and ability_badge.text == "USE ABILITY", "Usable ability must have a readable action label as well as its frame.")
 	_expect(ability_card != null and ability_card.find_child("ReadyStatus", true, false) == null, "Generic READY badge competes with ABILITY state.")
+	var collapsed_profile_rect: Rect2 = table.opponent_profile_badge.get_global_rect()
 	_expect(
-		table.player_profile_badge.size.x <= 110.0
-		and table.opponent_profile_badge.size.x <= 110.0
-		and not table.player_profile_details.visible
+		not table.player_profile_details.visible
 		and not table.opponent_profile_details.visible
-		and table.player_profile_life_bar.size.x >= 280.0
-		and table.opponent_profile_life_bar.size.x >= 280.0
-		and table.player_profile_life_label.text == "20/20",
-		"Collapsed combat profiles are not limited to portrait and HP."
+		and table.player_profile_name.is_visible_in_tree()
+		and table.opponent_profile_name.is_visible_in_tree()
+		and not table.player_profile_name.text.is_empty()
+		and not table.opponent_profile_name.text.is_empty()
+		and table.player_profile_badge.get_global_rect().encloses(table.player_profile_life_bar.get_global_rect())
+		and collapsed_profile_rect.encloses(table.opponent_profile_life_bar.get_global_rect())
+		and table.player_profile_badge.get_global_rect().encloses(table.player_profile_name.get_global_rect())
+		and collapsed_profile_rect.encloses(table.opponent_profile_name.get_global_rect())
+		and table.player_profile_life_label.text == "%d/%d" % [int(table.state.player.life), int(table.state.player.max_life)],
+		"Collapsed scorecards must keep the competitor name and numeric life together, with card-count details hidden."
 	)
-	table._toggle_profile_expanded("opponent")
-	await process_frame
+	await _click_profile(table.opponent_profile_badge)
 	_expect(
 		table.opponent_profile_details.visible
-		and table.opponent_profile_badge.size.x >= 240.0
-		and table.opponent_profile_badge.size.y <= 110.0
+		and is_equal_approx(table.opponent_profile_badge.size.x, collapsed_profile_rect.size.x)
+		and table.opponent_profile_badge.size.y > collapsed_profile_rect.size.y
+		and table.opponent_profile_badge.get_global_rect().encloses(table.opponent_profile_details.get_global_rect())
+		and table.opponent_profile_name.is_visible_in_tree()
+		and table.opponent_profile_life_label.is_visible_in_tree()
 		and table.opponent_profile_stats.text.contains("HAND")
 		and table.opponent_profile_stats.text.contains("DECK")
 		and table.opponent_profile_stats.text.contains("DISCARD"),
@@ -94,8 +103,14 @@ func _run() -> void:
 		await create_timer(0.75).timeout
 		var expanded_profile_preview := root.get_texture().get_image()
 		_expect(expanded_profile_preview.save_png(PROFILE_EXPANDED_PREVIEW_PATH) == OK, "Expanded profile preview could not be saved.")
-	table._toggle_profile_expanded("opponent")
-	await process_frame
+	await _click_profile(table.opponent_profile_badge)
+	_expect(
+		not table.opponent_profile_details.visible
+		and table.opponent_profile_badge.size.is_equal_approx(collapsed_profile_rect.size)
+		and table.opponent_profile_name.is_visible_in_tree()
+		and table.opponent_profile_life_label.is_visible_in_tree(),
+		"Clicking the portrait again did not restore the compact scorecard without hiding name or life."
+	)
 	var ability_base_position: Vector3 = ability_card.get_meta("base_position", ability_card.position)
 	var ability_base_scale: Vector3 = ability_card.get_meta("base_scale", ability_card.scale)
 	table.hovered_card = ability_card
@@ -148,6 +163,23 @@ func _unit(table, card_id: String, slot: int) -> Dictionary:
 	)
 	unit.table_slot = slot
 	return unit
+
+
+func _click_profile(profile: Control) -> void:
+	var portrait := profile.find_child("*PortraitFrame", true, false) as Control
+	_expect(portrait != null, "A scorecard is missing its clickable portrait.")
+	if portrait == null:
+		return
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = portrait.get_global_rect().get_center()
+	click.global_position = click.position
+	root.push_input(click, true)
+	click = click.duplicate()
+	click.pressed = false
+	root.push_input(click, true)
+	await process_frame
 
 
 func _texture_ends_with(aura: MeshInstance3D, suffix: String) -> bool:

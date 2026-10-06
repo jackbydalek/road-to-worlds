@@ -25,7 +25,10 @@ func load_content(path: String = "res://data/cards.json") -> bool:
 	var parsed = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
-	setup_content(parsed.get("cards", []), parsed.get("decks", {}))
+	var card_list: Array = parsed.get("cards", [])
+	if path == "res://data/cards.json":
+		card_list.append_array(preload("res://scripts/WeeklyDemoService.gd").read_json(preload("res://scripts/WeeklyDemoService.gd").CARDS_PATH).get("cards", []))
+	setup_content(card_list, parsed.get("decks", {}))
 	return true
 
 
@@ -35,17 +38,10 @@ func setup_content(card_list: Array, deck_data: Dictionary) -> void:
 		var card_id := String(card_data.get("id", ""))
 		if card_id != "":
 			cards_by_id[card_id] = card_data.duplicate(true)
-	cards_by_id["token_fresh_ingredient"] = {
-		"id": "token_fresh_ingredient",
-		"name": "Fresh Ingredient Token",
-		"card_type": "ingredient",
-		"archetype": "fresh",
-		"ingredient_types": ["fresh"],
-		"attack": 1,
-		"health": 1,
-		"is_token": true,
-		"text": "Token — disappears when it leaves play."
-	}
+	# Tokens share the editable data contract, but never enter collectible pools.
+	var token_data := preload("res://scripts/WeeklyDemoService.gd").read_json("res://data/content/tokens.json")
+	for token_card in token_data.get("cards", []):
+		cards_by_id[String(token_card.id)] = token_card.duplicate(true)
 	decks = deck_data.duplicate(true)
 
 
@@ -77,6 +73,7 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 		opponent_deck_id = deck_ids[1] if deck_ids.size() > 1 else deck_ids[0]
 	var player_combatant := _make_combatant(player_deck_id)
 	var opponent_combatant := _make_combatant(opponent_deck_id)
+	player_combatant.deckbox_effects = match_rules.get("deckbox_effects", {}).duplicate(true)
 	player_combatant.life = int(match_rules.get("player_life", STARTING_LIFE))
 	player_combatant.max_life = int(match_rules.get("player_max_life", player_combatant.life))
 	opponent_combatant.life = int(match_rules.get("opponent_life", STARTING_LIFE))
@@ -124,6 +121,8 @@ func start_game(player_deck_id: String = "", opponent_deck_id: String = "", seed
 	for unused in range(OPENING_HAND):
 		_draw(state, "player", false)
 		_draw(state, "opponent", false)
+	for unused in range(int(player_combatant.get("deckbox_effects", {}).get("opening_hand", 0))):
+		_draw(state, "player", false)
 	if first_side == "opponent":
 		state.phase = "opponent_turn"
 		if defer_opponent_turn:
@@ -241,7 +240,7 @@ func play_card(state: Dictionary, hand_index: int, destination: String = "prep",
 	return state
 
 
-func begin_meal_play(state: Dictionary, hand_index: int, destination: String = "plated", destination_slot: int = -1) -> Dictionary:
+func begin_meal_play(state: Dictionary, hand_index: int, destination: String = "plated", destination_slot: int = -1, special: bool = false) -> Dictionary:
 	if not _can_player_act(state) or not state.get("pending_meal", {}).is_empty():
 		return state
 	if destination not in ["prep", "plated"]:
@@ -252,12 +251,14 @@ func begin_meal_play(state: Dictionary, hand_index: int, destination: String = "
 	var data := card(card_id)
 	if String(data.get("card_type", "")) != "meal":
 		return _message(state, "Only a Meal starts recipe selection.")
-	if not _can_serve_meal(state.player):
-		return _message(state, "You have already served a Meal this turn.")
-	var recipe: Array = _effective_recipe(state, "player", data)
-	if _find_recipe_ingredients(state.player, recipe).is_empty():
-		return _message(state, "No recipe-ready Ingredients currently match: %s." % _recipe_text(recipe))
-	var required_meal_archetype := String(data.get("required_meal_archetype", ""))
+	if not special and not _can_serve_meal(state.player):
+		return _message(state, "You have already served a Meal normally this turn. Special Serves are separate.")
+	if special and not special_serve_enabled(state, data):
+		return _message(state, "This card cannot Special Serve here.")
+	var recipe: Array = serve_recipe(state, "player", data, special)
+	if serve_ingredient_ids(state, "player", data, special).is_empty():
+		return _message(state, meal_play_block_reason(state, data, special))
+	var required_meal_archetype := "" if special else String(data.get("required_meal_archetype", ""))
 	if required_meal_archetype != "" and _find_recipe_meal(state.player, required_meal_archetype).is_empty():
 		return _message(state, "Serving %s also requires a %s Meal." % [data.name, required_meal_archetype.capitalize()])
 	state.selected_ingredients = []
@@ -268,7 +269,8 @@ func begin_meal_play(state: Dictionary, hand_index: int, destination: String = "
 		"card_id": card_id,
 		"destination": destination,
 		"destination_slot": destination_slot,
-		"required": recipe.size()
+		"required": recipe.size(),
+		"special": special
 	}
 	return _message(state, _meal_selection_message(state))
 
@@ -279,10 +281,12 @@ func meal_selectable_ingredient_ids(state: Dictionary) -> Array[int]:
 	if pending.is_empty():
 		return result
 	var data := card(String(pending.get("card_id", "")))
-	var recipe: Array = _effective_recipe(state, "player", data)
+	var special := bool(pending.get("special", false))
+	var recipe: Array = serve_recipe(state, "player", data, special)
+	var eligible := _serve_combatant(state.player, data, special)
 	for zone_name in ["prep", "plated"]:
-		for unit in state.player[zone_name]:
-			if String(unit.get("card_type", "")) != "ingredient" or not _ingredient_is_recipe_ready(state.player, unit):
+		for unit in eligible[zone_name]:
+			if String(unit.get("card_type", "")) != "ingredient" or not _ingredient_is_recipe_ready(eligible, unit):
 				continue
 			for requirement in recipe:
 				if _ingredient_matches_requirement(card(String(unit.get("card_id", ""))), String(requirement)):
@@ -300,15 +304,20 @@ func meal_selection_is_ready(state: Dictionary) -> bool:
 		return false
 	var data := card(String(pending.card_id))
 	var selected: Array = state.get("selected_ingredients", [])
-	var recipe: Array = _effective_recipe(state, "player", data)
-	if not _selection_satisfies(state.player, selected, recipe):
+	var special := bool(pending.get("special", false))
+	if special and not special_serve_enabled(state, data):
+		return false
+	if not special and not _can_serve_meal(state.player):
+		return false
+	var recipe: Array = serve_recipe(state, "player", data, special)
+	if not _selection_satisfies(_serve_combatant(state.player, data, special), selected, recipe):
 		return false
 	var destination := String(pending.get("destination", "plated"))
 	var selected_destination_count := 0
 	for instance_id in selected:
 		if not _find_unit_in_zone(state.player, destination, int(instance_id)).is_empty():
 			selected_destination_count += 1
-	var recipe_meal := _find_recipe_meal(state.player, String(data.get("required_meal_archetype", "")))
+	var recipe_meal := {} if special else _find_recipe_meal(state.player, String(data.get("required_meal_archetype", "")))
 	if not recipe_meal.is_empty() and not _find_unit_in_zone(state.player, destination, int(recipe_meal.instance_id)).is_empty():
 		selected_destination_count += 1
 	var capacity := PREP_SLOTS if destination == "prep" else PLATED_SLOTS
@@ -336,7 +345,7 @@ func confirm_meal_play(state: Dictionary) -> Dictionary:
 	var destination := String(pending.destination)
 	var selected: Array = state.get("selected_ingredients", []).duplicate()
 	state.pending_meal = {}
-	_serve_meal(state, "player", hand_index, selected, destination)
+	_serve_meal(state, "player", hand_index, selected, destination, bool(pending.get("special", false)))
 	return state
 
 
@@ -352,9 +361,11 @@ func cancel_meal_play(state: Dictionary) -> Dictionary:
 func _meal_selection_message(state: Dictionary) -> String:
 	var pending: Dictionary = state.get("pending_meal", {})
 	var data := card(String(pending.get("card_id", "")))
-	var recipe: Array = _effective_recipe(state, "player", data)
+	var special := bool(pending.get("special", false))
+	var recipe: Array = serve_recipe(state, "player", data, special)
 	var selected_count: int = state.get("selected_ingredients", []).size()
-	return "Choose Ingredients for %s (%s): %d/%d selected." % [String(data.get("name", "Meal")), _recipe_text(recipe), selected_count, recipe.size()]
+	var rule := String(data.get("special_serve", {}).get("text", "")) if special else _recipe_text(recipe)
+	return "%s %s — %s (%d/%d selected)" % ["Special Serve:" if special else "Serve:", String(data.get("name", "Meal")), rule, selected_count, recipe.size()]
 
 
 func toggle_discard_card(state: Dictionary, hand_index: int) -> Dictionary:
@@ -594,7 +605,7 @@ func play_discard_ingredient(state: Dictionary) -> Dictionary:
 		state.player.discard_ingredient_play_used = true
 		var unit := _make_unit(state, state.player, card(card_id), "prep", "player")
 		state.player.prep.append(unit)
-		var play_group_id := _queue_play_event(state, "player", card_id, "ingredient", int(unit.instance_id))
+		var play_group_id := _queue_play_event(state, "player", card_id, "ingredient", int(unit.instance_id), -1, {"from": "discard"})
 		var previous_animation_group := _with_animation_group(state, play_group_id)
 		_resolve_effects(state, "player", card(card_id).get("on_play", []), unit)
 		_restore_animation_group(state, previous_animation_group)
@@ -778,7 +789,7 @@ func toggle_ingredient_selection(state: Dictionary, instance_id: int) -> Diction
 	var unit := _find_unit(state.player, instance_id)
 	if unit.is_empty() or String(unit.get("card_type", "")) != "ingredient":
 		return _message(state, "Only ingredients can be used in recipes.")
-	if not _ingredient_is_recipe_ready(state.player, unit):
+	if not bool(state.get("pending_meal", {}).get("special", false)) and not _ingredient_is_recipe_ready(state.player, unit):
 		return _message(state, "%s must survive until your next turn before it can be used in a recipe." % unit.name)
 	var selected: Array = state.get("selected_ingredients", [])
 	var pending_meal: Dictionary = state.get("pending_meal", {})
@@ -1005,8 +1016,7 @@ func end_player_turn(state: Dictionary, defer_opponent_turn: bool = false) -> Di
 	_set_defense_positions(state, "player")
 	_clear_selections(state)
 	_clear_temporary_buffs(state.player)
-	state.player.chefs_disabled = false
-	state.player.items_disabled = false
+	_clear_play_restrictions(state.player)
 	state.phase = "opponent_turn"
 	if defer_opponent_turn:
 		_prepare_opponent_sequence(state, true)
@@ -1034,6 +1044,73 @@ func recipe_status(state: Dictionary, card_id: String) -> String:
 	if meal_requirement != "":
 		ready = ready and not _find_recipe_meal(state.player, meal_requirement).is_empty()
 	return "Selected recipe: %s" % ("ready" if ready else "does not match")
+
+
+## Public explanations share the same active-zone rules as the recipe resolver.
+## Timed sources are retained after leaving play, until the affected turn ends.
+func active_play_restrictions(state: Dictionary, side: String = "player") -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var enemy_side := "opponent" if side == "player" else "player"
+	for zone in ["prep", "plated"]:
+		for source in state[enemy_side].get(zone, []):
+			var data := card(String(source.card_id))
+			var extra := 0
+			for aura in data.get("auras", []):
+				if String(aura.get("target", "")) == "opponent_meal_recipes" and String(aura.get("active_zone", zone)) in ["", zone]:
+					extra += int(aura.get("extra_any", 0))
+			if extra > 0:
+				result.append({"kind": "meal", "card_id": String(source.card_id), "instance_id": int(source.instance_id), "side": enemy_side, "zone": zone,
+					"message": "%s: normal Meals need +%d Ingredient%s while %s." % [data.name, extra, "" if extra == 1 else "s", zone.capitalize()]})
+	for entry in [{"flag": "items_disabled", "kind": "tool", "label": "Tools"}, {"flag": "chefs_disabled", "kind": "chef", "label": "Chefs"}]:
+		if not bool(state[side].get(entry.flag, false)):
+			continue
+		var sources: Array = state[side].get("play_restriction_sources", {}).get(entry.flag, [])
+		if sources.is_empty():
+			result.append({"kind": entry.kind, "card_id": "", "message": "%s blocked until your turn ends." % entry.label})
+		for source in sources:
+			result.append({"kind": entry.kind, "card_id": String(source.get("card_id", "")), "instance_id": int(source.get("instance_id", -1)), "side": enemy_side,
+				"message": "%s: %s blocked until your turn ends." % [source.get("name", "Rival effect"), entry.label]})
+	return result
+
+
+func play_restriction_reason(state: Dictionary, card_type: String, side: String = "player") -> String:
+	var reasons: Array[String] = []
+	for restriction in active_play_restrictions(state, side):
+		if String(restriction.kind) == card_type:
+			reasons.append(String(restriction.message))
+	return "\n".join(reasons)
+
+
+func meal_play_block_reason(state: Dictionary, data: Dictionary, special: bool = false) -> String:
+	if not special and not _can_serve_meal(state.player):
+		return "Normal Meal already served this turn."
+	if special and not special_serve_enabled(state, data):
+		return "This card cannot Special Serve here."
+	if serve_ingredient_ids(state, "player", data, special).is_empty():
+		if special:
+			return "Special Serve: " + String(data.get("special_serve", {}).get("text", "Condition not met."))
+		var reason := play_restriction_reason(state, "meal")
+		return (reason + "\n" if not reason.is_empty() else "") + "Need recipe-ready Ingredients for: %s." % _recipe_text(_effective_recipe(state, "player", data))
+	var required_meal := String(data.get("required_meal_archetype", ""))
+	if not special and required_meal != "" and _find_recipe_meal(state.player, required_meal).is_empty():
+		return "Serving %s also requires a %s Meal." % [data.name, required_meal.capitalize()]
+	return ""
+
+
+func _record_play_restriction_source(combatant: Dictionary, flag: String, source: Dictionary) -> void:
+	if not combatant.has("play_restriction_sources"):
+		combatant.play_restriction_sources = {}
+	if not combatant.play_restriction_sources.has(flag):
+		combatant.play_restriction_sources[flag] = []
+	var record := {"card_id": String(source.get("card_id", "")), "name": String(source.get("name", "Rival effect")), "instance_id": int(source.get("instance_id", -1))}
+	if not combatant.play_restriction_sources[flag].has(record):
+		combatant.play_restriction_sources[flag].append(record)
+
+
+func _clear_play_restrictions(combatant: Dictionary) -> void:
+	combatant.chefs_disabled = false
+	combatant.items_disabled = false
+	combatant.erase("play_restriction_sources")
 
 
 func ingredient_recipe_status(combatant: Dictionary, unit: Dictionary) -> String:
@@ -1279,7 +1356,8 @@ func _pay_negated_card_from_hand(state: Dictionary, side: String, card_id: Strin
 	var data := card(card_id)
 	state[side].hand.remove_at(hand_index)
 	state[side].discard.append(card_id)
-	_queue_play_event(state, side, card_id, action_kind)
+	var play_group_id := _queue_play_event(state, side, card_id, action_kind)
+	var discarded_cost_cards: Array[String] = []
 	if action_kind == "chef":
 		state[side].chef_used = true
 	elif action_kind == "tool":
@@ -1287,8 +1365,12 @@ func _pay_negated_card_from_hand(state: Dictionary, side: String, card_id: Strin
 			var discard_index: int = state[side].hand.size() - 1
 			if side == "opponent" and _ai_level(state) >= 3:
 				discard_index = _ai_lowest_value_hand_index(state[side].hand)
-			state[side].discard.append(String(state[side].hand[discard_index]))
+			var discarded_card := String(state[side].hand[discard_index])
+			state[side].discard.append(discarded_card)
+			discarded_cost_cards.append(discarded_card)
 			state[side].hand.remove_at(discard_index)
+
+	_queue_hand_discard_events(state, side, discarded_cost_cards, play_group_id)
 
 
 func _resume_opponent_turn_after_reaction(state: Dictionary) -> void:
@@ -1356,17 +1438,21 @@ func _play_ingredient(state: Dictionary, side: String, hand_index: int, destinat
 		_message(state, "Select %d card%s from your hand to discard for %s." % [discard_cost, "" if discard_cost == 1 else "s", data.name])
 		return true
 	who.hand.remove_at(hand_index)
+	var discarded_cost_cards: Array[String] = []
 	if side == "opponent":
 		for unused in range(discard_cost):
 			var discard_index: int = who.hand.size() - 1
 			if _ai_level(state) >= 3:
 				discard_index = _ai_lowest_value_hand_index(who.hand)
-			who.discard.append(String(who.hand[discard_index]))
+			var discarded_card := String(who.hand[discard_index])
+			who.discard.append(discarded_card)
+			discarded_cost_cards.append(discarded_card)
 			who.hand.remove_at(discard_index)
 	var unit := _make_unit(state, who, data, destination, side)
 	who[destination].append(unit)
 	_record_hand_play(state, side, card_id, "ingredient", int(unit.instance_id))
 	var play_group_id := _queue_play_event(state, side, card_id, "ingredient", int(unit.instance_id))
+	_queue_hand_discard_events(state, side, discarded_cost_cards, play_group_id)
 	_log(state, "%s plays %s to %s." % [_side_name(side), data.name, destination.capitalize()])
 	var previous_animation_group := _with_animation_group(state, play_group_id)
 	_resolve_effects(state, side, data.get("on_play", []), unit)
@@ -1388,23 +1474,27 @@ func _play_ingredient(state: Dictionary, side: String, hand_index: int, destinat
 	return true
 
 
-func _serve_meal(state: Dictionary, side: String, hand_index: int, requested_ids: Array, destination: String = "plated") -> bool:
+func _serve_meal(state: Dictionary, side: String, hand_index: int, requested_ids: Array, destination: String = "plated", special: bool = false) -> bool:
 	var who: Dictionary = state[side]
 	if destination != "prep" and destination != "plated":
 		destination = "plated"
-	if not _can_serve_meal(who):
-		_message(state, "%s has already served a Meal this turn." % _side_name(side))
+	if hand_index < 0 or hand_index >= who.hand.size() or bool(state.get("game_over", false)):
+		return false
+	if not special and not _can_serve_meal(who):
+		_message(state, "%s has already served a Meal normally this turn." % _side_name(side))
 		return false
 	var card_id := String(who.hand[hand_index])
 	var data := card(card_id)
-	var recipe: Array = _effective_recipe(state, side, data)
+	if String(data.get("card_type", "")) != "meal" or (special and not special_serve_enabled(state, data)):
+		return false
+	var recipe: Array = serve_recipe(state, side, data, special)
 	var chosen := requested_ids.duplicate()
 	if chosen.is_empty():
-		chosen = _find_recipe_ingredients(who, recipe)
-	if not _selection_satisfies(who, chosen, recipe):
+		chosen = serve_ingredient_ids(state, side, data, special)
+	if not _selection_satisfies(_serve_combatant(who, data, special), chosen, recipe):
 		_message(state, "Select recipe-ready ingredients matching: %s." % _recipe_text(recipe))
 		return false
-	var required_meal_archetype := String(data.get("required_meal_archetype", ""))
+	var required_meal_archetype := "" if special else String(data.get("required_meal_archetype", ""))
 	var recipe_meal := _find_recipe_meal(who, required_meal_archetype) if required_meal_archetype != "" else {}
 	if required_meal_archetype != "" and recipe_meal.is_empty():
 		_message(state, "Serving %s also requires a %s Meal." % [data.name, required_meal_archetype.capitalize()])
@@ -1462,13 +1552,17 @@ func _serve_meal(state: Dictionary, side: String, hand_index: int, requested_ids
 		meal.health += int(environment_data.get("meal_health_bonus", 0))
 		meal.max_health += int(environment_data.get("meal_health_bonus", 0))
 	who[destination].append(meal)
-	who.meals_served = int(who.get("meals_served", 0)) + 1
-	who.meal_served = int(who.meals_served) >= _meal_limit(who)
+	meal.special_served = special
+	if not special:
+		who.meals_served = int(who.get("meals_served", 0)) + 1
+		who.meal_served = int(who.meals_served) >= _meal_limit(who)
 	_record_hand_play(state, side, card_id, "meal", int(meal.instance_id))
 	var play_group_id := _queue_play_event(state, side, card_id, "meal", int(meal.instance_id))
 	_refresh_stat_auras(state)
 	state.selected_ingredients = []
 	_log(state, "%s sacrifices %s and serves %s to %s." % [_side_name(side), ", ".join(sacrificed_names), data.name, destination.capitalize()])
+	if special:
+		_log(state, "Special Serve — %s. Normal Meal allowance unchanged." % String(data.name))
 	var previous_animation_group := _with_animation_group(state, play_group_id)
 	_resolve_effects(state, side, data.get("on_play", []), meal)
 	_restore_animation_group(state, previous_animation_group)
@@ -1478,7 +1572,7 @@ func _serve_meal(state: Dictionary, side: String, hand_index: int, requested_ids
 func _play_tool(state: Dictionary, side: String, hand_index: int, skip_reaction: bool = false) -> bool:
 	var who: Dictionary = state[side]
 	if bool(who.items_disabled):
-		_message(state, "%s cannot use Items this turn." % _side_name(side))
+		_message(state, play_restriction_reason(state, "tool", side))
 		return false
 	var card_id := String(who.hand[hand_index])
 	var data := card(card_id)
@@ -1543,7 +1637,7 @@ func _play_chef(state: Dictionary, side: String, hand_index: int, skip_reaction:
 		_message(state, "%s has already used a Chef this turn." % _side_name(side))
 		return false
 	if bool(who.chefs_disabled):
-		_message(state, "%s cannot use a Chef this turn." % _side_name(side))
+		_message(state, play_restriction_reason(state, "chef", side))
 		return false
 	var card_id := String(who.hand[hand_index])
 	var data := card(card_id)
@@ -1627,6 +1721,12 @@ func _make_unit(state: Dictionary, combatant: Dictionary, data: Dictionary, zone
 		"spices": [],
 		"defending": false
 	}
+	if not bool(data.get("deckbox_applied", false)):
+		var bonuses: Dictionary = combatant.get("deckbox_effects", {})
+		var kind := String(data.get("card_type", ""))
+		unit.attack += int(bonuses.get(kind + "_attack", 0))
+		unit.health += int(bonuses.get(kind + "_health", 0))
+		unit.max_health += int(bonuses.get(kind + "_health", 0))
 	state.next_instance_id = int(state.next_instance_id) + 1
 	return unit
 
@@ -1680,9 +1780,13 @@ func _start_turn(state: Dictionary, side: String, draw_card: bool = true) -> boo
 	if should_draw:
 		_draw(state, side)
 		var hand_floor := int(state.get("run_rules", {}).get("turn_hand_floor", START_TURN_HAND_FLOOR))
-		while who.hand.size() < hand_floor and (not who.deck.is_empty() or not who.discard.is_empty()):
+		while who.hand.size() < hand_floor and not bool(state.game_over):
+			var count_before: int = who.hand.size()
 			_draw(state, side)
-	state.phase = "player_main" if side == "player" else "opponent_turn"
+			if who.hand.size() == count_before:
+				break
+	if not bool(state.game_over):
+		state.phase = "player_main" if side == "player" else "opponent_turn"
 	return should_draw
 
 
@@ -1759,8 +1863,7 @@ func advance_opponent_turn(state: Dictionary) -> Dictionary:
 					return state
 				sequence.stage = "end"
 			"end":
-				state.opponent.chefs_disabled = false
-				state.opponent.items_disabled = false
+				_clear_play_restrictions(state.opponent)
 				_resolve_end_turn_triggers(state, "opponent")
 				_set_defense_positions(state, "opponent")
 				_clear_temporary_buffs(state.opponent)
@@ -1783,7 +1886,7 @@ func _ai_play_discard_ingredient(state: Dictionary) -> bool:
 		state.opponent.discard_ingredient_play_used = true
 		var unit := _make_unit(state, state.opponent, card(card_id), "prep", "opponent")
 		state.opponent.prep.append(unit)
-		var play_group_id := _queue_play_event(state, "opponent", card_id, "ingredient", int(unit.instance_id))
+		var play_group_id := _queue_play_event(state, "opponent", card_id, "ingredient", int(unit.instance_id), -1, {"from": "discard"})
 		var previous_animation_group := _with_animation_group(state, play_group_id)
 		_resolve_effects(state, "opponent", card(card_id).get("on_play", []), unit)
 		_restore_animation_group(state, previous_animation_group)
@@ -1808,6 +1911,12 @@ func _ai_play_first_hand_card(state: Dictionary) -> bool:
 		var card_type := String(data.get("card_type", ""))
 		if card_type == "environment":
 			return _play_environment(state, "opponent", hand_index)
+		if card_type == "meal" and special_serve_enabled(state, data):
+			var special_units := serve_ingredient_ids(state, "opponent", data, true)
+			if not special_units.is_empty():
+				for zone in ["plated", "prep"]:
+					if _serve_meal(state, "opponent", hand_index, special_units, zone, true):
+						return true
 		if card_type == "meal" and _can_serve_meal(state.opponent):
 			var recipe_units := _find_recipe_ingredients(state.opponent, _effective_recipe(state, "opponent", data))
 			var required_meal := String(data.get("required_meal_archetype", ""))
@@ -1868,7 +1977,7 @@ func _ai_face_race_card_score(state: Dictionary, data: Dictionary) -> float:
 			match String(effect.get("type", "")):
 				"damage_enemy_player":
 					score += float(amount * 120)
-				"damage_all_enemy_units", "damage_all_enemy_plated", "damage_enemy_unit", "damage_enemy_plated":
+				"damage_all_enemy_units", "damage_all_enemy_plated", "damage_enemy_unit", "damage_enemy_plated", "damage_prep_unit":
 					score += float(amount * 20)
 				"return_enemy_plated_unit", "destroy_enemy_unit":
 					if not state.player.plated.is_empty():
@@ -1943,7 +2052,7 @@ func _ai_execute_hand_action(state: Dictionary, action: Dictionary) -> bool:
 		"environment":
 			return _play_environment(state, "opponent", hand_index)
 		"meal":
-			return _serve_meal(state, "opponent", hand_index, action.get("recipe_units", []), String(action.get("destination", "plated")))
+			return _serve_meal(state, "opponent", hand_index, action.get("recipe_units", []), String(action.get("destination", "plated")), bool(action.get("special", false)))
 		"ingredient":
 			return _play_ingredient(state, "opponent", hand_index, String(action.destination))
 		"spice":
@@ -1978,11 +2087,14 @@ func _ai_hand_action(state: Dictionary, hand_index: int) -> Dictionary:
 			base.score += 38.0 if String(state.opponent.environment) == "" else 10.0
 			return base
 		"meal":
-			if not _can_serve_meal(state.opponent):
+			var special_units := serve_ingredient_ids(state, "opponent", data, true) if special_serve_enabled(state, data) else []
+			var special := not special_units.is_empty()
+			if not special and not _can_serve_meal(state.opponent):
 				return {}
 			var recipe := _effective_recipe(state, "opponent", data)
-			var recipe_units := _find_low_value_recipe_ingredients(state.opponent, recipe) if _ai_level(state) >= 2 else _find_recipe_ingredients(state.opponent, recipe)
-			var required_meal := String(data.get("required_meal_archetype", ""))
+			var recipe_units := special_units if special else (_find_low_value_recipe_ingredients(state.opponent, recipe) if _ai_level(state) >= 2 else _find_recipe_ingredients(state.opponent, recipe))
+			base.special = special
+			var required_meal := "" if special else String(data.get("required_meal_archetype", ""))
 			if recipe_units.is_empty() or (required_meal != "" and _find_recipe_meal(state.opponent, required_meal).is_empty()):
 				return {}
 			var destination := _ai_deployment_zone(state, "meal")
@@ -2086,7 +2198,7 @@ func _ai_card_effect_value(data: Dictionary) -> float:
 			match String(effect.get("type", "")):
 				"draw", "search", "look_and_take", "recover":
 					value += 10.0 * amount
-				"damage_enemy_player", "damage_enemy_unit", "damage_enemy_prep", "damage_all_enemy_units", "damage_all_enemy_plated":
+				"damage_enemy_player", "damage_enemy_unit", "damage_enemy_prep", "damage_all_enemy_units", "damage_all_enemy_plated", "damage_prep_unit":
 					value += 8.0 * amount
 				"heal_player", "heal_unit", "heal_all_friendly_units":
 					value += 5.0 * amount
@@ -2580,8 +2692,7 @@ func _ai_turn(state: Dictionary, start_turn: bool = true) -> void:
 		_ai_attack_with_unit(state, unit)
 		if not state.get("pending_reaction", {}).is_empty():
 			return
-	state.opponent.chefs_disabled = false
-	state.opponent.items_disabled = false
+	_clear_play_restrictions(state.opponent)
 	_resolve_end_turn_triggers(state, "opponent")
 	_set_defense_positions(state, "opponent")
 	_clear_temporary_buffs(state.opponent)
@@ -2597,14 +2708,74 @@ func _resolve_end_turn_triggers(state: Dictionary, side: String) -> void:
 			_resolve_effects(state, side, data.get("on_end_turn", []), unit)
 
 
+## Pure, public-board combat math shared by resolution and the targeting preview.
+func combat_exchange(attacker: Dictionary, defender: Dictionary) -> Dictionary:
+	var damage := int(attacker.attack)
+	var retaliation := int(defender.attack)
+	var overflow := maxi(0, damage - int(defender.health))
+	var protection := ""
+	if _unit_has_keyword(defender, "bodyguard"):
+		protection = "Bodyguard"
+	elif bool(defender.get("defending", false)) and not _unit_has_keyword(attacker, "piercing"):
+		protection = "Defending"
+	if not protection.is_empty():
+		overflow = 0
+	return {
+		"damage": damage, "retaliation": retaliation, "overflow": overflow,
+		"attacker_health": maxi(0, int(attacker.health) - retaliation),
+		"defender_health": maxi(0, int(defender.health) - damage),
+		"protection": protection,
+	}
+
+
+## Never runs effects, reads hidden cards, consumes RNG, or mutates the match.
+func attack_preview(state: Dictionary, attacker_id: int, target_id: int = -1) -> Dictionary:
+	if state.is_empty() or bool(state.get("game_over", false)) or String(state.get("phase", "")) != "player_main":
+		return {}
+	for pending in ["pending_meal", "pending_discard", "pending_ability", "pending_search", "pending_choice", "pending_reaction"]:
+		if not state.get(pending, {}).is_empty():
+			return {}
+	var attacker := _find_unit(state.player, attacker_id)
+	if attacker.is_empty() or not bool(attacker.get("ready", false)) or _opening_attack_lock(state, "player"):
+		return {}
+	if _unit_zone(state.player, attacker_id) != "plated" and not bool(card(String(attacker.card_id)).get("can_attack_from_prep", false)):
+		return {}
+	var defender := _find_unit_in_zone(state.opponent, "plated", target_id) if target_id >= 0 else {}
+	if target_id < 0:
+		if not can_attack_opposing_chef(state, attacker_id):
+			return {}
+	else:
+		if defender.is_empty() or (not _first_plated_with_keyword(state.opponent, "taunt").is_empty() and not _unit_has_keyword(defender, "taunt")):
+			return {}
+	# Attack effects resolve before damage and may require a choice or change
+	# the board. Do not present their unresolved outcome as a guaranteed kill.
+	if not card(String(attacker.card_id)).get("on_attack", []).is_empty():
+		return {"effect_first": true}
+	var result := combat_exchange(attacker, defender) if target_id >= 0 else {
+		"damage": int(attacker.attack), "retaliation": 0, "overflow": int(attacker.attack),
+		"attacker_health": int(attacker.health), "defender_health": maxi(0, int(state.opponent.life) - int(attacker.attack)),
+		"protection": "",
+	}
+	result.direct = target_id < 0
+	result.effects_follow = false
+	# Visible damage/death/chef-hit triggers can heal or change the survivors.
+	# Show the damage exchange, without promising the final surviving board.
+	for side in ["player", "opponent"]:
+		for zone in ["prep", "plated"]:
+			for unit in state[side].get(zone, []):
+				var data := card(String(unit.card_id))
+				for trigger in ["on_damaged", "on_ko", "on_ko_enemy", "auras", "on_combat_damage_to_chef"]:
+					if not data.get(trigger, []).is_empty():
+						result.effects_follow = true
+	return result
+
+
 func _resolve_unit_battle(state: Dictionary, attacker_side: String, attacker: Dictionary, defender: Dictionary) -> void:
 	var defender_side := "opponent" if attacker_side == "player" else "player"
-	var attack_value := int(attacker.attack)
-	var defense_value := int(defender.attack)
-	var defender_health_before := int(defender.health)
-	var overflow_damage := maxi(0, attack_value - defender_health_before)
-	if bool(defender.get("defending", false)) and not _unit_has_keyword(attacker, "piercing"):
-		overflow_damage = 0
+	var exchange := combat_exchange(attacker, defender)
+	var attack_value := int(exchange.damage)
+	var defense_value := int(exchange.retaliation)
+	var overflow_damage := int(exchange.overflow)
 	var combat_group_id := _next_animation_group(state)
 	if attack_value > 0:
 		_queue_animation_event(state, "damage", {
@@ -2790,6 +2961,12 @@ func _resolve_effects(
 				# Chef Duff follows Pokémon TCG's Judge pattern: both hands are
 				# shuffled away before either player receives their replacement cards.
 				for affected_side in [side, enemy_side]:
+					for hand_index in state[affected_side].hand.size():
+						_queue_animation_event(state, "search", {
+							"side": affected_side,
+							"card_id": String(state[affected_side].hand[hand_index]),
+							"from": "hand", "to": "deck", "hand_index": hand_index,
+						})
 					state[affected_side].deck.append_array(state[affected_side].hand)
 					state[affected_side].hand.clear()
 					_shuffle(state[affected_side].deck)
@@ -2900,8 +3077,10 @@ func _resolve_effects(
 				_return_enemy_plated_unit(state, enemy_side, target_instance_id)
 			"disable_enemy_chefs_next_turn":
 				state[enemy_side].chefs_disabled = true
+				_record_play_restriction_source(state[enemy_side], "chefs_disabled", source)
 			"disable_enemy_items_next_turn":
 				state[enemy_side].items_disabled = true
+				_record_play_restriction_source(state[enemy_side], "items_disabled", source)
 			"buff_self":
 				if not source.is_empty():
 					var attack_bonus := int(effect.get("attack", 0))
@@ -2988,7 +3167,10 @@ func _resolve_effects(
 						_queue_buff_event(state, side, source, attack_bonus, health_bonus)
 			"draw_to_hand_size":
 				while state[side].hand.size() < amount and not bool(state.game_over):
+					var count_before: int = state[side].hand.size()
 					_draw(state, side)
+					if state[side].hand.size() == count_before:
+						break
 			"create_token":
 				var token_zone := String(effect.get("zone", "prep"))
 				var token_capacity := PREP_SLOTS if token_zone == "prep" else PLATED_SLOTS
@@ -3193,6 +3375,22 @@ func _resolve_effects(
 				if not damage_target.is_empty():
 					_log(state, "%s deals %d damage to %s." % [_side_name(side), amount, damage_target.name])
 					_deal_effect_damage_to_unit(state, side, enemy_side, damage_target, amount, source)
+			"damage_prep_unit":
+				# A single chosen Prep unit, on either side. Automated choices prefer
+				# opposing units; with only friendly targets, choose the healthiest unit to reduce the risk of a KO.
+				var damage_side := enemy_side
+				var prep_damage_target := _find_unit_in_zone(state[enemy_side], "prep", target_instance_id)
+				if target_instance_id >= 0 and prep_damage_target.is_empty():
+					damage_side = side
+					prep_damage_target = _find_unit_in_zone(state[side], "prep", target_instance_id)
+				elif target_instance_id < 0:
+					if state[enemy_side].prep.is_empty():
+						damage_side = side
+					for candidate in state[damage_side].prep:
+						if prep_damage_target.is_empty() or (damage_side == enemy_side and int(candidate.health) < int(prep_damage_target.health)) or (damage_side == side and int(candidate.health) > int(prep_damage_target.health)):
+							prep_damage_target = candidate
+				if not prep_damage_target.is_empty():
+					_deal_effect_damage_to_unit(state, side, damage_side, prep_damage_target, amount, source)
 	if refresh_after:
 		_refresh_stat_auras(state)
 	_check_game_over(state)
@@ -3221,6 +3419,7 @@ func _effect_needs_board_choice(effect: Dictionary) -> bool:
 		"heal_unit",
 		"damage_enemy_unit",
 		"damage_enemy_plated",
+		"damage_prep_unit",
 		"return_enemy_ingredient",
 		"return_enemy_plated_unit",
 		"move_friendly_to_prep",
@@ -3277,6 +3476,14 @@ func _deploy_enemy_hand_unit(state: Dictionary, side: String, hand_index: int) -
 	var unit := _make_unit(state, state[enemy_side], data, destination, enemy_side)
 	unit.ready = false
 	state[enemy_side][destination].append(unit)
+	# Forced deployment consumes a real held card, but does not resolve its
+	# on-play text. Emit only the physical play, not an activation event.
+	_queue_animation_event(state, "play", {
+		"side": enemy_side, "card_id": card_id,
+		"card_type": String(data.get("card_type", "ingredient")),
+		"instance_id": int(unit.instance_id), "target_instance_id": -1,
+		"zone": destination, "from": "hand", "to": destination,
+	})
 	_log(state, "%s uses Tongs to put %s into %s's %s zone." % [_side_name(side), data.name, _side_name(enemy_side), destination.capitalize()])
 
 
@@ -3306,6 +3513,11 @@ func _valid_board_target_ids(state: Dictionary, side: String, effect: Dictionary
 		"damage_enemy_plated":
 			target_side = enemy_side
 			zones = ["plated"]
+		"damage_prep_unit":
+			for candidate_side in [side, enemy_side]:
+				for unit in state[candidate_side].prep:
+					result.append(int(unit.instance_id))
+			return result
 		"damage_enemy_unit":
 			target_side = enemy_side
 		"return_enemy_ingredient", "return_enemy_plated_unit", "destroy_enemy_unit", "remove_enemy_spice":
@@ -3354,6 +3566,8 @@ func _board_choice_prompt(effect: Dictionary) -> String:
 			return "Choose an opposing unit to damage."
 		"damage_enemy_plated":
 			return "Choose an opposing Plated unit to damage."
+		"damage_prep_unit":
+			return "Choose 1 Prep unit to take %d damage." % int(effect.get("amount", 1))
 		"move_friendly_to_prep":
 			return "Choose a friendly Spicy Plated card to move to Prep."
 		"switch_friendly_zones":
@@ -3611,6 +3825,14 @@ func _draw(state: Dictionary, side: String, _fatigue_enabled: bool = true) -> vo
 		var pressure_curve: Array = run_rules.get("reshuffle_damage", [3, 5, 7])
 		var curve_index := mini(int(who.fatigue) - 1, pressure_curve.size() - 1)
 		var pressure_damage := int(pressure_curve[curve_index]) if curve_index >= 0 else 0
+		var pressure_reduction := maxi(0, int(who.get("deckbox_effects", {}).get("reshuffle_damage_reduction", 0)))
+		pressure_damage = maxi(0, pressure_damage - pressure_reduction)
+		_queue_animation_event(state, "reshuffle", {
+			"side": side,
+			"card_count": who.deck.size(),
+			"reshuffle_count": int(who.fatigue),
+			"pressure_damage": pressure_damage,
+		})
 		_log(state, "%s reshuffles and takes %d pressure damage." % [_side_name(side), pressure_damage])
 		_deal_chef_damage(state, side, pressure_damage, side, false)
 		if bool(state.game_over):
@@ -3728,7 +3950,11 @@ func _selection_satisfies(combatant: Dictionary, selected: Array, recipe: Array)
 	if selected.size() != recipe.size():
 		return false
 	var selected_units: Array = []
+	var seen := {}
 	for instance_id in selected:
+		if seen.has(int(instance_id)):
+			return false
+		seen[int(instance_id)] = true
 		var unit := _find_unit(combatant, int(instance_id))
 		if unit.is_empty() or String(unit.card_type) != "ingredient" or not _ingredient_is_recipe_ready(combatant, unit):
 			return false
@@ -3815,14 +4041,18 @@ func _healing_amount(state: Dictionary, healing_side: String, amount: int) -> in
 
 
 func _effect_damage_is_prevented(state: Dictionary, target_side: String, target: Dictionary) -> bool:
+	return not _effect_damage_protector(state, target_side, target).is_empty()
+
+
+func _effect_damage_protector(state: Dictionary, target_side: String, target: Dictionary) -> Dictionary:
 	if _unit_zone(state[target_side], int(target.get("instance_id", -1))) != "prep":
-		return false
+		return {}
 	for protector in state[target_side].prep:
 		if int(protector.instance_id) == int(target.get("instance_id", -1)):
 			continue
 		if bool(card(String(protector.card_id)).get("protect_other_friendly_prep_from_effect_damage", false)):
-			return true
-	return false
+			return protector
+	return {}
 
 
 func _deal_effect_damage_to_unit(
@@ -3837,8 +4067,25 @@ func _deal_effect_damage_to_unit(
 ) -> bool:
 	if target.is_empty() or amount <= 0:
 		return false
-	if _effect_damage_is_prevented(state, target_side, target):
-		_log(state, "%s protects %s from effect damage." % [_side_name(target_side), target.name])
+	var protector := _effect_damage_protector(state, target_side, target)
+	if not protector.is_empty():
+		_queue_animation_event(state, "damage_prevented", {
+			"source_side": source_side,
+			"source_instance_id": int(source.get("instance_id", -1)),
+			"target_kind": "unit",
+			"target_side": target_side,
+			"target_instance_id": int(target.instance_id),
+			"target_card_id": String(target.card_id),
+			"target_table_slot": int(target.get("table_slot", 0)),
+			"target_zone": _unit_zone(state[target_side], int(target.instance_id)),
+			"protector_side": target_side,
+			"protector_instance_id": int(protector.instance_id),
+			"protector_card_id": String(protector.card_id),
+			"protector_table_slot": int(protector.get("table_slot", 0)),
+			"protector_zone": _unit_zone(state[target_side], int(protector.instance_id)),
+			"amount": amount
+		}, animation_group_id)
+		_log(state, "%s protects %s from effect damage." % [protector.name, target.name])
 		return false
 	_queue_animation_event(state, "damage", {
 		"source_side": source_side,
@@ -4149,11 +4396,15 @@ func _search_deck(state: Dictionary, side: String, effect: Dictionary) -> void:
 func _deploy_searched_ingredient(state: Dictionary, side: String, card_id: String) -> void:
 	if state[side].prep.size() >= PREP_SLOTS:
 		state[side].hand.append(card_id)
+		_queue_animation_event(state, "search", {
+			"side": side, "card_id": card_id, "from": "deck", "to": "hand",
+			"hand_index": state[side].hand.size() - 1,
+		})
 		return
 	var data := card(card_id)
 	var unit := _make_unit(state, state[side], data, "prep", side)
 	state[side].prep.append(unit)
-	var play_group_id := _queue_play_event(state, side, card_id, "ingredient", int(unit.instance_id))
+	var play_group_id := _queue_play_event(state, side, card_id, "ingredient", int(unit.instance_id), -1, {"from": "deck"})
 	var previous_animation_group := _with_animation_group(state, play_group_id)
 	_resolve_effects(state, side, data.get("on_play", []), unit)
 	_restore_animation_group(state, previous_animation_group)
@@ -4270,7 +4521,7 @@ func _deploy_revived_unit(state: Dictionary, side: String, card_id: String) -> v
 	var data := card(card_id)
 	var unit := _make_unit(state, state[side], data, "prep", side)
 	state[side].prep.append(unit)
-	_queue_play_event(state, side, card_id, String(data.get("card_type", "unit")), int(unit.instance_id))
+	_queue_play_event(state, side, card_id, String(data.get("card_type", "unit")), int(unit.instance_id), -1, {"from": "discard"})
 	_log(state, "%s returns %s from the discard pile to Prep." % [_side_name(side), data.get("name", card_id)])
 
 
@@ -4312,6 +4563,7 @@ func _return_enemy_ingredient(state: Dictionary, target_side: String, target_ins
 					_log(state, "%s's %s evaporates instead of returning to hand." % [_side_name(target_side), unit.name])
 				else:
 					combatant.hand.append(String(unit.card_id))
+					_queue_board_return_event(state, target_side, unit, zone_name)
 				return
 
 
@@ -4328,6 +4580,7 @@ func _return_enemy_plated_unit(state: Dictionary, target_side: String, target_in
 			_log(state, "%s's %s evaporates instead of returning to hand." % [_side_name(target_side), unit.name])
 		else:
 			combatant.hand.append(String(unit.card_id))
+			_queue_board_return_event(state, target_side, unit, "plated")
 		return
 
 
@@ -4400,6 +4653,25 @@ func _record_hand_play(state: Dictionary, side: String, card_id: String, action_
 	}
 
 
+func _queue_hand_discard_events(state: Dictionary, side: String, card_ids: Array[String], group_id: int) -> void:
+	for discard_order in card_ids.size():
+		_queue_animation_event(state, "discard", {
+			"side": side, "card_id": card_ids[discard_order],
+			"from": "hand", "to": "discard",
+			"discard_order": discard_order, "discard_count": card_ids.size(),
+		}, group_id)
+
+
+func _queue_board_return_event(state: Dictionary, side: String, unit: Dictionary, source_zone: String) -> void:
+	_queue_animation_event(state, "search", {
+		"side": side, "card_id": String(unit.card_id),
+		"from": source_zone, "to": "hand",
+		"source_instance_id": int(unit.instance_id),
+		"source_table_slot": int(unit.get("table_slot", 0)),
+		"hand_index": state[side].hand.size() - 1,
+	})
+
+
 func _queue_play_event(
 	state: Dictionary,
 	side: String,
@@ -4418,7 +4690,7 @@ func _queue_play_event(
 		"instance_id": instance_id,
 		"target_instance_id": target_instance_id,
 		"zone": zone,
-		"from": "hand",
+		"from": "token" if action_kind == "token" else "hand",
 		"to": zone if zone != "" else ("attachment" if action_kind == "spice" else "environment" if action_kind == "environment" else "discard")
 	}
 	play_presentation.merge(extra_presentation, true)
@@ -4515,3 +4787,52 @@ func _queue_buff_event(state: Dictionary, side: String, target: Dictionary, atta
 
 func _side_name(side: String) -> String:
 	return "You" if side == "player" else "Opponent"
+
+
+func special_serve_enabled(state: Dictionary, data: Dictionary) -> bool:
+	return bool(state.get("run_rules", {}).get("special_serve_enabled", true)) and not data.get("special_serve", {}).get("recipe", []).is_empty()
+
+
+func serve_recipe(state: Dictionary, side: String, data: Dictionary, special: bool = false) -> Array:
+	return data.get("special_serve", {}).get("recipe", []) if special else _effective_recipe(state, side, data)
+
+
+func serve_ingredient_ids(state: Dictionary, side: String, data: Dictionary, special: bool = false) -> Array:
+	if special and not special_serve_enabled(state, data):
+		return []
+	return _find_recipe_ingredients(_serve_combatant(state[side], data, special), serve_recipe(state, side, data, special))
+
+
+func special_ingredient_eligible(combatant: Dictionary, unit: Dictionary, data: Dictionary) -> bool:
+	if String(unit.get("card_type", "")) != "ingredient":
+		return false
+	var rule: Dictionary = data.get("special_serve", {})
+	var filter: Dictionary = rule.get("ingredient_filter", {})
+	if bool(rule.get("require_ready", false)) and not _ingredient_is_recipe_ready(combatant, unit):
+		return false
+	if bool(filter.get("spiced", false)) and unit.get("spices", []).is_empty():
+		return false
+	if int(unit.get("attack", 0)) < int(filter.get("min_attack", 0)) or int(unit.get("health", 0)) < int(filter.get("min_health", 0)):
+		return false
+	if bool(filter.get("damaged", false)) and int(unit.health) >= int(unit.max_health):
+		return false
+	if bool(filter.get("token", false)) and not bool(unit.get("is_token", false)):
+		return false
+	var keyword := String(filter.get("keyword", ""))
+	if not keyword.is_empty() and not card(String(unit.card_id)).get("keywords", []).has(keyword):
+		return false
+	return true
+
+
+func _serve_combatant(combatant: Dictionary, data: Dictionary, special: bool) -> Dictionary:
+	if not special:
+		return combatant
+	var filtered := {"prep": [], "plated": [], "turns_started": int(combatant.turns_started)}
+	for zone in ["prep", "plated"]:
+		for unit in combatant[zone]:
+			if not special_ingredient_eligible(combatant, unit, data):
+				continue
+			var candidate: Dictionary = unit.duplicate(true)
+			candidate.recipe_ready_on_turn = 0
+			filtered[zone].append(candidate)
+	return filtered

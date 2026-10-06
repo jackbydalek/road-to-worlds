@@ -4,16 +4,19 @@ class_name RuntimeAngularCard
 signal visual_changed
 
 ## A resolution-independent card face built from Godot controls and draw calls.
-## The illustration is the only raster layer; the chassis, panels, keylines,
-## wedges, typography and stat treatment are all rendered at runtime.
+## The illustration is the only raster layer. Paper frames, affinity medallions,
+## folded ribbons and readable stat tabs are drawn live.
 
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const ART_INK_SHADER := preload("res://assets/shaders/runtime_art_black_ink.gdshader")
 const RECIPE_TILES := preload("res://scripts/ui/RecipeRequirementTiles.gd")
 const UPGRADED_CARD_FOIL := preload("res://scripts/ui/UpgradedCardFoil.gd")
+const CARD_RIBBON := preload("res://scripts/ui/CardRibbon.gd")
+const CARD_MEDALLION := preload("res://scripts/ui/CardMedallion.gd")
+const PEACH_FRAME_BORDER_WIDTH := 10
 
 var card_name := "JALAPEÑO PANTHER"
 var card_type := "INGREDIENT"
@@ -32,8 +35,14 @@ var art_offset := Vector2.ZERO
 var compact_visual := false
 var show_art := true
 var upgraded := false
+## Shared presentation default, independent of the card's rules and identity.
+## An explicit false retains the former renderer for comparison tools.
+var peach_soda_frame := true
+var card_border_color := PALETTE.CARD_BORDER_BLACK
 var accent_color := PALETTE.SIGNAL_RED
 var secondary_accent_color := PALETTE.SIGNAL_RED
+var sleeve_color := PALETTE.SIGNAL_RED
+var secondary_sleeve_color := PALETTE.SIGNAL_RED
 
 var _title_label: Label
 var _type_label: Label
@@ -53,7 +62,10 @@ var _health_label: Label
 var _footer_label: Label
 var _art_clip: Control
 var _art: TextureRect
+var _art_ink_material: ShaderMaterial
 var _foil_overlay: Control
+var _ribbon: Control
+var _medallion: Control
 var _deferred_layout_pending := false
 
 
@@ -76,8 +88,18 @@ func configure(card_data: Dictionary, texture: Texture2D) -> void:
 	compact_visual = bool(card_data.get("compact_visual", false))
 	show_art = bool(card_data.get("show_art", true))
 	upgraded = bool(card_data.get("upgraded", false))
+	peach_soda_frame = bool(card_data.get("peach_soda_frame", true))
+	card_border_color = PALETTE.card_border_color(String(card_data.get("card_border_id", "white")))
 	accent_color = _card_accent_color(affinities[0])
 	secondary_accent_color = _card_accent_color(affinities[1] if affinities.size() > 1 else affinities[0])
+	sleeve_color = _affinity_color(affinities[0]).lerp(PALETTE.LOCALS_INK, 0.16)
+	secondary_sleeve_color = _affinity_color(affinities[1] if affinities.size() > 1 else affinities[0]).lerp(PALETTE.LOCALS_INK, 0.16)
+	if affinities[0] == "neutral":
+		sleeve_color = PALETTE.LOCALS_PAPER_MUTED.lerp(PALETTE.LOCALS_INK, 0.44)
+		secondary_sleeve_color = sleeve_color
+	if card_data.get("sleeve_color") is Color:
+		sleeve_color = card_data.sleeve_color
+		secondary_sleeve_color = sleeve_color
 	card_art = texture
 	if not is_instance_valid(_title_label):
 		_create_content()
@@ -137,10 +159,18 @@ func _create_content() -> void:
 	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ink_material := ShaderMaterial.new()
-	ink_material.shader = ART_INK_SHADER
-	_art.material = ink_material
+	_art_ink_material = ShaderMaterial.new()
+	_art_ink_material.shader = ART_INK_SHADER
+	_art.material = _art_ink_material
 	_art_clip.add_child(_art)
+
+	_ribbon = CARD_RIBBON.new()
+	_ribbon.name = "CardTypeRibbon"
+	_ribbon.draw_copy = false
+	add_child(_ribbon)
+	_medallion = CARD_MEDALLION.new()
+	_medallion.name = "CardAffinityMedallion"
+	add_child(_medallion)
 
 	_foil_overlay = UPGRADED_CARD_FOIL.new()
 	_foil_overlay.name = "UpgradedCardFoil"
@@ -206,7 +236,7 @@ func _create_content() -> void:
 
 	_rules_label = _make_label(BODY_FONT, 24, PALETTE.CARBON, 0.18)
 	_rules_label.name = "CardRules"
-	_rules_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_rules_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	_rules_label.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
 	_rules_label.add_theme_constant_override("shadow_offset_x", 0)
 	_rules_label.add_theme_constant_override("shadow_offset_y", 0)
@@ -260,6 +290,7 @@ func _sync_content() -> void:
 	if not is_instance_valid(_title_label):
 		return
 	_title_label.text = card_name
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if peach_soda_frame else HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.add_theme_color_override(
 		"font_color",
 		PALETTE.STATE_REWARD if upgraded else PALETTE.COOL_WHITE
@@ -285,7 +316,7 @@ func _sync_content() -> void:
 	_recipe_requirement_tiles.configure(recipe_requirements, required_meal_archetype)
 	_rules_label.text = rules_text
 	_attack_value.text = str(attack)
-	_attack_label.text = "ATK"
+	_attack_label.text = "/" if compact_visual else "ATK"
 	_health_value.text = str(health)
 	_health_label.text = "HP"
 	_type_label.visible = not compact_visual
@@ -296,11 +327,24 @@ func _sync_content() -> void:
 	_attack_value.visible = show_stats
 	_attack_label.visible = show_stats
 	_health_value.visible = show_stats
-	_health_label.visible = show_stats
+	_health_label.visible = show_stats and not compact_visual
 	_footer_label.visible = not show_stats and not compact_visual and not _uses_expanded_rules_panel()
 	_footer_label.text = footer_text
 	_art.texture = card_art
 	_art.visible = show_art
+	# The ribbon frame displays the authored source texture without tint or ink
+	# remapping; changing frame mode must not change the card illustration.
+	_art.material = null if peach_soda_frame else _art_ink_material
+	_ribbon.visible = peach_soda_frame
+	_medallion.visible = peach_soda_frame
+	_ribbon.configure(
+		_pastel_ribbon_color(accent_color),
+		_pastel_ribbon_color(secondary_accent_color) if affinities.size() > 1 else Color.TRANSPARENT,
+		"" if compact_visual else card_type,
+		_meal_requirements_text() if not compact_visual else ""
+	)
+	# Keep the original identity colors on the seal rim and its existing glyphs.
+	_medallion.configure(accent_color, secondary_accent_color if affinities.size() > 1 else Color.TRANSPARENT, "", DISPLAY_FONT)
 	_foil_overlay.configure(
 		upgraded,
 		accent_color,
@@ -316,16 +360,27 @@ func _layout_content() -> void:
 	var sy := size.y / 620.0
 	var font_scale := minf(sx, sy)
 
-	_set_rect(_title_label, Vector2(84, 24), Vector2(308, 74), sx, sy)
-	if _header_symbol_secondary.visible:
-		_set_rect(_header_symbol_primary, Vector2(31, 43), Vector2(29, 50), sx, sy)
-		_set_rect(_header_symbol_secondary, Vector2(55, 43), Vector2(29, 50), sx, sy)
+	_set_rect(_title_label, Vector2(88, 25), Vector2(300, 62), sx, sy)
+	if peach_soda_frame:
+		_set_rect(_title_label, Vector2(104, 25), Vector2(284, 62), sx, sy)
+	_set_rect(_medallion, Vector2(13, 16), Vector2(82, 82), sx, sy)
+	if compact_visual:
+		# A taller plaque accommodates camera-facing combat values projected
+		# over the table, as well as ordinary compact CardFace labels.
+		_set_rect(_ribbon, Vector2(8, 436), Vector2(404, 176), sx, sy)
+	elif _is_meal():
+		_set_rect(_ribbon, Vector2(8, 314), Vector2(404, 106), sx, sy)
 	else:
-		_set_rect(_header_symbol_primary, Vector2(31, 40), Vector2(49, 56), sx, sy)
+		_set_rect(_ribbon, Vector2(8, 342), Vector2(404, 70), sx, sy)
+	if _header_symbol_secondary.visible:
+		_set_rect(_header_symbol_primary, Vector2(29, 33), Vector2(27, 54), sx, sy)
+		_set_rect(_header_symbol_secondary, Vector2(55, 33), Vector2(27, 54), sx, sy)
+	else:
+		_set_rect(_header_symbol_primary, Vector2(30, 33), Vector2(50, 56), sx, sy)
 		_set_rect(_header_symbol_secondary, Vector2.ZERO, Vector2.ZERO, sx, sy)
 	var uses_compact_category_rail := _uses_full_width_category_rail()
-	var art_height := 407 if compact_visual else (217 if uses_compact_category_rail else 193)
-	_set_rect(_art_clip, Vector2(31, 121), Vector2(358, art_height), sx, sy)
+	var art_height := (326 if peach_soda_frame else 354) if compact_visual else (226 if uses_compact_category_rail else 202)
+	_set_rect(_art_clip, Vector2(33, 111), Vector2(354, art_height), sx, sy)
 	_art.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	# Keep a restrained bleed beyond the clipped illustration well. The former
 	# overscan cropped ears, tails, and tall silhouettes too aggressively.
@@ -349,14 +404,28 @@ func _layout_content() -> void:
 		_set_rect(_recipe_requirements_label, Vector2.ZERO, Vector2.ZERO, sx, sy)
 		_set_rect(_recipe_requirement_tiles, Vector2.ZERO, Vector2.ZERO, sx, sy)
 	else:
-		_set_rect(_type_label, Vector2(31, 337), Vector2(190, 50), sx, sy)
+		_set_rect(_type_label, Vector2(31, 326), Vector2(358, 36), sx, sy)
 	if _is_meal():
 		_set_rect(_affinity_label, Vector2.ZERO, Vector2.ZERO, sx, sy)
 		_set_rect(_rail_symbol_primary, Vector2.ZERO, Vector2.ZERO, sx, sy)
 		_set_rect(_rail_symbol_secondary, Vector2.ZERO, Vector2.ZERO, sx, sy)
-		_set_rect(_recipe_title_label, Vector2(244, 328), Vector2(139, 23), sx, sy)
-		_set_rect(_recipe_requirements_label, Vector2(238, 347), Vector2(145, 45), sx, sy)
-		_set_rect(_recipe_requirement_tiles, Vector2(246, 350), Vector2(134, 37), sx, sy)
+		_set_rect(_recipe_title_label, Vector2(35, 366), Vector2(83, 28), sx, sy)
+		_set_rect(_recipe_requirements_label, Vector2(134, 366), Vector2(244, 30), sx, sy)
+		var recipe_tile_width := 244.0
+		if peach_soda_frame:
+			# A short recipe uses small printed tokens rather than stretching one
+			# affinity into a second full-width bar. Every AND/OR token remains live.
+			var token_count := 0 if required_meal_archetype.is_empty() else 1
+			for requirement in recipe_requirements:
+				token_count += requirement.split("|").size()
+			recipe_tile_width = clampf(float(token_count * 50 - 20), 30.0, 244.0)
+		_set_rect(_recipe_requirement_tiles, Vector2(134, 366), Vector2(recipe_tile_width, 30), sx, sy)
+		if peach_soda_frame:
+			# Center the complete label + AND/OR expression inside the ribbon's
+			# plaque. The folded ends are decorative space, never recipe space.
+			var recipe_left := (420.0 - recipe_tile_width - 83.0) * 0.5
+			_set_rect(_recipe_title_label, Vector2(recipe_left, 365), Vector2(75, 28), sx, sy)
+			_set_rect(_recipe_requirement_tiles, Vector2(recipe_left + 83, 365), Vector2(recipe_tile_width, 28), sx, sy)
 	elif not _is_ingredient():
 		if affinities.size() > 1:
 			_set_rect(_affinity_label, Vector2(278, 337), Vector2(106, 50), sx, sy)
@@ -369,8 +438,8 @@ func _layout_content() -> void:
 		_set_rect(_recipe_title_label, Vector2.ZERO, Vector2.ZERO, sx, sy)
 		_set_rect(_recipe_requirements_label, Vector2.ZERO, Vector2.ZERO, sx, sy)
 		_set_rect(_recipe_requirement_tiles, Vector2.ZERO, Vector2.ZERO, sx, sy)
-	var rules_height := 192 if _uses_expanded_rules_panel() else 134
-	_set_rect(_rules_label, Vector2(42, 409), Vector2(336, rules_height) if not compact_visual else Vector2.ZERO, sx, sy)
+	var rules_height := 176 if _uses_expanded_rules_panel() else 118
+	_set_rect(_rules_label, Vector2(42, 419), Vector2(336, rules_height) if not compact_visual else Vector2.ZERO, sx, sy)
 	_set_rect(_attack_value, Vector2(36, 544), Vector2(68, 60), sx, sy)
 	_set_rect(_attack_label, Vector2(106, 552), Vector2(85, 51), sx, sy)
 	_set_rect(_health_value, Vector2(236, 544), Vector2(68, 60), sx, sy)
@@ -399,6 +468,15 @@ func _layout_content() -> void:
 	_set_rect(_attack_label, Vector2(106, 552), Vector2(85, 51), sx, sy)
 	_set_rect(_health_value, Vector2(236, 544), Vector2(68, 60), sx, sy)
 	_set_rect(_health_label, Vector2(305, 552), Vector2(77, 51), sx, sy)
+	if compact_visual:
+		# The field card reads like the reference: a generous art well and one
+		# cream number strip, with full rules preserved for normal inspection.
+		_set_rect(_attack_value, Vector2(76, 498), Vector2(106, 88), sx, sy)
+		_set_rect(_attack_label, Vector2(184, 498), Vector2(52, 88), sx, sy)
+		_set_rect(_health_value, Vector2(238, 498), Vector2(106, 88), sx, sy)
+		_attack_value.add_theme_font_size_override("font_size", maxi(1, roundi(44 * font_scale)))
+		_attack_label.add_theme_font_size_override("font_size", maxi(1, roundi(38 * font_scale)))
+		_health_value.add_theme_font_size_override("font_size", maxi(1, roundi(44 * font_scale)))
 	_apply_chrome_text_styles(font_scale)
 
 
@@ -485,207 +563,142 @@ func _wrap_rules_to_width(value: String, font: Font, font_size: int, available_w
 
 
 func _draw() -> void:
-	if size.x < 80.0 or size.y < 120.0:
+	if size.x < 12.0 or size.y < 18.0:
 		return
 	var sx := size.x / 420.0
 	var sy := size.y / 620.0
-	var stroke := maxf(1.0, minf(sx, sy))
+	var stroke := maxf(0.65, minf(sx, sy))
+	if peach_soda_frame:
+		_draw_peach_soda_frame(sx, sy, stroke)
+		return
+	var ink := PALETTE.LOCALS_INK
 
-	var outer := _points([
-		Vector2(24, 4), Vector2(386, 4), Vector2(416, 34),
-		Vector2(416, 586), Vector2(386, 616), Vector2(24, 616),
-		Vector2(4, 596), Vector2(4, 24),
-	], sx, sy)
-	_draw_poly(_offset_points(outer, Vector2(8 * sx, 10 * sy)), Color(PALETTE.CARBON, 0.62))
-	_draw_poly(outer, PALETTE.GRAPHITE)
-	_draw_closed_line(outer, PALETTE.STEEL.lightened(0.16), 3.0 * stroke)
+	# The supplied locals reference uses visible colored sleeves around the
+	# entire face. One black contact edge grounds that color on the table.
+	_draw_printed_panel(Rect2(4, 4, 412, 612), ink, ink, 13, sx, sy, 1, true)
+	_draw_printed_panel(Rect2(14, 14, 392, 592), sleeve_color, ink, 8, sx, sy, 2)
+	if not sleeve_color.is_equal_approx(secondary_sleeve_color):
+		_draw_printed_panel(Rect2(210, 16, 194, 588), secondary_sleeve_color, Color.TRANSPARENT, 7, sx, sy)
+	_draw_printed_panel(Rect2(80, 24, 314, 65), ink, Color.TRANSPARENT, 3, sx, sy)
+	_draw_printed_panel(Rect2(26, 24, 58, 71), PALETTE.LOCALS_PAPER, ink, 4, sx, sy, 1)
 
-	var inner := _points([
-		Vector2(27, 13), Vector2(381, 13), Vector2(407, 39),
-		Vector2(407, 581), Vector2(381, 607), Vector2(27, 607),
-		Vector2(13, 593), Vector2(13, 27),
-	], sx, sy)
-	_draw_closed_line(inner, Color(PALETTE.COOL_WHITE, 0.16), 1.1 * stroke)
-
-	# Header: white affinity tile, carbon name bar, affinity underline and cyan rail.
-	var header := _points([
-		Vector2(22, 22), Vector2(389, 22), Vector2(400, 33),
-		Vector2(400, 101), Vector2(386, 115), Vector2(22, 115),
-	], sx, sy)
-	_draw_poly(_offset_points(header, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.65))
-	_draw_poly(header, PALETTE.CARBON.lightened(0.018))
-	_draw_closed_line(header, PALETTE.STEEL.lightened(0.12), 2.0 * stroke)
-
-	var title_wedge := _points([
-		Vector2(84, 96), Vector2(319, 96), Vector2(330, 87),
-		Vector2(400, 87), Vector2(400, 103), Vector2(386, 115),
-		Vector2(98, 115),
-	], sx, sy)
-	_draw_poly(title_wedge, accent_color)
-	if affinities.size() > 1:
-		_draw_poly(_points([
-			Vector2(246, 96), Vector2(319, 96), Vector2(330, 87),
-			Vector2(400, 87), Vector2(400, 103), Vector2(386, 115),
-			Vector2(276, 115),
-		], sx, sy), secondary_accent_color)
-
-	var icon_tile := _points([
-		Vector2(22, 22), Vector2(75, 22), Vector2(87, 34),
-		Vector2(87, 103), Vector2(75, 115), Vector2(22, 115),
-	], sx, sy)
-	_draw_poly(icon_tile, PALETTE.COOL_WHITE)
-	_draw_poly(_points([
-		Vector2(22, 22), Vector2(31, 22), Vector2(31, 115), Vector2(22, 115),
-	], sx, sy), accent_color)
-	if affinities.size() > 1:
-		_draw_poly(_points([
-			Vector2(22, 68), Vector2(31, 68), Vector2(31, 115), Vector2(22, 115),
-		], sx, sy), secondary_accent_color)
-
-	_draw_poly(_points([
-		Vector2(388, 23), Vector2(397, 32), Vector2(397, 80),
-		Vector2(394, 80), Vector2(385, 71), Vector2(385, 30),
-	], sx, sy), PALETTE.ELECTRIC_CYAN)
-
-	# Illustration well and its deterministic diagonal field.
-	var compact_category_layout := _uses_full_width_category_rail()
-	var art_vertical_end := 512.0 if compact_visual else (323.0 if compact_category_layout else 299.0)
-	var art_bottom := 532.0 if compact_visual else (343.0 if compact_category_layout else 319.0)
-	var art_well := _points([
-		Vector2(22, 120), Vector2(398, 120), Vector2(398, art_vertical_end),
-		Vector2(378, art_bottom), Vector2(42, art_bottom), Vector2(22, art_vertical_end),
-	], sx, sy)
-	_draw_poly(_offset_points(art_well, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.64))
-	_draw_poly(art_well, PALETTE.COOL_WHITE.darkened(0.018))
-	_draw_poly(_points([
-		Vector2(24, 122), Vector2(288, 122), Vector2(24, 392 if compact_visual else (276 if compact_category_layout else 260)),
-	], sx, sy), accent_color)
-	_draw_poly(_points([
-		Vector2(24, 122), Vector2(166, 122), Vector2(24, 252 if compact_visual else (202 if compact_category_layout else 190)),
-	], sx, sy), secondary_accent_color.darkened(0.10))
-	for index in range(3):
-		var y := (491.0 if compact_visual else (302.0 if compact_category_layout else 278.0)) + float(index) * 12.0
-		draw_line(Vector2(270 * sx, y * sy), Vector2(397 * sx, (y - 63.0) * sy), Color(PALETTE.STEEL, 0.11), 7.0 * stroke, true)
-	_draw_closed_line(art_well, PALETTE.STEEL.lightened(0.06), 2.2 * stroke)
+	var full_category := _uses_full_width_category_rail()
+	var art_height := 365.0 if compact_visual else (237.0 if full_category else 213.0)
+	_draw_art_well(Rect2(28, 106, 364, art_height), sx, sy)
 	if compact_visual:
-		if show_stats:
-			_draw_stat_pod(Vector2(22, 548), Vector2(184, 60), false, sx, sy, stroke, accent_color)
-			_draw_stat_pod(Vector2(214, 548), Vector2(184, 60), true, sx, sy, stroke, secondary_accent_color)
-		else:
-			_draw_effect_footer(sx, sy, stroke)
+		# Field renderers may place live combat values over this bottom 20%.
+		# Keep the strip even when the card's own base stats are suppressed.
+		_draw_printed_panel(Rect2(28, 480, 364, 123), PALETTE.LOCALS_PAPER, ink, 3, sx, sy, 1)
 		return
 
-	# Card type/affinity rail.
-	var rail_top := 346.0 if compact_category_layout else 326.0
-	var type_rail := _points([
-		Vector2(22, rail_top), Vector2(398, rail_top), Vector2(398, 390),
-		Vector2(388, 400), Vector2(32, 400), Vector2(22, 390),
-	], sx, sy)
-	_draw_poly(_offset_points(type_rail, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.70))
-	_draw_poly(type_rail, PALETTE.CARBON.lightened(0.018))
-	if compact_category_layout:
-		_draw_poly(type_rail, accent_color)
-		if affinities.size() > 1:
-			_draw_poly(_points([
-				Vector2(210, 346), Vector2(398, 346), Vector2(398, 390),
-				Vector2(388, 400), Vector2(210, 400),
-			], sx, sy), secondary_accent_color)
-	else:
-		var type_tab := _points([
-			Vector2(22, 326), Vector2(213, 326), Vector2(250, 400),
-			Vector2(32, 400), Vector2(22, 390),
-		], sx, sy)
-		_draw_poly(type_tab, accent_color)
-		if affinities.size() > 1:
-			_draw_poly(_points([
-				Vector2(136, 326), Vector2(213, 326), Vector2(250, 400),
-				Vector2(136, 400),
-			], sx, sy), secondary_accent_color)
-	_draw_closed_line(type_rail, PALETTE.STEEL.lightened(0.10), 2.0 * stroke)
-
-	# Rules panel.
-	var rules_bottom := 608.0 if _uses_expanded_rules_panel() else 545.0
-	var rules_vertical_end := rules_bottom - 12.0
-	var rules := _points([
-		Vector2(31, 405), Vector2(389, 405), Vector2(398, 414),
-		Vector2(398, rules_vertical_end), Vector2(386, rules_bottom), Vector2(34, rules_bottom),
-		Vector2(22, rules_vertical_end), Vector2(22, 421), Vector2(31, 412),
-	], sx, sy)
-	_draw_poly(_offset_points(rules, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.65))
-	_draw_poly(rules, PALETTE.COOL_WHITE)
-	_draw_closed_line(rules, PALETTE.STEEL.lightened(0.16), 2.0 * stroke)
-	_draw_poly(_points([
-		Vector2(31, 405), Vector2(61, 405), Vector2(53, 413),
-		Vector2(31, 413), Vector2(31, 429), Vector2(22, 429),
-		Vector2(22, 414),
-	], sx, sy), accent_color)
-	_draw_poly(_points([
-		Vector2(370, rules_bottom - 8.0), Vector2(390, rules_bottom - 8.0), Vector2(398, rules_bottom - 16.0),
-		Vector2(398, rules_bottom), Vector2(360, rules_bottom),
-	], sx, sy), secondary_accent_color)
-
+	var rail_top := 347.0 if full_category else 326.0
+	var rail_height := 53.0 if full_category else 35.0
+	_draw_printed_panel(Rect2(28, rail_top, 364, rail_height), _ribbon_color(sleeve_color), ink, 3, sx, sy, 1)
+	if not sleeve_color.is_equal_approx(secondary_sleeve_color):
+		_draw_printed_panel(Rect2(210, rail_top + 1, 181, rail_height - 2), _ribbon_color(secondary_sleeve_color), Color.TRANSPARENT, 2, sx, sy)
+	if _is_meal():
+		_draw_printed_panel(Rect2(28, 364, 364, 36), PALETTE.LOCALS_PAPER, ink, 2, sx, sy, 1)
+	var rules_bottom := 603.0 if _uses_expanded_rules_panel() else 541.0
+	_draw_printed_panel(Rect2(28, 405, 364, rules_bottom - 405), PALETTE.LOCALS_PAPER, ink, 4, sx, sy, 1)
 	if show_stats:
-		# Mirrored stat pods anchor combat cards to the bottom edge.
-		_draw_stat_pod(Vector2(22, 548), Vector2(184, 60), false, sx, sy, stroke, accent_color)
-		_draw_stat_pod(Vector2(214, 548), Vector2(184, 60), true, sx, sy, stroke, secondary_accent_color)
-		for index in range(4):
-			var x := 182.0 + float(index) * 14.0
-			draw_line(Vector2(x * sx, 599 * sy), Vector2((x + 24.0) * sx, 560 * sy), Color(PALETTE.COOL_WHITE, 0.075), 5.0 * stroke, true)
+		_draw_printed_panel(Rect2(28, 548, 364, 55), PALETTE.LOCALS_PAPER, ink, 3, sx, sy, 1)
+		draw_line(Vector2(210 * sx, 555 * sy), Vector2(210 * sx, 596 * sy), Color(ink, 0.36), stroke, true)
 	elif not _uses_expanded_rules_panel():
 		_draw_effect_footer(sx, sy, stroke)
 
 
-func _draw_stat_pod(origin: Vector2, dimensions: Vector2, mirrored: bool, sx: float, sy: float, stroke: float, stat_accent: Color) -> void:
-	var x := origin.x
-	var y := origin.y
-	var w := dimensions.x
-	var h := dimensions.y
-	var pod_points: Array[Vector2]
-	var number_points: Array[Vector2]
-	if mirrored:
-		pod_points = [
-			Vector2(x + 16, y), Vector2(x + w - 10, y), Vector2(x + w, y + 10),
-			Vector2(x + w, y + h - 10), Vector2(x + w - 10, y + h),
-			Vector2(x + 16, y + h), Vector2(x, y + h - 16), Vector2(x, y + 16),
-		]
-		number_points = [
-			Vector2(x + 16, y + 4), Vector2(x + 75, y + 4), Vector2(x + 102, y + h - 4),
-			Vector2(x + 16, y + h - 4), Vector2(x + 4, y + h - 16), Vector2(x + 4, y + 16),
-		]
-	else:
-		pod_points = [
-			Vector2(x + 10, y), Vector2(x + w - 16, y), Vector2(x + w, y + 16),
-			Vector2(x + w, y + h - 16), Vector2(x + w - 16, y + h),
-			Vector2(x + 10, y + h), Vector2(x, y + h - 10), Vector2(x, y + 10),
-		]
-		number_points = [
-			Vector2(x + 4, y + 4), Vector2(x + 75, y + 4), Vector2(x + 100, y + h - 4),
-			Vector2(x + 10, y + h - 4), Vector2(x + 4, y + h - 10),
-		]
-	var pod := _points(pod_points, sx, sy)
-	_draw_poly(_offset_points(pod, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.72))
-	_draw_poly(pod, PALETTE.CARBON.lightened(0.028))
-	_draw_poly(_points(number_points, sx, sy), stat_accent)
-	_draw_closed_line(pod, PALETTE.STEEL.lightened(0.18), 2.0 * stroke)
+func _draw_peach_soda_frame(sx: float, sy: float, _stroke: float) -> void:
+	# Restore the cozy ribbon silhouette using native, editable shapes. Keep a
+	# midtone art well so floating illustrations retain their white cutout edge.
+	var ink := PALETTE.PEACH_INK
+	# The chosen border owns the silhouette. A second dark contour or offset
+	# paper shadow would read as an unwanted black sleeve around colored rims.
+	# Give the identity rim a substantial trading-card frame presence while
+	# keeping the printed face and internal rails readable.
+	_draw_printed_panel(Rect2(8, 8, 404, 604), PALETTE.PEACH_PAPER_MUTED, card_border_color, 20, sx, sy, PEACH_FRAME_BORDER_WIDTH)
+	_draw_printed_panel(Rect2(26, 20, 368, 76), PALETTE.PEACH_PAPER, ink, 15, sx, sy, 2)
+	var full_category := _uses_full_width_category_rail()
+	var art_height := 338.0 if compact_visual else (246.0 if full_category else 220.0)
+	_draw_ribbon_art_well(Rect2(26, 104, 368, art_height), sx, sy)
+	if upgraded:
+		# Foil animation remains active; this small printed reward underline also
+		# identifies an upgrade without yellow lettering on light paper.
+		draw_line(Vector2(104 * sx, 88 * sy), Vector2(380 * sx, 88 * sy), PALETTE.STATE_REWARD, maxf(1.0, 3.0 * minf(sx, sy)), true)
+	if compact_visual:
+		# The compact ribbon also backs the field's live combat numbers; their
+		# position and hit areas remain the same as the full-paper stat strip.
+		return
+
+	var rules_bottom := 603.0 if _uses_expanded_rules_panel() else 541.0
+	_draw_printed_panel(Rect2(28, 405, 364, rules_bottom - 405), PALETTE.PEACH_PAPER, Color(ink, 0.36), 13, sx, sy, 1)
+	if show_stats:
+		_draw_printed_panel(Rect2(28, 548, 170, 55), _pastel_ribbon_color(accent_color), ink, 14, sx, sy, 2)
+		_draw_printed_panel(Rect2(222, 548, 170, 55), _pastel_ribbon_color(secondary_accent_color), ink, 14, sx, sy, 2)
+	elif not _uses_expanded_rules_panel():
+		_draw_printed_panel(Rect2(28, 548, 364, 55), PALETTE.PEACH_PAPER, ink, 13, sx, sy, 1)
 
 
-func _draw_effect_footer(sx: float, sy: float, stroke: float) -> void:
-	var footer := _points([
-		Vector2(32, 548), Vector2(388, 548), Vector2(398, 558),
-		Vector2(398, 598), Vector2(388, 608), Vector2(32, 608),
-		Vector2(22, 598), Vector2(22, 558),
-	], sx, sy)
-	_draw_poly(_offset_points(footer, Vector2(3 * sx, 4 * sy)), Color(PALETTE.CARBON, 0.72))
-	_draw_poly(footer, PALETTE.CARBON.lightened(0.028))
-	_draw_poly(_points([
-		Vector2(22, 558), Vector2(32, 548), Vector2(66, 548),
-		Vector2(49, 608), Vector2(32, 608), Vector2(22, 598),
-	], sx, sy), accent_color)
-	_draw_poly(_points([
-		Vector2(354, 548), Vector2(388, 548), Vector2(398, 558),
-		Vector2(398, 598), Vector2(388, 608), Vector2(371, 608),
-	], sx, sy), secondary_accent_color)
-	_draw_closed_line(footer, PALETTE.STEEL.lightened(0.18), 2.0 * stroke)
+func _pastel_ribbon_color(color: Color) -> Color:
+	# Warm the stock without replacing semantic affiliation hues. Exact colors
+	# remain in the medallion; recipe symbols print in black on the softer ribbon.
+	return color.lerp(PALETTE.PEACH_PAPER, PALETTE.PEACH_CARD_RIBBON_PAPER_MIX)
+
+
+func _draw_ribbon_art_well(rect: Rect2, sx: float, sy: float) -> void:
+	var fill := PALETTE.PEACH_CARD_FRAME.lerp(_pastel_ribbon_color(accent_color), 0.18)
+	_draw_printed_panel(rect, fill, Color.TRANSPARENT, 13, sx, sy)
+	if affinities.size() > 1:
+		var right := StyleBoxFlat.new()
+		right.bg_color = PALETTE.PEACH_CARD_FRAME.lerp(_pastel_ribbon_color(secondary_accent_color), 0.18)
+		right.corner_radius_top_right = maxi(1, roundi(13 * minf(sx, sy)))
+		right.corner_radius_bottom_right = right.corner_radius_top_right
+		right.corner_detail = 8
+		draw_style_box(right, Rect2(Vector2(rect.get_center().x * sx, rect.position.y * sy), Vector2(rect.size.x * 0.5 * sx, rect.size.y * sy)))
+	_draw_printed_panel(rect, Color.TRANSPARENT, Color(PALETTE.PEACH_INK, 0.64), 13, sx, sy, 1)
+
+
+func _draw_art_well(rect: Rect2, sx: float, sy: float) -> void:
+	var cream := PALETTE.LOCALS_PAPER
+	_draw_printed_panel(rect, cream, PALETTE.LOCALS_INK, 2, sx, sy, 1)
+	# One broad diagonal is ink printed behind the genuine card illustration.
+	# Its color echoes the sleeve, as in the supplied red and blue card frames.
+	var inset := rect.grow(-1.5)
+	var print_color := sleeve_color.lerp(cream, 0.24)
+	var triangle: Array[Vector2] = [
+		inset.position,
+		Vector2(inset.end.x, inset.position.y),
+		Vector2(inset.position.x, inset.position.y + inset.size.y * 0.88),
+	]
+	_draw_poly(_points(triangle, sx, sy), print_color)
+	if not sleeve_color.is_equal_approx(secondary_sleeve_color):
+		_draw_poly(_points([
+			inset.position + Vector2(inset.size.x * 0.60, 0),
+			Vector2(inset.end.x, inset.position.y),
+			Vector2(inset.position.x + inset.size.x * 0.60, inset.position.y + inset.size.y * 0.35),
+		], sx, sy), secondary_sleeve_color.lerp(cream, 0.24))
+
+
+func _ribbon_color(color: Color) -> Color:
+	return color.lerp(PALETTE.LOCALS_PAPER, 0.22)
+
+
+func _draw_effect_footer(sx: float, sy: float, _stroke: float) -> void:
+	_draw_printed_panel(Rect2(28, 548, 364, 55), PALETTE.LOCALS_PAPER, PALETTE.LOCALS_INK, 3, sx, sy, 1)
+
+
+func _draw_printed_panel(rect: Rect2, fill: Color, edge: Color, radius: int, sx: float, sy: float, border: int = 0, shadow: bool = false) -> void:
+	var paper := StyleBoxFlat.new()
+	paper.bg_color = fill
+	paper.border_color = edge
+	paper.set_border_width_all(maxi(1, roundi(float(border) * minf(sx, sy))) if border > 0 else 0)
+	paper.set_corner_radius_all(maxi(1, roundi(float(radius) * minf(sx, sy))) if radius > 0 else 0)
+	paper.corner_detail = 8
+	paper.anti_aliasing = true
+	if shadow:
+		paper.shadow_color = Color(PALETTE.PEACH_INK if peach_soda_frame else PALETTE.LOCALS_INK, 0.24)
+		paper.shadow_size = 0 if peach_soda_frame else maxi(1, roundi(2 * minf(sx, sy)))
+		paper.shadow_offset = Vector2(2 * sx, (3 if peach_soda_frame else 4) * sy)
+	draw_style_box(paper, Rect2(rect.position * Vector2(sx, sy), rect.size * Vector2(sx, sy)))
 
 
 func _sync_classification_symbols() -> void:
@@ -830,51 +843,35 @@ func _card_accent_color(value: String) -> Color:
 		_: return PALETTE.INGREDIENT_NEUTRAL
 
 
-func _apply_chrome_text_styles(scale_factor: float = 1.0) -> void:
-	# Colored tabs and numbers share one high-contrast treatment on every card.
-	# Dark neutral rails keep solid light text so the outlined style never turns
-	# hollow against a carbon background.
-	_apply_outlined_light_text(
-		_title_label,
-		_scaled_outline(3, scale_factor),
-		PALETTE.STATE_REWARD if upgraded else PALETTE.COOL_WHITE
-	)
-	_apply_outlined_dark_text(_type_label, _scaled_outline(4, scale_factor))
-	_apply_outlined_light_text(_affinity_label, _scaled_outline(3, scale_factor))
-	_apply_outlined_dark_text(_attack_value, _scaled_outline(5, scale_factor))
-	_apply_outlined_light_text(_attack_label, _scaled_outline(3, scale_factor))
-	_apply_outlined_dark_text(_health_value, _scaled_outline(5, scale_factor))
-	_apply_outlined_light_text(_health_label, _scaled_outline(3, scale_factor))
-	_apply_outlined_light_text(_footer_label, _scaled_outline(3, scale_factor))
-	_apply_outlined_light_text(_recipe_title_label, _scaled_outline(2, scale_factor))
-	_recipe_requirements_label.add_theme_color_override("font_color", accent_color)
-	_recipe_requirements_label.add_theme_color_override("font_outline_color", PALETTE.TRUE_BLACK)
-	_recipe_requirements_label.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
-	_recipe_requirements_label.add_theme_constant_override("outline_size", _scaled_outline(2, scale_factor))
-	_recipe_requirements_label.add_theme_constant_override("shadow_offset_x", 0)
-	_recipe_requirements_label.add_theme_constant_override("shadow_offset_y", 0)
+func _apply_chrome_text_styles(_scale_factor: float = 1.0) -> void:
+	# Solid printed text remains legible at hand and inspection scale. A dark
+	# title strip supports the established reward-yellow upgraded card state.
+	var ink := PALETTE.PEACH_INK if peach_soda_frame else PALETTE.LOCALS_INK
+	var supporting_ink := PALETTE.PEACH_INK_SOFT if peach_soda_frame else PALETTE.LOCALS_INK_SOFT
+	_apply_printed_text(_title_label, ink if peach_soda_frame else PALETTE.STATE_REWARD if upgraded else PALETTE.COOL_WHITE)
+	_apply_printed_text(_type_label, ink)
+	_apply_printed_text(_affinity_label, ink)
+	_apply_printed_text(_attack_value, ink)
+	_apply_printed_text(_attack_label, supporting_ink)
+	_apply_printed_text(_health_value, ink)
+	_apply_printed_text(_health_label, supporting_ink)
+	_apply_printed_text(_footer_label, ink)
+	_apply_printed_text(_recipe_title_label, supporting_ink)
+	_apply_printed_text(_recipe_requirements_label, ink)
+	_apply_printed_text(_rules_label, ink)
+
+
+func _apply_printed_text(label: Label, foreground: Color) -> void:
+	label.add_theme_color_override("font_color", foreground)
+	label.add_theme_color_override("font_outline_color", Color.TRANSPARENT)
+	label.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
+	label.add_theme_constant_override("outline_size", 0)
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
 
 
 func _scaled_outline(base_size: int, scale_factor: float) -> int:
 	return maxi(1, roundi(float(base_size) * scale_factor))
-
-
-func _apply_outlined_dark_text(label: Label, outline_size: int) -> void:
-	label.add_theme_color_override("font_color", PALETTE.TRUE_BLACK)
-	label.add_theme_color_override("font_outline_color", PALETTE.COOL_WHITE)
-	label.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.add_theme_constant_override("shadow_offset_x", 0)
-	label.add_theme_constant_override("shadow_offset_y", 0)
-
-
-func _apply_outlined_light_text(label: Label, outline_size: int, font_color := PALETTE.COOL_WHITE) -> void:
-	label.add_theme_color_override("font_color", font_color)
-	label.add_theme_color_override("font_outline_color", PALETTE.TRUE_BLACK)
-	label.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.add_theme_constant_override("shadow_offset_x", 0)
-	label.add_theme_constant_override("shadow_offset_y", 0)
 
 
 func _make_label(font: Font, font_size: int, color: Color, embolden: float) -> Label:

@@ -36,6 +36,7 @@ func _run() -> void:
 		if card.is_empty():
 			continue
 		var face := CARD_FACE_SCRIPT.new()
+		var original_card := card.duplicate(true)
 		face.configure(card, "black", false, bool(spec.compact))
 		face.position = Vector2(index * 440, 0)
 		face.custom_minimum_size = spec.size
@@ -48,6 +49,8 @@ func _run() -> void:
 		_expect(runtime != null, "%s did not use RuntimeAngularCard." % String(spec.id))
 		if runtime == null:
 			continue
+		_expect(runtime.peach_soda_frame, "%s did not use the shared Soft Print frame." % String(spec.id))
+		_expect(card == original_card, "%s frame construction changed the authoritative card data." % String(spec.id))
 		_expect(runtime.card_name == String(card.name).to_upper(), "%s lost its title." % String(spec.id))
 		var card_title := runtime.find_child("CardTitle", true, false) as Label
 		_expect(card_title != null, "%s lost its visible title label." % String(spec.id))
@@ -68,6 +71,7 @@ func _run() -> void:
 		_expect(runtime.compact_visual == bool(spec.compact), "%s used the wrong compact mode." % String(spec.id))
 		var art := runtime.find_child("CardArtwork", true, false) as TextureRect
 		_expect(art != null and art.texture != null, "%s did not load its artwork." % String(spec.id))
+		_expect(art != null and art.material == null and art.modulate.is_equal_approx(Color.WHITE), "%s recolored its original illustration." % String(spec.id))
 		var standard_foil := runtime.find_child("UpgradedCardFoil", true, false) as Control
 		_expect(standard_foil != null and not standard_foil.visible, "%s displayed the upgraded foil treatment on a standard card." % String(spec.id))
 		var rules := runtime.find_child("CardRules", true, false) as Label
@@ -111,10 +115,10 @@ func _run() -> void:
 	var upgraded_foil := upgraded_runtime.find_child("UpgradedCardFoil", true, false) as Control if upgraded_runtime != null else null
 	_expect(upgraded_runtime != null and upgraded_runtime.upgraded, "The shared card face did not retain the upgraded state.")
 	_expect(
-		upgraded_title != null and upgraded_title.get_theme_color("font_color").is_equal_approx(PALETTE.STATE_REWARD),
-		"An upgraded card title did not use the shared reward-yellow state color (%s instead of %s)." % [
+		upgraded_title != null and upgraded_title.get_theme_color("font_color").is_equal_approx(PALETTE.PEACH_INK),
+		"An upgraded card title did not retain readable ink on the shared paper frame (%s instead of %s)." % [
 			str(upgraded_title.get_theme_color("font_color")) if upgraded_title != null else "missing",
-			str(PALETTE.STATE_REWARD),
+			str(PALETTE.PEACH_INK),
 		]
 	)
 	_expect(

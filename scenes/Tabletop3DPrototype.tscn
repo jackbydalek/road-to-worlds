@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://d2cjo7vj8apsb"]
 
 [ext_resource type="Script" uid="uid://bod7dptp0enb7" path="res://scripts/Tabletop3DPrototype.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/battle/field-battle-background.png" id="2_field_background"]
+[ext_resource type="Script" path="res://scripts/ui/PeachSodaBattleBackdrop.gd" id="2_field_background"]
 
 [sub_resource type="Environment" id="Environment_tabletop"]
 background_mode = 0
@@ -84,7 +84,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="BattleBackdrop" type="TextureRect" parent="."]
+[node name="BattleBackdrop" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -93,18 +93,17 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 z_index = 0
-texture = ExtResource("2_field_background")
-expand_mode = 1
-stretch_mode = 6
+script = ExtResource("2_field_background")
 
-[node name="ViewportContainer" type="SubViewportContainer" parent="." unique_id=1562794964]
+[node name="ViewportContainer" type="TextureRect" parent="." unique_id=1562794964]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-stretch = true
+mouse_filter = 0
+expand_mode = 1
 z_index = 2
 
 [node name="WorldViewport" type="SubViewport" parent="ViewportContainer" unique_id=229818861]

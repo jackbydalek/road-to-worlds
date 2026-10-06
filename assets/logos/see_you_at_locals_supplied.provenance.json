@@ -1,0 +1,20 @@
+{
+  "source_filename": "IMG_0477.PNG",
+  "supplied_on": "2026-09-14",
+  "asset": "assets/logos/see_you_at_locals_supplied.png",
+  "sha256": "97f226be6b16a30700b79ae9d0e5b13d61cef562647be37aa6a982e56ad7155b",
+  "dimensions": [
+    2160,
+    1620
+  ],
+  "png_color_type": 6,
+  "consumer": "scripts/ui/LocalsWordmark.gd",
+  "processing": "Original PNG bytes preserved unchanged. Runtime source region omits transparent canvas padding and fits proportionally.",
+  "origin": "Project-owner supplied logo; no authorship or license assignment added.",
+  "visible_source_rect": [
+    23,
+    314,
+    2132,
+    1055
+  ]
+}

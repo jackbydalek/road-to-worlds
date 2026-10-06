@@ -222,21 +222,21 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var remove_overlay := main.find_child("RouteShopServiceOverlay", true, false) as Control
-	var remove_grid := main.find_child("RouteRemoveChoices", true, false) as GridContainer
+	var remove_grid := main.find_child("RouteServiceGrid", true, false) as GridContainer
 	var remove_confirm := main.find_child("RouteRemoveConfirmButton", true, false) as Button
 	var underlying_shop := main.find_child("RouteShopEncounter", true, false) as PanelContainer
 	var hidden_shopkeeper := underlying_shop.find_child("RouteShopkeeperArtwork", true, false) as TextureRect if underlying_shop != null else null
 	var first_remove_choice := remove_grid.get_child(0) as Control if remove_grid != null and remove_grid.get_child_count() > 0 else null
-	var first_remove_face := first_remove_choice.find_child("RuntimeCardFace", true, false) as Control if first_remove_choice != null else null
+	var first_remove_face := first_remove_choice.find_child("InspectedCardFace", true, false) as Control if first_remove_choice != null else null
 	_expect(main.current_screen == "route_remove" and remove_overlay != null, "Card removal did not open as a shop overlay.")
 	_expect(underlying_shop != null and main.find_child("RouteRemoveEncounter", true, false) == null, "Card removal replaced the shop with a second encounter screen.")
-	_expect(remove_grid != null and remove_grid.columns == 6 and remove_grid.get_child_count() > 0, "The removal overlay did not lay out the deck as a six-column card grid.")
+	_expect(remove_grid != null and remove_grid.columns >= 1 and remove_grid.get_child_count() > 0, "The removal overlay did not lay out the deck in the responsive card browser.")
 	_expect(first_remove_face != null, "The removal overlay did not render its choices through the shared card face.")
-	_expect(hidden_shopkeeper != null and not hidden_shopkeeper.visible, "The shopkeeper remained visible behind the removal picker.")
+	_expect(remove_overlay != null and remove_overlay.mouse_filter == Control.MOUSE_FILTER_STOP and remove_overlay.z_index > underlying_shop.z_index, "The removal picker did not isolate interaction above the underlying shop.")
 	_expect(remove_confirm != null and remove_confirm.disabled, "The removal confirmation was not initially disabled.")
 	var remove_choice_id := String(first_remove_choice.get_meta("card_id", "")) if first_remove_choice != null else ""
-	main._select_route_shop_service_card("remove", remove_choice_id)
-	var remove_outline := first_remove_choice.find_child("RouteServiceSelectionOutline", true, false) as Control if first_remove_choice != null else null
+	_select_card_face(first_remove_face)
+	var remove_outline := first_remove_choice.find_child("SelectedCopyEdge", true, false) as Control if first_remove_choice != null else null
 	_expect(
 		remove_outline != null
 		and remove_outline.visible
@@ -252,10 +252,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var upgrade_overlay := main.find_child("RouteShopServiceOverlay", true, false) as Control
-	var upgrade_grid := main.find_child("RouteUpgradeChoices", true, false) as GridContainer
+	var upgrade_grid := main.find_child("RouteServiceGrid", true, false) as GridContainer
 	var upgrade_confirm := main.find_child("RouteUpgradeConfirmButton", true, false) as Button
 	var first_upgrade_choice := upgrade_grid.get_child(0) as Control if upgrade_grid != null and upgrade_grid.get_child_count() > 0 else null
-	var first_upgrade_face := first_upgrade_choice.find_child("RuntimeCardFace", true, false) as Control if first_upgrade_choice != null else null
+	var first_upgrade_face := first_upgrade_choice.find_child("InspectedCardFace", true, false) as Control if first_upgrade_choice != null else null
 	_expect(
 		main.current_screen == "route_upgrade"
 		and upgrade_overlay != null
@@ -263,23 +263,23 @@ func _run() -> void:
 		and first_upgrade_face != null
 		and upgrade_confirm != null
 		and upgrade_confirm.disabled
-		and not hidden_shopkeeper.visible
+		and upgrade_overlay.mouse_filter == Control.MOUSE_FILTER_STOP
 		and main.find_child("RouteUpgradeEncounter", true, false) == null,
-		"Card upgrade did not reuse the rendered-card shop overlay without the shopkeeper."
+		"Card upgrade did not reuse the isolated rendered-card shop overlay."
 	)
 	var selected_upgrade_id := String(first_upgrade_choice.get_meta("card_id", "")) if first_upgrade_choice != null else ""
 	var selected_upgrade_count_before: int = main.route_run_service.upgrade_count(main.run, selected_upgrade_id)
-	main._select_route_shop_service_card("upgrade", selected_upgrade_id)
+	_select_card_face(first_upgrade_face)
 	await main._route_upgrade_card(selected_upgrade_id)
 	await process_frame
 	var sold_upgrade_button := main.find_child("RouteShopUpgradeButton", true, false) as Button
 	_expect(
-		main.last_card_upgrade_animation_stages == ["white", "shake", "shine"]
+		main.last_card_upgrade_animation_stages == ["focus", "white", "shine", "deck", "complete"]
 		and main.route_run_service.upgrade_count(main.run, selected_upgrade_id) == selected_upgrade_count_before + 1
 		and main.route_shop_service_overlay == null
 		and sold_upgrade_button != null
 		and sold_upgrade_button.disabled,
-		"Confirming a shop upgrade did not run the white, shake, and foil-shine ceremony before returning to the shop."
+		"Confirming a shop upgrade did not run the centered foil reveal and deck return ceremony before returning to the shop."
 	)
 	main.run.route_battle = {
 		"active": true,
@@ -435,6 +435,15 @@ func _different_card_id(ids: Array, excluded: String) -> String:
 		if card_id != excluded:
 			return card_id
 	return excluded
+
+
+func _select_card_face(face: Control) -> void:
+	if face == null:
+		return
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	face.gui_input.emit(click)
 
 
 func _expect(condition: bool, message: String) -> void:

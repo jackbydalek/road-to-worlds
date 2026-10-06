@@ -14,13 +14,13 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="TOP CUT: Locals to Worlds"
+config/name="See You at Locals"
 config/version="0.1.0-demo.1"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Godot/app_userdata/Topdeck to Worlds"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://assets/logos/top-cut-game-icon.png"
+config/icon="res://assets/logos/chilling-at-locals-icon.svg"
 
 [autoload]
 

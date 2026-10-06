@@ -1,0 +1,133 @@
+{
+  "version": 2,
+  "starter_cards": [
+    {
+      "id": "prototype_basic_bite",
+      "name": "Basic Bite",
+      "art_source": "hearty_french_bread_dog",
+      "card_type": "ingredient",
+      "attack": 2,
+      "health": 2,
+      "copies": 6
+    },
+    {
+      "id": "prototype_sturdy_bite",
+      "name": "Sturdy Bite",
+      "art_source": "hearty_macaroni_manatee",
+      "card_type": "ingredient",
+      "attack": 1,
+      "health": 3,
+      "copies": 4
+    },
+    {
+      "id": "prototype_simple_serve",
+      "name": "Simple Serve",
+      "art_source": "hearty_gravy_gazelle",
+      "card_type": "meal",
+      "attack": 4,
+      "health": 4,
+      "recipe": [
+        "any"
+      ],
+      "copies": 3
+    }
+  ],
+  "starter_tools": {
+    "item_wooden_spoon": 1,
+    "item_tongs": 1
+  },
+  "opening_pool": [
+    "spicy_jalapeno_jackal",
+    "sweet_caramel_camel",
+    "fresh_sprout_squirrel",
+    "funky_eggplant_ant",
+    "hearty_bagver"
+  ],
+  "card_overrides": {},
+  "encounters": {
+    "mini_boss": {
+      "life": 16,
+      "deck_upgrades": 4
+    },
+    "final_boss": {
+      "life": 22,
+      "deck_upgrades": 5
+    }
+  },
+  "reward_packages": {
+    "pressure": {
+      "enablers": [
+        "spicy_jalapeno_jackal",
+        "spicy_wasabi_wasp",
+        "spicy_hot_honey_bee",
+        "spicy_habanero_hare",
+        "spicy_funky_arrabbeta"
+      ],
+      "payoffs": [
+        "spicy_sriracharrow",
+        "spicy_firecracker_shrimp",
+        "spicy_funky_relishoon",
+        "hearty_gravy_gazelle"
+      ]
+    },
+    "tokens": {
+      "enablers": [
+        "fresh_sprout_squirrel",
+        "fresh_comeback_corgi",
+        "fresh_crisp_capybara"
+      ],
+      "payoffs": [
+        "fresh_saladmander",
+        "fresh_harvest_hydra",
+        "spicy_funky_relishoon",
+        "hearty_bison_burrito",
+        "fresh_garden_gorilla"
+      ]
+    },
+    "discard": {
+      "enablers": [
+        "funky_eggplant_ant",
+        "funky_fondue_ferret",
+        "funky_beat_beetle",
+        "spicy_ghost_pepper_python"
+      ],
+      "payoffs": [
+        "funky_bibimbear",
+        "funky_sauerkrat",
+        "spicy_funky_jambaye_aye",
+        "chef_gusteau"
+      ]
+    },
+    "durability": {
+      "enablers": [
+        "hearty_french_bread_dog",
+        "hearty_ramen_ram",
+        "hearty_kale_whale",
+        "sweet_soft_serve_crab",
+        "hearty_bagver"
+      ],
+      "payoffs": [
+        "hearty_gravy_gazelle",
+        "hearty_polar_pot_pie_bear",
+        "hearty_dumpling_tortoise",
+        "hearty_lasagnama",
+        "sweet_mothchi"
+      ]
+    },
+    "serving": {
+      "enablers": [
+        "sweet_caramel_camel",
+        "funky_beat_beetle",
+        "fresh_sprout_squirrel",
+        "hearty_bagver",
+        "funky_eggplant_ant"
+      ],
+      "payoffs": [
+        "sweet_pup_tart",
+        "sweet_strawberry_sharkcake",
+        "spicy_funky_jambaye_aye",
+        "funky_sauerkrat"
+      ]
+    }
+  }
+}

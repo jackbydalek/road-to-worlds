@@ -1,10 +1,24 @@
 extends Control
 class_name TitleBackgroundPattern
 
-## A quiet, code-drawn title backdrop. The repeated clipped cards echo the
-## game's angular card frame without turning the menu into a literal tabletop.
-
+## Editable tabletop drawing shared by the title and starter-selection screens.
+## All props, lettering and contours are native; no generated raster is used.
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const SKETCH := preload("res://scripts/ui/WarmSketch.gd")
+const FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
+
+var menu_sheet_rect := Rect2():
+	set(value):
+		menu_sheet_rect = value
+		queue_redraw()
+var show_title_details := true:
+	set(value):
+		show_title_details = value
+		queue_redraw()
+var menu_only := false:
+	set(value):
+		menu_only = value
+		queue_redraw()
 
 
 func _ready() -> void:
@@ -14,69 +28,56 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), PALETTE.SURFACE_PAPER)
-	_draw_accent_sashes()
-	_draw_card_pattern()
+	if size.x < 2 or size.y < 2:
+		return
+	if menu_only:
+		if menu_sheet_rect.has_area():
+			SKETCH.paper(self, menu_sheet_rect, PALETTE.PEACH_PAPER, PALETTE.PEACH_INK, true, 1.7)
+		return
+	draw_rect(Rect2(Vector2.ZERO, size), PALETTE.PEACH_TABLE)
+	for mark in [0.12, 0.41, 0.73, 0.92]:
+		SKETCH.line(self, Vector2(size.x * mark, 14), Vector2(size.x * mark + 86, 13), Color(PALETTE.PEACH_INK, 0.15))
+		SKETCH.line(self, Vector2(size.x * mark - 30, size.y - 13), Vector2(size.x * mark + 60, size.y - 15), Color(PALETTE.PEACH_INK, 0.15))
+	var mat := Rect2(Vector2(25, 25), size - Vector2(50, 50))
+	SKETCH.paper(self, mat, PALETTE.PEACH_TEAL, PALETTE.PEACH_INK, true, 2.1)
+	# A few broken perimeter stitches suggest cloth without a full-screen weave.
+	for point in [Vector2(43, 56), Vector2(44, size.y - 64), Vector2(size.x - 52, 70), Vector2(size.x - 54, size.y - 74)]:
+		SKETCH.line(self, point, point + Vector2(0, 12), Color(PALETTE.PEACH_MINT, 0.55), 1.0)
+	if not show_title_details:
+		return
+	if size.x >= 1000.0:
+		_draw_table_details()
+	if menu_sheet_rect.has_area():
+		SKETCH.paper(self, menu_sheet_rect, PALETTE.PEACH_PAPER, PALETTE.PEACH_INK, true, 1.7)
+	var footer := "Good company. Great games. One more round."
+	var font_size := 16 if size.x < 1000.0 else 18
+	var text_width := FONT.get_string_size(footer, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var left := size.x * 0.085 if size.x >= 1000.0 else (size.x - text_width) * 0.5
+	draw_string(FONT, Vector2(left, size.y - 67), footer, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, PALETTE.PEACH_PAPER)
+	if size.x >= 1000.0:
+		SKETCH.line(self, Vector2(left + text_width - 112, size.y - 60), Vector2(left + text_width - 10, size.y - 62), PALETTE.PEACH_MINT, 1.7)
 
 
-func _draw_accent_sashes() -> void:
-	var sash_width := maxf(150.0, size.x * 0.12)
-	var red_sash := PackedVector2Array([
-		Vector2(size.x * 0.64, -40.0),
-		Vector2(size.x * 0.64 + sash_width, -40.0),
-		Vector2(size.x * 0.35, size.y + 40.0),
-		Vector2(size.x * 0.35 - sash_width, size.y + 40.0),
-	])
-	draw_colored_polygon(red_sash, Color(PALETTE.SIGNAL_RED, 0.035))
-
-	var blue_sash := PackedVector2Array([
-		Vector2(size.x * 0.91, -40.0),
-		Vector2(size.x + 90.0, -40.0),
-		Vector2(size.x * 0.69, size.y + 40.0),
-		Vector2(size.x * 0.58, size.y + 40.0),
-	])
-	draw_colored_polygon(blue_sash, Color(PALETTE.SELECTION_BLUE, 0.04))
-
-
-func _draw_card_pattern() -> void:
-	const STEP := Vector2(184.0, 208.0)
-	const CARD_SIZE := Vector2(76.0, 108.0)
-	var row_count := ceili(size.y / STEP.y) + 2
-	var column_count := ceili(size.x / STEP.x) + 2
-	for row_index in range(-1, row_count):
-		var row_shift := STEP.x * 0.5 if row_index % 2 != 0 else 0.0
-		for column_index in range(-1, column_count):
-			var origin := Vector2(
-				float(column_index) * STEP.x + row_shift,
-				float(row_index) * STEP.y
-			)
-			_draw_card_mark(origin, CARD_SIZE, row_index + column_index)
-
-
-func _draw_card_mark(origin: Vector2, card_size: Vector2, pattern_index: int) -> void:
-	var cut := 10.0
-	var points := PackedVector2Array([
-		origin + Vector2(cut, 0.0),
-		origin + Vector2(card_size.x - cut, 0.0),
-		origin + Vector2(card_size.x, cut),
-		origin + Vector2(card_size.x, card_size.y - cut),
-		origin + Vector2(card_size.x - cut, card_size.y),
-		origin + Vector2(cut, card_size.y),
-		origin + Vector2(0.0, card_size.y - cut),
-		origin + Vector2(0.0, cut),
-	])
-	var fill := Color(PALETTE.SURFACE_PAPER_MUTED, 0.24 if pattern_index % 3 == 0 else 0.16)
-	draw_colored_polygon(points, fill)
-	var closed_points := points.duplicate()
-	closed_points.append(points[0])
-	draw_polyline(closed_points, Color(PALETTE.STRUCTURAL_EDGE, 0.16), 2.0, true)
-
-	var center := origin + card_size * 0.5
-	var accent := PALETTE.SIGNAL_RED if pattern_index % 4 == 0 else PALETTE.SELECTION_BLUE
-	draw_line(
-		center + Vector2(-15.0, 12.0),
-		center + Vector2(15.0, -12.0),
-		Color(accent, 0.13),
-		4.0,
-		true
-	)
+func _draw_table_details() -> void:
+	var scale_factor := minf(size.y / 900.0, 1.1)
+	# A little open-play slip at the edge, clear of the title and menu targets.
+	draw_set_transform(Vector2(size.x * 0.105, 26), -0.09, Vector2.ONE * scale_factor)
+	SKETCH.paper(self, Rect2(-52, -48, 170, 114), PALETTE.PEACH_PAPER, PALETTE.PEACH_INK, true)
+	draw_string(FONT, Vector2(-33, -2), "SATURDAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, PALETTE.PEACH_INK)
+	draw_string(FONT, Vector2(-33, 23), "OPEN PLAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, PALETTE.PEACH_INK)
+	SKETCH.line(self, Vector2(-33, 35), Vector2(94, 34), PALETTE.PEACH_TEAL, 1.6)
+	draw_set_transform(Vector2.ZERO)
+	# Top-down cup, drawn as a few flat shapes with one contact shadow.
+	var cup := Vector2(size.x * 0.85, size.y * 0.21)
+	var radius := 67.0 * scale_factor
+	draw_circle(cup + Vector2(4, 8), radius, Color(PALETTE.PEACH_INK, 0.22), true, -1, true)
+	draw_circle(cup, radius, PALETTE.PEACH_MINT, true, -1, true)
+	draw_circle(cup, radius, PALETTE.PEACH_INK, false, 1.8, true)
+	var handle := cup + Vector2(radius * 0.72, -radius * 0.18)
+	draw_circle(handle, radius * 0.31, PALETTE.PEACH_PAPER, true, -1, true)
+	draw_circle(handle, radius * 0.31, PALETTE.PEACH_INK, false, 1.8, true)
+	draw_circle(handle, radius * 0.16, PALETTE.PEACH_TEAL, true, -1, true)
+	draw_circle(cup + Vector2(-6, -9), radius * 0.76, PALETTE.PEACH_PAPER, true, -1, true)
+	draw_circle(cup + Vector2(-6, -9), radius * 0.76, PALETTE.PEACH_INK, false, 2.0, true)
+	draw_circle(cup + Vector2(-6, -11), radius * 0.55, PALETTE.PEACH_INK, true, -1, true)
+	draw_arc(cup + Vector2(-6, -11), radius * 0.59, PI * 1.1, PI * 1.6, 16, PALETTE.PEACH_TABLE, 2.2, true)

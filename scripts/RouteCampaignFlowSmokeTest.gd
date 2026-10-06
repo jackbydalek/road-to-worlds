@@ -15,23 +15,17 @@ func _initialize() -> void:
 	await process_frame
 	var setup = main.find_child("SeasonRegistration", true, false)
 	_expect(setup != null, "New Run did not open the starter selection.")
-	var spicy_player_art := main.find_child("SpicyPlayerArtwork", true, false) as TextureRect
 	_expect(
-		spicy_player_art != null
-		and spicy_player_art.texture != null
-		and spicy_player_art.texture.resource_path.ends_with("player_idle.png"),
-		"Spicy character selection did not use the supplied idle sprite."
+		setup.boxes.size() == 3 and setup.boxes[0].get_meta("cover_card_id", "") == "spicy_sriracharrow",
+		"Starter selection did not expose three decks with the original Spicy cover card."
 	)
 	main._select_season_setup_archetype(1)
 	await process_frame
 	await process_frame
 	setup = main.find_child("SeasonRegistration", true, false)
-	var hearty_player_art := main.find_child("HeartyPlayerArtwork", true, false) as TextureRect
 	_expect(
-		hearty_player_art != null
-		and hearty_player_art.texture != null
-		and hearty_player_art.texture.resource_path.ends_with("hearty_player_idle.png"),
-		"Hearty character selection did not use the supplied idle sprite."
+		setup.selected_index == 1 and setup.boxes[1].get_meta("cover_card_id", "") == "hearty_gravy_gazelle",
+		"Hearty selection lost its original card or selected deck."
 	)
 	if setup != null:
 		_expect(not setup.get_node("%DraftNightButton").visible, "Legacy Draft Night remained in the public route setup.")
@@ -87,7 +81,7 @@ func _initialize() -> void:
 		"The hub kiosk did not open its persistent card-shop screen."
 	)
 	var hub_shop_services := main.find_child("RouteShopServicesPanel", true, false) as Control
-	_expect(hub_shop_services != null and not hub_shop_services.visible, "The hub shop exposed services that belong to the one-use vending machine.")
+	_expect(hub_shop_services == null, "The hub shop exposed services that belong to the one-use vending machine.")
 	var hub_shop_back := main.find_child("RouteShopContinueButton", true, false) as Button
 	if hub_shop_back != null:
 		hub_shop_back.emit_signal("pressed")
@@ -111,7 +105,7 @@ func _initialize() -> void:
 		and main.find_child("BeginRouteEncounterButton", true, false) != null
 		and rival_intro_portrait != null
 		and rival_intro_portrait.texture != null
-		and rival_intro_portrait.texture.resource_path.contains("route_rival_npc_"),
+		and rival_intro_portrait.texture == preload("res://scripts/ui/PeachSodaCast.gd").texture_for(String(main._route_rival_presentation(main.run.route_battle).id)),
 		"Enemy node did not stage the supplied rival over the darkened tournament hub."
 	)
 	_expect(
@@ -151,28 +145,30 @@ func _initialize() -> void:
 	var reward_hub := main.find_child("TournamentHub", true, false)
 	_expect(reward_hub != null and main.find_child("RouteRewardDimmer", true, false) != null, "The victory reward did not stay over the live tournament hub.")
 	_expect(int(main.run.life) == 31 and int(main.run.money) == 10 and main.run.reward_offer.size() == 3, "Victory did not preserve life, animate cash, and generate a three-card reward.")
-	var regular_pack_button := main.find_child("RouteSealedPackButton", true, false) as TextureButton
+	var regular_pack_button := main.find_child("RouteSealedPackButton", true, false) as Button
 	_expect(
 		main.current_screen == "route_reward_pack"
 		and regular_pack_button != null
-		and regular_pack_button.texture_normal.resource_path.ends_with("route_regular_reward.png"),
+		and regular_pack_button.pack_kind == "enemy" and regular_pack_button.card_count == 3,
 		"The victory CTA did not present a clickable sealed pack."
 	)
-	_expect(main.find_child("RouteSealedPackPrompt", true, false) == null, "The wordless sealed-pack overlay still rendered instruction copy.")
-	_expect(main.find_child("RouteSealedPackAngularSurface", true, false) != null, "The sealed-pack overlay did not use the dark reward-panel treatment.")
+	_expect(regular_pack_button.focus_mode == Control.FOCUS_ALL, "The sealed pack is not keyboard accessible.")
+	_expect(main.find_child("RouteSealedPackAngularSurface", true, false) != null, "The sealed-pack overlay did not use the shared paper treatment.")
 	var sealed_pack_panel := main.find_child("RouteSealedPackScreen", true, false)
-	_expect(sealed_pack_panel != null and sealed_pack_panel.find_children("*", "Label", true, false).is_empty(), "The sealed-pack panel still contains visible words.")
+	_expect(sealed_pack_panel != null and not sealed_pack_panel.find_children("*", "Label", true, false).is_empty(), "The sealed pack does not explain its open action.")
 	var saved_reward_node: Dictionary = main.run.pending_route_node.duplicate(true)
 	for pack_case in [
-		{"type": "enemy", "asset": "route_regular_reward.png"},
-		{"type": "mini_boss", "asset": "route_miniboss_reward.png"},
-		{"type": "final_boss", "asset": "route_floor_boss_reward.png"},
+		{"type": "enemy"},
+		{"type": "mini_boss"},
+		{"type": "final_boss"},
 	]:
 		main.run.pending_route_node.type = String(pack_case.type)
-		var mapped_pack_art := main._route_reward_pack_art() as Texture2D
+		main._show_route_sealed_pack()
+		await process_frame
+		var mapped_pack := main.find_child("RouteSealedPackButton", true, false)
 		_expect(
-			mapped_pack_art != null and mapped_pack_art.resource_path.ends_with(String(pack_case.asset)),
-			"The %s reward did not use its supplied pack artwork." % String(pack_case.type)
+			mapped_pack != null and mapped_pack.pack_kind == String(pack_case.type) and mapped_pack.card_count == main.run.reward_offer.size(),
+			"The %s reward pack lost its tier or actual card count." % String(pack_case.type)
 		)
 	main.run.pending_route_node = saved_reward_node
 	main._resolve_pending_route_node()
@@ -191,7 +187,7 @@ func _initialize() -> void:
 	var first_reward_id := String(reward_ids[0])
 	var first_reward_choice := main.find_child("RouteReward_%s" % first_reward_id, true, false) as Control
 	var first_add_button := main.find_child("RouteRewardAddButton_%s" % first_reward_id, true, false) as Button
-	_expect(first_reward_choice != null and first_add_button != null and not first_add_button.visible, "Reward cards did not begin in the unselected state.")
+	_expect(first_reward_choice != null and first_add_button != null and not first_add_button.visible and first_add_button.disabled, "A reward card exposed Add to Deck before selection.")
 	var second_reward_choice := main.find_child("RouteReward_%s" % String(reward_ids[1]), true, false) as Control
 	_expect(
 		first_reward_choice != null
@@ -208,6 +204,10 @@ func _initialize() -> void:
 		and first_reward_choice.position.y < first_reward_base_position.y,
 		"Selecting a reward card did not lift it and reveal Add to Deck."
 	)
+	main._select_route_reward_card(String(reward_ids[1]))
+	var second_add_button := main.find_child("RouteRewardAddButton_%s" % String(reward_ids[1]), true, false) as Button
+	_expect(not first_add_button.visible and first_add_button.disabled and second_add_button.visible and not second_add_button.disabled, "Switching cards did not move the individual Add action to the selected card.")
+	main._select_route_reward_card(first_reward_id)
 	_expect(
 		main.find_child("RouteRewardAddAllButton", true, false) != null
 		and main.find_child("RouteRewardSkipButton", true, false) != null,
@@ -226,8 +226,9 @@ func _initialize() -> void:
 	_expect(
 		main.find_child("RouteRewardOverlay", true, false) == continuous_reward_overlay
 		and main.find_child("RouteRewardDimmer", true, false) == continuous_reward_dimmer
-		and main.find_child("RouteReward_%s" % first_reward_id, true, false) == null,
-		"Adding one reward card rebuilt the overlay instead of continuing within the same pack screen."
+		and (not is_instance_valid(first_reward_choice) or not first_reward_choice.is_visible_in_tree())
+		and (not is_instance_valid(first_add_button) or first_add_button.disabled),
+		"Adding one reward card rebuilt the overlay or left its collected face on the reward cloth."
 	)
 	main._add_all_route_rewards()
 	await process_frame
@@ -236,32 +237,22 @@ func _initialize() -> void:
 	var victory_run: Dictionary = main.run.duplicate(true)
 	main._show_route_victory()
 	await process_frame
-	var victory_discord := main.find_child("RouteVictoryDiscordButton", true, false) as Button
-	var victory_deck := main.find_child("RouteVictoryDeckButton", true, false) as Button
-	var victory_again := main.find_child("RouteVictoryAgainButton", true, false) as Button
-	var victory_title := main.find_child("RouteVictoryTitleButton", true, false) as Button
-	_expect(
-		victory_discord != null
-		and not victory_discord.disabled
-		and not victory_discord.get_signal_connection_list("pressed").is_empty(),
-		"The route finale Discord action was not clickable."
-	)
-	_expect(main.find_child("RouteVictorySteamButton", true, false) == null, "The route finale showed a dead Steam action without a configured URL.")
-	_expect(victory_deck != null and victory_again != null and victory_title != null, "The route finale was missing a navigation action.")
+	var victory_deck := main.find_child("FinalDeckReviewButton", true, false) as Button
+	var victory_again := main.find_child("SeasonResultPrimaryAction", true, false) as Button
+	var victory_title := main.find_child("ResultMainMenuButton", true, false) as Button
+	_expect(victory_deck != null and victory_again != null and victory_title != null, "The finale is missing navigation.")
 	if victory_deck != null:
-		victory_deck.emit_signal("pressed")
+		victory_deck.pressed.emit()
 		await process_frame
-		_expect(main.current_screen == "deck", "Review Winning Deck did not open the deck view.")
-		var deck_back := main.find_child("DeckbuilderBackButton", true, false) as Button
-		if deck_back != null:
-			deck_back.emit_signal("pressed")
-			await process_frame
-		_expect(main.current_screen == "route_victory", "The winning deck did not return to the route finale.")
+		_expect(main.find_child("FinalDeckReview", true, false) != null, "Review did not open the winning deck.")
+		main._close_final_deck_review()
+		await process_frame
+		_expect(main.current_screen == "route_victory", "Deck review did not preserve the finale.")
 
 	main.run = victory_run.duplicate(true)
 	main._show_route_victory()
 	await process_frame
-	victory_again = main.find_child("RouteVictoryAgainButton", true, false) as Button
+	victory_again = main.find_child("SeasonResultPrimaryAction", true, false) as Button
 	if victory_again != null:
 		victory_again.emit_signal("pressed")
 		await process_frame
@@ -270,7 +261,7 @@ func _initialize() -> void:
 	main.run = victory_run.duplicate(true)
 	main._show_route_victory()
 	await process_frame
-	victory_title = main.find_child("RouteVictoryTitleButton", true, false) as Button
+	victory_title = main.find_child("ResultMainMenuButton", true, false) as Button
 	if victory_title != null:
 		victory_title.emit_signal("pressed")
 		await process_frame

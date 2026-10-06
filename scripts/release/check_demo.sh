@@ -9,7 +9,7 @@ if [[ ! -x "$godot_bin" ]]; then
 	exit 1
 fi
 
-release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/top-cut-locals-to-worlds-release.XXXXXX")"
+release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/see-you-at-locals-release.XXXXXX")"
 cleanup() {
 	rm -rf "$release_tmp"
 }
@@ -28,7 +28,7 @@ run_test() {
 printf '[demo gate] Verify product branding\n'
 "$project_dir/scripts/release/check_branding.sh"
 
-printf '[demo gate] Verify no-generative-AI asset policy\n'
+printf '[demo gate] Verify asset provenance and registered generated working art\n'
 "$project_dir/scripts/release/check_no_ai_assets.sh"
 
 printf '[demo gate] Import and parse project\n'
@@ -36,6 +36,12 @@ printf '[demo gate] Import and parse project\n'
 
 tests=(
 	"scripts/cooking/CanonicalCatalogSmokeTest.gd"
+	"scripts/cooking/SpecialServeSmokeTest.gd"
+	"scripts/WeeklyDemoSmokeTest.gd"
+	"scripts/WeeklySpecialServeUiSmokeTest.gd"
+	"scripts/cooking/BodyguardBagverSmokeTest.gd"
+	"scripts/cooking/AttackPreviewSmokeTest.gd"
+	"scripts/cooking/DrawRefillSmokeTest.gd"
 	"scripts/cooking/KitchenGameSmokeTest.gd"
 	"scripts/cooking/RebalancedCardPoolSmokeTest.gd"
 	"scripts/cooking/FreshFunkyEffectsSmokeTest.gd"
@@ -45,6 +51,9 @@ tests=(
 	"scripts/cooking/ChefCarmySmokeTest.gd"
 	"scripts/OpponentHandFaceAttackSmokeTest.gd"
 	"scripts/TabletopPacingSmokeTest.gd"
+	"scripts/BattleActionPreviewUiSmokeTest.gd"
+	"scripts/PeachSodaBattleSmokeTest.gd"
+	"scripts/ReshuffleBannerSmokeTest.gd"
 	"scripts/SelectionClaritySmokeTest.gd"
 	"scripts/CombatLayoutSmokeTest.gd"
 	"scripts/ResponsiveLayoutSmokeTest.gd"
@@ -53,13 +62,20 @@ tests=(
 	"scripts/CardEffectLabSmokeTest.gd"
 	"scripts/ThreeDCardInterfaceAudit.gd"
 	"scripts/RouteRunSmokeTest.gd"
+	"scripts/TournamentHubSmokeTest.gd"
+	"scripts/HubCounterZoomSmokeTest.gd"
+	"scripts/HubSellerSmokeTest.gd"
+	"scripts/HubShopRefreshSmokeTest.gd"
 	"scripts/RouteCampaignFlowSmokeTest.gd"
+	"scripts/RouteRewardLayoutSmokeTest.gd"
 	"scripts/overworld/OverworldRouteGraphSmokeTest.gd"
 	"scripts/OpponentDeckTierSmokeTest.gd"
 	"scripts/RoundCashRewardSmokeTest.gd"
 	"scripts/GuidedTutorialSmokeTest.gd"
 	"scripts/DraftModeSmokeTest.gd"
 	"scripts/DeckbuilderLayoutSmokeTest.gd"
+	"scripts/UiRefreshDecisionSmokeTest.gd"
+	"scripts/StarterSelectionFlowSmokeTest.gd"
 	"scripts/PackRewardSmokeTest.gd"
 	"scripts/SinglesSelectionSmokeTest.gd"
 	"scripts/StorefrontMenuSmokeTest.gd"
@@ -70,6 +86,7 @@ tests=(
 	"scripts/GlobalButtonStyleSmokeTest.gd"
 	"scripts/TitleMenuPaletteSmokeTest.gd"
 	"scripts/TournamentResultUiSmokeTest.gd"
+	"scripts/SharedCardInspectionSmokeTest.gd"
 	"scripts/PublicUiSmokeTest.gd"
 	"scripts/AutosaveSmokeTest.gd"
 )
@@ -94,6 +111,11 @@ test -s "$release_tmp/index.wasm"
 
 if ! grep -q '<meta name="version" content="0.1.0-demo.1">' "$release_tmp/index.html"; then
 	printf 'Exported HTML is missing the expected demo version metadata.\n' >&2
+	exit 1
+fi
+
+if ! grep -Fq '<meta name="description" content="See You at Locals — playable browser demo">' "$release_tmp/index.html"; then
+	printf 'Exported HTML is missing the expected See You at Locals branding.\n' >&2
 	exit 1
 fi
 

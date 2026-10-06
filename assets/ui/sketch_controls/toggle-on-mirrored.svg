@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 64 32">
+  <!-- Original native vector control; Peach Soda palette, no raster artwork. -->
+  <g stroke="#293047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(64 0) scale(-1 1)">
+    <path d="M15.2 4.2C26.5 3.8 37.2 4.7 48.8 4.1C56.8 3.8 61.1 9.5 60.4 16.7C60.1 23.5 55.1 28.1 48 27.5L15.3 27.9C7.4 28.3 3 23.5 3.6 15.3C4 8.6 8.1 4 15.2 4.2Z" fill="#C7DFD5"/>
+    <path d="M48.3 6.8C53.7 6.6 57.5 10.9 57.1 16.2C56.9 22 52.8 25.7 47.5 25.3C42 25.1 38.2 21 38.7 15.6C38.9 10.2 42.9 6.6 48.3 6.8Z" fill="#FFF4DF" stroke="#126866"/>
+    <path d="m10 16 3.5 3.5 6-7" fill="none" stroke="#126866" stroke-width="2"/>
+    </g>
+  </g>
+</svg>

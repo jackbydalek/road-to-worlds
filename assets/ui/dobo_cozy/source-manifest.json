@@ -1,0 +1,81 @@
+{
+  "pack": "dobo_ui Cozy UI DEMO and full Cozy UI Pack",
+  "owner_archive": "/Users/jack.bydalek/Downloads/DEMO_Cozy_UI_Pack_doboui.zip",
+  "author": "dobo_ui",
+  "source_url": "https://dobo-ui.itch.io/cozy-ui",
+  "origin": "Creator states handmade and no AI; external statement, not independently certified",
+  "preparation": "Original PNGs unchanged; conventional runtime palette mapping through CozyPackAssets.gd; no image generation",
+  "assets": [
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Buttons/Square/SquareButton2_white.png",
+      "runtime": "assets/ui/dobo_cozy/source/button_square.png",
+      "sha256": "79f47bdccf18c269e4c2ee82efd61b1dd21b0c3bc993ab146cb145dff8a213cf"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Buttons/Round/RoundButton2_white.png",
+      "runtime": "assets/ui/dobo_cozy/source/button_round.png",
+      "sha256": "9cde12719b1d98613bc054bfb05dfbf395a36cbd4bca28c092ad5776bbecc0d7"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Containers/Containers/Container1.png",
+      "runtime": "assets/ui/dobo_cozy/source/panel.png",
+      "sha256": "e9bb68c21631dc9688392941a6ab026b21e3fc9a1dcc7a1b619e45e7fa18d81b"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Checkboxes/Checkbox2_checked.png",
+      "runtime": "assets/ui/dobo_cozy/source/check_on.png",
+      "sha256": "ecc8277fde0a5aa838370110f30f885a22c83d68d97d99200e10018c6e48c7bb"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Checkboxes/Checkbox2_unchecked.png",
+      "runtime": "assets/ui/dobo_cozy/source/check_off.png",
+      "sha256": "cc65f32e4ef8186f421178aa8339218123ffd5f86f33450832b8a4675bba4e82"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Arrows/BrownOutline/ArrowBrownOuline20.png",
+      "runtime": "assets/ui/dobo_cozy/source/arrow_up.png",
+      "sha256": "dffd02f3e3fceb155b64dc7b70928d7e214f68ced22b8f848b4c9c0bbf41f6d1"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Arrows/BrownOutline/ArrowBrownOuline21.png",
+      "runtime": "assets/ui/dobo_cozy/source/arrow_down.png",
+      "sha256": "8a666f069946581f83b409ebe188c78a0c72a4aa8020ac7beee9a98f856e5a6f"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Arrows/BrownOutline/ArrowBrownOuline22.png",
+      "runtime": "assets/ui/dobo_cozy/source/arrow_left.png",
+      "sha256": "04df8979f1dbbb45621bd2fbcd6d46b2e85b4077432c128a377e5bf2257eff1e"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Arrows/BrownOutline/ArrowBrownOuline23.png",
+      "runtime": "assets/ui/dobo_cozy/source/arrow_right.png",
+      "sha256": "3881e5d09187900af1990f80bcbe5fee0355d3622608f8773dde094bf38319e4"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Containers/Containers/NoteContainerSimple.png",
+      "runtime": "assets/ui/dobo_cozy/source/note.png",
+      "sha256": "ca8389648fc9712bc0cb9f92990ebd911ef18d64a146e303a9fc4a24b9a15bf7"
+    },
+    {
+      "source": "outputs/dobo_cozy_ui_v1/source/Icons/Icons Default/128px/IconsDefault38_128px.png",
+      "runtime": "assets/ui/dobo_cozy/source/heart.png",
+      "sha256": "9e8cdd65c9c3784e569d8862c29714407e3aaff1e574d4f427bee3e4ae9b2194"
+    },
+    {
+      "source": "/Users/jack.bydalek/Desktop/Game/Game 8:5/Cozy_UI_Pack_doboui/ProgressBars/ProgressBar/ProgressBarBackground.png",
+      "source_pack": "Cozy_UI_Pack_doboui (full pack)",
+      "archive_relative_source": "ProgressBars/ProgressBar/ProgressBarBackground.png",
+      "runtime": "assets/ui/dobo_cozy/source/health_track.png",
+      "sha256": "bb275e04c1059a361438287184515964478a363bb7fb33be3119674deb5d324a"
+    },
+    {
+      "source": "/Users/jack.bydalek/Desktop/Game/Game 8:5/Cozy_UI_Pack_doboui/ProgressBars/ProgressBar/ProgressBar10.png",
+      "source_pack": "Cozy_UI_Pack_doboui (full pack)",
+      "archive_relative_source": "ProgressBars/ProgressBar/ProgressBar10.png",
+      "runtime": "assets/ui/dobo_cozy/source/health_fill.png",
+      "sha256": "059216de5b0a4c037d23faaf2278acc389740076528e78e7c66dfb1e39db7d96"
+    }
+  ],
+  "owner_full_pack_directory": "/Users/jack.bydalek/Desktop/Game/Game 8:5/Cozy_UI_Pack_doboui",
+  "owner_full_pack_archive": "/Users/jack.bydalek/Desktop/Game/Game 8:5/Cozy_UI_Pack_doboui.zip"
+}

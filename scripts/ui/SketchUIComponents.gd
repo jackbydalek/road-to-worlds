@@ -2,14 +2,14 @@ extends RefCounted
 class_name SketchUIComponents
 
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
-const INK := PALETTE.INK
-const MUTED_INK := PALETTE.SLATE
-const PAPER := PALETTE.GHOST
-const TEAL := PALETTE.TEAL
+const INK := PALETTE.PEACH_INK
+const MUTED_INK := PALETTE.PEACH_INK_SOFT
+const PAPER := PALETTE.PEACH_PAPER
+const TEAL := PALETTE.PEACH_TEAL
 const ORANGE := PALETTE.BRICK
-const MUSTARD := PALETTE.APRICOT
+const MUSTARD := PALETTE.PEACH_TABLE
 
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BODY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BUTTON_PAPER_A := preload("res://assets/ui/wired_title/button_paper_a.svg")
 const BUTTON_PAPER_B := preload("res://assets/ui/wired_title/button_paper_b.svg")
@@ -46,7 +46,7 @@ static func make_panel(
 
 static func make_paper_background() -> ColorRect:
 	var background := ColorRect.new()
-	background.color = PALETTE.CREAM
+	background.color = PALETTE.PEACH_PAPER
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return background

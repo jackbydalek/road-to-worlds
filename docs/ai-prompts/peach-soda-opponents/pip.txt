@@ -1,0 +1,5 @@
+Use case: background-extraction.
+Asset type: transparent PNG seated opponent sprite for a card game.
+Input image 1 is the edit target: Pip, an existing character illustration.
+Extract ONLY the exact existing character silhouette including the cards held in the hands. Remove the cream wall, entire orange tabletop, teal band, cast shadow outside the person, and all other background. Genuine transparent alpha outside the subject, including holes between arms and held cards. Do not paint a white or checkerboard background.
+Preserve the original face, brown hair, freckles, warm skin, teal sweatshirt, cream-trimmed card backs, pose, hand anatomy, linework, original flat colors and every contour. No redesign, relighting, texture additions or stylistic changes. Retain complete top hair tuft, both rounded elbows, both hands and held cards; no clipping. The silhouette ends along the existing bottom edges of the forearms and central torso behind them. Same seated across-table view and same natural proportions. Center on a transparent canvas with about 5% clear padding. Output only this one clean cutout.

@@ -2,7 +2,7 @@ extends SceneTree
 
 const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
-const TEST_SETTINGS_PATH := "user://topdeck_to_worlds_public_ui_settings_test"
+const TEST_SETTINGS_PATH := "/tmp/topdeck_to_worlds_public_ui_settings_test"
 const SETTINGS_PREVIEW_PATH := "res://outputs/illustrated_vfx/settings_menu_redesign.png"
 
 var failed := false
@@ -15,6 +15,7 @@ func _init() -> void:
 func _run() -> void:
 	root.size = Vector2i(1440, 900)
 	var main = MAIN_SCENE.instantiate()
+	main.autosave_enabled = false
 	root.add_child(main)
 	await process_frame
 	await process_frame
@@ -126,7 +127,7 @@ func _run() -> void:
 		reset_button != null
 		and header_row != null
 		and reset_button.get_parent() == header_row
-		and reset_button.get_theme_color("icon_normal_color").is_equal_approx(PALETTE.CARBON)
+		and reset_button.get_theme_color("icon_normal_color").is_equal_approx(PALETTE.PEACH_INK)
 		and settings_actions != null
 		and reset_button.get_parent() != settings_actions,
 		"Restore Defaults was not moved opposite the Options title in the top header."
@@ -158,6 +159,9 @@ func _run() -> void:
 	)
 	var abandon_confirmation := main.find_child("AbandonRunConfirmation", true, false) as HBoxContainer
 	_expect(abandon_button != null and not abandon_button.disabled, "An active season could not be abandoned from Settings.")
+	var run_category := main.find_child("SettingsCategoryRun", true, false) as Button
+	_expect(run_category != null and not abandon_button.is_visible_in_tree(), "Abandon should live in the Run category.")
+	run_category.pressed.emit()
 	if abandon_button != null:
 		abandon_button.emit_signal("pressed")
 	await process_frame
@@ -216,88 +220,23 @@ func _run() -> void:
 	)
 	main._show_thanks_for_playing()
 	await process_frame
-	var finale_title := main.find_child("FinaleChampionTitle", true, false) as Label
-	var finale_hero_detail := main.find_child("FinaleHeroDetail", true, false) as Label
-	var finale_road_detail := main.find_child("FinaleRoadDetail", true, false) as Label
-	_expect(
-		finale_title != null and finale_title.text == "Thanks for Playing the Demo!",
-		"The finale is missing its personal demo thank-you title."
-	)
-	_expect(
-		finale_hero_detail != null
-		and finale_hero_detail.text == "Hope you liked it! The fact that people are actually getting to the end of my demo is dope so thank you!",
-		"The finale is missing its personal thank-you message."
-	)
-	_expect(
-		finale_road_detail != null
-		and finale_road_detail.text == "Still working on getting multiple packs in and making the path all the way to worlds. Join the discord or comment your feedback to help make the game better!",
-		"The finale is missing the updated Road Ahead message."
-	)
-	_expect(main.find_child("FinaleTeaser", true, false) != null, "The finale is missing its Road Ahead teaser.")
-	_expect(main.find_child("FinaleDeckButton", true, false) != null, "The finale cannot open the winning deck.")
-	_expect(main.find_child("ThanksMainMenuButton", true, false) != null, "The finale cannot return to the title.")
-	var finale_hero := main.find_child("FinaleHero", true, false) as PanelContainer
-	var finale_hero_style := finale_hero.get_theme_stylebox("panel") as StyleBoxFlat if finale_hero != null else null
-	_expect(
-		finale_hero_style != null
-		and finale_hero_style.border_color.is_equal_approx(PALETTE.NAVY)
-		and finale_hero_style.corner_radius_top_left >= 16,
-		"The finale hero does not use the rounded navy illustrated-card treatment."
-	)
-	var finale_milestones := main.find_child("FinaleAchievementList", true, false) as GridContainer
-	_expect(
-		finale_milestones != null and finale_milestones.columns == 2,
-		"The finale milestones were not consolidated into the two-column season scrapbook."
-	)
-	var milestone_statuses := main.find_children("FinaleMilestoneStatus", "Label", true, false)
-	var readable_milestone_statuses := milestone_statuses.size() == 4
-	for milestone_status_value in milestone_statuses:
-		var milestone_status := milestone_status_value as Label
-		readable_milestone_statuses = (
-			readable_milestone_statuses
-			and milestone_status != null
-			and milestone_status.get_theme_font_size("font_size") >= 18
-		)
-	_expect(readable_milestone_statuses, "The finale milestone values are too small to scan.")
-	var finale_teaser := main.find_child("FinaleTeaser", true, false) as PanelContainer
-	var finale_teaser_style := finale_teaser.get_theme_stylebox("panel") as StyleBoxFlat if finale_teaser != null else null
-	_expect(
-		finale_teaser_style != null
-		and finale_teaser_style.border_color.is_equal_approx(PALETTE.PERIWINKLE)
-		and finale_teaser_style.corner_radius_top_left >= 12,
-		"The finale Road Ahead panel does not use the lavender/periwinkle illustrated treatment."
-	)
-	var discord_button := main.find_child("FinaleDiscordButton", true, false) as Button
-	var discord_face = discord_button.get_node_or_null("BattleAngularButtonFace") if discord_button != null else null
-	_expect(
-		discord_button != null
-		and not discord_button.disabled
-		and discord_button.text == "Join the Discord"
-		and discord_face != null
-		and discord_face.variant == "primary"
-		and discord_face.fill_color_for_state("normal").is_equal_approx(PALETTE.SELECTION_BLUE)
-		and main.DISCORD_INVITE_URL == "https://discord.gg/EK6AmYgnPZ",
-		"The finale does not expose the configured public Discord invite."
-	)
-	_expect(
-		main.find_child("FinaleSteamWishlistButton", true, false) == null,
-		"The finale exposed a placeholder Steam action without a configured public URL."
-	)
-	var finale_deck_button := main.find_child("FinaleDeckButton", true, false) as Button
-	if finale_deck_button != null:
-		finale_deck_button.emit_signal("pressed")
+	var finale_title := main.find_child("TournamentResultProgress", true, false) as Label
+	_expect(finale_title != null and finale_title.text == "Locals champion!", "The finale did not use the shared victory banner.")
+	_expect(main.find_child("SeasonResultActions", true, false) != null, "The finale has no pinned actions.")
+	var review := main.find_child("FinalDeckReviewButton", true, false) as Button
+	_expect(review != null, "The finale has no deck review.")
+	if review != null:
+		review.pressed.emit()
 		await process_frame
-	_expect(main.current_screen == "deck", "The finale Review Winning Deck action did not open the deck view.")
-	var finale_deck_back := main.find_child("DeckbuilderBackButton", true, false) as Button
-	if finale_deck_back != null:
-		finale_deck_back.emit_signal("pressed")
+		_expect(main.find_child("FinalDeckReview", true, false) != null, "Review did not open the final deck.")
+		main._close_final_deck_review()
 		await process_frame
-	_expect(main.current_screen == "thanks", "The winning deck did not return to the finale.")
-	var finale_main_menu := main.find_child("ThanksMainMenuButton", true, false) as Button
-	if finale_main_menu != null:
-		finale_main_menu.emit_signal("pressed")
+	_expect(main.current_screen == "thanks", "Deck review lost the finale.")
+	var menu := main.find_child("ResultMainMenuButton", true, false) as Button
+	if menu != null:
+		menu.pressed.emit()
 		await process_frame
-	_expect(main.current_screen == "start", "The finale Return to Main Menu action did not open the title screen.")
+	_expect(main.current_screen == "start", "Main Menu did not return to the title.")
 
 	main._release_audio_streams()
 	await create_timer(0.12).timeout

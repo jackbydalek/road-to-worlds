@@ -27,18 +27,18 @@ func _run() -> void:
 	var how_to_play := main.find_child("TitleHowToPlayButton", true, false) as Button
 	var credits := main.find_child("CreditsPosterButton", true, false) as Button
 	_expect(main.current_screen == "start", "The game did not boot to the title screen.")
-	_expect(new_game != null and new_game.text == "NEW GAME", "The title did not offer New Game.")
+	_expect(new_game != null and new_game.text.to_lower() == "new game", "The title did not offer New Game.")
 	_expect(empty_continue != null and not empty_continue.visible and empty_continue.disabled, "Continue appeared without a valid autosave.")
-	_expect(how_to_play != null and credits != null, "The centered title lost How to Play or Credits.")
+	_expect(how_to_play != null and credits != null, "The title lost How to Play or Credits.")
 	_expect(main.find_child("GameStartGateway", true, false) == null, "The retired saved-run gateway still exists in the title flow.")
 	_expect(not main.has_method("_play_menu_circle_wipe"), "The retired title-menu wipe remained in Main.")
-	_expect(not main.has_method("_play_shop_door_bell"), "The retired storefront ding remained in Main.")
+	_expect(main.has_method("_play_shop_entry_sound") and main.ui_sound_controller.has_method("play_shop_bell"), "The original shop bell was not restored through the shared audio controller.")
 	if title != null:
-		var title_center_x: float = title.get_global_rect().get_center().x
+		var menu_sheet: Rect2 = title.get_menu_sheet_rect()
 		for button in [new_game, how_to_play, credits]:
 			_expect(
-				button != null and absf(button.get_global_rect().get_center().x - title_center_x) < 1.0,
-				"%s was not centered beneath the title logo." % button.name if button != null else "A title action was missing."
+				button != null and menu_sheet.encloses(button.get_rect()),
+				"%s overflowed the title's paper action stack." % button.name if button != null else "A title action was missing."
 			)
 
 	if new_game != null:
@@ -62,9 +62,10 @@ func _run() -> void:
 	_expect(continue_button != null and continue_button.visible and not continue_button.disabled, "Continue did not appear on the title for a valid autosave.")
 	_expect(saved_title != null and main.find_child("GameStartGateway", true, false) == null, "Continue was not kept on the title itself.")
 	if continue_button != null and saved_title != null:
+		var saved_menu_sheet: Rect2 = saved_title.get_menu_sheet_rect()
 		_expect(
-			absf(continue_button.get_global_rect().get_center().x - saved_title.get_global_rect().get_center().x) < 1.0,
-			"Continue was not centered with the other title actions."
+			saved_menu_sheet.encloses(continue_button.get_rect()),
+			"Continue overflowed the title's paper action stack."
 		)
 		continue_button.emit_signal("pressed")
 	await create_timer(0.4).timeout

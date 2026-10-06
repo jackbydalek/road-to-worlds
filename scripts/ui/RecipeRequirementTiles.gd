@@ -1,10 +1,12 @@
 extends Control
 class_name RecipeRequirementTiles
 
+## Print recipe symbols directly on the card ribbon without colored tile fills.
+
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
 const AFFINITY_VISUALS := preload("res://scripts/AffinityVisuals.gd")
 const SYMBOL_FONT := preload("res://assets/fonts/KitchenAffinitySymbols.ttf")
-const DISPLAY_FONT := preload("res://assets/fonts/Oxanium-SemiBold.ttf")
+const DISPLAY_FONT := preload("res://assets/fonts/AtkinsonHyperlegibleNext.ttf")
 const BLACK_SYMBOL_SHADER := preload("res://assets/shaders/ui_symbol_black_mask.gdshader")
 
 var requirements: Array[String] = []
@@ -39,7 +41,7 @@ func _rebuild() -> void:
 		label.clip_text = true
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		label.add_theme_font_override("font", DISPLAY_FONT if is_operator else SYMBOL_FONT)
-		label.add_theme_color_override("font_color", Color(PALETTE.COOL_WHITE, 0.88) if is_operator else PALETTE.TRUE_BLACK)
+		label.add_theme_color_override("font_color", PALETTE.LOCALS_INK_SOFT if is_operator else PALETTE.TRUE_BLACK)
 		label.add_theme_color_override("font_outline_color", Color.TRANSPARENT)
 		label.add_theme_constant_override("outline_size", 0)
 		if not is_operator:
@@ -50,7 +52,6 @@ func _rebuild() -> void:
 		label.set_meta("segment_kind", String(segment.kind))
 		_labels.append(label)
 	_layout_tiles()
-	queue_redraw()
 
 
 func _layout_tiles() -> void:
@@ -70,29 +71,6 @@ func _layout_tiles() -> void:
 		label.position = Vector2(cursor, 0.0)
 		label.size = Vector2(segment_width, size.y)
 		label.add_theme_font_size_override("font_size", maxi(7, roundi(minf(size.y * (0.43 if is_operator else 0.7), segment_width * (0.72 if is_operator else 0.62)))))
-		cursor += segment_width + gap
-	queue_redraw()
-
-
-func _draw() -> void:
-	var segments := _segments()
-	if segments.is_empty():
-		return
-	var gap := maxf(3.0, size.x * 0.032)
-	var operator_count := 0
-	for segment in segments:
-		operator_count += 1 if String(segment.kind) == "operator" else 0
-	var tile_count := segments.size() - operator_count
-	var unit_width := (size.x - gap * float(segments.size() - 1)) / (float(tile_count) + float(operator_count) * 0.46)
-	var cursor := 0.0
-	for segment in segments:
-		var is_operator := String(segment.kind) == "operator"
-		var segment_width := unit_width * (0.46 if is_operator else 1.0)
-		if is_operator:
-			cursor += segment_width + gap
-			continue
-		var x := cursor
-		draw_rect(Rect2(Vector2(x, 0), Vector2(segment_width, size.y)), _color_for(String(segment.affinity)))
 		cursor += segment_width + gap
 
 
@@ -125,17 +103,3 @@ func _token_text(token: String) -> String:
 	for option in token.split("|"):
 		symbols.append(AFFINITY_VISUALS.symbol(String(option)))
 	return "/".join(symbols)
-
-
-func _primary_color(token: String) -> Color:
-	return _color_for(String(token.split("|")[0]))
-
-
-func _color_for(value: String) -> Color:
-	match value.to_lower():
-		"spicy": return PALETTE.AFFINITY_SPICY
-		"hearty": return PALETTE.AFFINITY_HEARTY
-		"sweet": return PALETTE.AFFINITY_SWEET
-		"fresh": return PALETTE.AFFINITY_FRESH
-		"funky": return PALETTE.AFFINITY_FUNKY
-		_: return PALETTE.AFFINITY_NEUTRAL

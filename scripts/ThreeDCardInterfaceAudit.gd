@@ -11,9 +11,9 @@ const EFFECT_ARRAY_KEYS := [
 const SUPPORTED_EFFECT_TYPES := [
 	"absorb_all_friendly_units", "buff_friendly_unit", "buff_self", "buff_self_from_discard_attack",
 	"create_token", "damage_all_enemy_plated", "damage_all_enemy_units", "damage_enemy_player",
-	"damage_enemy_prep", "destroy_all_plated_units", "destroy_enemy_unit",
+	"damage_enemy_prep", "damage_prep_unit", "destroy_all_plated_units", "destroy_enemy_unit",
 	"disable_enemy_chefs_next_turn", "disable_enemy_items_next_turn", "discard_hand",
-	"discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw", "draw_to_hand_size",
+	"discard_all_friendly_prep_then_buff_self", "discard_hand_then_draw_if_any", "discard_top_then_buff_if_unit", "draw", "draw_to_hand_size",
 	"fill_prep_with_tokens", "heal_all_friendly_units", "heal_player", "heal_unit", "look_and_take",
 	"recover", "recycle", "remove_enemy_spice", "return_enemy_ingredient", "revive",
 	"sacrifice_friendly_then_damage_all_enemy_units_by_attack", "search",
@@ -22,7 +22,7 @@ const SUPPORTED_EFFECT_TYPES := [
 ]
 const BOARD_CHOICE_EFFECTS := [
 	"buff_friendly_unit", "buff_friendly_plated", "heal_unit", "damage_enemy_unit",
-	"damage_enemy_plated", "damage_enemy_prep", "return_enemy_ingredient",
+	"damage_enemy_plated", "damage_enemy_prep", "damage_prep_unit", "return_enemy_ingredient",
 	"move_friendly_to_prep", "switch_enemy_zones", "switch_friendly_zones", "destroy_enemy_unit",
 	"swap_attack_health", "remove_enemy_spice"
 ]
@@ -31,9 +31,9 @@ const EXPECTED_CATEGORY_COUNTS := {
 	"recipes": 23,
 	"searches": 12,
 	"discard_choices": 5,
-	"board_choices": 9,
+	"board_choices": 10,
 	"reactions": 3,
-	"abilities": 6,
+	"abilities": 5,
 	"discard_costs": 8
 }
 
@@ -75,7 +75,7 @@ func _run() -> void:
 			push_error(failure)
 		quit(1)
 		return
-	print("3D card interface audit passed: 87/87 canonical cards (%d renderer-supported faces, %d fallback faces); 35 effect operations; 23 recipes; 12 searches; 5 discard choices; 9 board-target cards; 6 activated abilities; 3 reactions; 8 discard-cost cards." % [rendered_face_count, fallback_face_count])
+	print("3D card interface audit passed: 87/87 canonical cards (%d renderer-supported faces, %d fallback faces); %d effect operations; 23 recipes; 12 searches; 5 discard choices; %d board-target cards; 5 activated abilities; 3 reactions; 8 discard-cost cards." % [rendered_face_count, fallback_face_count, SUPPORTED_EFFECT_TYPES.size(), EXPECTED_CATEGORY_COUNTS.board_choices])
 	quit()
 
 
@@ -95,7 +95,7 @@ func _audit_inventory_and_3d_faces() -> void:
 		var face := physical_card.find_child("CardFace", true, false) as MeshInstance3D
 		var face_material := face.material_override as StandardMaterial3D if face != null else null
 		_expect(body != null and face_material != null and face_material.albedo_texture != null, "%s could not build a complete physical 3D card." % card_id)
-		_expect(body != null and String(body.get_meta("card_body_geometry", "")) == "runtime_angular", "%s used a physical card body that did not match the runtime angular face." % card_id)
+		_expect(body != null and String(body.get_meta("card_body_geometry", "")) == "runtime_ribbon", "%s used a physical card body that did not match the rounded runtime ribbon face." % card_id)
 		physical_card.free()
 		for effect in _card_effects(data):
 			var effect_type := String(effect.get("type", ""))

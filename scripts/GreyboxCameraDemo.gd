@@ -904,7 +904,7 @@ func _add_singles_panel() -> void:
 
 	singles_message_label = Label.new()
 	singles_message_label.name = "InSceneSinglesMessage"
-	singles_message_label.text = "Choose a card to reveal its purchase button. Hover to inspect the full card."
+	singles_message_label.text = "Choose a card to reveal its purchase button."
 	singles_message_label.add_theme_font_override("font", SKETCH_UI.body_font(0.44))
 	singles_message_label.add_theme_font_size_override("font_size", 14)
 	singles_message_label.add_theme_color_override("font_color", PALETTE.NAVY_MUTED)
@@ -1163,7 +1163,7 @@ func _render_singles_case(message: String = "") -> void:
 	if message != "":
 		singles_message_label.text = message
 	else:
-		singles_message_label.text = "Choose a card to reveal its purchase button. Hover to inspect the full card."
+	singles_message_label.text = "Choose a card to reveal its purchase button."
 	var singles: Array = shop_context.get("singles", [])
 	if not singles.any(func(entry_value) -> bool:
 		return String((entry_value as Dictionary).get("id", "")) == selected_single_id
@@ -1288,7 +1288,7 @@ func _render_set_list() -> void:
 	for set_entry_value in set_entries:
 		total_cards += (set_entry_value as Dictionary).get("cards", []).size()
 	set_list_status_label.text = "%d CARD%s" % [total_cards, "" if total_cards == 1 else "S"]
-	set_list_message_label.text = "Grouped by expansion, then affiliation, then card type. Hover a card to inspect it."
+	set_list_message_label.text = "Grouped by expansion, then affiliation, then card type."
 
 	if set_entries.is_empty():
 		var empty := Label.new()

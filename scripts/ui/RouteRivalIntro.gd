@@ -3,7 +3,9 @@ extends Control
 signal continue_requested
 
 const PALETTE := preload("res://scripts/ui/GamePalette.gd")
+const SKETCH := preload("res://scripts/ui/WarmSketch.gd")
 const TOPDECK_UI := preload("res://scripts/ui/TopdeckUIComponents.gd")
+const SEATED_PORTRAIT := preload("res://scripts/ui/SeatedRivalPortrait.gd")
 
 var dimmer: ColorRect
 var portrait_stage: Control
@@ -11,7 +13,7 @@ var portrait: TextureRect
 var dialogue_panel: PanelContainer
 var continue_button: Button
 var wipe_layer: Control
-var accent := PALETTE.FOCUS_EDGE
+var accent := PALETTE.PEACH_TEAL
 var reduced_motion := false
 var automated_test := false
 var entrance_started := false
@@ -23,7 +25,8 @@ func configure(
 	dialogue: String,
 	accent_color: Color,
 	reduce_motion: bool,
-	is_automated_test: bool
+	is_automated_test: bool,
+	cast_id: String = ""
 ) -> void:
 	accent = accent_color
 	reduced_motion = reduce_motion
@@ -31,7 +34,8 @@ func configure(
 	_build_overlay(
 		portrait_texture,
 		speaker_name,
-		dialogue
+		dialogue,
+		cast_id
 	)
 	if reduced_motion or automated_test:
 		continue_button.disabled = false
@@ -42,7 +46,8 @@ func configure(
 func _build_overlay(
 	portrait_texture: Texture2D,
 	speaker_name: String,
-	dialogue: String
+	dialogue: String,
+	cast_id: String = ""
 ) -> void:
 	name = "RouteEncounterOverlay"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -52,14 +57,15 @@ func _build_overlay(
 	dimmer = ColorRect.new()
 	dimmer.name = "RouteEncounterDimmer"
 	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = PALETTE.OVERLAY_DIM
+	dimmer.color = Color(PALETTE.PEACH_INK, 0.58)
 	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dimmer)
 
-	var portrait_backing := ColorRect.new()
+	var portrait_backing := Control.new()
 	portrait_backing.name = "RouteRivalPortraitBacking"
-	_set_anchors(portrait_backing, 0.54, 0.055, 0.94, 0.765)
-	portrait_backing.color = Color(PALETTE.COOL_WHITE, 0.075)
+	_set_anchors(portrait_backing, 0.55, 0.115, 0.93, 0.775)
+	portrait_backing.draw.connect(func() -> void: SKETCH.paper(portrait_backing, Rect2(Vector2(3, 3), portrait_backing.size - Vector2(9, 10)), PALETTE.PEACH_MINT, PALETTE.PEACH_INK, true, 1.7))
+	portrait_backing.resized.connect(portrait_backing.queue_redraw)
 	portrait_backing.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(portrait_backing)
 
@@ -68,9 +74,17 @@ func _build_overlay(
 	backing_accent.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	backing_accent.custom_minimum_size.y = 5.0
 	backing_accent.offset_bottom = 5.0
-	backing_accent.color = accent
+	backing_accent.color = PALETTE.PEACH_TEAL
+	backing_accent.visible = false
 	backing_accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_backing.add_child(backing_accent)
+
+	var invitation := TOPDECK_UI.make_label("Pull up a chair.", "title", PALETTE.PEACH_PAPER)
+	invitation.name = "RouteRivalInvitation"
+	_set_anchors(invitation, 0.075, 0.26, 0.45, 0.36)
+	invitation.add_theme_font_size_override("font_size", 40)
+	invitation.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(invitation)
 
 	portrait_stage = Control.new()
 	portrait_stage.name = "RouteRivalPortraitStage"
@@ -78,9 +92,12 @@ func _build_overlay(
 	portrait_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(portrait_stage)
 
-	portrait = TextureRect.new()
+	portrait = TextureRect.new() if cast_id.is_empty() else SEATED_PORTRAIT.new()
 	portrait.name = "RouteRivalPortrait"
-	portrait.texture = portrait_texture
+	if cast_id.is_empty():
+		portrait.texture = portrait_texture
+	else:
+		portrait.call("configure", cast_id, true, reduced_motion)
 	_set_anchors(portrait, 0.49, 0.02, 0.985, 0.82)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -89,11 +106,11 @@ func _build_overlay(
 
 	var dialogue_parts := TOPDECK_UI.make_surface_panel(
 		"RouteRivalDialoguePanel",
-		PALETTE.SURFACE_RAISED,
-		accent,
+		PALETTE.PEACH_PAPER,
+		PALETTE.PEACH_TEAL,
 		Vector2(0, 190),
 		Vector4(26, 18, 22, 18),
-		true
+		false
 	)
 	dialogue_panel = dialogue_parts.panel as PanelContainer
 	_set_anchors(dialogue_panel, 0.055, 0.715, 0.945, 0.96)
@@ -113,11 +130,11 @@ func _build_overlay(
 	copy.add_theme_constant_override("separation", 3)
 	dialogue_row.add_child(copy)
 
-	var speaker := TOPDECK_UI.make_label(speaker_name.to_upper(), "section", PALETTE.TEXT_PRIMARY)
+	var speaker := TOPDECK_UI.make_label(speaker_name, "section", PALETTE.PEACH_INK)
 	speaker.name = "RouteRivalSpeaker"
 	copy.add_child(speaker)
 
-	var dialogue_label := TOPDECK_UI.make_label("“%s”" % dialogue, "body", PALETTE.TEXT_PRIMARY)
+	var dialogue_label := TOPDECK_UI.make_label("“%s”" % dialogue, "body", PALETTE.PEACH_INK)
 	dialogue_label.name = "RouteRivalDialogueText"
 	dialogue_label.add_theme_font_size_override("font_size", 21)
 	dialogue_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -130,7 +147,7 @@ func _build_overlay(
 	action_column.alignment = BoxContainer.ALIGNMENT_END
 	dialogue_row.add_child(action_column)
 	continue_button = TOPDECK_UI.make_button(
-		"CONTINUE  >",
+		"Continue",
 		"primary",
 		Vector2(220, 58),
 		"BeginRouteEncounterButton"
@@ -197,7 +214,7 @@ func wipe_to_cover() -> void:
 	var cover := ColorRect.new()
 	cover.name = "RouteEncounterWipeCover"
 	cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	cover.color = PALETTE.CARBON
+	cover.color = PALETTE.PEACH_MINT
 	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wipe_layer.add_child(cover)
 
@@ -207,9 +224,9 @@ func wipe_to_cover() -> void:
 	edge.set_anchor(SIDE_TOP, 0.0)
 	edge.set_anchor(SIDE_RIGHT, 1.0)
 	edge.set_anchor(SIDE_BOTTOM, 1.0)
-	edge.offset_left = -14.0
+	edge.offset_left = -2.0
 	edge.offset_right = 0.0
-	edge.color = accent
+	edge.color = PALETTE.PEACH_TEAL
 	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wipe_layer.add_child(edge)
 

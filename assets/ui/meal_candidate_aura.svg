@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="360" height="500" viewBox="0 0 360 500">
-  <path d="M68 35h221l34 34v362l-34 34H68l-31-31V66Z" fill="none" stroke="#26c7ed" stroke-opacity=".16" stroke-width="22"/>
-  <path d="M70 43h215l28 28v356l-28 28H70l-23-23V68Z" fill="none" stroke="#f3f6fa" stroke-opacity=".9" stroke-width="5"/>
-  <path d="M49 130V69l22-22h66M224 454h62l26-27v-61" fill="none" stroke="#26c7ed" stroke-width="7" stroke-dasharray="42 12"/>
-  <g fill="#f3f6fa">
-    <path d="M49 90 53 105 68 109 53 113 49 128 45 113 30 109 45 105Z"/>
-    <path d="M310 372 314 387 329 391 314 395 310 410 306 395 291 391 306 387Z"/>
+  <g fill="none">
+    <rect x="36" y="38" width="288" height="424" rx="25" stroke="#C7DFD5" stroke-width="64" opacity=".16"/>
+    <rect x="36" y="38" width="288" height="424" rx="25" stroke="#C7DFD5" stroke-width="42" opacity=".48"/>
+    <rect x="36" y="38" width="288" height="424" rx="25" stroke="#126866" stroke-width="22"/>
+    <rect x="36" y="38" width="288" height="424" rx="25" stroke="#FFF4DF" stroke-width="12"/>
   </g>
+  <g fill="#FFF4DF"><path d="m5 228 18 22-18 22z"/><path d="m355 228-18 22 18 22z"/></g>
 </svg>

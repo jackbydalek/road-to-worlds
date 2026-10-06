@@ -52,7 +52,7 @@ jobs:
       - name: Upload versioned itch artifact
         uses: actions/upload-artifact@v4
         with:
-          name: topdeck-to-worlds-itch-web
-          path: builds/*-itch-web.zip
+          name: see-you-at-locals-itch-web
+          path: builds/see-you-at-locals-*-itch-web.zip
           if-no-files-found: error
           retention-days: 14
